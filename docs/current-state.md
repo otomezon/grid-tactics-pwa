@@ -8,6 +8,7 @@
 - PR #1〜#5はマージ済み。PR #5のマージコミット: `d63981b9a51e36286a53ebfc1922bbaba2d6fafc`
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
+- PR #6 latest head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - 現在の開発対象: 経験値報酬、レベルアップ、ステージ結果表示。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
@@ -36,7 +37,8 @@
 | 経験値・レベルアップ・クラスチェンジ | 未実装 | — |
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
-| ステージ結果表示 | 実装済み（勝敗・撃破数・生存味方のLv/EXP/HP） | `src/App.tsx` | 手動ブラウザ確認未実施 |
+| ステージ結果表示 | 実装済み（勝敗・撃破数・生存味方のLv/EXP/HP） | `src/App.tsx` | UI手動確認未実施 |
+| progression／attack tests | 実装済み | `src/domain/progression/level-up.test.ts`, `src/application/perform-attack.test.ts` | 10 test files／66 tests、GitHub Actions run #112成功 |
 | クラスチェンジ | 未実装 | — |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
 | 砦のフェイズ開始回復 | 未実装（10%回復の整数端数未決定） | `docs/game-design.md` §4.2 |
@@ -44,7 +46,7 @@
 
 ## 3. 検証コマンド
 
-`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。今回のローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。PR Checksの結果を追記する。
+`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #6のrun #112で型チェック、10 test files／66 tests、本番ビルド、PWA precache 11 entriesを確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
 
 ## 4. 暫定・未決定事項
 
