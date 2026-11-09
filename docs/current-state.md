@@ -5,12 +5,12 @@
 - 更新日: 2026-11-09
 - Repository: `otomezon/grid-tactics-pwa`
 - デフォルトブランチ: `main`
-- PR #1〜#7はマージ済み。PR #7のマージコミット: `faa20a45e0e5b8640320c75d3136a9bba405f18b`
+- PR #1〜#8はマージ済み。PR #8のマージコミット: `b6a31fdeff71d9915734d9e3c2a0da9b4df6737f`
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- 現在の開発対象: クラスチェンジの試作アイテム配布・所持品表示・確認UI接続。
+- 現在の開発対象: 砦のフェイズ開始回復（PR #9候補）。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
 
@@ -48,7 +48,7 @@
 | クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ条件） | `src/App.tsx`, `src/application/perform-class-change.ts` | typecheck／build。画面手動確認は未実施 |
 | 正式な昇格ボーナス・上限・昇格後移動／武器データ | 未決定（現行は仮値） | `src/content/classes.ts` | playtest／仕様決定待ち |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
-| 砦のフェイズ開始回復 | 未実装（10%回復の整数端数未決定） | `docs/game-design.md` §4.2 |
+| 砦のフェイズ開始回復 | 実装済み（該当陣営の生存ユニット／最大HPの10%／端数切り捨ては暫定） | `src/domain/rules/apply-fort-recovery.ts`, `src/application/resolve-enemy-phase.ts` |
 | UI／スマートフォン実機確認 | 未実施 | — |
 
 ## 3. 検証コマンド
@@ -61,7 +61,7 @@
 - AI対象スコアと移動先評価は初期ヒューリスティックで、実プレイ調整が必要。
 - 役割タグは現在のユニットモデルにないためスコア対象外。
 - 敗北条件は味方全滅のみ。主人公個別撃破は主人公識別データがないため保留。
-- 砦回復は設計書に記載があるが、処理／端数規則未確定のため未実装。
+- 砦回復は実装済み。端数切り捨ては暫定判断で、設計書に正式規則はない。最大HP9以下では回復量0。
 - クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。
 - 1戦闘中に複数回ダメージを与えた場合、現行はstrikeごとに+10 EXPを付与する解釈。
 - HP成長時は最大HPのみ増やし、現在HPは維持。
@@ -72,5 +72,5 @@
 
 1. クラス別の正式上限・昇格ボーナス・EXP方針と昇格後移動／武器データを決定。
 2. 章報酬・章間引き継ぎ・次ステージ解放を設計し、証の正式な配布経路を追加。
-3. 主人公識別と敗北条件、砦回復の端数規則を決定。
+3. 主人公識別と敗北条件、砦回復の正式な端数規則を決定。
 4. 1ステージの開始からクリアまでをブラウザ／スマートフォンで検証。
