@@ -44,7 +44,7 @@ npm run preview
 
 ## 4. CI
 
-`.github/workflows/ci.yml` を追加した。Pull Requestと `main` へのpushでNode.jsを `.nvmrc` からセットアップし、`npm install`、型チェック、Vitest、Vite buildを実行する。PRのChecksで実行結果を確認すること。ローカル実行・CI実行済みであると推測して報告してはいけない。
+`.github/workflows/ci.yml` を追加した。Pull Requestと `main`／`feature/**` へのpushでNode.jsを `.nvmrc` からセットアップし、`npm install`、型チェック、Vitest、Vite buildを実行する。PRのChecksで実行結果を確認すること。ローカル実行・CI実行済みであると推測して報告してはいけない。
 
 ## 5. PWA
 
