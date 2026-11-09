@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
 - Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal.
-- PR #1–#10 are merged. Current implementation includes fort recovery, a data-driven chapter registry, validated chapter item rewards, chapter carry-over, next-chapter UI, and chapter-aware save restoration. Chapter 2 is explicitly prototype content; reward values and final campaign map data remain product decisions.
+- PR #1–#12 are merged. Current implementation includes fort recovery, a data-driven chapter registry, validated chapter item rewards, chapter carry-over, next-chapter UI, chapter-aware save restoration, map-specific defeat conditions, and static map-definition validation. Chapter 2 is explicitly prototype content; reward values, protagonist identity, and final campaign map data remain product decisions.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 
 ## 2. Critical instructions
