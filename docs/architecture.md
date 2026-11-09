@@ -15,6 +15,7 @@ src/
 │   ├── terrain.ts
 │   ├── weapons.ts
 │   ├── classes.ts
+│   ├── items.ts
 │   └── maps/chapter-01.ts
 ├── domain/
 │   ├── models/
@@ -33,7 +34,7 @@ src/
 
 | レイヤー | 現在の責務 | 状態 |
 |---|---|---|
-| content | 地形、試作マップ／ユニット、仮武器 | 実装あり。仮コンテンツ |
+| content | 地形、試作マップ／ユニット、仮武器、昇格先・仮能力ボーナス、クラスチェンジアイテム | 実装あり。昇格ボーナス／上限は仮データ |
 | domain/models | GameUnit、GameStateSnapshot、saveVersion 2検証 | 実装あり |
 | domain/movement | 地形・占有を考慮した到達可能範囲 | 実装あり |
 | domain/combat | 武器適合、式、射程、予測、決定論的解決、暫定Manhattan距離 | 実装あり |
@@ -41,7 +42,7 @@ src/
 | domain/rules | defeat_all／defeat_boss／味方全滅の勝敗判定 | 実装あり |
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジコマンド、敵AI行動選択、敵フェイズ解決、ターン進行 | 基本実装。クラスチェンジUI／アイテム配布は未実装 |
-| ui | マップ、戦闘UI、装備、フェイズ終了、勝敗表示 | 試作実装 |
+| ui | マップ、戦闘UI、装備、所持品・クラスチェンジ確認、フェイズ終了、勝敗表示 | 試作実装。正式なクラスデータと章報酬は未実装 |
 | persistence | IndexedDB、saveVersion 1→2 migration | 実装あり |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
@@ -67,7 +68,7 @@ src/
 
 - `application/gameController.ts`: 移動、装備、攻撃、待機、フェイズ進行を統合する。
 - 敵AIは現在単純なスコア式。役割タグ、戦略の追加、プレイテストを別途行う。
-- `domain/progression/`: EXP・成長とクラス昇格ルールの基盤を実装。正式な昇格値・UI・アイテム配布は未実装。
+- `domain/progression/`: EXP・成長とクラス昇格ルールの基盤を実装。クラスチェンジUI／仮アイテム接続済み。正式な昇格値・クラス別移動／武器データ・章報酬は未実装。
 - `domain/events/`: ターン／撃破／勝利イベント。
 - UIコンポーネント分割。現状は `App.tsx` に集約。
 - 基本的なステージ結果概要は実装済み。詳細統計／加入／章報酬／次章進行は未実装。
