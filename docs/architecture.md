@@ -2,7 +2,7 @@
 
 ## 1. 現在の構成
 
-PR #1〜#7で文書基盤、PWA／マップ／移動、戦闘計算、戦闘UI・攻撃・RNG保存、敵AI／フェイズ進行、経験値・レベルアップ・ステージ結果、クラスチェンジルール基盤をmainに追加した。現在の開発ブランチでは、クラスチェンジアイテムと確認UIを接続している。
+PR #1〜#8で文書基盤、PWA／マップ／移動、戦闘計算、戦闘UI・攻撃・RNG保存、敵AI／フェイズ進行、経験値・レベルアップ・ステージ結果、クラスチェンジのルール／UI接続をmainに追加した。現在の開発ブランチでは、砦のフェイズ開始回復を追加している。
 
 ```text
 src/
@@ -24,7 +24,8 @@ src/
 │   ├── random/
 │   ├── progression/
 │   └── rules/
-│       └── evaluate-battle-outcome.ts
+│       ├── evaluate-battle-outcome.ts
+│       └── apply-fort-recovery.ts
 └── persistence/
     ├── save-repository.ts
     └── migrations.ts
@@ -39,7 +40,7 @@ src/
 | domain/movement | 地形・占有を考慮した到達可能範囲 | 実装あり |
 | domain/combat | 武器適合、式、射程、予測、決定論的解決、暫定Manhattan距離 | 実装あり |
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
-| domain/rules | defeat_all／defeat_boss／味方全滅の勝敗判定 | 実装あり |
+| domain/rules | defeat_all／defeat_boss／味方全滅の勝敗判定、砦回復 | 実装あり。回復端数は暫定切り捨て |
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジコマンド、敵AI行動選択、敵フェイズ解決、ターン進行 | 基本実装。試作アイテム／UI／自動保存を接続。正式配布ルールは未実装 |
 | ui | マップ、戦闘UI、装備、所持品・クラスチェンジ確認、フェイズ終了、勝敗表示 | 試作実装。正式なクラスデータと章報酬は未実装 |
@@ -50,10 +51,10 @@ src/
 
 1. AppがIndexedDB auto slotをロードし、saveVersion 1→2 migrationまたはversion 2 validatorを通す。
 2. player phaseでは既存の移動・装備・攻撃・待機コマンドを使う。
-3. 「自軍フェイズ終了」で `phase: enemy` のスナップショットをまず保存する。
+3. 「自軍フェイズ終了」で敵軍フェイズへ移り、砦上の敵軍ユニットを最大HPの10%（端数切り捨て・暫定）回復してから `phase: enemy` のスナップショットを保存する。
 4. `runEnemyPhase` が敵ユニットをID辞書順に処理する。現在攻撃できるなら対象評価して攻撃、いなければ移動可能範囲を調べ、移動後攻撃、接近、待機を選ぶ。
 5. 各戦闘は共通combat resolverと保存済みXorshift32 stateを利用する。HP・撃破・RNG stateはGameStateへ反映する。
-6. 戦闘継続中なら敵軍フェイズ後にturnを1増やし、残存ユニットの行動フラグをresetしてplayer phaseへ戻す。勝敗ならterminal stateのままにする。
+6. 戦闘継続中なら敵軍フェイズ後にturnを1増やし、残存ユニットの行動フラグをresetしてplayer phaseへ戻し、砦上の味方を最大HPの10%（端数切り捨て・暫定）回復する。勝敗ならterminal stateのままにする。
 7. 次状態をIndexedDBへ保存。起動時に `phase: enemy` の保存が読み込まれた場合は敵軍フェイズを再開・解決する。
 
 ## 4. 依存方向のルール
