@@ -14,6 +14,7 @@ src/
 ├── content/
 │   ├── terrain.ts
 │   ├── weapons.ts
+│   ├── classes.ts
 │   └── maps/chapter-01.ts
 ├── domain/
 │   ├── models/
@@ -69,7 +70,7 @@ src/
 - `domain/progression/`: EXP・成長とクラス昇格ルールの基盤を実装。正式な昇格値・UI・アイテム配布は未実装。
 - `domain/events/`: ターン／撃破／勝利イベント。
 - UIコンポーネント分割。現状は `App.tsx` に集約。
-- 勝敗後のリザルト／報酬／章進行は未実装。
+- 基本的なステージ結果概要は実装済み。詳細統計／加入／章報酬／次章進行は未実装。
 
 ## 6. 外部サービス
 
