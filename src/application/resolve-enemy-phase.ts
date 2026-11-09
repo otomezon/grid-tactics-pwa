@@ -1,0 +1,349 @@
+import { TERRAIN_DEFINITIONS } from "../content/terrain";
+import { createAttackPlanForFaction, performEnemyAttack } from "./perform-attack";
+import type { AttackPlan } from "./perform-attack";
+import { calculateManhattanDistance } from "../domain/combat/grid-distance";
+import { calculateReachableTiles } from "../domain/movement/calculate-reachable-tiles";
+import type { GameMapDefinition, GameStateSnapshot, GameUnit, Position } from "../domain/models/game";
+import { evaluateBattleOutcome, type BattleOutcome } from "../domain/rules/evaluate-battle-outcome";
+
+export type EnemyActionKind = "attacked" | "moved-and-attacked" | "moved" | "waited";
+
+export interface EnemyActionLog {
+  enemyId: string;
+  enemyName: string;
+  kind: EnemyActionKind;
+  targetId?: string;
+  targetName?: string;
+  destination?: Position;
+  message: string;
+}
+
+export interface EnemyPhaseResult {
+  nextState: GameStateSnapshot;
+  outcome: BattleOutcome;
+  actions: EnemyActionLog[];
+}
+
+interface AttackCandidate {
+  target: GameUnit;
+  plan: AttackPlan;
+  score: number;
+}
+
+interface TileCandidate {
+  position: Position;
+  score: number;
+  attack?: AttackCandidate;
+}
+
+const KILL_BONUS = 1000;
+const TRIANGLE_BONUS = 40;
+const LOW_HP_BONUS_PER_POINT = 0.5;
+const EXPECTED_DAMAGE_WEIGHT = 5;
+const COUNTER_DAMAGE_PENALTY_WEIGHT = 2;
+const COUNTER_LETHAL_PENALTY = 500;
+
+/** Begin the enemy phase after player input is locked and that state is saved. */
+export function beginEnemyPhase(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): GameStateSnapshot {
+  if (state.phase !== "player") {
+    throw new Error("The player phase is not active.");
+  }
+  if (evaluateBattleOutcome(state, map) !== "playing") {
+    throw new Error("The battle has already ended.");
+  }
+
+  return { ...state, phase: "enemy" };
+}
+
+function getAttackCandidates(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  enemyId: string
+): AttackCandidate[] {
+  const enemy = state.units.find((unit) => unit.id === enemyId);
+  if (!enemy || enemy.faction !== "enemy" || enemy.currentHp <= 0 || enemy.hasActed) return [];
+
+  const targets = state.units
+    .filter((unit) => unit.faction === "player" && unit.currentHp > 0)
+    .sort((left, right) => compareIds(left.id, right.id));
+
+  const candidates: AttackCandidate[] = [];
+  for (const target of targets) {
+    try {
+      const plan = createAttackPlanForFaction(state, map, enemy.id, target.id, "enemy");
+      candidates.push({
+        target,
+        plan,
+        score: scoreAttack(enemy, target, plan)
+      });
+    } catch {
+      // Out-of-range or otherwise invalid targets are not attack candidates.
+    }
+  }
+  return candidates.sort(compareAttackCandidates);
+}
+
+function scoreAttack(enemy: GameUnit, target: GameUnit, plan: AttackPlan): number {
+  const opening = plan.forecast.strikes[0];
+  if (!opening) return Number.NEGATIVE_INFINITY;
+
+  const expectedDamage = opening.normalDamage * opening.hitRate / 100;
+  const canDefeat = opening.hitRate > 0 && (
+    opening.normalDamage >= target.currentHp ||
+    (opening.criticalRate > 0 && opening.criticalDamage >= target.currentHp)
+  );
+  const triangleBonus = opening.weaponTriangleHitModifier > 0 ? TRIANGLE_BONUS : 0;
+  const lowHpBonus = (target.stats.hp - target.currentHp) * LOW_HP_BONUS_PER_POINT;
+  const counter = plan.forecast.strikes.find((strike) => strike.kind === "counter");
+  const counterExpectedDamage = counter
+    ? counter.normalDamage * counter.hitRate / 100
+    : 0;
+  const counterLethalPenalty = counter && counter.hitRate > 0 && (
+    counter.normalDamage >= enemy.currentHp ||
+    (counter.criticalRate > 0 && counter.criticalDamage >= enemy.currentHp)
+  ) ? COUNTER_LETHAL_PENALTY : 0;
+
+  return (
+    (canDefeat ? KILL_BONUS : 0) +
+    triangleBonus +
+    lowHpBonus +
+    expectedDamage * EXPECTED_DAMAGE_WEIGHT -
+    counterExpectedDamage * COUNTER_DAMAGE_PENALTY_WEIGHT -
+    counterLethalPenalty
+  );
+}
+
+function compareAttackCandidates(left: AttackCandidate, right: AttackCandidate): number {
+  return right.score - left.score || compareIds(left.target.id, right.target.id);
+}
+
+function compareIds(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function getTerrainScore(map: GameMapDefinition, position: Position): number {
+  const terrainType = map.terrain[position.y]?.[position.x];
+  if (!terrainType) return Number.NEGATIVE_INFINITY;
+  const terrain = TERRAIN_DEFINITIONS[terrainType];
+  return terrain.defenseBonus * 10 + terrain.avoidanceBonus;
+}
+
+function getNearestPlayerDistance(state: GameStateSnapshot, position: Position): number {
+  const livingPlayers = state.units.filter(
+    (unit) => unit.faction === "player" && unit.currentHp > 0
+  );
+  if (livingPlayers.length === 0) return Number.POSITIVE_INFINITY;
+  return Math.min(
+    ...livingPlayers.map((unit) => calculateManhattanDistance(position, unit.position))
+  );
+}
+
+function createTileCandidates(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  enemy: GameUnit
+): TileCandidate[] {
+  const reachable = calculateReachableTiles({
+    terrain: map.terrain,
+    start: enemy.position,
+    movementPoints: enemy.move,
+    movementType: enemy.movementType,
+    occupiedPositions: state.units
+      .filter((unit) => unit.id !== enemy.id && unit.currentHp > 0)
+      .map((unit) => unit.position)
+  });
+
+  return reachable.map((tile) => {
+    const movedState: GameStateSnapshot = {
+      ...state,
+      units: state.units.map((unit) =>
+        unit.id === enemy.id
+          ? { ...unit, position: { x: tile.x, y: tile.y }, hasMoved: true }
+          : unit
+      )
+    };
+    const attack = getAttackCandidates(movedState, map, enemy.id)[0];
+    const terrainScore = getTerrainScore(map, tile);
+    if (attack) {
+      return {
+        position: { x: tile.x, y: tile.y },
+        attack,
+        score: 100_000 + attack.score * 10 + terrainScore
+      };
+    }
+
+    const nearestDistance = getNearestPlayerDistance(state, tile);
+    return {
+      position: { x: tile.x, y: tile.y },
+      score: -nearestDistance * 100 + terrainScore
+    };
+  }).sort(compareTileCandidates);
+}
+
+function compareTileCandidates(left: TileCandidate, right: TileCandidate): number {
+  return right.score - left.score ||
+    left.position.y - right.position.y ||
+    left.position.x - right.position.x;
+}
+
+function executeEnemyAction(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  enemyId: string
+): { state: GameStateSnapshot; action: EnemyActionLog } {
+  const currentEnemy = state.units.find((unit) => unit.id === enemyId);
+  if (!currentEnemy || currentEnemy.currentHp <= 0) {
+    throw new Error("The enemy unit is no longer available.");
+  }
+
+  const currentAttack = getAttackCandidates(state, map, enemyId)[0];
+  if (currentAttack) {
+    const result = performEnemyAttack(state, map, enemyId, currentAttack.target.id);
+    const logs = result.result.events.map((event) =>
+      event.hit
+        ? `${event.critical ? "必殺" : "命中"}・${event.damage}ダメージ`
+        : "攻撃ミス"
+    ).join(" / ");
+    return {
+      state: result.nextState,
+      action: {
+        enemyId,
+        enemyName: currentEnemy.name,
+        kind: "attacked",
+        targetId: currentAttack.target.id,
+        targetName: currentAttack.target.name,
+        message: `${currentEnemy.name}は${currentAttack.target.name}に攻撃（${logs}）`
+      }
+    };
+  }
+
+  if (!currentEnemy.hasMoved) {
+    const destination = createTileCandidates(state, map, currentEnemy)[0];
+    if (destination) {
+      const movedState: GameStateSnapshot = {
+        ...state,
+        units: state.units.map((unit) =>
+          unit.id === enemyId
+            ? { ...unit, position: destination.position, hasMoved: true }
+            : unit
+        )
+      };
+      const postMoveAttack = getAttackCandidates(movedState, map, enemyId)[0];
+      if (postMoveAttack) {
+        const result = performEnemyAttack(movedState, map, enemyId, postMoveAttack.target.id);
+        const logs = result.result.events.map((event) =>
+          event.hit
+            ? `${event.critical ? "必殺" : "命中"}・${event.damage}ダメージ`
+            : "攻撃ミス"
+        ).join(" / ");
+        return {
+          state: result.nextState,
+          action: {
+            enemyId,
+            enemyName: currentEnemy.name,
+            kind: "moved-and-attacked",
+            targetId: postMoveAttack.target.id,
+            targetName: postMoveAttack.target.name,
+            destination: destination.position,
+            message: `${currentEnemy.name}は${positionText(destination.position)}へ移動し、${postMoveAttack.target.name}に攻撃（${logs}）`
+          }
+        };
+      }
+
+      return {
+        state: {
+          ...movedState,
+          units: movedState.units.map((unit) =>
+            unit.id === enemyId ? { ...unit, hasActed: true } : unit
+          )
+        },
+        action: {
+          enemyId,
+          enemyName: currentEnemy.name,
+          kind: "moved",
+          destination: destination.position,
+          message: `${currentEnemy.name}は${positionText(destination.position)}へ移動`
+        }
+      };
+    }
+  }
+
+  return {
+    state: {
+      ...state,
+      units: state.units.map((unit) =>
+        unit.id === enemyId ? { ...unit, hasActed: true } : unit
+      )
+    },
+    action: {
+      enemyId,
+      enemyName: currentEnemy.name,
+      kind: "waited",
+      message: `${currentEnemy.name}は待機`
+    }
+  };
+}
+
+function positionText(position: Position): string {
+  return `${position.x + 1}列${position.y + 1}行`;
+}
+
+/**
+ * Resolves enemy units in lexical ID order. Candidate scoring is a deliberately
+ * simple, deterministic interpretation of the initial AI design proposal.
+ */
+export function runEnemyPhase(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): EnemyPhaseResult {
+  if (state.phase !== "enemy") {
+    throw new Error("The enemy phase is not active.");
+  }
+
+  let currentState = state;
+  const actions: EnemyActionLog[] = [];
+  let outcome = evaluateBattleOutcome(currentState, map);
+  if (outcome !== "playing") {
+    return { nextState: currentState, outcome, actions };
+  }
+
+  const enemyIds = currentState.units
+    .filter((unit) => unit.faction === "enemy" && unit.currentHp > 0 && !unit.hasActed)
+    .map((unit) => unit.id)
+    .sort(compareIds);
+
+  for (const enemyId of enemyIds) {
+    if (evaluateBattleOutcome(currentState, map) !== "playing") break;
+    const enemy = currentState.units.find((unit) => unit.id === enemyId);
+    if (!enemy) continue;
+
+    const execution = executeEnemyAction(currentState, map, enemyId);
+    currentState = execution.state;
+    actions.push(execution.action);
+    outcome = evaluateBattleOutcome(currentState, map);
+    if (outcome !== "playing") break;
+  }
+
+  outcome = evaluateBattleOutcome(currentState, map);
+  if (outcome === "playing") {
+    currentState = {
+      ...currentState,
+      phase: "player",
+      turn: currentState.turn + 1,
+      units: currentState.units.map((unit) => ({
+        ...unit,
+        hasMoved: false,
+        hasActed: false
+      }))
+    };
+  }
+
+  return {
+    nextState: currentState,
+    outcome,
+    actions
+  };
+}

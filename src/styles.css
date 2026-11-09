@@ -156,3 +156,16 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .forecast-values { display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: .72rem; color: var(--text-muted); }
 .forecast-values strong { color: #f2f5f7; font-size: .82rem; }
 .block-button { width: 100%; margin-top: 10px; }
+
+.phase-end-button { white-space: nowrap; }
+.battle-outcome {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--line);
+  border-radius: 12px; background: rgba(25, 38, 51, .88); font-size: .9rem;
+}
+.battle-outcome strong { font-size: 1rem; }
+.battle-outcome span { color: var(--text-muted); }
+.outcome-victory { border-color: #3f796f; }
+.outcome-victory strong { color: #9de4d8; }
+.outcome-defeat { border-color: #8b5d56; }
+.outcome-defeat strong { color: #ffc0b1; }

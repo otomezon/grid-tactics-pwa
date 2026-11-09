@@ -2,54 +2,51 @@
 
 ## 1. 対象と判定基準
 
-- 基準資料: `docs/game-design.md`（v1.0、2026-11-09、初期実装向け設計案）
-- PR #1（文書基盤）、PR #2（PWA／マップ初期基盤）、PR #3（戦闘計算kernel）はmainへマージ済み。現在のブランチで戦闘UI・攻撃コマンド・RNG保存・旧save migrationを追加。
-- A: 設計記載と実装が一致
+- 基準: `docs/game-design.md` v1.0（2026-11-09、初期実装向け設計案）
+- PR #1〜#4はmainにマージ済み。現在の開発ブランチで敵AI・フェイズ進行・勝敗判定を追加。
+- A: 初期設計案と実装が一致
 - B: 設計済み・未実装
 - C: 実装済み・未文書化
-- D: 不一致・要確認、または設計案に対する暫定判断
+- D: 暫定実装・要確認
 
-## 2. A：設計案と実装が一致する項目
+## 2. A：設計案に沿って実装した項目
 
-| 対象 | 設計書 | 現在の実装 | 根拠 |
+| 対象 | 設計案 | 実装 | 根拠 |
 |---|---|---|---|
-| PWA／React／TypeScript | 初期技術案 | 構成済み | package.json、vite.config.ts |
-| マップ規模・移動 | 10×10、4方向 | 10×10試作マップと4近傍探索 | chapter-01.ts、movement |
-| 地形移動・防御・回避 | terrain定義へ集約 | content/terrain.tsで管理 | terrain.ts |
-| 三すくみ | 剣／槍／斧の命中±20、弓／魔法対象外 | domain combatに反映 | combat.ts |
-| 戦闘計算 | 初期案の攻撃力・ダメージ・命中・必殺式 | domain関数に実装 | combat.ts |
-| 必殺・追撃 | 必殺×3、速さ差4 | 定数とforecast／resolverに反映 | combat.ts |
-| 攻撃順 | 先制→可能なら反撃→追撃 | forecast／resolverに反映 | combat.ts |
-| 戦闘予測・攻撃操作 | 予測UIと実戦闘 | マップで対象選択、予測確認、攻撃確定 | App.tsx、perform-attack.ts |
-| 状態・RNG保存 | 行動後自動保存、乱数状態保存 | saveVersion 2でHP／行動状態／RNG stateを保存 | game.ts、save-repository.ts |
-| save互換性 | saveVersionとmigration | version1→2を追加 | migrations.ts |
+| マップ・4方向移動 | §4 | 10×10試作マップ、4近傍Dijkstra | `src/domain/movement/` |
+| 戦闘計算・予測 | §6 | domain kernelと戦闘UI | `src/domain/combat/`, `src/App.tsx` |
+| 自軍フェイズ→敵軍フェイズ | §3.1 | 自軍終了操作から敵軍AIを実行 | `resolve-enemy-phase.ts` |
+| 敵行動順 | §7.3 | ID辞書順で固定 | 同上 |
+| 敵の現在位置から攻撃 | §7.1 | 射程と装備武器を検証し攻撃 | 同上、`perform-attack.ts` |
+| 敵の移動後攻撃 | §7.1 | 到達可能マスから攻撃可能位置を探索 | 同上 |
+| 攻撃できない場合に接近／待機 | §7.1 | 最近接味方との距離を基準に移動、不可なら待機 | 同上 |
+| 勝利条件 | §3.2 | defeat_all／defeat_boss | `evaluate-battle-outcome.ts` |
+| 味方全滅時の敗北 | §3.2 | player rosterが0なら敗北 | 同上 |
+| 自動保存 | §10.3 | enemy phase開始状態と終了状態を保存 | App、IndexedDB |
 
 ## 3. B：設計済み・未実装
 
-敵AI・敵フェイズ・ターン進行、勝利／敗北判定、リザルト、経験値・成長・クラスチェンジ、アイテム・イベント、章選択・複数ステージ、複数slot・backup・export/import、戦闘演出・専用ログ画面は未実装。
+主人公個別撃破による敗北、リザルト画面、撃破数・経験値報酬、レベルアップ・成長、クラスチェンジ、イベント、章間引き継ぎ、敵攻撃範囲表示、砦のフェイズ開始回復は未実装。
 
 ## 4. C：実装済み・未文書化
 
-現時点で該当なし。今回追加した機能は `combat.md`、`database.md`、`architecture.md`、`current-state.md` に記録する。
+現時点で該当なし。今回のAIルール・結果判定は `docs/enemy-ai.md` に記録する。
 
 ## 5. D：暫定実装・要確認
 
 | 項目 | 現状 | 判断・影響 |
 |---|---|---|
-| 仮武器数値 | 鉄の剣は設計書 §12.2の例。他4種は操作確認用の暫定値 | 正式な武器データ・能力値を決める |
-| 攻撃距離 | Manhattan距離を暫定採用 | 正式なdistance metricを決める。斜め攻撃の距離解釈に影響 |
-| 反撃武器 | 防御側のequippedWeaponIdを使用 | 複数武器時の最適選択やユーザー選択を決める |
-| 追撃全条件 | 設計書初期案の速さ差4と攻撃順を実装 | 反撃不可能な場合など全端条件を正式確認 |
-| RNG方式 | Xorshift32を実装しsaveVersion 2で状態保存 | 実装方式は再現性のため固定。将来変更時はmigrationが必要 |
-| 試作コンテンツ | マップ・ユニット・仮武器を表示・操作に利用 | 正式な物語／コンテンツ／バランスではない |
-| IndexedDB | database version 1、save schema version 2 | 複数slot・backup・import/export等は未決定 |
-
-Dは実装バグの断定ではなく、設計書で最終決定されていない仕様を暫定実装している項目を示す。
+| AI攻撃スコア | 撃破+1000、三すくみ+40、HP欠損+0.5／HP、期待ダメージ、反撃リスクを重み付け | 実プレイで調整が必要。正式バランスではない |
+| AIの移動先 | 攻撃可能位置を優先。なければ最寄り味方との距離と地形値で選択 | 評価式は暫定 |
+| ID順 | 辞書順で固定 | 設計の例にある固定順を採用 |
+| Manhattan距離 | 攻撃射程・AI接近で暫定利用 | 最終距離仕様は未決定 |
+| 主人公敗北条件 | 主人公ID／roleなし。味方全滅のみ判定 | 主人公識別データが必要 |
+| 砦回復 | 設計書§4.2は最大HPの10%回復 | 回復処理と端数丸めを確認 |
+| リザルト | 勝敗表示と操作停止まで | 撃破数・経験値・報酬は未実装 |
+| AIロール | 役割タグなし | 回復役・遠距離役等の優先度は未実装 |
 
 ## 6. 検証上の制約
 
-- ローカルnpm install／typecheck／test／buildは未実施。PRのGitHub Actionsで検証する。
-- 実ブラウザ／スマートフォンでの攻撃操作、セーブmigration、PWAオフライン挙動は未実施。
-- 既存version1 saveを実ブラウザIndexedDBから移行する統合テストは未実施。
-
-詳細は [`combat.md`](combat.md) と [`database.md`](database.md) を参照。
+- ローカルnpm install／typecheck／test／buildは未実施。PR GitHub Actionsで検証する。
+- ブラウザ／スマートフォンで敵AIの挙動とIndexedDB再開を確認していない。
+- AIは初期ルールのプロトタイプであり、バランス調整前。

@@ -7,6 +7,8 @@ import {
 } from "../domain/combat/combat";
 import { calculateManhattanDistance } from "../domain/combat/grid-distance";
 import type {
+  BattlePhase,
+  Faction,
   GameMapDefinition,
   GameStateSnapshot,
   GameUnit
@@ -46,15 +48,19 @@ function getCounterWeapon(unit: GameUnit) {
   return weapon;
 }
 
-/** Validates an attack command and creates the same forecast used for resolution. */
-export function createAttackPlan(
+/** Creates an attack plan for the faction whose turn is currently active. */
+export function createAttackPlanForFaction(
   state: GameStateSnapshot,
   map: GameMapDefinition,
   attackerId: string,
-  defenderId: string
+  defenderId: string,
+  attackerFaction: Faction
 ): AttackPlan {
-  if (state.phase !== "player") {
-    throw new Error("Attacks can only be initiated during the player phase.");
+  const requiredPhase: BattlePhase = attackerFaction === "player" ? "player" : "enemy";
+  const defenderFaction: Faction = attackerFaction === "player" ? "enemy" : "player";
+
+  if (state.phase !== requiredPhase) {
+    throw new Error("Attacks can only be initiated during the matching faction phase.");
   }
 
   const attacker = state.units.find((unit) => unit.id === attackerId);
@@ -63,8 +69,13 @@ export function createAttackPlan(
   if (!attacker || !defender) {
     throw new Error("The selected attacker or target no longer exists.");
   }
-  if (attacker.faction !== "player" || defender.faction !== "enemy") {
-    throw new Error("The player unit must target an enemy unit.");
+  if (attacker.faction !== attackerFaction || defender.faction !== defenderFaction) {
+    throw new Error(attackerFaction === "player"
+      ? "The player unit must target an enemy unit."
+      : "The enemy unit must target a player unit.");
+  }
+  if (attacker.currentHp <= 0 || defender.currentHp <= 0) {
+    throw new Error("Combat participants must be alive.");
   }
   if (attacker.hasActed) {
     throw new Error("This unit has already acted.");
@@ -72,7 +83,7 @@ export function createAttackPlan(
 
   const weaponId = attacker.equippedWeaponId;
   const attackerWeapon = weaponId ? WEAPONS_BY_ID[weaponId] : undefined;
-  if (!attackerWeapon) {
+  if (!attackerWeapon || !canUnitUseWeapon(attacker, attackerWeapon)) {
     throw new Error("The selected unit has no valid equipped weapon.");
   }
 
@@ -93,18 +104,25 @@ export function createAttackPlan(
   };
 }
 
-/**
- * Executes an attack as an application command:
- * validates, creates deterministic rolls, resolves combat, updates HP/action
- * flags, removes defeated units, and advances the persisted RNG state.
- */
-export function performAttack(
+/** Player-facing helper retained for existing UI callers. */
+export function createAttackPlan(
   state: GameStateSnapshot,
   map: GameMapDefinition,
   attackerId: string,
   defenderId: string
+): AttackPlan {
+  return createAttackPlanForFaction(state, map, attackerId, defenderId, "player");
+}
+
+/** Executes one combat exchange and returns an immutable next snapshot. */
+export function performAttackForFaction(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  attackerId: string,
+  defenderId: string,
+  attackerFaction: Faction
 ): AttackExecution {
-  const plan = createAttackPlan(state, map, attackerId, defenderId);
+  const plan = createAttackPlanForFaction(state, map, attackerId, defenderId, attackerFaction);
   const sequence = createCombatRollSequence(state.rngState, plan.forecast.strikes.length);
   const result = resolveCombat(plan.input, sequence.rolls);
   const nextRngState =
@@ -138,4 +156,24 @@ export function performAttack(
       units: nextUnits
     }
   };
+}
+
+/** Executes a player-initiated attack. */
+export function performAttack(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  attackerId: string,
+  defenderId: string
+): AttackExecution {
+  return performAttackForFaction(state, map, attackerId, defenderId, "player");
+}
+
+/** Executes one enemy AI attack during the enemy phase. */
+export function performEnemyAttack(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  attackerId: string,
+  defenderId: string
+): AttackExecution {
+  return performAttackForFaction(state, map, attackerId, defenderId, "enemy");
 }
