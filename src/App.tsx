@@ -8,6 +8,7 @@ import { performClassChange } from "./application/perform-class-change";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
+import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
@@ -48,15 +49,25 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "戦闘操作に失敗しました。";
 }
 
+function formatFortRecoverySummary(recoveries: FortRecoveryRecord[]): string {
+  if (recoveries.length === 0) return "";
+  return "砦の効果で" + recoveries
+    .map((recovery) => recovery.unitName + "が" + recovery.recoveredHp + "HP回復")
+    .join("、");
+}
+
 function formatEnemyPhaseSummary(execution: ReturnType<typeof runEnemyPhase>): string {
   const actions = execution.actions.map((action) => action.message).join("。");
+  const details = [actions, formatFortRecoverySummary(execution.phaseStartRecoveries)]
+    .filter(Boolean)
+    .join("。");
   if (execution.outcome === "victory") {
-    return (actions ? actions + "。" : "") + "勝利条件を達成しました。";
+    return (details ? details + "。" : "") + "勝利条件を達成しました。";
   }
   if (execution.outcome === "defeat") {
-    return (actions ? actions + "。" : "") + "味方ユニットが全滅しました。";
+    return (details ? details + "。" : "") + "味方ユニットが全滅しました。";
   }
-  return (actions ? actions + "。" : "敵軍は行動できませんでした。") +
+  return (details ? details + "。" : "敵軍は行動できませんでした。") +
     "敵軍フェイズ終了。第" + execution.nextState.turn + "ターン・自軍フェイズです。";
 }
 
@@ -443,12 +454,19 @@ export default function App() {
     if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
 
     try {
-      const enemyPhaseState = beginEnemyPhase(gameState, CHAPTER_01_MAP);
+      const phaseStart = beginEnemyPhase(gameState, CHAPTER_01_MAP);
+      const enemyPhaseState = phaseStart.nextState;
       setGameState(enemyPhaseState);
       setSelectedUnitId(null);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
-      await persist(enemyPhaseState, "敵軍フェイズを開始します。");
+      const recoverySummary = formatFortRecoverySummary(phaseStart.fortRecoveries);
+      await persist(
+        enemyPhaseState,
+        recoverySummary
+          ? "敵軍フェイズを開始します。" + recoverySummary + "。"
+          : "敵軍フェイズを開始します。"
+      );
 
       const execution = runEnemyPhase(enemyPhaseState, CHAPTER_01_MAP);
       setGameState(execution.nextState);

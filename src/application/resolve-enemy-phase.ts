@@ -5,6 +5,8 @@ import { calculateManhattanDistance } from "../domain/combat/grid-distance";
 import { calculateReachableTiles } from "../domain/movement/calculate-reachable-tiles";
 import type { GameMapDefinition, GameStateSnapshot, GameUnit, Position } from "../domain/models/game";
 import { evaluateBattleOutcome, type BattleOutcome } from "../domain/rules/evaluate-battle-outcome";
+import { applyFortRecovery } from "../domain/rules/apply-fort-recovery";
+import type { FortRecoveryRecord } from "../domain/rules/apply-fort-recovery";
 
 export type EnemyActionKind = "attacked" | "moved-and-attacked" | "moved" | "waited";
 
@@ -18,10 +20,16 @@ export interface EnemyActionLog {
   message: string;
 }
 
+export interface BeginEnemyPhaseResult {
+  nextState: GameStateSnapshot;
+  fortRecoveries: FortRecoveryRecord[];
+}
+
 export interface EnemyPhaseResult {
   nextState: GameStateSnapshot;
   outcome: BattleOutcome;
   actions: EnemyActionLog[];
+  phaseStartRecoveries: FortRecoveryRecord[];
 }
 
 interface AttackCandidate {
@@ -47,7 +55,7 @@ const COUNTER_LETHAL_PENALTY = 500;
 export function beginEnemyPhase(
   state: GameStateSnapshot,
   map: GameMapDefinition
-): GameStateSnapshot {
+): BeginEnemyPhaseResult {
   if (state.phase !== "player") {
     throw new Error("The player phase is not active.");
   }
@@ -55,7 +63,8 @@ export function beginEnemyPhase(
     throw new Error("The battle has already ended.");
   }
 
-  return { ...state, phase: "enemy" };
+  const recovery = applyFortRecovery({ ...state, phase: "enemy" }, map, "enemy");
+  return { nextState: recovery.nextState, fortRecoveries: recovery.recoveries };
 }
 
 function getAttackCandidates(
@@ -306,8 +315,9 @@ export function runEnemyPhase(
   let currentState = state;
   const actions: EnemyActionLog[] = [];
   let outcome = evaluateBattleOutcome(currentState, map);
+  let phaseStartRecoveries: FortRecoveryRecord[] = [];
   if (outcome !== "playing") {
-    return { nextState: currentState, outcome, actions };
+    return { nextState: currentState, outcome, actions, phaseStartRecoveries };
   }
 
   const enemyIds = currentState.units
@@ -329,7 +339,7 @@ export function runEnemyPhase(
 
   outcome = evaluateBattleOutcome(currentState, map);
   if (outcome === "playing") {
-    currentState = {
+    const playerPhaseState: GameStateSnapshot = {
       ...currentState,
       phase: "player",
       turn: currentState.turn + 1,
@@ -339,11 +349,15 @@ export function runEnemyPhase(
         hasActed: false
       }))
     };
+    const recovery = applyFortRecovery(playerPhaseState, map, "player");
+    currentState = recovery.nextState;
+    phaseStartRecoveries = recovery.recoveries;
   }
 
   return {
     nextState: currentState,
     outcome,
-    actions
+    actions,
+    phaseStartRecoveries
   };
 }
