@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
+import { CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP } from "../../content/maps/chapter-02";
+import { prepareNextChapter } from "../../application/prepare-next-chapter";
 import { applyChapterRewards } from "../../application/apply-chapter-rewards";
 import type { GameStateSnapshot } from "../models/game";
 import type { ChapterRewardDefinition } from "./chapter-reward";
@@ -64,13 +66,43 @@ describe("applyChapterRewards", () => {
     ])).toThrow(/quantity must be an integer/);
   });
 
+  it("carries chapter-clear rewards into the next chapter snapshot", () => {
+    const result = applyChapterRewards(victoryState(), CHAPTER_01_MAP, [
+      { recipientUnitId: "unit_002", itemId: "promotion_seal", quantity: 1 }
+    ]);
+    const nextState = prepareNextChapter({
+      previousState: result.nextState,
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: CHAPTER_02_INITIAL_STATE,
+      nextMap: CHAPTER_02_MAP,
+      currentHpPolicy: "preserve"
+    });
+
+    expect(nextState.units.find((unit) => unit.id === "unit_002")?.inventory)
+      .toEqual(["short_bow", "promotion_seal"]);
+  });
+
+  it("rejects a defeated reward recipient", () => {
+    const state = victoryState();
+    const defeatedRecipient = {
+      ...state,
+      units: state.units.map((unit) =>
+        unit.id === "unit_002" ? { ...unit, currentHp: 0 } : unit
+      )
+    };
+
+    expect(() => applyChapterRewards(defeatedRecipient, CHAPTER_01_MAP, [
+      { recipientUnitId: "unit_002", itemId: "promotion_seal", quantity: 1 }
+    ])).toThrow(/surviving player unit/);
+  });
+
   it("rejects a reward that would exceed the five-slot inventory limit", () => {
     const state = victoryState();
     const fullInventoryState = {
       ...state,
       units: state.units.map((unit) =>
         unit.id === "unit_002"
-          ? { ...unit, inventory: ["weapon_bow", "weapon_sword", "weapon_lance", "weapon_axe", "weapon_magic"] }
+          ? { ...unit, inventory: ["short_bow", "promotion_seal", "promotion_seal", "promotion_seal", "promotion_seal"] }
           : unit
       )
     };
