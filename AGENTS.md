@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
 - Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal.
-- PR #1–#8 and #10 are merged; PR #9 (fort recovery at faction phase start) is being brought up to date. Current implementation includes the prototype promotion item/UI and the chapter carry-over command. Final promotion balance, reward contents, and campaign UI remain unimplemented.
+- PR #1–#10 are merged. Current implementation includes fort recovery, a data-driven chapter registry, validated chapter item rewards, chapter carry-over, next-chapter UI, and chapter-aware save restoration. Chapter 2 is explicitly prototype content; reward values and final campaign map data remain product decisions.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 
 ## 2. Critical instructions
@@ -27,8 +27,8 @@
 - `domain/random`: Xorshift32.
 - `domain/rules`: battle outcome evaluation and fort recovery at faction phase start.
 - `domain/progression`: experience threshold, deterministic level growth, and data-driven class promotion rules.
-- `application`: player/enemy combat commands, class-promotion command, and deterministic enemy-phase resolution.
-- `App.tsx`: prototype map UI, battle forecast, phase-end control, battle result, inventory display, and class-promotion confirmation.
+- `application`: player/enemy combat commands, class-promotion command, chapter reward command, next-chapter preparation, and deterministic enemy-phase resolution.
+- `App.tsx`: chapter-aware prototype map UI, battle forecast, phase-end control, results/rewards summary, next-chapter launch, inventory display, and class-promotion confirmation.
 - `persistence`: IndexedDB and saveVersion 1→2 migration.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
