@@ -7,6 +7,7 @@ import type {
   WeaponType
 } from "../../domain/models/game";
 import { SAVE_VERSION } from "../../domain/models/game";
+import { WEAPON_ID_BY_TYPE } from "../weapons";
 
 const terrain = [
   ["plain", "plain", "plain", "forest", "forest", "plain", "plain", "road", "road", "plain"],
@@ -88,14 +89,15 @@ function createPrototypeUnit(
     movementType,
     move,
     usableWeaponTypes,
-    inventory: ["prototype_weapon"],
+    inventory: usableWeaponTypes.map((weaponType) => WEAPON_ID_BY_TYPE[weaponType]),
+    equippedWeaponId: WEAPON_ID_BY_TYPE[usableWeaponTypes[0]!],
     position: { x, y },
     hasMoved: false,
     hasActed: false
   };
 }
 
-// Temporary placeholder content for map and movement verification only.
+// Temporary placeholder content for movement and combat interaction verification only.
 export const INITIAL_UNITS: GameUnit[] = [
   createPrototypeUnit("unit_001", "味方01", "player", "swordsman", 1, 8, 5, "infantry", ["sword"]),
   createPrototypeUnit("unit_002", "味方02", "player", "archer", 3, 8, 5, "infantry", ["bow"]),
@@ -113,5 +115,6 @@ export const INITIAL_GAME_STATE: GameStateSnapshot = {
   chapterId: CHAPTER_01_MAP.id,
   phase: "player",
   turn: 1,
+  rngState: 0x6d2b79f5,
   units: INITIAL_UNITS
 };
