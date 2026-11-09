@@ -41,6 +41,10 @@
 
 saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、座標、重複ID／占有、能力値、所持品、装備武器を検証する。勝敗は既存stateから派生判定するため、save schemaへのbattleStatus追加は行っていない。
 
-## 6. 未実装
+## 6. 章間遷移と保存
+
+章間遷移は既存の `GameStateSnapshot` を次章用に再構成するだけで、新しいフィールドを追加しない。次章stateを生成した後、既存の自動保存slotへ通常の `saveGameState` で保存できる。遷移コマンド自体はIndexedDBへ直接依存せず、Appから呼び出して保存する構成とする。saveVersion 2およびversion 1→2 migrationは変更しない。
+
+## 7. 未実装
 
 複数slot、backup世代、export/import、IndexedDBブラウザ統合テスト、quota超過・private browsing時の復旧案内、敵軍フェイズ中の各行動ごとの個別autosave。

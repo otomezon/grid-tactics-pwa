@@ -51,6 +51,9 @@
 | 砦のフェイズ開始回復 | 未実装（10%回復の整数端数未決定） | `docs/game-design.md` §4.2 |
 | UI／スマートフォン実機確認 | 未実施 | — |
 
+| 章間引き継ぎロジック | 実装済み（勝利後の次章state構築、永続データ引き継ぎ、撃破者除外、新規加入者／敵テンプレート、HP方針明示） | `src/application/prepare-next-chapter.ts` | application tests。App／IndexedDB接続・実際の次章コンテンツは未実装 |
+| 章報酬・章間アイテム配布・リザルトUI・次章選択 | 未実装（報酬内容／数量／次章コンテンツが未定義） | — |
+
 ## 3. 検証コマンド
 
 `npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 code head `c6fef376` のrun #168で型チェック成功、13 test files／78 tests成功、本番ビルド成功、PWA precache 11 entriesを確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
