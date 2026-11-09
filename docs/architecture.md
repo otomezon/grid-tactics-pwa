@@ -41,7 +41,7 @@ src/
 | レイヤー | 現在の責務 | 状態 |
 |---|---|---|
 | content | 地形、章レジストリ／章別マップ／初期状態、仮武器、昇格先・仮能力ボーナス、クラスチェンジアイテム | 実装あり。第2章・昇格ボーナス／上限は試作データ |
-| domain/models | GameUnit、GameStateSnapshot、saveVersion 2検証 | 実装あり |
+| domain/models | GameUnit、GameStateSnapshot、saveVersion 2検証、マップ定義の構造／参照整合性検証 | 実装あり |
 | domain/movement | 地形・占有を考慮した到達可能範囲 | 実装あり |
 | domain/combat | 武器適合、式、射程、予測、決定論的解決、暫定Manhattan距離 | 実装あり |
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
