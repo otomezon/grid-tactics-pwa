@@ -11,7 +11,7 @@
 | 言語 | TypeScript 7.0.2 |
 | 開発・ビルド | Vite 8.3.6、`@vitejs/plugin-react` 6.2.1 |
 | PWA | `vite-plugin-pwa` 2.0.0 |
-| テスト | Vitest 5.1.0 |
+| テスト | Vitest 5.0.0 |
 
 直接依存のバージョンは `package.json` に固定している。現時点ではnpm lockfileは未作成。PWA plugin 2.0.0はNode.js 20.19.0以上を要求し、Vitest 5系のNode要件も満たすようNode 26を標準にしている。
 

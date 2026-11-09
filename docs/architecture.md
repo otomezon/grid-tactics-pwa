@@ -2,7 +2,7 @@
 
 ## 1. 現在の構成
 
-添付設計書 v1.0 のレイヤー分離方針を踏まえ、Phase 0のアプリ基盤とマップ・移動の試作実装を追加した。
+添付設計書 v1.0 のレイヤー分離方針を踏まえ、Phase 0のアプリ基盤、マップ・移動の試作実装、戦闘domain kernelを追加した。
 
 ```text
 .
@@ -25,7 +25,8 @@
     │   └── maps/chapter-01.ts
     ├── domain/
     │   ├── models/
-    │   └── movement/
+    │   ├── movement/
+    │   └── combat/
     └── persistence/
 ```
 
@@ -38,6 +39,7 @@
 | content | 地形定義、試作マップ、試作ユニット・初期状態 | 実装あり |
 | domain/models | ゲーム型、セーブ状態検証 | 実装あり |
 | domain/movement | 地形コストと占有を考慮した到達可能範囲計算 | 実装あり |
+| domain/combat | 武器適合、三すくみ、戦闘予測、決定論的な戦闘解決 | 計算エンジンのみ実装。UI・武器content・保存RNGとは未接続 |
 | application | UIイベントと状態更新を `App.tsx` が暫定的に制御 | 今後分離 |
 | ui | React画面、マップ、情報パネル、レスポンシブCSS | 試作実装あり |
 | persistence | IndexedDBの初期化、読込、保存 | saveVersion 1を実装 |
@@ -51,21 +53,22 @@
 2. `App.tsx` がIndexedDBのauto slotを読み、保存があれば型・範囲・重複占有を検証する。
 3. プレイヤーがユニットをタップすると、選択ユニットと移動可能マスを計算する。
 4. `calculate-reachable-tiles.ts` が4方向の到達範囲を地形コスト付きで探索する。占有マスと進入不可地形は通過しない。
-5. 移動確定または待機確定でゲーム状態を更新し、`save-repository.ts` 経由でIndexedDBに保存する。
-6. `vite-plugin-pwa` がビルド時にmanifestとService Workerを生成し、静的アセットをキャッシュする。
+5. `domain/combat/combat.ts` は戦闘計算・予測・解決を行う。解決ロールは呼び出し元から注入され、domain内では乱数を生成しない。
+6. 移動確定または待機確定でゲーム状態を更新し、`save-repository.ts` 経由でIndexedDBに保存する。
+7. `vite-plugin-pwa` がビルド時にmanifestとService Workerを生成し、静的アセットをキャッシュする。
 
 ## 4. 依存方向のルール
 
 - domainはReact／DOMに依存しない。
 - contentはゲームデータと定義を保持し、計算処理を持たない。
-- UIはdomainの計算結果を表示し、移動計算式を再実装しない。
+- UIはdomainの計算結果を表示し、移動・戦闘計算式を再実装しない。
 - persistenceは型付きの保存状態を扱い、UIからIndexedDB APIを直接呼ばない。
-- UIからユニット座標を直接変更する処理は、将来application commandへ移管する。
+- UIからユニット座標・HPを直接変更する処理は、将来application commandへ移管する。
 
 ## 5. これからの分割候補
 
 - `application/gameController.ts`: コマンド検証・状態遷移・行動確定。
-- `domain/combat/`: 射程、三すくみ、戦闘予測、実際の解決処理。
+- `domain/combat/`: 三すくみ、戦闘予測、決定論的な解決処理の計算核は実装済み。射程の座標距離規則、武器content、UI・application接続は今後の作業。
 - `domain/progression/`: 経験値・成長・クラスチェンジ。
 - `domain/ai/`: 敵行動選択。
 - `content/classes/`、`content/weapons/`、`content/chapters/`: 静的コンテンツ。

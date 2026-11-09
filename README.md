@@ -6,7 +6,7 @@
 
 - PR #1でAI開発ドキュメント基盤を整備し、mainへマージ済み。
 - 現在の作業ブランチではPhase 0のReact／TypeScript／Vite／PWA基盤と、Phase 1の10×10マップ・ユニット選択・移動範囲・移動の初期プロトタイプを追加しています。
-- マップとユニットは操作確認用の仮データです。戦闘、敵AI、フェイズ進行、成長、章選択は未実装です。
+- マップとユニットは操作確認用の仮データです。戦闘の計算・予測・決定論的な解決エンジンは追加中ですが、UI・正式な武器データ・セーブ済み乱数状態とは未接続です。敵AI、フェイズ進行、成長、章選択も未実装です。
 - 実装状況は [docs/current-state.md](docs/current-state.md) を参照してください。
 
 ## 技術スタック
@@ -17,7 +17,7 @@
 - TypeScript 7.0.2
 - Vite 8.3.6
 - vite-plugin-pwa 2.0.0
-- Vitest 5.1.0
+- Vitest 5.0.0
 - IndexedDB（ブラウザ内の自動保存）
 
 ## セットアップ
@@ -44,6 +44,7 @@ npm run preview
 - [ドキュメント目次](docs/README.md)
 - [ゲーム設計書 v1.0](docs/game-design.md)
 - [アーキテクチャ](docs/architecture.md)
+- [戦闘システム](docs/combat.md)
 - [開発環境・手順](docs/development.md)
 - [データ保存設計](docs/database.md)
 - [セキュリティ](docs/security.md)

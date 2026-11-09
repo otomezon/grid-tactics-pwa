@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - The product name in the supplied design is the provisional name **Tactical SRPG PWA**. Treat naming as open until confirmed.
 - The supplied baseline design is [`docs/game-design.md`](docs/game-design.md), version 1.0, dated 2026-11-09, status “initial implementation design proposal”.
-- **Initial repository audit (2026-11-09, before the documentation upload):** the repository contained no application source, package manifest, tests, CI, deployment configuration, README, or prior development rules. The baseline documentation was subsequently uploaded to `main` in commit [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea). The repository now contains the documentation baseline, but no application implementation has been confirmed. PR #1 merged the documentation baseline. A Phase 0 scaffold and initial map/movement prototype now exist on the active development branch; combat, AI, progression, and campaign features remain unimplemented.
+- **Initial repository audit (2026-11-09, before the documentation upload):** the repository contained no application source, package manifest, tests, CI, deployment configuration, README, or prior development rules. The baseline documentation was subsequently uploaded to `main` in commit [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea). The repository now contains the documentation baseline. PR #1 (docs) and PR #2 (PWA/map prototype) are merged. The current combat branch adds a formula/forecast/resolution kernel under `src/domain/combat/`, but it is not yet connected to the gameplay UI, real weapon content, or persisted RNG state. Enemy AI, progression, and campaign features remain unimplemented.
 - When implementation is added, source code, executable tests, configuration, and observed runtime behavior are evidence of current implementation. They do not automatically override intended product requirements. Record conflicts in `docs/design-reconciliation.md` and request a product decision where necessary.
 
 ## 2. Critical instructions for AI agents
@@ -21,7 +21,7 @@
 
 ## 3. Intended technology and architecture (proposal only)
 
-The current Phase 0 scaffold uses Node.js 26 by `.nvmrc`, npm, React / React DOM 19.3.1, TypeScript 7.0.2, Vite 8.3.6, `@vitejs/plugin-react` 6.2.1, `vite-plugin-pwa` 2.0.0, Vitest 5.1.0, and browser IndexedDB. Direct dependency versions are pinned in `package.json`; no npm lockfile is present yet, so generate and commit `package-lock.json` on the first local install.
+The current Phase 0 scaffold uses Node.js 26 by `.nvmrc`, npm, React / React DOM 19.3.1, TypeScript 7.0.2, Vite 8.3.6, `@vitejs/plugin-react` 6.2.1, `vite-plugin-pwa` 2.0.0, Vitest 5.0.0, and browser IndexedDB. Direct dependency versions are pinned in `package.json`; no npm lockfile is present yet, so generate and commit `package-lock.json` on the first local install.
 
 The current scaffold has `src/content`, `src/domain`, `src/persistence`, and a temporary React UI in `src/App.tsx`. The following is the intended separation; some layers remain planned:
 
@@ -45,7 +45,7 @@ Unless a later approved decision changes them:
 - A unit normally acts once per side's phase. No post-attack remount/re-move is planned for the initial version.
 - Terrain movement, defense, and avoidance modifiers belong in data definitions, not scattered UI code.
 - The sword/lance/axe triangle modifies hit by ±20 percentage points only; bows and magic are outside the triangle in the initial proposal.
-- Combat calculations must be centralized in the domain layer and shared by forecast and resolution. Do not duplicate formulas in UI components.
+- Combat calculations must be centralized in `src/domain/combat/` and shared by forecast and resolution. Do not duplicate formulas in UI components. The current resolver receives caller-supplied deterministic rolls and does not own or persist RNG state.
 - The proposed follow-up threshold is a speed difference of 4; critical damage is 3× normal damage; weapon durability and personal skills are excluded from the initial version.
 - Maps, deployments, objectives, and events should be data-driven rather than hard-coded into screen components.
 - Game state should be serializable plain data. Do not place DOM nodes or functions in persisted game state.
@@ -107,6 +107,7 @@ The detailed proposed formulas, values, and exceptions are in `docs/game-design.
 
 - `docs/game-design.md`: full supplied product/gameplay design proposal; preserve its provenance and do not silently rewrite its intent.
 - `docs/architecture.md`: target architecture and observed architectural facts (clearly labeled).
+- `docs/combat.md`: combat formula implementation, weapon model, deterministic roll interface, and unresolved gameplay decisions.
 - `docs/development.md`: confirmed setup/build/test/deploy instructions only; mark unavailable details as unknown.
 - `docs/database.md`: actual storage implementation when present; until then, only the proposed IndexedDB save model.
 - `docs/security.md`: verified controls and explicitly identified gaps/risks.

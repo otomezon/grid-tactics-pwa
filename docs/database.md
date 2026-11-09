@@ -42,7 +42,11 @@ IndexedDB未対応または読み書き失敗時はUIに状態を表示する。
 
 `src/domain/models/validate-game-state.ts` でsaveVersion、chapterId、座標範囲、重複ID／重複占有、能力値、成長率、所持品上限等を検証する。不正または非対応の保存データは自動的に初期化・上書きしない。現在は安全側に倒して操作を停止する。
 
-## 5. 未実装・今後の設計事項
+## 5. 戦闘乱数との接続
+
+現行の `GameStateSnapshot`（saveVersion 1）にはRNGシード／状態／消費位置が含まれない。戦闘resolverは決定論的なロール列を呼び出し側から受け取り、RNG生成・保存を行わない。ゲーム進行と戦闘を統合する前にRNG方式を決め、保存形式を変更する場合はsaveVersion更新と明示的なmigrationを実装・テストする。
+
+## 6. 未実装・今後の設計事項
 
 - saveVersion 1からのマイグレーション。
 - 複数slot、バックアップ世代、export/import。
