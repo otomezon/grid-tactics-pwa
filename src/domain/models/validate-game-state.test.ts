@@ -7,13 +7,36 @@ describe("isValidGameStateSnapshot", () => {
     expect(isValidGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP)).toBe(true);
   });
 
+  it("accepts a valid reserve member and rejects invalid or duplicate reserves", () => {
+    const unit = INITIAL_GAME_STATE.units.find((candidate) => candidate.id === "unit_002")!;
+    const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...reserve } = unit;
+    const withReserve = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((candidate) => candidate.id !== unit.id),
+      reserveUnits: [reserve]
+    };
+    expect(isValidGameStateSnapshot(withReserve, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot({
+      ...withReserve,
+      units: INITIAL_GAME_STATE.units,
+      reserveUnits: [reserve]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...withReserve,
+      reserveUnits: [{ ...reserve, currentHp: 0 }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...withReserve,
+      reserveUnits: [{ ...reserve, id: "not-on-this-map" }]
+    }, CHAPTER_01_MAP)).toBe(false);
+  });
+
   it("rejects duplicate IDs and occupied positions", () => {
     const duplicateId = {
       ...INITIAL_GAME_STATE,
       units: [...INITIAL_GAME_STATE.units, INITIAL_GAME_STATE.units[0]!]
     };
     expect(isValidGameStateSnapshot(duplicateId, CHAPTER_01_MAP)).toBe(false);
-
     const first = INITIAL_GAME_STATE.units[0]!;
     const overlap = { ...first, id: "overlap", position: { ...first.position } };
     const duplicatePosition = {
@@ -30,7 +53,6 @@ describe("isValidGameStateSnapshot", () => {
         index === 0 ? { ...unit, id: "undeployed_unit" } : unit
       )
     };
-
     expect(isValidGameStateSnapshot(unexpectedUnit, CHAPTER_01_MAP)).toBe(false);
   });
 
@@ -41,7 +63,6 @@ describe("isValidGameStateSnapshot", () => {
         index === 0 ? { ...unit, faction: "enemy" as const } : unit
       )
     };
-
     expect(isValidGameStateSnapshot(changedFaction, CHAPTER_01_MAP)).toBe(false);
   });
 
@@ -56,24 +77,16 @@ describe("isValidGameStateSnapshot", () => {
       ...INITIAL_GAME_STATE,
       units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_002")
     };
-
     expect(isValidGameStateSnapshot(defeatedEnemiesRemoved, CHAPTER_01_MAP)).toBe(true);
     expect(isValidGameStateSnapshot(defeatedAllyRemoved, CHAPTER_01_MAP)).toBe(true);
   });
 
   it("rejects unsupported save versions and invalid coordinates", () => {
-    expect(isValidGameStateSnapshot(
-      { ...INITIAL_GAME_STATE, saveVersion: 99 },
-      CHAPTER_01_MAP
-    )).toBe(false);
-
+    expect(isValidGameStateSnapshot({ ...INITIAL_GAME_STATE, saveVersion: 99 }, CHAPTER_01_MAP)).toBe(false);
     const first = INITIAL_GAME_STATE.units[0]!;
     const invalid = {
       ...INITIAL_GAME_STATE,
-      units: [
-        { ...first, position: { x: CHAPTER_01_MAP.width, y: 0 } },
-        ...INITIAL_GAME_STATE.units.slice(1)
-      ]
+      units: [{ ...first, position: { x: CHAPTER_01_MAP.width, y: 0 } }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalid, CHAPTER_01_MAP)).toBe(false);
   });
@@ -82,46 +95,31 @@ describe("isValidGameStateSnapshot", () => {
     const first = INITIAL_GAME_STATE.units[0]!;
     const invalidHp = {
       ...INITIAL_GAME_STATE,
-      units: [
-        { ...first, currentHp: first.stats.hp + 1 },
-        ...INITIAL_GAME_STATE.units.slice(1)
-      ]
+      units: [{ ...first, currentHp: first.stats.hp + 1 }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalidHp, CHAPTER_01_MAP)).toBe(false);
-
     const invalidInventory = {
       ...INITIAL_GAME_STATE,
-      units: [
-        { ...first, inventory: ["a", "b", "c", "d", "e", "f"] },
-        ...INITIAL_GAME_STATE.units.slice(1)
-      ]
+      units: [{ ...first, inventory: ["a", "b", "c", "d", "e", "f"] }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalidInventory, CHAPTER_01_MAP)).toBe(false);
   });
-  it("rejects invalid RNG state and an equipped weapon not in inventory", () => {
-    expect(isValidGameStateSnapshot(
-      { ...INITIAL_GAME_STATE, rngState: 0 },
-      CHAPTER_01_MAP
-    )).toBe(false);
 
+  it("rejects invalid RNG state and an equipped weapon not in inventory", () => {
+    expect(isValidGameStateSnapshot({ ...INITIAL_GAME_STATE, rngState: 0 }, CHAPTER_01_MAP)).toBe(false);
     const first = INITIAL_GAME_STATE.units[0]!;
     const invalidEquipment = {
       ...INITIAL_GAME_STATE,
-      units: [
-        { ...first, equippedWeaponId: "missing-weapon" },
-        ...INITIAL_GAME_STATE.units.slice(1)
-      ]
+      units: [{ ...first, equippedWeaponId: "missing-weapon" }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalidEquipment, CHAPTER_01_MAP)).toBe(false);
   });
+
   it("rejects saved experience at or above the level-up threshold", () => {
     const first = INITIAL_GAME_STATE.units[0]!;
     const invalid = {
       ...INITIAL_GAME_STATE,
-      units: [
-        { ...first, experience: 100 },
-        ...INITIAL_GAME_STATE.units.slice(1)
-      ]
+      units: [{ ...first, experience: 100 }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalid, CHAPTER_01_MAP)).toBe(false);
   });

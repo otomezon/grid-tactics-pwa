@@ -1,18 +1,21 @@
-import type { GameMapDefinition, GameStateSnapshot, GameUnit, Position } from "../domain/models/game";
+import type {
+  CampaignUnit,
+  GameMapDefinition,
+  GameStateSnapshot,
+  GameUnit,
+  Position
+} from "../domain/models/game";
 import { evaluateBattleOutcome } from "../domain/rules/evaluate-battle-outcome";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 
 export type ChapterCarryOverHpPolicy = "preserve" | "restore";
-
 export interface PrepareNextChapterInput {
   previousState: GameStateSnapshot;
   previousMap: GameMapDefinition;
   nextChapterInitialState: GameStateSnapshot;
   nextMap: GameMapDefinition;
-  /** The design does not specify whether units recover between chapters. */
   currentHpPolicy: ChapterCarryOverHpPolicy;
 }
-
 function placeUnit(
   unit: GameUnit,
   position: Position,
@@ -32,16 +35,18 @@ function placeUnit(
     hasActed: false
   };
 }
+function placeReserve(unit: CampaignUnit, policy: ChapterCarryOverHpPolicy): CampaignUnit {
+  return {
+    ...unit,
+    stats: { ...unit.stats },
+    growthRates: { ...unit.growthRates },
+    currentHp: policy === "restore" ? unit.stats.hp : unit.currentHp,
+    usableWeaponTypes: [...unit.usableWeaponTypes],
+    inventory: [...unit.inventory]
+  };
+}
 
-/**
- * Creates a new chapter snapshot after a confirmed victory.
- *
- * The next map's deployment lists are authoritative for who appears and where.
- * Existing player units retain their progression and inventory by ID; a player
- * unit missing from the cleared chapter's state is treated as defeated and is
- * not recreated from the next chapter template. New player units must be present
- * in the next chapter template. Enemy units always come from that template.
- */
+/** Carries living active and reserve campaign members into the next map's candidate roster. */
 export function prepareNextChapter({
   previousState,
   previousMap,
@@ -58,9 +63,7 @@ export function prepareNextChapter({
   if (evaluateBattleOutcome(previousState, previousMap) !== "victory") {
     throw new Error("The next chapter can only begin after a chapter victory.");
   }
-  if (nextMap.id === previousMap.id) {
-    throw new Error("The next chapter must use a different map.");
-  }
+  if (nextMap.id === previousMap.id) throw new Error("The next chapter must use a different map.");
   if (
     !isValidGameStateSnapshot(nextChapterInitialState, nextMap) ||
     nextChapterInitialState.phase !== "player" ||
@@ -71,60 +74,60 @@ export function prepareNextChapter({
 
   const previousPartyIds = new Set(previousMap.playerDeployment.map(({ unitId }) => unitId));
   const previousPlayers = new Map(
-    previousState.units
-      .filter((unit) => unit.faction === "player")
-      .map((unit) => [unit.id, unit] as const)
+    previousState.units.filter((unit) => unit.faction === "player").map((unit) => [unit.id, unit] as const)
   );
-  const nextTemplateUnits = new Map(
-    nextChapterInitialState.units.map((unit) => [unit.id, unit] as const)
-  );
+  const previousReserves = new Map(previousState.reserveUnits.map((unit) => [unit.id, unit] as const));
+  const nextTemplateUnits = new Map(nextChapterInitialState.units.map((unit) => [unit.id, unit] as const));
+  const nextTemplateReserves = new Map(nextChapterInitialState.reserveUnits.map((unit) => [unit.id, unit] as const));
+  const playerUnits: GameUnit[] = [];
+  const reserveUnits: CampaignUnit[] = [];
 
-  const playerUnits = nextMap.playerDeployment.flatMap((deployment) => {
-    const wasInPreviousParty = previousPartyIds.has(deployment.unitId);
+  for (const deployment of nextMap.playerDeployment) {
+    const wasInPreviousRoster = previousPartyIds.has(deployment.unitId);
     const previousUnit = previousPlayers.get(deployment.unitId);
+    const previousReserve = previousReserves.get(deployment.unitId);
+    if (wasInPreviousRoster && !previousUnit && !previousReserve) continue;
 
-    if (wasInPreviousParty && !previousUnit) {
-      // A unit missing from the cleared state was defeated; do not respawn it.
-      return [];
+    if (previousReserve) {
+      reserveUnits.push(placeReserve(previousReserve, currentHpPolicy));
+      continue;
     }
-
     const templateUnit = nextTemplateUnits.get(deployment.unitId);
-    const sourceUnit = wasInPreviousParty ? previousUnit : templateUnit;
-    if (!sourceUnit || sourceUnit.faction !== "player") {
-      throw new Error(`Player deployment "${deployment.unitId}" has no matching player unit.`);
-    }
-
-    return [
-      placeUnit(
+    const templateReserve = nextTemplateReserves.get(deployment.unitId);
+    const sourceUnit = wasInPreviousRoster ? previousUnit : templateUnit;
+    if (sourceUnit) {
+      if (sourceUnit.faction !== "player") {
+        throw new Error(`Player deployment "${deployment.unitId}" has no matching player unit.`);
+      }
+      playerUnits.push(placeUnit(
         sourceUnit,
         { x: deployment.x, y: deployment.y },
         currentHpPolicy,
-        wasInPreviousParty
-      )
-    ];
-  });
+        wasInPreviousRoster
+      ));
+      continue;
+    }
+    if (!wasInPreviousRoster && templateReserve) {
+      reserveUnits.push(placeReserve(templateReserve, "preserve"));
+      continue;
+    }
+    throw new Error(`Player deployment "${deployment.unitId}" has no matching player unit.`);
+  }
 
   const enemyUnits = nextMap.enemyDeployment.map((deployment) => {
     const templateUnit = nextTemplateUnits.get(deployment.unitId);
     if (!templateUnit || templateUnit.faction !== "enemy") {
       throw new Error(`Enemy deployment "${deployment.unitId}" has no matching enemy unit.`);
     }
-    return placeUnit(
-      templateUnit,
-      { x: deployment.x, y: deployment.y },
-      currentHpPolicy,
-      false
-    );
+    return placeUnit(templateUnit, { x: deployment.x, y: deployment.y }, currentHpPolicy, false);
   });
-
   const nextState: GameStateSnapshot = {
     ...nextChapterInitialState,
-    units: [...playerUnits, ...enemyUnits]
+    units: [...playerUnits, ...enemyUnits],
+    reserveUnits
   };
-
   if (!isValidGameStateSnapshot(nextState, nextMap)) {
     throw new Error("The prepared next chapter state is invalid.");
   }
-
   return nextState;
 }

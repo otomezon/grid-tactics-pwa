@@ -51,6 +51,8 @@ export interface GameUnit {
   hasActed: boolean;
 }
 
+export type CampaignUnit = Omit<GameUnit, "faction" | "position" | "hasMoved" | "hasActed">;
+
 export interface TerrainDefinition {
   label: string;
   symbol: string;
@@ -88,7 +90,7 @@ export interface GameMapDefinition {
   defeatCondition?: MapDefeatCondition;
 }
 
-export const SAVE_VERSION = 2 as const;
+export const SAVE_VERSION = 3 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
@@ -98,4 +100,6 @@ export interface GameStateSnapshot {
   /** Xorshift32 state. Must be an unsigned, non-zero 32-bit integer. */
   rngState: number;
   units: GameUnit[];
+  /** Living player units kept outside the current battle. */
+  reserveUnits: CampaignUnit[];
 }

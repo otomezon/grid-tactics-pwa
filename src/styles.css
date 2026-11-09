@@ -309,6 +309,8 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   gap: 3px;
   min-width: 0;
 }
+.deployment-unit-choice .deployment-unit-info { flex: 1; }
+.deployment-unit-choice:has(input:disabled) { cursor: not-allowed; }
 .deployment-unit-info strong {
   overflow: hidden;
   color: #edf3f7;
