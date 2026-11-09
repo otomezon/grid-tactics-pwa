@@ -3,7 +3,7 @@ import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "./content/maps/chapter-01";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
 import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
-import { getClassPromotionDefinition } from "./content/classes";
+import { getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
 import { performClassChange } from "./application/perform-class-change";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
@@ -368,7 +368,7 @@ export default function App() {
 
     try {
       const execution = performClassChange(gameState, selectedUnit.id, definition);
-      const targetName = definition.toClassId;
+      const targetName = getClassDisplayName(definition.toClassId);
       const bonusText = formatPromotionBonuses(execution.appliedBonuses);
       setGameState(execution.nextState);
       setCombatTargetId(null);
@@ -638,7 +638,7 @@ export default function App() {
                   </span>
                   <div>
                     <h3>{selectedUnit.name}</h3>
-                    <p>Lv.{selectedUnit.level} · {selectedUnit.classId}</p>
+                    <p>Lv.{selectedUnit.level} · {getClassDisplayName(selectedUnit.classId)}</p>
                   </div>
                 </div>
                 <div className="unit-details">
@@ -689,7 +689,7 @@ export default function App() {
                       <h3 id="promotion-heading">クラスチェンジ</h3>
                       {promotionDefinition ? (
                         <>
-                          <p className="promotion-target">昇格先：<strong>{promotionDefinition.toClassId}</strong></p>
+                          <p className="promotion-target">昇格先：<strong>{getClassDisplayName(promotionDefinition.toClassId)}</strong></p>
                           <p className="promotion-item-count">クラスチェンジの証：<strong>{promotionItemCount}個</strong></p>
                           {selectedUnit.level < 10 && (
                             <p className="helper-text">基本職Lv.10以上でクラスチェンジできます（現在Lv.{selectedUnit.level}）。</p>
@@ -707,7 +707,7 @@ export default function App() {
                           </button>
                           {promotionConfirmUnitId === selectedUnit.id && (
                             <div className="promotion-confirmation" role="group" aria-label="クラスチェンジ確認">
-                              <strong>{promotionDefinition.toClassId}へ昇格しますか？</strong>
+                              <strong>{getClassDisplayName(promotionDefinition.toClassId)}へ昇格しますか？</strong>
                               <p>能力ボーナス（暫定）：{formatPromotionBonuses(promotionDefinition.statBonuses)}</p>
                               <p>レベルは1に戻り、現在EXPは保持します。証を1個消費します。</p>
                               <div className="command-actions">
