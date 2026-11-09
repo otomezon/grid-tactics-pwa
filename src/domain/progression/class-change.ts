@@ -58,8 +58,8 @@ function validateDefinition(definition: ClassPromotionDefinition): void {
   }
 
   const bonusEntries = Object.entries(definition.statBonuses ?? {});
-  if (bonusEntries.length === 0) {
-    throw new RangeError("A promotion must define at least one stat bonus.");
+  if (bonusEntries.length === 0 || !bonusEntries.some(([, bonus]) => Number.isInteger(bonus) && (bonus as number) > 0)) {
+    throw new RangeError("A promotion must define at least one positive stat bonus.");
   }
 
   for (const [key, bonus] of bonusEntries) {
