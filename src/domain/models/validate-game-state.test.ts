@@ -60,4 +60,21 @@ describe("isValidGameStateSnapshot", () => {
     };
     expect(isValidGameStateSnapshot(invalidInventory, CHAPTER_01_MAP)).toBe(false);
   });
+  it("rejects invalid RNG state and an equipped weapon not in inventory", () => {
+    expect(isValidGameStateSnapshot(
+      { ...INITIAL_GAME_STATE, rngState: 0 },
+      CHAPTER_01_MAP
+    )).toBe(false);
+
+    const first = INITIAL_GAME_STATE.units[0]!;
+    const invalidEquipment = {
+      ...INITIAL_GAME_STATE,
+      units: [
+        { ...first, equippedWeaponId: "missing-weapon" },
+        ...INITIAL_GAME_STATE.units.slice(1)
+      ]
+    };
+    expect(isValidGameStateSnapshot(invalidEquipment, CHAPTER_01_MAP)).toBe(false);
+  });
+
 });
