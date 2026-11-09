@@ -38,7 +38,6 @@ export function applyChapterRewards(
     if (
       !Number.isInteger(reward.quantity) ||
       reward.quantity < 1 ||
-      !Number.isInteger(reward.quantity) ||
       reward.quantity > MAX_INVENTORY_SIZE
     ) {
       throw new Error("A chapter reward quantity must be an integer from 1 to 5.");
