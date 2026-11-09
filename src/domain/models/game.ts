@@ -70,6 +70,12 @@ export interface MapObjective {
   targetUnitId?: string;
 }
 
+export interface MapDefeatCondition {
+  type: "unit_defeated";
+  /** Must identify a player unit in this map's deployment data. */
+  targetUnitId: string;
+}
+
 export interface GameMapDefinition {
   id: string;
   width: number;
@@ -78,6 +84,8 @@ export interface GameMapDefinition {
   playerDeployment: readonly MapDeployment[];
   enemyDeployment: readonly MapDeployment[];
   objective: MapObjective;
+  /** Optional critical-unit defeat rule. Omit to use the party-wipe rule only. */
+  defeatCondition?: MapDefeatCondition;
 }
 
 export const SAVE_VERSION = 2 as const;
