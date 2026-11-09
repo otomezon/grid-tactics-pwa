@@ -160,13 +160,15 @@ describe("enemy phase controller", () => {
     const baseMap = openMap();
     const map: GameMapDefinition = {
       ...baseMap,
-      enemyDeployment: baseMap.enemyDeployment.map((deployment) =>
-        deployment.unitId === "enemy_001"
-          ? { ...deployment, unitId: "enemy_010" }
-          : deployment.unitId === "enemy_003"
-            ? { ...deployment, unitId: "enemy_002" }
-            : deployment
-      )
+      enemyDeployment: baseMap.enemyDeployment
+        .filter((deployment) => deployment.unitId !== "enemy_002")
+        .map((deployment) =>
+          deployment.unitId === "enemy_001"
+            ? { ...deployment, unitId: "enemy_010" }
+            : deployment.unitId === "enemy_003"
+              ? { ...deployment, unitId: "enemy_002" }
+              : deployment
+        )
     };
     const result = runEnemyPhase(battleState([player, enemyOne, enemyTwo]), map);
 
