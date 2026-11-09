@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "./content/maps/chapter-01";
+import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
 import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
 import { getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
 import { performClassChange } from "./application/perform-class-change";
+import { applyChapterRewards } from "./application/apply-chapter-rewards";
+import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
@@ -109,13 +111,17 @@ function formatPromotionBonuses(bonuses: Partial<UnitStats>): string {
 }
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameStateSnapshot>(INITIAL_GAME_STATE);
+  const [activeChapter, setActiveChapter] = useState(INITIAL_CHAPTER);
+  const [gameState, setGameState] = useState<GameStateSnapshot>(INITIAL_CHAPTER.initialState);
+  const currentMap = activeChapter.map;
+  const nextChapter = getNextChapter(activeChapter.id);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [message, setMessage] = useState("味方ユニットを選択してください。");
   const [loadBlocked, setLoadBlocked] = useState(false);
   const [promotionConfirmUnitId, setPromotionConfirmUnitId] = useState<string | null>(null);
+  const [isStartingNextChapter, setIsStartingNextChapter] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,14 +133,26 @@ export default function App() {
 
         if (stored === null) {
           setGameState({
-            ...INITIAL_GAME_STATE,
+            ...INITIAL_CHAPTER.initialState,
             rngState: createRandomSeed()
           });
           setSaveStatus("ready");
           return;
         }
 
-        const migration = migrateGameStateSnapshot(stored, CHAPTER_01_MAP);
+        const savedChapterId = typeof stored === "object" && stored !== null &&
+          "chapterId" in stored && typeof stored.chapterId === "string"
+          ? stored.chapterId
+          : null;
+        const restoredChapter = savedChapterId ? getChapterById(savedChapterId) : undefined;
+        if (!restoredChapter) {
+          setSaveStatus("invalid");
+          setLoadBlocked(true);
+          setMessage("保存データの章IDが現在のコンテンツに存在しません。データ保全のため操作を停止しています。");
+          return;
+        }
+
+        const migration = migrateGameStateSnapshot(stored, restoredChapter.map);
         if (!migration) {
           setSaveStatus("invalid");
           setLoadBlocked(true);
@@ -143,6 +161,7 @@ export default function App() {
         }
 
         let restoredState = migration.snapshot;
+        setActiveChapter(restoredChapter);
         setGameState(restoredState);
         if (migration.migrated) {
           setSaveStatus("saving");
@@ -161,7 +180,7 @@ export default function App() {
         }
 
         if (restoredState.phase === "enemy") {
-          const enemyPhase = runEnemyPhase(restoredState, CHAPTER_01_MAP);
+          const enemyPhase = runEnemyPhase(restoredState, restoredChapter.map);
           restoredState = enemyPhase.nextState;
           setGameState(restoredState);
           try {
@@ -180,7 +199,7 @@ export default function App() {
         }
 
         setSaveStatus((current) => current === "failed" ? "failed" : "saved");
-        const restoredOutcome = evaluateBattleOutcome(restoredState, CHAPTER_01_MAP);
+        const restoredOutcome = evaluateBattleOutcome(restoredState, restoredChapter.map);
         setMessage(restoredOutcome === "victory"
           ? "勝利条件を達成しています。"
           : restoredOutcome === "defeat"
@@ -217,7 +236,7 @@ export default function App() {
     }
 
     return calculateReachableTiles({
-      terrain: CHAPTER_01_MAP.terrain,
+      terrain: currentMap.terrain,
       start: selectedUnit.position,
       movementPoints: selectedUnit.move,
       movementType: selectedUnit.movementType,
@@ -225,9 +244,9 @@ export default function App() {
         .filter((unit) => unit.id !== selectedUnit.id)
         .map((unit) => unit.position)
     });
-  }, [gameState.units, selectedUnit]);
+  }, [gameState.units, selectedUnit, currentMap]);
 
-  const battleOutcome = evaluateBattleOutcome(gameState, CHAPTER_01_MAP);
+  const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked &&
     gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
@@ -262,7 +281,7 @@ export default function App() {
 
     try {
       return {
-        plan: createAttackPlan(gameState, CHAPTER_01_MAP, selectedUnit.id, combatTargetId),
+        plan: createAttackPlan(gameState, currentMap, selectedUnit.id, combatTargetId),
         error: null as string | null
       };
     } catch (error) {
@@ -271,7 +290,7 @@ export default function App() {
         error: getErrorMessage(error)
       };
     }
-  }, [gameState, selectedUnit, combatTargetId]);
+  }, [gameState, selectedUnit, combatTargetId, currentMap]);
 
   async function persist(
     nextState: GameStateSnapshot,
@@ -314,7 +333,7 @@ export default function App() {
       }
 
       try {
-        createAttackPlan(gameState, CHAPTER_01_MAP, selectedUnit.id, unitOnTile.id);
+        createAttackPlan(gameState, currentMap, selectedUnit.id, unitOnTile.id);
         setCombatTargetId(unitOnTile.id);
         setMessage(unitOnTile.name + "への戦闘予測を表示しています。内容を確認して攻撃を確定してください。");
       } catch (error) {
@@ -401,7 +420,7 @@ export default function App() {
     try {
       const execution = performAttack(
         gameState,
-        CHAPTER_01_MAP,
+        currentMap,
         selectedUnit.id,
         combatTargetId
       );
@@ -454,7 +473,7 @@ export default function App() {
     if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
 
     try {
-      const phaseStart = beginEnemyPhase(gameState, CHAPTER_01_MAP);
+      const phaseStart = beginEnemyPhase(gameState, currentMap);
       const enemyPhaseState = phaseStart.nextState;
       setGameState(enemyPhaseState);
       setSelectedUnitId(null);
@@ -468,11 +487,64 @@ export default function App() {
           : "敵軍フェイズを開始します。"
       );
 
-      const execution = runEnemyPhase(enemyPhaseState, CHAPTER_01_MAP);
+      const execution = runEnemyPhase(enemyPhaseState, currentMap);
       setGameState(execution.nextState);
       await persist(execution.nextState, formatEnemyPhaseSummary(execution));
     } catch (error) {
       setMessage(getErrorMessage(error));
+    }
+  }
+
+  async function handleStartNextChapter(): Promise<void> {
+    const targetChapter = getNextChapter(activeChapter.id);
+    if (
+      !targetChapter ||
+      battleOutcome !== "victory" ||
+      saveStatus === "saving" ||
+      saveStatus === "loading" ||
+      loadBlocked ||
+      isStartingNextChapter
+    ) return;
+
+    setIsStartingNextChapter(true);
+    try {
+      const rewardExecution = applyChapterRewards(
+        gameState,
+        currentMap,
+        activeChapter.clearRewards
+      );
+      const nextState = prepareNextChapter({
+        previousState: rewardExecution.nextState,
+        previousMap: currentMap,
+        nextChapterInitialState: {
+          ...targetChapter.initialState,
+          rngState: gameState.rngState
+        },
+        nextMap: targetChapter.map,
+        // Inter-chapter HP handling is not defined in the game design yet.
+        currentHpPolicy: "preserve"
+      });
+
+      setActiveChapter(targetChapter);
+      setGameState(nextState);
+      setSelectedUnitId(null);
+      setCombatTargetId(null);
+      setPromotionConfirmUnitId(null);
+
+      const rewardText = rewardExecution.rewardsApplied.length > 0
+        ? " 報酬：" + rewardExecution.rewardsApplied
+            .map((reward) => reward.recipientName + "に" + reward.itemName + "×" + reward.quantity)
+            .join("、") + "。"
+        : " この章に設定された追加アイテム報酬はありません。";
+      await persist(
+        nextState,
+        activeChapter.title + "をクリアしました。" + targetChapter.title +
+          "を開始します。" + rewardText + "章間HPは現在値を維持しました（暫定）。"
+      );
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    } finally {
+      setIsStartingNextChapter(false);
     }
   }
 
@@ -543,9 +615,51 @@ export default function App() {
             <span>{battleOutcome === "victory" ? "勝利条件を達成しました。" : "味方ユニットが全滅しました。"}</span>
           </div>
           <div className="result-summary">
-            <div><span>撃破数</span><strong>{Math.max(0, CHAPTER_01_MAP.enemyDeployment.length - gameState.units.filter((unit) => unit.faction === "enemy").length)}</strong></div>
+            <div><span>撃破数</span><strong>{Math.max(0, currentMap.enemyDeployment.length - gameState.units.filter((unit) => unit.faction === "enemy").length)}</strong></div>
             <div><span>生存味方</span><strong>{gameState.units.filter((unit) => unit.faction === "player").length}</strong></div>
+            <div><span>経過ターン</span><strong>{gameState.turn}</strong></div>
           </div>
+          {battleOutcome === "victory" && (
+            <>
+              <div className="result-units chapter-rewards">
+                <h2>章クリア報酬</h2>
+                {activeChapter.clearRewards.length > 0 ? (
+                  activeChapter.clearRewards.map((reward) => {
+                    const recipient = gameState.units.find((unit) => unit.id === reward.recipientUnitId);
+                    const itemName = INVENTORY_ITEMS_BY_ID[reward.itemId]?.name ?? reward.itemId;
+                    return (
+                      <div className="result-unit" key={reward.recipientUnitId + "-" + reward.itemId}>
+                        <strong>{recipient?.name ?? reward.recipientUnitId}</strong>
+                        <span>{itemName}</span>
+                        <span>×{reward.quantity}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="helper-text">この章には追加アイテム報酬が設定されていません。経験値・レベルアップは戦闘中に反映済みです。</p>
+                )}
+              </div>
+              {nextChapter ? (
+                <div className="next-chapter-panel">
+                  <h2>次の章</h2>
+                  <strong>{nextChapter.title}</strong>
+                  <p>{nextChapter.summary}</p>
+                  <p className="helper-text">味方のレベル・EXP・能力・所持品を引き継ぎます。撃破済みの味方は復帰しません。現在HPは維持します（暫定）。</p>
+                  {nextChapter.isPrototype && <p className="helper-text">次章マップは章遷移の動作確認用データです。正式なマップ・敵配置ではありません。</p>}
+                  <button
+                    className="primary-button block-button"
+                    type="button"
+                    disabled={saveStatus === "saving" || saveStatus === "loading" || loadBlocked || isStartingNextChapter}
+                    onClick={() => void handleStartNextChapter()}
+                  >
+                    {isStartingNextChapter ? "次章を準備中…" : nextChapter.title + "を開始"}
+                  </button>
+                </div>
+              ) : (
+                <p className="helper-text">登録済みの全章をクリアしました。キャンペーンの試作範囲はここまでです。</p>
+              )}
+            </>
+          )}
           <div className="result-units">
             <h2>味方ユニットの成長状況</h2>
             {gameState.units.filter((unit) => unit.faction === "player").length > 0 ? (
@@ -572,21 +686,21 @@ export default function App() {
         <section className="map-card" aria-labelledby="map-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">CHAPTER 01 · TEST MAP</p>
-              <h2 id="map-heading">試作マップ</h2>
+              <p className="eyebrow">CHAPTER {String(activeChapter.number).padStart(2, "0")} · {activeChapter.isPrototype ? "PROTOTYPE MAP" : "CAMPAIGN MAP"}</p>
+              <h2 id="map-heading">{activeChapter.title}</h2>
             </div>
-            <span className="map-size">10 × 10</span>
+            <span className="map-size">{currentMap.width} × {currentMap.height}</span>
           </div>
 
           <div
             className="map-grid"
-            style={{ gridTemplateColumns: "repeat(" + CHAPTER_01_MAP.width + ", minmax(0, 1fr))" }}
-            aria-label="10列10行の戦闘マップ"
+            style={{ gridTemplateColumns: "repeat(" + currentMap.width + ", minmax(0, 1fr))" }}
+            aria-label={currentMap.width + "列" + currentMap.height + "行の戦闘マップ"}
           >
-            {Array.from({ length: CHAPTER_01_MAP.height }, (_, y) =>
-              Array.from({ length: CHAPTER_01_MAP.width }, (_, x) => {
+            {Array.from({ length: currentMap.height }, (_, y) =>
+              Array.from({ length: currentMap.width }, (_, x) => {
                 const position = { x, y };
-                const terrain = CHAPTER_01_MAP.terrain[y]?.[x] ?? "plain";
+                const terrain = currentMap.terrain[y]?.[x] ?? "plain";
                 const unit = gameState.units.find((candidate) => samePosition(candidate.position, position));
                 const isSelected = unit?.id === selectedUnitId;
                 const isReachable = reachableKeys.has(String(x) + "," + String(y));

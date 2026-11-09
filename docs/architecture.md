@@ -2,7 +2,7 @@
 
 ## 1. 現在の構成
 
-PR #1〜#8と#10で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、章間引き継ぎ基盤をmainに追加した。PR #9では砦のフェイズ開始回復を実装し、mainへの追従と再検証を行っている。
+PR #1〜#10で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UIをmainに追加した。
 
 ```text
 src/
@@ -10,13 +10,18 @@ src/
 ├── application/
 │   ├── perform-attack.ts
 │   ├── perform-class-change.ts
+│   ├── apply-chapter-rewards.ts
+│   ├── prepare-next-chapter.ts
 │   └── resolve-enemy-phase.ts
 ├── content/
 │   ├── terrain.ts
 │   ├── weapons.ts
 │   ├── classes.ts
 │   ├── items.ts
-│   └── maps/chapter-01.ts
+│   ├── chapters.ts
+│   └── maps/
+│       ├── chapter-01.ts
+│       └── chapter-02.ts
 ├── domain/
 │   ├── models/
 │   ├── movement/
@@ -35,15 +40,15 @@ src/
 
 | レイヤー | 現在の責務 | 状態 |
 |---|---|---|
-| content | 地形、試作マップ／ユニット、仮武器、昇格先・仮能力ボーナス、クラスチェンジアイテム | 実装あり。昇格ボーナス／上限は仮データ |
+| content | 地形、章レジストリ／章別マップ／初期状態、仮武器、昇格先・仮能力ボーナス、クラスチェンジアイテム | 実装あり。第2章・昇格ボーナス／上限は試作データ |
 | domain/models | GameUnit、GameStateSnapshot、saveVersion 2検証 | 実装あり |
 | domain/movement | 地形・占有を考慮した到達可能範囲 | 実装あり |
 | domain/combat | 武器適合、式、射程、予測、決定論的解決、暫定Manhattan距離 | 実装あり |
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
 | domain/rules | defeat_all／defeat_boss／味方全滅の勝敗判定、砦回復 | 実装あり。回復端数は暫定切り捨て |
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
-| application | プレイヤー／敵の攻撃、クラスチェンジコマンド、敵AI行動選択、敵フェイズ解決、ターン進行 | 基本実装。試作アイテム／UI／自動保存を接続。正式配布ルールは未実装 |
-| ui | マップ、戦闘UI、装備、所持品・クラスチェンジ確認、フェイズ終了、勝敗表示 | 試作実装。正式なクラスデータと章報酬は未実装 |
+| application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、敵AI／フェイズ進行 | 実装あり。報酬は章データで明示したアイテムのみ適用 |
+| ui | 章別マップ、戦闘UI、装備／所持品／クラスチェンジ、結果／報酬表示、次章開始 | 試作実装。第2章は遷移検証用で正式な章データではない |
 | persistence | IndexedDB、saveVersion 1→2 migration | 実装あり |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
@@ -59,7 +64,7 @@ src/
 
 ## 4. 章間遷移
 
-`application/prepare-next-chapter.ts` は前章の勝利を検証し、次章マップの出撃配置を基準に味方の永続データを引き継ぐ。撃破済み味方を復帰させず、次章テンプレートに定義された新規加入者と敵を追加する。章間HP方針は呼び出し側が明示し、次章の初期turn／phase／RNGは次章テンプレートを使う。saveVersion 2の形は変更しない。UI／保存接続は未実装。
+`content/chapters.ts` が章ID・マップ・初期状態・クリア報酬を登録する。起動時は保存されたchapterIdに対応するマップでセーブを検証・復元する。勝利後は `apply-chapter-rewards.ts` が設定済み報酬を生存味方へ付与し、`prepare-next-chapter.ts` が次章stateを構築する。Appは章別マップへ切り替え、通常のIndexedDB auto slotへ保存する。撃破済み味方を復帰させず、章間HPは現在の設計未決定のためUIでは暫定的に維持する。saveVersion 2の形は変更しない。
 
 ## 5. 依存方向のルール
 
@@ -73,10 +78,10 @@ src/
 
 - `application/gameController.ts`: 移動、装備、攻撃、待機、フェイズ進行を統合する。
 - 敵AIは現在単純なスコア式。役割タグ、戦略の追加、プレイテストを別途行う。
-- `domain/progression/`: EXP・成長とクラス昇格ルールの基盤を実装。クラスチェンジUI／仮アイテム接続済み。正式な昇格値・クラス別移動／武器データ・章報酬は未実装。
+- `domain/progression/`: EXP・成長、クラス昇格、章報酬定義型を実装。正式な昇格値とクラス別移動／武器データは未決定。
 - `domain/events/`: ターン／撃破／勝利イベント。
 - UIコンポーネント分割。現状は `App.tsx` に集約。
-- 基本的なステージ結果概要は実装済み。詳細統計／加入／章報酬／次章進行は未実装。
+- 基本リザルト、章定義されたアイテム報酬、次章開始UIは実装済み。詳細戦闘統計／会話イベント／キャンペーン選択・章解放管理は未実装。
 
 ## 7. 外部サービス
 
