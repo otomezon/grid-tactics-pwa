@@ -41,7 +41,7 @@
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
 | ステージ結果表示 | 実装済み（勝敗・撃破数・生存味方のLv/EXP/HP） | `src/App.tsx` | UI手動確認未実施 |
 | 選択ユニットの経験値表示 | 実装済み（EXP x/100） | `src/App.tsx` | CI build。実機操作未確認 |
-| progression／attack／class-change tests | mainのPR #6と今回のPR #7で実装済み | `src/domain/progression/`, `src/application/` | GitHub Actions run #142: 12 test files／75 tests成功 |
+| progression／attack／class-change／content tests | mainのPR #6〜#7と今回のPR #8で実装済み | `src/domain/progression/`, `src/application/`, `src/content/class-promotion.test.ts` | GitHub Actions run #168: 13 test files／78 tests成功 |
 | 昇格先パス | 実装済み（設計書§5.5の7系統） | `src/content/classes.ts` | mapping tests |
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み（ボーナス／上限／EXP方針は外部設定） | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts` | GitHub Actions run #142で12 test files／75 tests成功 |
 | 試作クラスチェンジアイテム・所持品表示 | 実装済み（新規初期状態の味方01に1個） | `src/content/items.ts`, `src/content/maps/chapter-01.ts`, `src/App.tsx` | content tests |
@@ -53,7 +53,7 @@
 
 ## 3. 検証コマンド
 
-`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #7 latest head `90e0c1c2` のrun #142で型チェック成功、12 test files／75 tests成功、本番ビルド成功、PWA precache 11 entriesを確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
+`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 code head `c6fef376` のrun #168で型チェック成功、13 test files／78 tests成功、本番ビルド成功、PWA precache 11 entriesを確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
 
 ## 4. 暫定・未決定事項
 
