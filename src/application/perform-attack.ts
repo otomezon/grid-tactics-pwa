@@ -1,4 +1,5 @@
 import { WEAPONS_BY_ID } from "../content/weapons";
+import { getPrototypeStatCaps } from "../content/classes";
 import { TERRAIN_DEFINITIONS } from "../content/terrain";
 import {
   buildCombatForecast,
@@ -6,6 +7,7 @@ import {
   resolveCombat
 } from "../domain/combat/combat";
 import { calculateManhattanDistance } from "../domain/combat/grid-distance";
+import { applyExperience, type LevelUpRecord } from "../domain/progression/level-up";
 import type {
   BattlePhase,
   Faction,
@@ -25,6 +27,8 @@ export interface AttackExecution {
   plan: AttackPlan;
   result: CombatResult;
   nextState: GameStateSnapshot;
+  experienceAwarded: number;
+  levelUps: LevelUpRecord[];
 }
 
 function getUnitContext(unit: GameUnit, map: GameMapDefinition): CombatInput["attacker"] {
@@ -114,6 +118,29 @@ export function createAttackPlan(
   return createAttackPlanForFaction(state, map, attackerId, defenderId, "player");
 }
 
+function calculatePlayerExperienceAward(
+  result: CombatResult,
+  attackerId: string,
+  defenderId: string,
+  map: GameMapDefinition
+): number {
+  const damagingHits = result.events.filter((event) =>
+    event.attackerId === attackerId &&
+    event.defenderId === defenderId &&
+    event.hit &&
+    event.damage > 0
+  ).length;
+
+  let award = damagingHits * 10;
+  if (result.defenderHp <= 0) {
+    award += 20;
+    if (map.objective.type === "defeat_boss" && map.objective.targetUnitId === defenderId) {
+      award += 10;
+    }
+  }
+  return award;
+}
+
 /** Executes one combat exchange and returns an immutable next snapshot. */
 export function performAttackForFaction(
   state: GameStateSnapshot,
@@ -125,10 +152,10 @@ export function performAttackForFaction(
   const plan = createAttackPlanForFaction(state, map, attackerId, defenderId, attackerFaction);
   const sequence = createCombatRollSequence(state.rngState, plan.forecast.strikes.length);
   const result = resolveCombat(plan.input, sequence.rolls);
-  const nextRngState =
+  let nextRngState =
     sequence.statesAfterEachStrike[result.consumedRolls - 1] ?? state.rngState;
 
-  const nextUnits = state.units
+  let nextUnits = state.units
     .map((unit) => {
       if (unit.id === attackerId) {
         return {
@@ -147,6 +174,35 @@ export function performAttackForFaction(
     })
     .filter((unit) => unit.currentHp > 0);
 
+  let experienceAwarded = 0;
+  let levelUps: LevelUpRecord[] = [];
+
+  if (attackerFaction === "player") {
+    const attackerAfterCombat = nextUnits.find((unit) => unit.id === attackerId);
+    if (attackerAfterCombat) {
+      experienceAwarded = calculatePlayerExperienceAward(
+        result,
+        attackerId,
+        defenderId,
+        map
+      );
+
+      if (experienceAwarded > 0) {
+        const progression = applyExperience(
+          attackerAfterCombat,
+          experienceAwarded,
+          nextRngState,
+          getPrototypeStatCaps(attackerAfterCombat.classId)
+        );
+        nextRngState = progression.rngState;
+        levelUps = progression.levelUps;
+        nextUnits = nextUnits.map((unit) =>
+          unit.id === attackerId ? progression.unit : unit
+        );
+      }
+    }
+  }
+
   return {
     plan,
     result,
@@ -154,7 +210,9 @@ export function performAttackForFaction(
       ...state,
       rngState: nextRngState,
       units: nextUnits
-    }
+    },
+    experienceAwarded,
+    levelUps
   };
 }
 
