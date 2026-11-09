@@ -25,8 +25,7 @@ function eligibleState(): GameStateSnapshot {
         ? {
             ...unit,
             level: 10,
-            experience: 35,
-            inventory: [...unit.inventory, "promotion_seal"]
+            experience: 35
           }
         : unit
     )
