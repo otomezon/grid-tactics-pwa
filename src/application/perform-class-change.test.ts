@@ -72,6 +72,13 @@ describe("performClassChange", () => {
     expect(state.units.find((unit) => unit.id === "unit_001")?.classId).toBe("swordsman");
   });
 
+  it("rejects class changes outside the player phase", () => {
+    const enemyPhase = { ...eligibleState(), phase: "enemy" as const };
+    expect(() =>
+      performClassChange(enemyPhase, "unit_001", definition())
+    ).toThrow(/player phase/);
+  });
+
   it("rejects an unknown unit or a target outside the configured promotion path", () => {
     expect(() =>
       performClassChange(eligibleState(), "missing", definition())
