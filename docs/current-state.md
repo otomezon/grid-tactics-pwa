@@ -10,7 +10,7 @@
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- 現在の開発対象: PR #9の砦フェイズ回復を最新mainへ同期し、CIを再確認する。
+- 現在の開発対象: PR #9の砦フェイズ回復は最新mainへ同期済み。CI成功、レビュー待ち。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
 
@@ -55,7 +55,7 @@
 
 ## 3. 検証コマンド
 
-`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9の元head run #188も成功していたが、main追従後の再CIが必要。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
+`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9をmainへ同期したhead（run #201）でTypeScript型チェック成功、15 test files／93 tests成功、Vite build成功、PWA precache 11 entries（282.60 KiB）を確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
 
 ## 4. 暫定・未決定事項
 
@@ -67,7 +67,7 @@
 - クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。
 - 1戦闘中に複数回ダメージを与えた場合、現行はstrikeごとに+10 EXPを付与する解釈。
 - HP成長時は最大HPのみ増やし、現在HPは維持。
-- 詳細統計・加入・正式な章報酬・章間引き継ぎ・キャンペーン進行は未実装。クラスチェンジUIと試作アイテムは実装したが、正式な配布ルールは未決定。
+- 詳細統計・加入イベント・正式な章報酬・章間アイテム配布・章間遷移UI／次章コンテンツ・キャンペーン選択は未実装。章間の味方データを引き継ぐapplication基盤は実装済み。クラスチェンジアイテムの正式な配布ルールも未決定。
 - ブラウザ統合テスト・モバイル実機・IndexedDB再開動作は未実施。
 
 ## 5. 次の作業候補
