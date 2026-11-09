@@ -34,7 +34,8 @@
 | 勝利（defeat_all／defeat_boss） | 実装済み | `src/domain/rules/evaluate-battle-outcome.ts` |
 | 敗北（味方全滅） | 実装済み | 同上 |
 | 主人公個別撃破による敗北 | 未実装（主人公IDなし） | 未定義 |
-| 戦闘後リザルト／報酬 | 未実装 | — |
+| ステージ結果概要表示 | 実装済み（PR #6、勝敗・敵撃破数・生存味方のLv／EXP／HP） | `src/App.tsx` | UI手動確認未実施 |
+| 詳細リザルト統計・加入・章報酬・次章遷移 | 未実装 | — |
 | 経験値・レベルアップ | 実装済み（PR #6） | `src/domain/progression/level-up.ts`, `src/application/perform-attack.ts` |
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
