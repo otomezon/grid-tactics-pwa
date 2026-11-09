@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - The product name in the supplied design is the provisional name **Tactical SRPG PWA**. Treat naming as open until confirmed.
 - The supplied baseline design is [`docs/game-design.md`](docs/game-design.md), version 1.0, dated 2026-11-09, status “initial implementation design proposal”.
-- **Initial repository audit (2026-11-09, before the documentation upload):** the repository contained no application source, package manifest, tests, CI, deployment configuration, README, or prior development rules. The baseline documentation was subsequently uploaded to `main` in commit [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea). The repository now contains the documentation baseline, but no application implementation has been confirmed. This document set is a planning baseline, not evidence that the application has been implemented.
+- **Initial repository audit (2026-11-09, before the documentation upload):** the repository contained no application source, package manifest, tests, CI, deployment configuration, README, or prior development rules. The baseline documentation was subsequently uploaded to `main` in commit [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea). The repository now contains the documentation baseline, but no application implementation has been confirmed. PR #1 merged the documentation baseline. A Phase 0 scaffold and initial map/movement prototype now exist on the active development branch; combat, AI, progression, and campaign features remain unimplemented.
 - When implementation is added, source code, executable tests, configuration, and observed runtime behavior are evidence of current implementation. They do not automatically override intended product requirements. Record conflicts in `docs/design-reconciliation.md` and request a product decision where necessary.
 
 ## 2. Critical instructions for AI agents
@@ -21,9 +21,9 @@
 
 ## 3. Intended technology and architecture (proposal only)
 
-The design recommends TypeScript, Vite, React, CSS Grid initially (with Canvas considered only if measured performance requires it), `vite-plugin-pwa`, and IndexedDB. These are **not verified as installed** in the current repository.
+The current Phase 0 scaffold uses Node.js 26 by `.nvmrc`, npm, React / React DOM 19.3.1, TypeScript 7.0.2, Vite 8.3.6, `@vitejs/plugin-react` 6.2.1, `vite-plugin-pwa` 2.0.0, Vitest 5.1.0, and browser IndexedDB. Direct dependency versions are pinned in `package.json`; no npm lockfile is present yet, so generate and commit `package-lock.json` on the first local install.
 
-The proposed separation is:
+The current scaffold has `src/content`, `src/domain`, `src/persistence`, and a temporary React UI in `src/App.tsx`. The following is the intended separation; some layers remain planned:
 
 - `content`: data definitions for characters, classes, weapons, terrain, maps, chapters, and events.
 - `domain` / `engine`: movement, combat, progression, enemy AI, and victory/defeat rules.
@@ -33,6 +33,8 @@ The proposed separation is:
 - `pwa`: manifest, service worker, and offline asset caching.
 
 Treat this as a target boundary, not a mandated directory tree. Inspect the actual code before choosing paths or introducing abstractions.
+
+The current scripts are in `package.json`; see `docs/development.md`. Vitest tests are colocated with domain modules, and CI is configured in `.github/workflows/ci.yml`.
 
 ## 4. Gameplay invariants from the design baseline
 

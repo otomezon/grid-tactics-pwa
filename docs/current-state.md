@@ -2,57 +2,61 @@
 
 ## 1. 監査スナップショット
 
-- 初回監査日: 2026-11-09（ベースライン文書のアップロード前）
-- 再確認日: 2026-11-09（文書アップロード後）
+- 更新日: 2026-11-09
 - Repository: `otomezon/grid-tactics-pwa`
-- 公開状態: Public
 - デフォルトブランチ: `main`
-- 初回監査時のGitHub API応答: `This repository is empty`。
-- 初回監査後、設計・開発ドキュメント10ファイルが `main` に追加された（コミット [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea)）。
-- 文書アップロード後の確認では、`AGENTS.md`、`README.md`、`docs/README.md`、`docs/architecture.md`、`docs/development.md`、`docs/database.md`、`docs/security.md`、`docs/current-state.md`、`docs/design-reconciliation.md`、`docs/game-design.md`を取得できた。
-- `package.json`、ロックファイル、Vite／TypeScript設定、`src/`、LICENSE、`.github/workflows/`は確認できていない。
-- 文書アップロード後のIssue: 0件、Pull Request: 0件（本ベースラインPR作成前の確認）。
-- アプリケーションソースがないため、ビルド・テスト・デプロイは実行できない。
+- PR #1（AI開発ドキュメント基盤）: マージ済み。マージコミット: `83d24fc9b3a2952127f36605efb5cc8ef8b7a20d`
+- 今回の対象: Phase 0（開発基盤）とPhase 1のマップ表示・ユニット選択・移動範囲・移動の初期実装
+- Node.js: `.nvmrc` は26。package.jsonはNode 22.12+／24+／26+を許容。
+- package manager: npm
+- このブランチでアプリ本体のソース、設定、テストを追加。CIの結果はPR作成後に確認する。
 
 ## 2. 機能別ステータス
 
-「未実装」は、今回確認できたリポジトリに実装ファイルが存在しないという意味です。ローカルの別コピーなど、GitHubに登録されていないコードの有無は調査できていません。
+「実装済み」はこのブランチでコードを追加したことを示す。CI成功・実機確認済みという意味ではない。
 
-| 機能 | 状況 | 根拠／関連資料 | テスト状況 |
+| 機能 | 状況 | 関連ファイル | テスト状況 |
 |---|---|---|---|
-| タイトル・章選択・出撃準備 | 未実装（リポジトリにコードなし） | `docs/game-design.md` §3, §9 | テストなし／実行不可 |
-| 戦闘マップ・地形・移動 | 未実装 | 同 §4 | テストなし／実行不可 |
-| ユニット・能力・成長 | 未実装 | 同 §5 | テストなし／実行不可 |
-| 武器・三すくみ・戦闘計算 | 未実装 | 同 §6 | テストなし／実行不可 |
-| 敵AI・フェイズ進行 | 未実装 | 同 §3, §7 | テストなし／実行不可 |
-| アイテム・イベント・勝敗 | 未実装 | 同 §8 | テストなし／実行不可 |
-| リザルト・キャンペーン進行 | 未実装 | 同 §3, §9 | テストなし／実行不可 |
-| IndexedDBセーブ／ロード | 未実装 | 同 §10 | テストなし／実行不可 |
-| PWA manifest／Service Worker／オフライン | 未実装 | 同 §10 | テストなし／実行不可 |
-| レスポンシブ・タッチUI | 未実装 | 同 §2, §9 | テストなし／実行不可 |
-| API／認証／バックエンド | 資料に仕様なし・未確認 | 設計書にAPI定義なし | 評価対象なし |
-| CI/CD・GitHub Actions | 確認できず | `.github/workflows/`なし | 実行履歴なし |
-| ライセンス | 確認できず | LICENSEファイルなし | 該当なし |
+| React + TypeScript + Vite基盤 | 実装済み | `package.json`, `vite.config.ts`, `tsconfig.json`, `src/main.tsx` | CIで型チェック・buildを実行 |
+| PWA manifest／Service Worker | 実装済み | `vite.config.ts`, `src/main.tsx`, `public/icons/` | CI build。実機オフライン確認は未実施 |
+| 10×10マップ表示 | 実装済み（試作データ） | `src/App.tsx`, `src/content/maps/chapter-01.ts`, `src/styles.css` | ブラウザ確認は未実施 |
+| 地形定義 | 初期版を実装 | `src/content/terrain.ts` | 移動計算テストで使用 |
+| ユニット選択・情報表示 | 実装済み（試作） | `src/App.tsx`, `src/domain/models/game.ts` | ブラウザ確認は未実施 |
+| 移動可能範囲計算 | 実装済み | `src/domain/movement/calculate-reachable-tiles.ts` | Vitest単体テスト追加 |
+| 移動確定・待機 | 実装済み（自軍のみ） | `src/App.tsx` | UI自動テストなし |
+| IndexedDB自動保存／復元 | 実装済み（saveVersion 1、auto slot） | `src/persistence/save-repository.ts` | ブラウザ統合テスト未実施 |
+| 保存データ検証 | 実装済み | `src/domain/models/validate-game-state.ts` | Vitest単体テスト追加 |
+| 戦闘・武器・三すくみ・追撃 | 未実装 | `docs/game-design.md` §6 | 未実施 |
+| 敵AI・敵フェイズ・ターン進行 | 未実装 | 同 §3, §7 | 未実施 |
+| レベルアップ・クラスチェンジ | 未実装 | 同 §5 | 未実施 |
+| アイテム・イベント・リザルト | 未実装 | 同 §8, §9 | 未実施 |
+| 勝利・敗北判定 | 未実装 | 同 §3, §8 | 未実施 |
+| 章選択・複数ステージ | 未実装 | 同 §3, §9 | 未実施 |
+| API／認証／バックエンド | 設計資料に仕様なし | — | 対象外 |
+| ホスティング・本番デプロイ | 未選定／未実施 | — | 対象外 |
 
-## 3. 技術構成の確認
+## 3. 開発・検証コマンド
 
-| 項目 | 確認結果 |
-|---|---|
-| 言語・フレームワーク | 実装ファイルなし。TypeScript／Reactは設計提案のみ |
-| ビルド | Viteは設計提案のみ。設定・スクリプトなし |
-| パッケージ管理 | package.json／ロックファイルなし。未確認 |
-| DB | IndexedDBは設計提案のみ。実装なし |
-| PWA | `vite-plugin-pwa`等は提案のみ。manifest／Service Workerなし |
-| ホスティング | 未確認 |
-| テスト・静的解析 | 設定・テストファイルなし |
+- `npm run dev`: Vite開発サーバー
+- `npm run typecheck`: TypeScript型チェック
+- `npm test`: Vitest単体テスト
+- `npm run build`: 型チェック後に本番ビルド
+- `npm run preview`: ビルド成果物のローカル確認
+- GitHub Actions: `.github/workflows/ci.yml` でPR／main push／feature branch push時に型チェック・テスト・ビルドを実行。
 
-## 4. 添付資料
+この作業環境ではGitHub clone／npm registryへの接続ができず、ローカル依存インストール・実行は未実施。CIの結果をPR上で確認する。
 
-確認できた資料は `docs/game-design.md` に同梱した「タクティカルSRPG PWA 設計書」v1.0（作成日 2026-11-09、ステータス: 初期実装向け設計案）1件です。記載内容は製品コンセプト、対象環境、ゲーム進行、マップ、ユニット、戦闘、AI、アイテム、UI、PWA／セーブ、推奨アーキテクチャ、データ形式例、開発フェーズ、テスト計画、リスク、未確定事項です。
+## 4. 試作データと制約
 
-## 5. リスク・注意事項
+- マップ・ユニットは移動・UI確認用の仮データ。正式な章・キャラクター・マップではない。
+- 移動は4方向、地形コスト、壁／水域、ユニット占有を考慮する。
+- 攻撃・アイテム・敵AI・フェイズ進行はまだない。移動後は待機のみ確定可能。
+- セーブはブラウザ内IndexedDBの自動保存スロット1つ。複数スロット・バックアップ・マイグレーションは未実装。
+- PWAのビルド設定はあるが、実機インストール・オフライン・更新動作は未検証。
 
-- 現在GitHubで確認できるのは設計・開発ドキュメントであり、アプリケーション実装がないため、設計と実装の実差分、既知不具合、技術的負債をコードから評価できない。
-- 設計書は「初期実装向け設計案」であり、特に技術構成・戦闘式・バランス値は確定済み仕様とみなさない。
-- save schema、PWA cache更新、RNGアルゴリズム、UI操作の状態遷移など、実装時に設計を具体化する必要がある。
-- ベースライン文書はユーザーによるアップロードで `main` に登録済み。本作業で追加する修正は専用ブランチ上で行い、PRでレビュー可能にする。
+## 5. 次の作業候補
+
+1. PR CI結果を確認し、失敗があれば修正する。
+2. ブラウザ／スマートフォンで地形表示、タップ選択、移動、リロード後復元を確認する。
+3. マップ・セーブデータの検証とIndexedDB統合テストを追加する。
+4. 攻撃可能範囲と射程計算、戦闘予測へ進む。
