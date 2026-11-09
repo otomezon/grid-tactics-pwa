@@ -7,6 +7,7 @@ import { getClassDisplayName, getClassPromotionDefinition } from "./content/clas
 import { performClassChange } from "./application/perform-class-change";
 import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
+import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
@@ -39,6 +40,43 @@ function samePosition(left: Position, right: Position): boolean {
 
 function positionLabel(position: Position): string {
   return String(position.x + 1) + "列・" + String(position.y + 1) + "行";
+}
+
+function deploymentPositionKey(position: Position): string {
+  return position.x + "," + position.y;
+}
+
+function createDeploymentAssignments(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): Record<string, string> {
+  const available = new Set(map.playerDeployment.map(deploymentPositionKey));
+  const used = new Set<string>();
+  const assignments: Record<string, string> = {};
+
+  for (const deployment of map.playerDeployment) {
+    const unit = state.units.find((candidate) =>
+      candidate.id === deployment.unitId &&
+      candidate.faction === "player" &&
+      candidate.currentHp > 0
+    );
+    if (!unit) continue;
+
+    const currentPosition = deploymentPositionKey(unit.position);
+    const fallbackPosition = deploymentPositionKey(deployment);
+    const selectedPosition = available.has(currentPosition) && !used.has(currentPosition)
+      ? currentPosition
+      : !used.has(fallbackPosition)
+        ? fallbackPosition
+        : [...available].find((position) => !used.has(position));
+
+    if (selectedPosition) {
+      assignments[unit.id] = selectedPosition;
+      used.add(selectedPosition);
+    }
+  }
+
+  return assignments;
 }
 
 function strikeKindLabel(kind: AttackPlan["forecast"]["strikes"][number]["kind"]): string {
@@ -131,6 +169,10 @@ export default function App() {
   const [loadBlocked, setLoadBlocked] = useState(false);
   const [promotionConfirmUnitId, setPromotionConfirmUnitId] = useState<string | null>(null);
   const [isStartingNextChapter, setIsStartingNextChapter] = useState(false);
+  const [deploymentPending, setDeploymentPending] = useState(true);
+  const [deploymentAssignments, setDeploymentAssignments] = useState<Record<string, string>>(
+    () => createDeploymentAssignments(INITIAL_CHAPTER.initialState, INITIAL_CHAPTER.map)
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -141,10 +183,13 @@ export default function App() {
         if (cancelled) return;
 
         if (stored === null) {
-          setGameState({
+          const freshState = {
             ...INITIAL_CHAPTER.initialState,
             rngState: createRandomSeed()
-          });
+          };
+          setGameState(freshState);
+          setDeploymentAssignments(createDeploymentAssignments(freshState, INITIAL_CHAPTER.map));
+          setDeploymentPending(true);
           setSaveStatus("ready");
           return;
         }
@@ -172,6 +217,8 @@ export default function App() {
         let restoredState = migration.snapshot;
         setActiveChapter(restoredChapter);
         setGameState(restoredState);
+        setDeploymentAssignments(createDeploymentAssignments(restoredState, restoredChapter.map));
+        setDeploymentPending(false);
         if (migration.migrated) {
           setSaveStatus("saving");
           try {
@@ -257,7 +304,7 @@ export default function App() {
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked &&
-    gameState.phase === "player" && battleOutcome === "playing";
+    !deploymentPending && gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
     () => new Set(reachableTiles.map((tile) => String(tile.x) + "," + String(tile.y))),
     [reachableTiles]
