@@ -1,9 +1,7 @@
 import { TERRAIN_DEFINITIONS } from "../content/terrain";
-import { WEAPONS_BY_ID } from "../content/weapons";
 import { createAttackPlanForFaction, performEnemyAttack } from "./perform-attack";
 import type { AttackPlan } from "./perform-attack";
 import { calculateManhattanDistance } from "../domain/combat/grid-distance";
-import { canUnitUseWeapon } from "../domain/combat/combat";
 import { calculateReachableTiles } from "../domain/movement/calculate-reachable-tiles";
 import type { GameMapDefinition, GameStateSnapshot, GameUnit, Position } from "../domain/models/game";
 import { evaluateBattleOutcome, type BattleOutcome } from "../domain/rules/evaluate-battle-outcome";
@@ -233,7 +231,6 @@ function executeEnemyAction(
             : unit
         )
       };
-      const movedEnemy = movedState.units.find((unit) => unit.id === enemyId)!;
       const postMoveAttack = getAttackCandidates(movedState, map, enemyId)[0];
       if (postMoveAttack) {
         const result = performEnemyAttack(movedState, map, enemyId, postMoveAttack.target.id);
