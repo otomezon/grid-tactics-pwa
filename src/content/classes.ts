@@ -33,6 +33,7 @@ export function getPrototypeStatCaps(classId: string): UnitStats {
   }
   return caps;
 }
+
 /**
  * Promotion paths proposed by docs/game-design.md §5.5.
  * Stat bonuses, promoted-class caps, and other runtime class data are configured
