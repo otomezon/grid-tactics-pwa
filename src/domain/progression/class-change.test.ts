@@ -125,7 +125,11 @@ describe("applyClassPromotion", () => {
   it("requires explicit promotion bonuses, caps, and experience policy", () => {
     expect(() =>
       applyClassPromotion(eligibleUnit(), definition({ statBonuses: {} }))
-    ).toThrow(/at least one stat bonus/);
+    ).toThrow(/at least one positive stat bonus/);
+
+    expect(() =>
+      applyClassPromotion(eligibleUnit(), definition({ statBonuses: { hp: 0 } }))
+    ).toThrow(/at least one positive stat bonus/);
 
     expect(() =>
       applyClassPromotion(
