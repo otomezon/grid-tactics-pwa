@@ -732,7 +732,7 @@ export default function App() {
           <p className="subtitle">マップ・移動・戦闘予測・攻撃のプロトタイプ</p>
         </div>
         <div className="header-status">
-          <span className="phase-badge">{battleOutcome === "victory" ? "勝利" : battleOutcome === "defeat" ? "敗北" : "第" + gameState.turn + "ターン · " + (gameState.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ")}</span>
+          <span className="phase-badge">{deploymentPending ? "出撃準備" : battleOutcome === "victory" ? "勝利" : battleOutcome === "defeat" ? "敗北" : "第" + gameState.turn + "ターン · " + (gameState.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ")}</span>
           <span className={"save-badge save-" + saveStatus}>{SAVE_STATUS_LABELS[saveStatus]}</span>
           {battleOutcome === "playing" && gameState.phase === "player" && (
             <button className="secondary-button phase-end-button" type="button" disabled={!interactive} onClick={() => void handleEndPlayerPhase()}>
