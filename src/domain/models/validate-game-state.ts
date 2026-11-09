@@ -56,7 +56,7 @@ function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
     (value.faction === "player" || value.faction === "enemy") &&
     isNonEmptyString(value.classId) &&
     isNonNegativeInteger(value.level) && (value.level as number) >= 1 &&
-    isNonNegativeInteger(value.experience) &&
+    isNonNegativeInteger(value.experience) && (value.experience as number) < 100 &&
     isUnitStats(stats) &&
     isGrowthRates(value.growthRates) &&
     isNonNegativeInteger(value.currentHp) && (value.currentHp as number) <= stats.hp &&
