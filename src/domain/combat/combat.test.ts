@@ -208,7 +208,7 @@ describe("combat formulas", () => {
       attacker: input.attacker,
       defender: input.defender,
       weapon: input.attackerWeapon,
-      opponentWeaponType: input.defenderWeapon?.weaponType
+      ...(input.defenderWeapon ? { opponentWeaponType: input.defenderWeapon.weaponType } : {})
     });
 
     expect(forecast.attackPower).toBe(13);
