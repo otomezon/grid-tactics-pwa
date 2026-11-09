@@ -12,6 +12,13 @@ function openMap(): GameMapDefinition {
   };
 }
 
+function mapWithFortAt(x: number, y: number): GameMapDefinition {
+  const base = openMap();
+  const terrain = base.terrain.map((row) => [...row]);
+  terrain[y]![x] = "fort";
+  return { ...base, terrain };
+}
+
 function battleState(
   units: GameStateSnapshot["units"],
   phase: "player" | "enemy" = "enemy"
@@ -26,8 +33,54 @@ function battleState(
 describe("enemy phase controller", () => {
   it("starts the enemy phase and rejects invalid phase transitions", () => {
     const started = beginEnemyPhase(INITIAL_GAME_STATE, CHAPTER_01_MAP);
-    expect(started.phase).toBe("enemy");
-    expect(() => beginEnemyPhase(started, CHAPTER_01_MAP)).toThrow("not active");
+    expect(started.nextState.phase).toBe("enemy");
+    expect(() => beginEnemyPhase(started.nextState, CHAPTER_01_MAP)).toThrow("not active");
+  });
+
+
+  it("recovers enemy units on forts when the enemy phase begins", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 4, y: 4 },
+      currentHp: 10
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 4, y: 4 },
+      currentHp: 10
+    };
+    const started = beginEnemyPhase(
+      battleState([player, enemy], "player"),
+      mapWithFortAt(4, 4)
+    );
+
+    expect(started.nextState.units.find((unit) => unit.id === enemy.id)?.currentHp).toBe(12);
+    expect(started.nextState.units.find((unit) => unit.id === player.id)?.currentHp).toBe(10);
+    expect(started.fortRecoveries).toEqual([
+      { unitId: enemy.id, unitName: enemy.name, recoveredHp: 2 }
+    ]);
+  });
+
+  it("recovers player units when the next player phase begins", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 1, y: 8 },
+      currentHp: 10
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      hasActed: true
+    };
+    const result = runEnemyPhase(
+      battleState([player, enemy]),
+      mapWithFortAt(1, 8)
+    );
+
+    expect(result.nextState.phase).toBe("player");
+    expect(result.nextState.units.find((unit) => unit.id === player.id)?.currentHp).toBe(12);
+    expect(result.phaseStartRecoveries).toEqual([
+      { unitId: player.id, unitName: player.name, recoveredHp: 2 }
+    ]);
   });
 
   it("attacks a player unit already in range and advances the round", () => {
