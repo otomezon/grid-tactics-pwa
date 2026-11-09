@@ -132,6 +132,47 @@ describe("prepareNextChapter", () => {
     expect(result.units.find((unit) => unit.id === "unit_005")?.position).toEqual({ x: 4, y: 9 });
   });
 
+  it("carries a living reserve member into the next chapter without deploying them", () => {
+    const reserved = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_003")!;
+    const previousState = clearedState({
+      units: INITIAL_GAME_STATE.units.filter((unit) =>
+        unit.faction === "player" && unit.id !== "unit_003"
+      ),
+      reserveUnits: [{
+        id: reserved.id,
+        name: reserved.name,
+        classId: reserved.classId,
+        level: 7,
+        experience: 31,
+        stats: { ...reserved.stats, hp: 25, strength: 9 },
+        growthRates: { ...reserved.growthRates },
+        currentHp: 13,
+        movementType: reserved.movementType,
+        move: reserved.move,
+        usableWeaponTypes: [...reserved.usableWeaponTypes],
+        inventory: [...reserved.inventory, "vulnerary"],
+        equippedWeaponId: reserved.equippedWeaponId
+      }]
+    });
+    const next = nextChapterFixture();
+    const result = prepareNextChapter({
+      previousState,
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap: next.map,
+      currentHpPolicy: "preserve"
+    });
+    expect(result.units.some((unit) => unit.id === "unit_003")).toBe(false);
+    expect(result.reserveUnits.find((unit) => unit.id === "unit_003")).toMatchObject({
+      level: 7,
+      experience: 31,
+      stats: { hp: 25, strength: 9 },
+      currentHp: 13,
+      inventory: [...reserved.inventory, "vulnerary"]
+    });
+    expect(isValidGameStateSnapshot(result, next.map)).toBe(true);
+  });
+
   it("takes enemies and the RNG seed from the next chapter template", () => {
     const next = nextChapterFixture();
     const result = prepareNextChapter({
