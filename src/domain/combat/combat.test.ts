@@ -20,6 +20,7 @@ function createUnit(
     classId?: string;
   } = {}
 ): GameUnit {
+  const inventory = options.inventory ?? ["iron-sword"];
   return {
     id,
     name: id,
@@ -52,7 +53,8 @@ function createUnit(
     movementType: "infantry",
     move: 5,
     usableWeaponTypes: options.weaponTypes ?? ["sword"],
-    inventory: options.inventory ?? ["iron-sword"],
+    inventory,
+    equippedWeaponId: inventory[0] ?? null,
     position: { x: 0, y: 0 },
     hasMoved: false,
     hasActed: false

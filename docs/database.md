@@ -1,22 +1,24 @@
 # データ保存設計
 
-## 1. 現在の実装
+## 1. IndexedDB
 
-初期版のブラウザ内保存としてIndexedDBを追加した。サーバーDBはない。
+サーバーDBはなく、ブラウザ内のIndexedDBを使用する。
 
 | 項目 | 実装値 |
 |---|---|
 | Database | `grid-tactics-pwa` |
-| IndexedDB version | `1` |
+| IndexedDB database version | `1` |
 | Object Store | `game-saves` |
 | Key path | `slotId` |
 | 自動保存slot | `auto` |
-| 保存データversion | `saveVersion: 1` |
+| Game save schema | `saveVersion: 2` |
 | 実装 | `src/persistence/save-repository.ts` |
 
-## 2. レコード形式
+IndexedDBのObject Store／key pathは変更していないため、IndexedDB database versionは1のまま。内部のゲームセーブschema versionは2へ更新した。
 
-Object Storeには次の形式で保存する。
+## 2. SaveVersion 2
+
+Object Storeのレコードは従来どおり次の形式。
 
 ```ts
 interface SaveRecord {
@@ -26,32 +28,44 @@ interface SaveRecord {
 }
 ```
 
-`GameStateSnapshot` は `saveVersion`、`chapterId`、`phase`、`turn`、`units` を保持する。ユニットにはID、陣営、クラス、レベル、経験値、能力値、成長率、HP、移動種別・移動力、武器種、所持品、座標、移動済み／行動済み状態を保存する。
+`GameStateSnapshot` は `saveVersion`、`chapterId`、`phase`、`turn`、`rngState`、`units` を保持する。
 
-マップ地形は静的contentとして読み込むため、現行saveにはterrain配列を重複保存しない。
+- `rngState`: Xorshift32の非ゼロunsigned 32bit状態。
+- `GameUnit.equippedWeaponId`: 選択中の装備武器ID。未装備はnull。
+- 既存のユニット能力、HP、成長率、移動種別／移動力、武器種、所持品、座標、行動状態は継続して保存する。
 
-## 3. 保存・復元タイミング
+マップ地形・武器の定義は静的contentとして読み込むため、saveに重複保存しない。
+
+## 3. SaveVersion 1 → 2 migration
+
+`src/persistence/migrations.ts` が旧version 1を読み込む。
+
+- `prototype_weapon` は、各ユニットの `usableWeaponTypes` の先頭に対応する仮武器IDへ変換する。
+- `equippedWeaponId` は旧所持品を変換後、カタログ上の最初の認識可能な武器を設定する。該当がなければnull。
+- `rngState` は旧saveの章ID・ターン・ユニットID／HP／座標／経験値情報から安定的に導出する。
+- HP、座標、経験値、ターン、フェイズなど既存の進行状態は保持する。
+- migration後にversion 2 validatorで全体を検証し、成功した場合だけ新形式で保存する。不正／未対応データは自動初期化・上書きしない。
+
+## 4. 保存・復元タイミング
 
 - ユニット移動確定後
+- 装備武器変更後
+- 攻撃確定後（HP、行動状態、撃破状態、RNG stateを同時保存）
 - ユニット待機確定後
-- アプリ起動時にauto slotがあれば復元
+- アプリ起動時にauto slotがあれば復元／必要に応じmigration
 
-IndexedDB未対応または読み書き失敗時はUIに状態を表示する。保存に失敗しても操作後の画面状態は維持するが、リロード後の復元は保証しない。
+IndexedDB未対応または読み書き失敗時はUIに状態を表示する。保存失敗時に操作後の画面状態は維持するが、リロード後の復元は保証しない。
 
-## 4. 読込データの検証
+## 5. 読込データの検証
 
-`src/domain/models/validate-game-state.ts` でsaveVersion、chapterId、座標範囲、重複ID／重複占有、能力値、成長率、所持品上限等を検証する。不正または非対応の保存データは自動的に初期化・上書きしない。現在は安全側に倒して操作を停止する。
-
-## 5. 戦闘乱数との接続
-
-現行の `GameStateSnapshot`（saveVersion 1）にはRNGシード／状態／消費位置が含まれない。戦闘resolverは決定論的なロール列を呼び出し側から受け取り、RNG生成・保存を行わない。ゲーム進行と戦闘を統合する前にRNG方式を決め、保存形式を変更する場合はsaveVersion更新と明示的なmigrationを実装・テストする。
+`src/domain/models/validate-game-state.ts` でsaveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、座標範囲、重複ID／重複占有、能力値、成長率、所持品上限、装備武器IDとinventoryの整合を検証する。
 
 ## 6. 未実装・今後の設計事項
 
-- saveVersion 1からのマイグレーション。
 - 複数slot、バックアップ世代、export/import。
 - IndexedDBのブラウザ統合テスト。
 - quota超過・private browsing・ストレージ消去時の復旧案内。
-- セーブデータschemaの専用バリデーションライブラリ採否。
+- セーブデータschemaの追加変更時のmigration。
+- RNGアルゴリズムを変更する場合の互換性方針。
 
-能力や戦闘状態を変更するときは、データ形式変更の影響を確認し、マイグレーションとテストを同時に追加すること。
+セーブ形式を変更するときは `SAVE_VERSION` を更新し、旧saveからの明示的なmigrationとテストを同時に追加すること。
