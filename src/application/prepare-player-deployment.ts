@@ -89,7 +89,7 @@ export function preparePlayerDeployment(
   }
   const selectedSet = new Set(selectedUnitIds);
   if (assignments.length !== selectedUnitIds.length) {
-    throw new Error("Every surviving selected player unit must have exactly one deployment position.");
+    throw new Error("Every surviving player unit must have a deployment position when selected.");
   }
 
   const availablePositions = new Set(map.playerDeployment.map(({ x, y }) => x + "," + y));
