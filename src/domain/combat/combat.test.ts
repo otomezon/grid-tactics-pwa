@@ -14,7 +14,7 @@ function createUnit(
   id: string,
   faction: "player" | "enemy",
   options: {
-    stats?: Partial<GameUnit["stats"]>;
+    stats?: Partial<GameUnit["stats"]> | undefined;
     weaponTypes?: WeaponType[];
     inventory?: string[];
     classId?: string;
