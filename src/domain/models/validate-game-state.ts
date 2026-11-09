@@ -47,6 +47,8 @@ function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
 
   const position = value.position;
   const stats = value.stats;
+  const equippedWeaponId = value.equippedWeaponId;
+  const inventory = value.inventory;
 
   return (
     isNonEmptyString(value.id) &&
@@ -61,7 +63,9 @@ function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
     (value.movementType === "infantry" || value.movementType === "cavalry") &&
     isNonNegativeInteger(value.move) &&
     Array.isArray(value.usableWeaponTypes) && value.usableWeaponTypes.every(isWeaponType) &&
-    Array.isArray(value.inventory) && value.inventory.length <= 5 && value.inventory.every(isNonEmptyString) &&
+    Array.isArray(inventory) && inventory.length <= 5 && inventory.every(isNonEmptyString) &&
+    (equippedWeaponId === null ||
+      (isNonEmptyString(equippedWeaponId) && inventory.includes(equippedWeaponId))) &&
     isNonNegativeInteger(position.x) && isNonNegativeInteger(position.y) &&
     position.x < map.width && position.y < map.height &&
     typeof value.hasMoved === "boolean" && typeof value.hasActed === "boolean"
@@ -79,6 +83,7 @@ export function isValidGameStateSnapshot(
     value.chapterId !== map.id ||
     (value.phase !== "player" && value.phase !== "enemy") ||
     !isNonNegativeInteger(value.turn) || (value.turn as number) < 1 ||
+    !isNonNegativeInteger(value.rngState) || value.rngState === 0 || value.rngState > 0xffffffff ||
     !Array.isArray(value.units) || value.units.length === 0 ||
     map.terrain.length !== map.height ||
     map.terrain.some((row) => row.length !== map.width)
