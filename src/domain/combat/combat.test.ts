@@ -182,7 +182,7 @@ describe("weapon validation and range", () => {
   it("rejects an initiating attack with an invalid distance or unusable weapon", () => {
     expect(() => buildCombatForecast(createInput({ distance: 0 }))).toThrow(RangeError);
     expect(() => buildCombatForecast(createInput({
-      attackerWeapon: createWeapon({ id: "not-in-inventory" })
+      attackerWeapon: createWeapon({ usableClassIds: ["archer"] })
     }))).toThrow("cannot use or does not own");
     expect(() => buildCombatForecast(createInput({
       distance: 2,
