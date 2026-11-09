@@ -139,7 +139,7 @@ describe("preparePlayerDeployment", () => {
     expect(redeployed.units.find((unit) => unit.id === "unit_002")).toMatchObject({
       faction: "player", position: { x: 1, y: 8 }, hasMoved: false, hasActed: false
     });
-    expect(redeployed.reserveUnits.map((unit) => unit.id).sort()).toEqual(["unit_001", "unit_003"]);
+    expect(redeployed.reserveUnits.map((unit) => unit.id).sort()).toEqual(["unit_001", "unit_003", "unit_004"]);
   });
 
   it("requires at least one selected unit and keeps a critical target deployed", () => {
