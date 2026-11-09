@@ -2,15 +2,14 @@
 
 ## 1. 現在の構成
 
-PR #1〜#3でドキュメント基盤、PWA／マップ／移動、戦闘計算エンジンをmainに追加した。現在のブランチでは戦闘エンジンをUI・保存へ接続している。
+PR #1〜#4で文書基盤、PWA／マップ／移動、戦闘計算、戦闘UI・攻撃・RNG保存をmainに追加した。現在の開発ブランチで敵AI／フェイズ進行／勝敗判定を実装している。
 
 ```text
 src/
 ├── App.tsx
-├── main.tsx
-├── styles.css
 ├── application/
-│   └── perform-attack.ts
+│   ├── perform-attack.ts
+│   └── resolve-enemy-phase.ts
 ├── content/
 │   ├── terrain.ts
 │   ├── weapons.ts
@@ -19,56 +18,56 @@ src/
 │   ├── models/
 │   ├── movement/
 │   ├── combat/
-│   └── random/
+│   ├── random/
+│   └── rules/
+│       └── evaluate-battle-outcome.ts
 └── persistence/
     ├── save-repository.ts
     └── migrations.ts
 ```
 
-単体テストは対象モジュールと同じ階層に `*.test.ts` として置く。
-
 ## 2. レイヤーと責務
 
 | レイヤー | 現在の責務 | 状態 |
 |---|---|---|
-| content | 地形、試作マップ／ユニット、仮武器定義 | 実装あり。武器数値は未承認の試作値 |
-| domain/models | GameUnit、GameStateSnapshot、saveVersion 2の検証 | 実装あり |
-| domain/movement | 地形コストと占有を考慮した到達可能範囲計算 | 実装あり |
-| domain/combat | 武器適合、三すくみ、計算、射程、戦闘予測、決定論的解決、暫定Manhattan距離 | 実装あり |
-| domain/random | Xorshift32、seed/state、戦闘roll生成 | 実装あり |
-| application | 攻撃コマンド検証、戦闘実行、HP／行動状態／撃破／RNG反映 | 攻撃のみ実装 |
-| ui | マップ、ユニット情報、装備変更、攻撃可能表示、戦闘予測・実行 | 試作実装あり |
-| persistence | IndexedDB read/write、saveVersion 1→2移行 | 実装あり |
+| content | 地形、試作マップ／ユニット、仮武器 | 実装あり。仮コンテンツ |
+| domain/models | GameUnit、GameStateSnapshot、saveVersion 2検証 | 実装あり |
+| domain/movement | 地形・占有を考慮した到達可能範囲 | 実装あり |
+| domain/combat | 武器適合、式、射程、予測、決定論的解決、暫定Manhattan距離 | 実装あり |
+| domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
+| domain/rules | defeat_all／defeat_boss／味方全滅の勝敗判定 | 実装あり |
+| application | プレイヤー／敵の攻撃、敵AI行動選択、敵フェイズ解決、ターン進行 | 基本実装 |
+| ui | マップ、戦闘UI、装備、フェイズ終了、勝敗表示 | 試作実装 |
+| persistence | IndexedDB、saveVersion 1→2 migration | 実装あり |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
 ## 3. 現在のデータフロー
 
-1. `App.tsx` がIndexedDBのauto slotを読み、`migrateGameStateSnapshot` でversion 1から2への移行またはversion 2検証を行う。
-2. version 1では旧 `prototype_weapon` IDをユニットの使用可能武器種に応じて仮武器IDへ変換し、HP・位置・ターン等を保持する。乱数状態を旧セーブ情報から安定的に導出し、新形式を保存する。
-3. 新規ゲームはWeb Cryptoから非ゼロ32bit seedを作成する（利用できない場合は固定fallback）。
-4. ユニット選択時に `calculate-reachable-tiles.ts` が4方向の移動可能範囲を計算する。装備武器の射程に入る敵は赤色で示す。
-5. 敵を選択すると `createAttackPlan` が、攻撃者／対象、装備武器、地形、距離、使用可能な反撃武器を検証し、`buildCombatForecast` を作る。
-6. 攻撃確定時に `performAttack` がXorshift32から決定論的rollを生成し、`resolveCombat` を呼ぶ。HP、攻撃側の行動済み、撃破ユニット除去、消費したrollに応じたRNG stateを更新する。
-7. 変更後のGameStateSnapshotをIndexedDBへ保存する。
+1. AppがIndexedDB auto slotをロードし、saveVersion 1→2 migrationまたはversion 2 validatorを通す。
+2. player phaseでは既存の移動・装備・攻撃・待機コマンドを使う。
+3. 「自軍フェイズ終了」で `phase: enemy` のスナップショットをまず保存する。
+4. `runEnemyPhase` が敵ユニットをID辞書順に処理する。現在攻撃できるなら対象評価して攻撃、いなければ移動可能範囲を調べ、移動後攻撃、接近、待機を選ぶ。
+5. 各戦闘は共通combat resolverと保存済みXorshift32 stateを利用する。HP・撃破・RNG stateはGameStateへ反映する。
+6. 戦闘継続中なら敵軍フェイズ後にturnを1増やし、残存ユニットの行動フラグをresetしてplayer phaseへ戻す。勝敗ならterminal stateのままにする。
+7. 次状態をIndexedDBへ保存。起動時に `phase: enemy` の保存が読み込まれた場合は敵軍フェイズを再開・解決する。
 
 ## 4. 依存方向のルール
 
 - domainはReact／DOM／IndexedDBに依存しない。
-- contentはゲームデータと定義を保持し、計算処理を持たない。
-- applicationはdomainとcontentを使って合法性を検証し、純粋な次状態を返す。
-- UIはapplication/domainの結果を表示し、移動・戦闘計算式を再実装しない。
-- persistenceは保存・ロード・version migrationを担当する。UIからIndexedDB APIを直接呼ばない。
+- contentは定義データのみを保持する。
+- applicationはdomainとcontentを使って合法性を検証し、次状態を返す。
+- UIはapplication/domainの結果を表示し、ルールや計算式を再実装しない。
+- persistenceは保存・ロード・migrationを担当する。
 
-## 5. これからの分割候補
+## 5. 今後の分割候補
 
 - `application/gameController.ts`: 移動、装備、攻撃、待機、フェイズ進行を統合する。
-- `application/perform-attack.ts`: 現在は攻撃コマンドのみ。
-- `domain/ai/`: 敵行動選択。
+- 敵AIは現在単純なスコア式。役割タグ、戦略の追加、プレイテストを別途行う。
 - `domain/progression/`: 経験値・成長・クラスチェンジ。
-- `content/weapons.ts`: 現在は仮武器の一時定義。正式なコンテンツ構成へ拡張。
-- `persistence/migrations.ts`: 現在はsaveVersion 1→2。
+- `domain/events/`: ターン／撃破／勝利イベント。
 - UIコンポーネント分割。現状は `App.tsx` に集約。
+- 勝敗後のリザルト／報酬／章進行は未実装。
 
 ## 6. 外部サービス
 
-現時点でサーバー、アカウント、オンライン同期、HTTP APIは追加していない。PWAのオフライン利用とローカルIndexedDB保存を基本とする。新規ゲームの乱数seed生成にWeb Cryptoを使用するが、外部サービス接続は行わない。
+サーバー、アカウント、オンライン同期、HTTP APIはない。PWAとブラウザ内IndexedDBを基本とする。新規ゲームの乱数seed生成にはWeb Cryptoを使うが、外部サービス接続は行わない。
