@@ -300,7 +300,7 @@ describe("combat forecast and deterministic resolution", () => {
   it("resolves hit, miss, critical, damage, and follow-up in deterministic order", () => {
     const input = createInput({
       attackerStats: { speed: 14 },
-      defenderStats: { speed: 8, hp: 30 }
+      defenderStats: { speed: 8, hp: 30, strength: 5, defense: 5 }
     });
     const result = resolveCombat(input, [
       { hitRoll: 99, criticalRoll: 0 },
