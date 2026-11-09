@@ -64,15 +64,44 @@
 - 新しいGameState fieldは追加していないため `SAVE_VERSION` は2のまま。
 - GameState validatorはEXPを0〜99に制限し、レベルアップ前の未処理100 EXPが保存されることを防ぐ。
 
-## 7. 未決定・未実装
+## 7. クラスチェンジ基盤
+
+根拠: 設計書 §5.4（クラスチェンジ）・§5.5（初期クラス案）。
+
+設計書が示す昇格先を `src/content/classes.ts` にIDとして定義した。
+
+| 基本職ID | 昇格先ID |
+|---|---|
+| swordsman | swordmaster |
+| mercenary | hero |
+| fighter | warrior |
+| soldier | general |
+| cavalry | paladin |
+| archer | sniper |
+| mage | sage |
+
+実装:
+- `src/domain/progression/class-change.ts` の `applyClassPromotion` は、味方ユニット、元クラス一致、Lv.10以上、専用アイテム所持を検証する。
+- 専用アイテムIDを所持品から1個消費し、昇格後クラスIDへ変更、レベルを1にする。
+- 能力ボーナスと昇格先上限は `ClassPromotionDefinition` で明示的に受け取る。ボーナスは上限まで適用し、既存能力が上限を超えていても能力を減少させない。
+- HPボーナスは最大HPだけに加算し、現在HPは維持する。
+- クラスチェンジ後のEXPは設計書に記載がないため、設定側が `preserve` または `reset` を必ず指定する。
+- `src/application/perform-class-change.ts` は昇格先テーブルと照合し、対象ユニットだけを更新した新しいGameStateを返す。
+
+**実装範囲の限界:** 昇格先の正式な能力ボーナス／上限値、移動力・移動種別・使用可能武器、アイテム入手・配布、クラスチェンジUIは未実装。これらの値や運用が決まるまでは、戦闘中の操作や実際のゲームコンテンツから本コマンドを呼び出さない。設計書にないバランス値を仮決定しないため、コマンドは必要なデータを呼び出し側から受け取る。
+
+所持品は既存 `GameUnit.inventory` 配列を利用する。新しいGameStateフィールドは追加しないため、saveVersion 2を維持する。
+
+## 8. 未決定・未実装
 
 - クラス別の正式な能力上限値。
 - HP成長時に現在HPも回復するかどうか。
 - 1回の攻撃行動で複数回ダメージを与えた際の経験値を、攻撃イベント単位とするか行動単位とするか（現行はイベント単位）。
 - 主人公／ボス役割の正式データ。ボス経験値はobjectiveのtargetUnitIdを利用。
-- クラスチェンジ（基本職Lv.10以上、専用アイテム、昇格先・能力ボーナス）。
+- クラス別の正式な能力上限、昇格時の能力ボーナス、EXPの扱い、昇格後クラスの移動・武器データ。
+- 専用アイテムの入手／配布、クラスチェンジUIと章間の利用タイミング。
 - 章間引き継ぎ、加入・報酬、撃破者一覧を含むリザルト画面。
 
-## 8. テスト
+## 9. テスト
 
-`src/domain/progression/level-up.test.ts` は閾値、成長判定、能力上限、HP現在値維持、複数レベルアップ、EXP不正値を確認する。`src/application/perform-attack.test.ts` はダメージ、撃破、ボス撃破、レベルアップ、ミス、敵AI攻撃時の報酬除外を確認する。
+`src/domain/progression/level-up.test.ts` は閾値、成長判定、能力上限、HP現在値維持、複数レベルアップ、EXP不正値を確認する。`src/application/perform-attack.test.ts` はダメージ、撃破、ボス撃破、レベルアップ、ミス、敵AI攻撃時の報酬除外を確認する。`src/domain/progression/class-change.test.ts` と `src/application/perform-class-change.test.ts` は昇格条件、アイテム消費、能力上限、現在HP／EXPの扱い、状態更新を確認する。
