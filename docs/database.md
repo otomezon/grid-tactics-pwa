@@ -43,7 +43,7 @@ saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、座標、重
 
 ## 6. 章間遷移と保存
 
-章間遷移は既存の `GameStateSnapshot` を次章用に再構成するだけで、新しいフィールドを追加しない。次章stateを生成した後、既存の自動保存slotへ通常の `saveGameState` で保存できる。遷移コマンド自体はIndexedDBへ直接依存せず、Appから呼び出して保存する構成とする。saveVersion 2およびversion 1→2 migrationは変更しない。
+章間遷移は既存の `GameStateSnapshot` を次章用に再構成するだけで、新しいフィールドを追加しない。`chapterId` に対応する章データ／マップをレジストリから取得して既存validatorで検証する。勝利後の報酬と次章stateを作り、既存の自動保存slotへ通常の `saveGameState` で保存する。章ID・ユニット・RNGを含む既存stateだけで復元できる。saveVersion 2およびversion 1→2 migrationは変更しない。
 
 ## 7. 未実装
 
