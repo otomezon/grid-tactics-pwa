@@ -4,11 +4,11 @@
 
 ## 現在の開発状況
 
-- PR #1でAI開発ドキュメント基盤、PR #2でReact／TypeScript／Vite／PWAとマップ・移動の初期プロトタイプ、PR #3で戦闘計算エンジンをmainへマージ済み。
-- 現在の開発ブランチでは、装備武器の選択、攻撃可能な敵の表示、戦闘予測、攻撃実行、HP・撃破の反映、乱数状態の自動保存を接続しています。
-- マップ・ユニット・武器の能力値は操作確認用の仮データです。仮武器の数値は正式なバランス値ではありません。
-- 敵AI、敵フェイズ、ターン進行、経験値・成長、勝敗・章進行は未実装です。
-- 実装状況は [docs/current-state.md](docs/current-state.md)、戦闘ルールの実装境界は [docs/combat.md](docs/combat.md) を参照してください。
+- PR #1でAI開発ドキュメント基盤、PR #2でPWA／マップ／移動、PR #3で戦闘計算エンジン、PR #4で戦闘UI／攻撃実行／乱数保存をmainへマージ済み。
+- 現在の開発ブランチでは自軍フェイズ終了、敵AI、敵軍フェイズ、勝利・敗北判定、ターン更新を接続しています。
+- マップ・ユニット・武器の能力値は操作確認用の仮データです。AIスコアも初期ヒューリスティックで、正式なバランス値ではありません。
+- 経験値・成長、敵フェイズ後のリザルト・報酬、キャンペーン進行は未実装です。
+- 実装状況は [docs/current-state.md](docs/current-state.md)、敵AIの判断と未決定事項は [docs/enemy-ai.md](docs/enemy-ai.md) を参照してください。
 
 ## 技術スタック
 
@@ -46,6 +46,7 @@ npm run preview
 - [ゲーム設計書 v1.0](docs/game-design.md)
 - [アーキテクチャ](docs/architecture.md)
 - [戦闘システム](docs/combat.md)
+- [敵AI・フェイズ進行](docs/enemy-ai.md)
 - [開発環境・手順](docs/development.md)
 - [データ保存設計](docs/database.md)
 - [セキュリティ](docs/security.md)
