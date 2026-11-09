@@ -24,6 +24,48 @@ describe("evaluateBattleOutcome", () => {
     expect(evaluateBattleOutcome(state, CHAPTER_01_MAP)).toBe("defeat");
   });
 
+  it("loses when a configured critical player unit is defeated while allies remain", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      defeatCondition: { type: "unit_defeated", targetUnitId: "unit_001" }
+    };
+    const state = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_001")
+    };
+
+    expect(state.units.some((unit) => unit.faction === "player")).toBe(true);
+    expect(evaluateBattleOutcome(state, map)).toBe("defeat");
+  });
+
+  it("continues while the configured critical player unit is alive", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      defeatCondition: { type: "unit_defeated", targetUnitId: "unit_001" }
+    };
+    const state = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_002")
+    };
+
+    expect(evaluateBattleOutcome(state, map)).toBe("playing");
+  });
+
+  it("gives a critical-unit defeat precedence over a completed victory objective", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      defeatCondition: { type: "unit_defeated", targetUnitId: "unit_001" }
+    };
+    const state = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter(
+        (unit) => unit.faction === "player" && unit.id !== "unit_001"
+      )
+    };
+
+    expect(evaluateBattleOutcome(state, map)).toBe("defeat");
+  });
+
   it("wins when the configured boss is no longer present", () => {
     const map: GameMapDefinition = {
       ...CHAPTER_01_MAP,

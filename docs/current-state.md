@@ -5,12 +5,12 @@
 - 更新日: 2026-11-09
 - Repository: `otomezon/grid-tactics-pwa`
 - デフォルトブランチ: `main`
-- PR #1〜#10はすべてマージ済み。PR #9（砦回復）のマージコミット: `30f474a938ae54ba5b3a17db34f2693e1434dc51`。PR #10（章間引き継ぎ）のマージコミット: `e378d1d48a24f2d4879ab84da66092f4cb6c028d`。
+- PR #1〜#11はすべてマージ済み。PR #11（章報酬／次章開始フロー）のマージコミット: `29fc033f11a01dda36768a00a6a3a7476cc6de3b`。
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- 現在の開発対象: 章レジストリ、データ駆動の章報酬、リザルトからの次章開始、章IDに応じたセーブ復元を接続。
+- 現在の開発対象: 戦闘ルール／進行の仕様差分を埋め、章・マップデータへ安全に接続する。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
 
@@ -33,7 +33,7 @@
 | 敵軍フェイズ中セーブからの再開 | 実装済み | `src/App.tsx`, `src/persistence/save-repository.ts` |
 | 勝利（defeat_all／defeat_boss） | 実装済み | `src/domain/rules/evaluate-battle-outcome.ts` |
 | 敗北（味方全滅） | 実装済み | 同上 |
-| 主人公個別撃破による敗北 | 未実装（主人公IDなし） | 未定義 |
+| マップ指定ユニット撃破による敗北 | ルール実装済み（`defeatCondition.targetUnitId`）。既存試作マップは主人公ID未決定のため未設定 | `src/domain/rules/evaluate-battle-outcome.ts`, `src/domain/models/game.ts` |
 | ステージ結果概要表示 | 実装済み（PR #6、勝敗・敵撃破数・生存味方のLv／EXP／HP） | `src/App.tsx` | UI手動確認未実施 |
 | 詳細リザルト統計・会話／加入イベント・キャンペーン選択／分岐 | 未実装 | — |
 | 経験値・レベルアップ | 実装済み（PR #6） | `src/domain/progression/level-up.ts`, `src/application/perform-attack.ts` |
@@ -56,14 +56,14 @@
 
 ## 3. 検証コマンド
 
-`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9をmainへ同期したhead（run #201）でTypeScript型チェック成功、15 test files／93 tests成功、Vite build成功、PWA precache 11 entries（282.60 KiB）を確認。章レジストリ／報酬／画面接続の実装head（run #226）ではTypeScript型チェック成功、17 test files／103 tests成功、Vite build成功、PWA precache 11 entries（289.58 KiB）を確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
+`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9をmainへ同期したhead（run #201）でTypeScript型チェック成功、15 test files／93 tests成功、Vite build成功、PWA precache 11 entries（282.60 KiB）を確認。章レジストリ／報酬／画面接続の実装head（run #226）ではTypeScript型チェック成功、17 test files／103 tests成功、Vite build成功、PWA precache 11 entries（289.58 KiB）を確認。PR #11 merge後のmain（run #235）も成功。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
 
 ## 4. 暫定・未決定事項
 
 - 仮武器能力値・Manhattan距離は正式仕様ではない。
 - AI対象スコアと移動先評価は初期ヒューリスティックで、実プレイ調整が必要。
 - 役割タグは現在のユニットモデルにないためスコア対象外。
-- 敗北条件は味方全滅のみ。主人公個別撃破は主人公識別データがないため保留。
+- 敗北条件は味方全滅に加え、マップが `defeatCondition: { type: "unit_defeated", targetUnitId }` を設定すれば指定味方の撃破でも成立する。主人公の正式IDは未決定のため試作マップでは未設定。
 - 砦回復は実装済み。端数切り捨ては暫定判断で、設計書に正式規則はない。最大HP9以下では回復量0。
 - クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。
 - 1戦闘中に複数回ダメージを与えた場合、現行はstrikeごとに+10 EXPを付与する解釈。
@@ -75,5 +75,5 @@
 
 1. クラス別の正式上限・昇格ボーナス・EXP方針と昇格後移動／武器データを決定。
 2. 章報酬・章間引き継ぎ・次ステージ解放を設計し、証の正式な配布経路を追加。
-3. 主人公識別と敗北条件、砦回復の端数規則を決定。
+3. 主人公の正式IDを決定し、各章マップへ敗北対象として設定。砦回復の端数規則も確定。
 4. 1ステージの開始からクリアまでをブラウザ／スマートフォンで検証。
