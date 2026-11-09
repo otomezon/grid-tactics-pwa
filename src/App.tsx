@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "./content/maps/chapter-01";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
+import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
+import { getClassPromotionDefinition } from "./content/classes";
+import { performClassChange } from "./application/perform-class-change";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
-import type { GameStateSnapshot, Position } from "./domain/models/game";
+import type { GameStateSnapshot, Position, UnitStats } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
 import type { LevelUpRecord } from "./domain/progression/level-up";
 import { createRandomSeed } from "./domain/random/xorshift32";
@@ -77,6 +80,23 @@ function formatLevelUps(levelUps: LevelUpRecord[]): string {
   }).join(" / ");
 }
 
+function formatPromotionBonuses(bonuses: Partial<UnitStats>): string {
+  const statLabels: Record<keyof UnitStats, string> = {
+    hp: "HP",
+    strength: "力",
+    magic: "魔力",
+    skill: "技",
+    speed: "速さ",
+    luck: "幸運",
+    defense: "守備",
+    resistance: "魔防"
+  };
+  const entries = Object.entries(bonuses).filter(([, value]) => Number(value) > 0);
+  return entries.length > 0
+    ? entries.map(([stat, value]) => statLabels[stat as keyof UnitStats] + "+" + String(value)).join("・")
+    : "能力上昇なし（昇格先上限に到達）";
+}
+
 export default function App() {
   const [gameState, setGameState] = useState<GameStateSnapshot>(INITIAL_GAME_STATE);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -84,6 +104,7 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [message, setMessage] = useState("味方ユニットを選択してください。");
   const [loadBlocked, setLoadBlocked] = useState(false);
+  const [promotionConfirmUnitId, setPromotionConfirmUnitId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,6 +280,7 @@ export default function App() {
 
   async function handleTileClick(position: Position): Promise<void> {
     if (!interactive) return;
+    setPromotionConfirmUnitId(null);
 
     const unitOnTile = gameState.units.find((unit) => samePosition(unit.position, position));
     if (unitOnTile) {
@@ -334,6 +356,34 @@ export default function App() {
     await persist(nextState, selectedUnit.name + "は" + weapon.name + "を装備しました。");
   }
 
+  async function handleClassChange(): Promise<void> {
+    if (!selectedUnit || !interactive || selectedUnit.faction !== "player") return;
+
+    const definition = getClassPromotionDefinition(selectedUnit.classId);
+    if (!definition) {
+      setPromotionConfirmUnitId(null);
+      setMessage("このクラスには昇格先が設定されていません。");
+      return;
+    }
+
+    try {
+      const execution = performClassChange(gameState, selectedUnit.id, definition);
+      const targetName = definition.toClassId;
+      const bonusText = formatPromotionBonuses(execution.appliedBonuses);
+      setGameState(execution.nextState);
+      setCombatTargetId(null);
+      setPromotionConfirmUnitId(null);
+      await persist(
+        execution.nextState,
+        selectedUnit.name + "は" + targetName + "へクラスチェンジしました。能力ボーナス：" + bonusText +
+          "。クラスチェンジの証を1個消費しました。"
+      );
+    } catch (error) {
+      setPromotionConfirmUnitId(null);
+      setMessage(getErrorMessage(error));
+    }
+  }
+
   async function handleAttack(): Promise<void> {
     if (!selectedUnit || !combatTargetId || !interactive || !combatPlan?.plan) return;
 
@@ -397,6 +447,7 @@ export default function App() {
       setGameState(enemyPhaseState);
       setSelectedUnitId(null);
       setCombatTargetId(null);
+      setPromotionConfirmUnitId(null);
       await persist(enemyPhaseState, "敵軍フェイズを開始します。");
 
       const execution = runEnemyPhase(enemyPhaseState, CHAPTER_01_MAP);
@@ -420,6 +471,28 @@ export default function App() {
         .map((weaponId) => WEAPONS_BY_ID[weaponId])
         .filter((weapon): weapon is NonNullable<typeof weapon> => Boolean(weapon))
     : [];
+  const selectedInventoryItems = selectedUnit
+    ? selectedUnit.inventory
+        .filter((itemId) => !WEAPONS_BY_ID[itemId])
+        .map((itemId) => ({
+          id: itemId,
+          definition: INVENTORY_ITEMS_BY_ID[itemId]
+        }))
+    : [];
+  const promotionDefinition = selectedUnit?.faction === "player"
+    ? getClassPromotionDefinition(selectedUnit.classId)
+    : undefined;
+  const promotionItemCount = selectedUnit?.inventory.filter(
+    (itemId) => itemId === PROMOTION_ITEM_ID
+  ).length ?? 0;
+  const canStartClassChange = Boolean(
+    selectedUnit &&
+    selectedUnit.faction === "player" &&
+    interactive &&
+    promotionDefinition &&
+    selectedUnit.level >= 10 &&
+    promotionItemCount > 0
+  );
 
   return (
     <main className="app-shell">
@@ -595,6 +668,75 @@ export default function App() {
                     {selectedWeapon && <p className="helper-text">威力 {selectedWeapon.power} · 命中 {selectedWeapon.hit}% · 必殺 {selectedWeapon.critical}% · 射程 {selectedWeapon.minRange}-{selectedWeapon.maxRange}</p>}
                   </div>
                 )}
+                {selectedUnit.faction === "player" && (
+                  <>
+                    <div className="inventory-items">
+                      <h3>所持アイテム</h3>
+                      {selectedInventoryItems.length > 0 ? (
+                        <ul>
+                          {selectedInventoryItems.map((item) => (
+                            <li key={item.id}>
+                              <strong>{item.definition?.name ?? item.id}</strong>
+                              {item.definition && <span>{item.definition.description}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="helper-text">武器以外のアイテムはありません。</p>
+                      )}
+                    </div>
+                    <section className="promotion-panel" aria-labelledby="promotion-heading">
+                      <h3 id="promotion-heading">クラスチェンジ</h3>
+                      {promotionDefinition ? (
+                        <>
+                          <p className="promotion-target">昇格先：<strong>{promotionDefinition.toClassId}</strong></p>
+                          <p className="promotion-item-count">クラスチェンジの証：<strong>{promotionItemCount}個</strong></p>
+                          {selectedUnit.level < 10 && (
+                            <p className="helper-text">基本職Lv.10以上でクラスチェンジできます（現在Lv.{selectedUnit.level}）。</p>
+                          )}
+                          {promotionItemCount === 0 && (
+                            <p className="helper-text">クラスチェンジの証を所持していません。</p>
+                          )}
+                          <button
+                            className="secondary-button block-button"
+                            type="button"
+                            disabled={!canStartClassChange}
+                            onClick={() => setPromotionConfirmUnitId(selectedUnit.id)}
+                          >
+                            クラスチェンジを確認
+                          </button>
+                          {promotionConfirmUnitId === selectedUnit.id && (
+                            <div className="promotion-confirmation" role="group" aria-label="クラスチェンジ確認">
+                              <strong>{promotionDefinition.toClassId}へ昇格しますか？</strong>
+                              <p>能力ボーナス（暫定）：{formatPromotionBonuses(promotionDefinition.statBonuses)}</p>
+                              <p>レベルは1に戻り、現在EXPは保持します。証を1個消費します。</p>
+                              <div className="command-actions">
+                                <button
+                                  className="primary-button"
+                                  type="button"
+                                  disabled={!interactive}
+                                  onClick={() => void handleClassChange()}
+                                >
+                                  昇格を確定
+                                </button>
+                                <button
+                                  className="secondary-button"
+                                  type="button"
+                                  disabled={saveStatus === "saving"}
+                                  onClick={() => setPromotionConfirmUnitId(null)}
+                                >
+                                  キャンセル
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="helper-text">このクラスに昇格先は設定されていません。</p>
+                      )}
+                    </section>
+                  </>
+                )}
                 <div className="command-actions">
                   <button
                     className="primary-button"
@@ -611,6 +753,7 @@ export default function App() {
                     onClick={() => {
                       setSelectedUnitId(null);
                       setCombatTargetId(null);
+                      setPromotionConfirmUnitId(null);
                     }}
                   >
                     選択解除
