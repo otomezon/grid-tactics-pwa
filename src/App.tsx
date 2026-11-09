@@ -3,6 +3,8 @@ import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "./content/maps/chapter-01";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
+import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
+import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
@@ -42,6 +44,18 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "戦闘操作に失敗しました。";
 }
 
+function formatEnemyPhaseSummary(execution: ReturnType<typeof runEnemyPhase>): string {
+  const actions = execution.actions.map((action) => action.message).join("。");
+  if (execution.outcome === "victory") {
+    return (actions ? actions + "。" : "") + "勝利条件を達成しました。";
+  }
+  if (execution.outcome === "defeat") {
+    return (actions ? actions + "。" : "") + "味方ユニットが全滅しました。";
+  }
+  return (actions ? actions + "。" : "敵軍は行動できませんでした。") +
+    "敵軍フェイズ終了。第" + execution.nextState.turn + "ターン・自軍フェイズです。";
+}
+
 export default function App() {
   const [gameState, setGameState] = useState<GameStateSnapshot>(INITIAL_GAME_STATE);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -75,11 +89,12 @@ export default function App() {
           return;
         }
 
-        setGameState(migration.snapshot);
+        let restoredState = migration.snapshot;
+        setGameState(restoredState);
         if (migration.migrated) {
           setSaveStatus("saving");
           try {
-            await saveGameState(migration.snapshot);
+            await saveGameState(restoredState);
             if (!cancelled) {
               setSaveStatus("saved");
               setMessage("以前のセーブデータを新しい形式へ移行しました。");
@@ -93,8 +108,29 @@ export default function App() {
           return;
         }
 
+        if (restoredState.phase === "enemy") {
+          const enemyPhase = runEnemyPhase(restoredState, CHAPTER_01_MAP);
+          restoredState = enemyPhase.nextState;
+          setGameState(restoredState);
+          try {
+            await saveGameState(restoredState);
+            if (!cancelled) {
+              setSaveStatus("saved");
+              setMessage(formatEnemyPhaseSummary(enemyPhase));
+            }
+          } catch {
+            if (!cancelled) {
+              setSaveStatus("failed");
+              setMessage("敵軍フェイズを解決しましたが、セーブに失敗しました。");
+            }
+          }
+          return;
+        }
+
         setSaveStatus("saved");
-        setMessage("前回の自動保存データを復元しました。");
+        setMessage(migration.migrated
+          ? "以前のセーブデータを新しい形式へ移行しました。"
+          : "前回の自動保存データを復元しました。");
       } catch {
         if (!cancelled) {
           setSaveStatus("unavailable");
@@ -134,7 +170,9 @@ export default function App() {
     });
   }, [gameState.units, selectedUnit]);
 
-  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked;
+  const battleOutcome = evaluateBattleOutcome(gameState, CHAPTER_01_MAP);
+  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked &&
+    gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
     () => new Set(reachableTiles.map((tile) => String(tile.x) + "," + String(tile.y))),
     [reachableTiles]
@@ -316,6 +354,24 @@ export default function App() {
     await persist(nextState, selectedUnit.name + "は待機しました。");
   }
 
+  async function handleEndPlayerPhase(): Promise<void> {
+    if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
+
+    try {
+      const enemyPhaseState = beginEnemyPhase(gameState, CHAPTER_01_MAP);
+      setGameState(enemyPhaseState);
+      setSelectedUnitId(null);
+      setCombatTargetId(null);
+      await persist(enemyPhaseState, "敵軍フェイズを開始します。");
+
+      const execution = runEnemyPhase(enemyPhaseState, CHAPTER_01_MAP);
+      setGameState(execution.nextState);
+      await persist(execution.nextState, formatEnemyPhaseSummary(execution));
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    }
+  }
+
   const selectedStatus = selectedUnit
     ? selectedUnit.hasActed
       ? "行動済み"
@@ -339,15 +395,27 @@ export default function App() {
           <p className="subtitle">マップ・移動・戦闘予測・攻撃のプロトタイプ</p>
         </div>
         <div className="header-status">
-          <span className="phase-badge">第{gameState.turn}ターン · 自軍フェイズ</span>
+          <span className="phase-badge">{battleOutcome === "victory" ? "勝利" : battleOutcome === "defeat" ? "敗北" : "第" + gameState.turn + "ターン · " + (gameState.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ")}</span>
           <span className={"save-badge save-" + saveStatus}>{SAVE_STATUS_LABELS[saveStatus]}</span>
+          {battleOutcome === "playing" && gameState.phase === "player" && (
+            <button className="secondary-button phase-end-button" type="button" disabled={!interactive} onClick={() => void handleEndPlayerPhase()}>
+              自軍フェイズ終了
+            </button>
+          )}
         </div>
       </header>
 
       <div className="prototype-notice">
         <strong>開発プロトタイプ</strong>
-        <span>仮マップ・仮ユニット・仮武器を使用しています。敵AI、フェイズ進行、成長・キャンペーンはまだ実装していません。</span>
+        <span>仮マップ・仮ユニット・仮武器を使用しています。基本的な敵AI・フェイズ進行・勝敗判定を実装した開発版です。</span>
       </div>
+
+      {battleOutcome !== "playing" && (
+        <section className={"battle-outcome " + (battleOutcome === "victory" ? "outcome-victory" : "outcome-defeat")} role="status">
+          <strong>{battleOutcome === "victory" ? "ステージクリア" : "敗北"}</strong>
+          <span>{battleOutcome === "victory" ? "勝利条件を達成しました。" : "味方ユニットが全滅しました。"}</span>
+        </section>
+      )}
 
       <div className="battle-layout">
         <section className="map-card" aria-labelledby="map-heading">
