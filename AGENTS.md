@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
 - Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal.
-- PR #1–#7 are merged. The current branch connects a prototype promotion item, inventory display, promotion confirmation UI, and autosave. Final promotion balance and chapter reward/campaign progression remain unimplemented.
+- PR #1–#8 are merged. The current branch implements fort recovery at faction phase start. Final promotion balance and chapter reward/campaign progression remain unimplemented.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 
 ## 2. Critical instructions
@@ -25,7 +25,7 @@
 - `domain/movement`: terrain-cost reachability.
 - `domain/combat`: weapon compatibility, formulas, forecast, deterministic resolver, provisional Manhattan distance.
 - `domain/random`: Xorshift32.
-- `domain/rules`: battle outcome evaluation.
+- `domain/rules`: battle outcome evaluation and fort recovery at phase start.
 - `domain/progression`: experience threshold, deterministic level growth, and data-driven class promotion rules.
 - `application`: player/enemy combat commands, class-promotion command, and deterministic enemy-phase resolution.
 - `App.tsx`: prototype map UI, battle forecast, phase-end control, battle result, inventory display, and class-promotion confirmation.
