@@ -13,7 +13,8 @@
 - package manager: npm
 - Vitest: `5.0.0`
 - Game save schema: `saveVersion: 2`。IndexedDB database versionは1のまま。
-- この作業ブランチでアプリ、ドメイン、content、persistence、テスト、ドキュメントを追加・更新。PR CI結果はChecksで確認する。
+- この作業ブランチでアプリ、ドメイン、content、persistence、テスト、ドキュメントを追加・更新。
+- PR #4のGitHub Actions CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。ブラウザ実機確認は未実施。
 
 ## 2. 機能別ステータス
 
