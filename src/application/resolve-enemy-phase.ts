@@ -46,21 +46,15 @@ const COUNTER_DAMAGE_PENALTY_WEIGHT = 2;
 const COUNTER_LETHAL_PENALTY = 500;
 
 /** Begin the enemy phase after player input is locked and that state is saved. */
-export function beginEnemyPhase(state: GameStateSnapshot): GameStateSnapshot {
+export function beginEnemyPhase(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): GameStateSnapshot {
   if (state.phase !== "player") {
     throw new Error("The player phase is not active.");
   }
-  if (evaluateBattleOutcome(state, {
-    id: state.chapterId,
-    width: 1,
-    height: 1,
-    terrain: [],
-    playerDeployment: [],
-    enemyDeployment: [],
-    objective: { type: "defeat_all" }
-  }) !== "playing") {
-    // The real map objective is evaluated by the caller before invoking this command.
-    // This fallback is intentionally not used for gameplay decision-making.
+  if (evaluateBattleOutcome(state, map) !== "playing") {
+    throw new Error("The battle has already ended.");
   }
 
   return { ...state, phase: "enemy" };
