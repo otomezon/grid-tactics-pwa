@@ -69,12 +69,15 @@ describe("evaluateBattleOutcome", () => {
   it("wins when the configured boss is no longer present", () => {
     const map: GameMapDefinition = {
       ...CHAPTER_01_MAP,
+      enemyDeployment: CHAPTER_01_MAP.enemyDeployment.map((deployment) =>
+        deployment.unitId === "enemy_001" ? { ...deployment, unitId: "enemy_boss" } : deployment
+      ),
       objective: { type: "defeat_boss", targetUnitId: "enemy_boss" }
     };
     const state = {
       ...INITIAL_GAME_STATE,
       units: [
-        ...INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "enemy_boss"),
+        ...INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "enemy_001" && unit.id !== "enemy_boss"),
         {
           ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
           id: "enemy_boss"
@@ -86,6 +89,17 @@ describe("evaluateBattleOutcome", () => {
       { ...state, units: state.units.filter((unit) => unit.id !== "enemy_boss") },
       map
     )).toBe("victory");
+  });
+
+  it("rejects a map whose critical defeat target is not deployed", () => {
+    const invalidMap: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      defeatCondition: { type: "unit_defeated", targetUnitId: "missing_unit" }
+    };
+
+    expect(() => evaluateBattleOutcome(INITIAL_GAME_STATE, invalidMap)).toThrow(
+      "The battle map definition is invalid."
+    );
   });
 
   it("treats an empty player roster as defeat even when the objective is met", () => {
