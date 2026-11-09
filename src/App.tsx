@@ -525,6 +525,71 @@ export default function App() {
     await persist(nextState, selectedUnit.name + "は待機しました。");
   }
 
+  function handleDeploymentPositionChange(unitId: string, nextPosition: string): void {
+    setDeploymentAssignments((current) => {
+      const currentPosition = current[unitId];
+      const occupiedBy = Object.entries(current).find(
+        ([otherUnitId, position]) => otherUnitId !== unitId && position === nextPosition
+      )?.[0];
+
+      if (occupiedBy && currentPosition) {
+        return {
+          ...current,
+          [unitId]: nextPosition,
+          [occupiedBy]: currentPosition
+        };
+      }
+
+      return { ...current, [unitId]: nextPosition };
+    });
+  }
+
+  async function handleConfirmDeployment(): Promise<void> {
+    if (
+      !deploymentPending ||
+      loadBlocked ||
+      saveStatus === "loading" ||
+      saveStatus === "saving"
+    ) return;
+
+    try {
+      const assignments = currentMap.playerDeployment.flatMap(({ unitId }) => {
+        const unit = gameState.units.find((candidate) =>
+          candidate.id === unitId && candidate.faction === "player" && candidate.currentHp > 0
+        );
+        const positionKey = deploymentAssignments[unitId];
+        if (!unit || !positionKey) return [];
+
+        const [x, y] = positionKey.split(",").map(Number);
+        if (!Number.isInteger(x) || !Number.isInteger(y)) {
+          throw new Error(unit.name + "の出撃位置が正しくありません。");
+        }
+
+        return [{ unitId, position: { x, y } }];
+      });
+      const nextState = preparePlayerDeployment(gameState, currentMap, assignments);
+
+      setGameState(nextState);
+      setSelectedUnitId(null);
+      setCombatTargetId(null);
+      setPromotionConfirmUnitId(null);
+      setSaveStatus("saving");
+
+      try {
+        await saveGameState(nextState);
+        setSaveStatus("saved");
+        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。");
+      } catch {
+        setSaveStatus("failed");
+        setMessage("出撃配置は確定しましたが、自動保存に失敗しました。次の行動時に再保存します。");
+      }
+
+      setDeploymentPending(false);
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    }
+  }
+
   async function handleEndPlayerPhase(): Promise<void> {
     if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
 
@@ -583,19 +648,22 @@ export default function App() {
 
       setActiveChapter(targetChapter);
       setGameState(nextState);
+      setDeploymentAssignments(createDeploymentAssignments(nextState, targetChapter.map));
+      setDeploymentPending(true);
       setSelectedUnitId(null);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
+      setSaveStatus("ready");
 
       const rewardText = rewardExecution.rewardsApplied.length > 0
         ? " 報酬：" + rewardExecution.rewardsApplied
             .map((reward) => reward.recipientName + "に" + reward.itemName + "×" + reward.quantity)
             .join("、") + "。"
         : " この章に設定された追加アイテム報酬はありません。";
-      await persist(
-        nextState,
+      setMessage(
         activeChapter.title + "をクリアしました。" + targetChapter.title +
-          "を開始します。" + rewardText + "章間HPは現在値を維持しました（暫定）。"
+          "の出撃位置を確認してください。" + rewardText +
+          "章間HPは現在値を維持しました（暫定）。配置確定時に次章データを保存します。"
       );
     } catch (error) {
       setMessage(getErrorMessage(error));
