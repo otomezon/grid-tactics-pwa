@@ -1,7 +1,6 @@
 import type {
   GameMapDefinition,
-  MapDeployment,
-  TerrainType
+  MapDeployment
 } from "./game";
 
 const TERRAIN_TYPES: ReadonlySet<string> = new Set([
