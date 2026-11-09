@@ -157,7 +157,18 @@ describe("enemy phase controller", () => {
       name: "Enemy 2",
       position: { x: 5, y: 4 }
     };
-    const result = runEnemyPhase(battleState([player, enemyOne, enemyTwo]), openMap());
+    const baseMap = openMap();
+    const map: GameMapDefinition = {
+      ...baseMap,
+      enemyDeployment: baseMap.enemyDeployment.map((deployment) =>
+        deployment.unitId === "enemy_001"
+          ? { ...deployment, unitId: "enemy_010" }
+          : deployment.unitId === "enemy_003"
+            ? { ...deployment, unitId: "enemy_002" }
+            : deployment
+      )
+    };
+    const result = runEnemyPhase(battleState([player, enemyOne, enemyTwo]), map);
 
     expect(result.actions.map((action) => action.enemyId)).toEqual(["enemy_002", "enemy_010"]);
   });
