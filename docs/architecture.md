@@ -56,7 +56,11 @@ src/
 6. 戦闘継続中なら敵軍フェイズ後にturnを1増やし、残存ユニットの行動フラグをresetしてplayer phaseへ戻す。勝敗ならterminal stateのままにする。
 7. 次状態をIndexedDBへ保存。起動時に `phase: enemy` の保存が読み込まれた場合は敵軍フェイズを再開・解決する。
 
-## 4. 依存方向のルール
+## 4. 章間遷移
+
+`application/prepare-next-chapter.ts` は前章の勝利を検証し、次章マップの出撃配置を基準に味方の永続データを引き継ぐ。撃破済み味方を復帰させず、次章テンプレートに定義された新規加入者と敵を追加する。章間HP方針は呼び出し側が明示し、次章の初期turn／phase／RNGは次章テンプレートを使う。saveVersion 2の形は変更しない。UI／保存接続は未実装。
+
+## 5. 依存方向のルール
 
 - domainはReact／DOM／IndexedDBに依存しない。
 - contentは定義データのみを保持する。
