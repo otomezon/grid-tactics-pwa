@@ -70,7 +70,9 @@ export function createAttackPlanForFaction(
     throw new Error("The selected attacker or target no longer exists.");
   }
   if (attacker.faction !== attackerFaction || defender.faction !== defenderFaction) {
-    throw new Error("The attacker and target must belong to opposing factions in the active turn.");
+    throw new Error(attackerFaction === "player"
+      ? "The player unit must target an enemy unit."
+      : "The enemy unit must target a player unit.");
   }
   if (attacker.currentHp <= 0 || defender.currentHp <= 0) {
     throw new Error("Combat participants must be alive.");
