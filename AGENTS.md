@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
 - Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal.
-- PR #1–#4 are merged. The current branch adds basic deterministic enemy AI, phase progression, and battle outcome evaluation. Progression, rewards, and campaign remain unimplemented.
+- PR #1–#5 are merged. The current branch adds experience rewards, deterministic growth checks, and a basic stage-result panel. Class change, final class caps, and campaign progression remain unimplemented.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 
 ## 2. Critical instructions
@@ -26,6 +26,7 @@
 - `domain/combat`: weapon compatibility, formulas, forecast, deterministic resolver, provisional Manhattan distance.
 - `domain/random`: Xorshift32.
 - `domain/rules`: battle outcome evaluation.
+- `domain/progression`: experience threshold and deterministic level growth.
 - `application`: player/enemy combat commands and deterministic enemy-phase resolution.
 - `App.tsx`: prototype map UI, battle forecast, phase-end control, and battle result.
 - `persistence`: IndexedDB and saveVersion 1→2 migration.
@@ -93,6 +94,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - `architecture.md`: module boundaries and data flow.
 - `combat.md`: combat calculations and unresolved combat rules.
 - `enemy-ai.md`: phase progression, AI scoring, outcomes, and open decisions.
+- `progression.md`: EXP rewards, growth checks, provisional stat caps, and stage results.
 - `development.md`: confirmed commands and CI.
 - `database.md`: IndexedDB schema and migrations.
 - `current-state.md`: feature/test status.
