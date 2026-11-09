@@ -15,7 +15,7 @@ import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
-import type { GameMapDefinition, GameStateSnapshot, Position, UnitStats } from "./domain/models/game";
+import type { CampaignUnit, GameMapDefinition, GameStateSnapshot, Position, UnitStats, WeaponType } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
 import type { LevelUpRecord } from "./domain/progression/level-up";
 import { createRandomSeed } from "./domain/random/xorshift32";
@@ -34,6 +34,25 @@ const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
   invalid: "保存データを確認してください"
 };
 
+const DEPLOYMENT_STAT_LABELS: ReadonlyArray<{ key: keyof UnitStats; label: string }> = [
+  { key: "hp", label: "HP" },
+  { key: "strength", label: "力" },
+  { key: "magic", label: "魔力" },
+  { key: "skill", label: "技" },
+  { key: "speed", label: "速さ" },
+  { key: "luck", label: "幸運" },
+  { key: "defense", label: "守備" },
+  { key: "resistance", label: "魔防" }
+];
+
+const WEAPON_TYPE_LABELS: Record<WeaponType, string> = {
+  sword: "剣",
+  lance: "槍",
+  axe: "斧",
+  bow: "弓",
+  magic: "魔法"
+};
+
 function samePosition(left: Position, right: Position): boolean {
   return left.x === right.x && left.y === right.y;
 }
@@ -46,13 +65,41 @@ function deploymentPositionKey(position: Position): string {
   return position.x + "," + position.y;
 }
 
-interface DeploymentCandidate {
-  id: string;
-  name: string;
-  level: number;
-  currentHp: number;
-  stats: UnitStats;
-  position: Position;
+type DeploymentCandidate = Pick<
+  CampaignUnit,
+  | "id"
+  | "name"
+  | "classId"
+  | "level"
+  | "experience"
+  | "stats"
+  | "currentHp"
+  | "movementType"
+  | "move"
+  | "usableWeaponTypes"
+  | "inventory"
+  | "equippedWeaponId"
+> & { position: Position };
+
+function toDeploymentCandidate(
+  unit: CampaignUnit,
+  position: Position
+): DeploymentCandidate {
+  return {
+    id: unit.id,
+    name: unit.name,
+    classId: unit.classId,
+    level: unit.level,
+    experience: unit.experience,
+    stats: unit.stats,
+    currentHp: unit.currentHp,
+    movementType: unit.movementType,
+    move: unit.move,
+    usableWeaponTypes: unit.usableWeaponTypes,
+    inventory: unit.inventory,
+    equippedWeaponId: unit.equippedWeaponId,
+    position
+  };
 }
 
 function getDeploymentCandidate(
@@ -65,26 +112,11 @@ function getDeploymentCandidate(
   const active = state.units.find((candidate) =>
     candidate.id === unitId && candidate.faction === "player" && candidate.currentHp > 0
   );
-  if (active) {
-    return {
-      id: active.id,
-      name: active.name,
-      level: active.level,
-      currentHp: active.currentHp,
-      stats: active.stats,
-      position: active.position
-    };
-  }
+  if (active) return toDeploymentCandidate(active, active.position);
+
   const reserve = state.reserveUnits.find((candidate) => candidate.id === unitId);
   if (!reserve) return undefined;
-  return {
-    id: reserve.id,
-    name: reserve.name,
-    level: reserve.level,
-    currentHp: reserve.currentHp,
-    stats: reserve.stats,
-    position: { x: deployment.x, y: deployment.y }
-  };
+  return toDeploymentCandidate(reserve, { x: deployment.x, y: deployment.y });
 }
 
 function createDeploymentAssignments(
@@ -221,6 +253,7 @@ export default function App() {
   const [deploymentSelectedUnitIds, setDeploymentSelectedUnitIds] = useState<string[]>(
     () => createDeploymentSelection(INITIAL_CHAPTER.initialState, INITIAL_CHAPTER.map)
   );
+  const [deploymentDetailUnitId, setDeploymentDetailUnitId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -788,6 +821,25 @@ export default function App() {
   });
   const deploymentSelectedSet = new Set(deploymentSelectedUnitIds);
   const deploymentUnits = deploymentCandidates.filter((candidate) => deploymentSelectedSet.has(candidate.id));
+  const deploymentDetailCandidate = deploymentCandidates.find(
+    (candidate) => candidate.id === deploymentDetailUnitId
+  );
+  const deploymentDetailWeapons = deploymentDetailCandidate
+    ? deploymentDetailCandidate.inventory
+        .map((itemId) => WEAPONS_BY_ID[itemId])
+        .filter((weapon): weapon is NonNullable<typeof weapon> => Boolean(weapon))
+    : [];
+  const deploymentDetailItems = deploymentDetailCandidate
+    ? deploymentDetailCandidate.inventory
+        .filter((itemId) => !WEAPONS_BY_ID[itemId])
+        .map((itemId) => ({
+          id: itemId,
+          definition: INVENTORY_ITEMS_BY_ID[itemId]
+        }))
+    : [];
+  const equippedDeploymentWeapon = deploymentDetailCandidate?.equippedWeaponId
+    ? WEAPONS_BY_ID[deploymentDetailCandidate.equippedWeaponId]
+    : undefined;
   const deploymentSlots = currentMap.playerDeployment.map(({ x, y }) => ({
     value: x + "," + y,
     label: positionLabel({ x, y })
@@ -847,24 +899,107 @@ export default function App() {
                       <span>Lv.{unit.level} · HP {unit.currentHp}/{unit.stats.hp}</span>
                     </span>
                   </label>
-                  {selected ? (
-                    <select
-                      aria-label={unit.name + "の出撃位置"}
-                      value={deploymentAssignments[unit.id] ?? deploymentPositionKey(unit.position)}
-                      disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
-                      onChange={(event) => handleDeploymentPositionChange(unit.id, event.target.value)}
+                  <div className="deployment-unit-actions">
+                    {selected ? (
+                      <select
+                        aria-label={unit.name + "の出撃位置"}
+                        value={deploymentAssignments[unit.id] ?? deploymentPositionKey(unit.position)}
+                        disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
+                        onChange={(event) => handleDeploymentPositionChange(unit.id, event.target.value)}
+                      >
+                        {deploymentSlots.map((slot) => (
+                          <option value={slot.value} key={slot.value}>{slot.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="deployment-reserve-label">控え</span>
+                    )}
+                    <button
+                      className="deployment-detail-toggle"
+                      type="button"
+                      aria-expanded={deploymentDetailUnitId === unit.id}
+                      aria-controls="deployment-detail-panel"
+                      onClick={() => setDeploymentDetailUnitId((current) =>
+                        current === unit.id ? null : unit.id
+                      )}
                     >
-                      {deploymentSlots.map((slot) => (
-                        <option value={slot.value} key={slot.value}>{slot.label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="deployment-reserve-label">控え</span>
-                  )}
+                      {deploymentDetailUnitId === unit.id ? "詳細を閉じる" : "詳細"}
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
+          {deploymentDetailCandidate && (
+            <section
+              className="deployment-detail-card"
+              id="deployment-detail-panel"
+              aria-labelledby="deployment-detail-heading"
+              aria-live="polite"
+            >
+              <div className="deployment-detail-heading">
+                <div>
+                  <p className="eyebrow">UNIT DETAILS</p>
+                  <h3 id="deployment-detail-heading">{deploymentDetailCandidate.name}</h3>
+                  <p>Lv.{deploymentDetailCandidate.level} · {getClassDisplayName(deploymentDetailCandidate.classId)} · EXP {deploymentDetailCandidate.experience}/100</p>
+                </div>
+                <span>{deploymentSelectedSet.has(deploymentDetailCandidate.id) ? "出撃予定" : "控え予定"}</span>
+              </div>
+              <div className="deployment-detail-overview">
+                <div><span>HP</span><strong>{deploymentDetailCandidate.currentHp} / {deploymentDetailCandidate.stats.hp}</strong></div>
+                <div><span>移動</span><strong>{deploymentDetailCandidate.movementType === "infantry" ? "歩兵" : "騎馬"} · {deploymentDetailCandidate.move}</strong></div>
+                <div><span>装備中</span><strong>{equippedDeploymentWeapon?.name ?? "未装備"}</strong></div>
+                <div><span>武器適性</span><strong>{deploymentDetailCandidate.usableWeaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join("・") || "なし"}</strong></div>
+              </div>
+              <div className="deployment-detail-stats" aria-label="能力値">
+                {DEPLOYMENT_STAT_LABELS.map(({ key, label }) => (
+                  <div className="deployment-detail-stat" key={key}>
+                    <span>{label}</span>
+                    <strong>{deploymentDetailCandidate.stats[key]}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="deployment-detail-inventory">
+                <section>
+                  <h4>所持武器</h4>
+                  {deploymentDetailWeapons.length > 0 ? (
+                    <ul>
+                      {deploymentDetailWeapons.map((weapon) => (
+                        <li key={weapon.id}>
+                          <div>
+                            <strong>{weapon.name}</strong>
+                            {deploymentDetailCandidate.equippedWeaponId === weapon.id && (
+                              <span className="equipped-weapon-label">装備中</span>
+                            )}
+                          </div>
+                          <span>
+                            {WEAPON_TYPE_LABELS[weapon.weaponType]} · 威力 {weapon.power} · 命中 {weapon.hit}% · 必殺 {weapon.critical}% · 射程 {weapon.minRange}-{weapon.maxRange}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="helper-text">所持武器はありません。</p>
+                  )}
+                </section>
+                <section>
+                  <h4>所持アイテム</h4>
+                  {deploymentDetailItems.length > 0 ? (
+                    <ul>
+                      {deploymentDetailItems.map((item) => (
+                        <li key={item.id}>
+                          <strong>{item.definition?.name ?? item.id}</strong>
+                          {item.definition && <span>{item.definition.description}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="helper-text">武器以外のアイテムはありません。</p>
+                  )}
+                </section>
+              </div>
+            </section>
+          )}
           {deploymentUnits.length === 0 && (
             <p className="helper-text">戦闘を開始するには、少なくとも1人の味方を選択してください。</p>
           )}
