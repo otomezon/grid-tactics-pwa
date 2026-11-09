@@ -5,12 +5,12 @@
 - 更新日: 2026-11-09
 - Repository: `otomezon/grid-tactics-pwa`
 - デフォルトブランチ: `main`
-- PR #1〜#8と#10はマージ済み。PR #8: `b6a31fdeff71d9915734d9e3c2a0da9b4df6737f`、PR #10: `e378d1d48a24f2d4879ab84da66092f4cb6c028d`。PR #9は砦回復のmain追従・再検証中。
+- PR #1〜#10はすべてマージ済み。PR #9（砦回復）のマージコミット: `30f474a938ae54ba5b3a17db34f2693e1434dc51`。PR #10（章間引き継ぎ）のマージコミット: `e378d1d48a24f2d4879ab84da66092f4cb6c028d`。
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- 現在の開発対象: PR #9の砦フェイズ回復は最新mainへ同期済み。CI成功、レビュー待ち。
+- 現在の開発対象: 章レジストリ、データ駆動の章報酬、リザルトからの次章開始、章IDに応じたセーブ復元を接続。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
 
@@ -35,7 +35,7 @@
 | 敗北（味方全滅） | 実装済み | 同上 |
 | 主人公個別撃破による敗北 | 未実装（主人公IDなし） | 未定義 |
 | ステージ結果概要表示 | 実装済み（PR #6、勝敗・敵撃破数・生存味方のLv／EXP／HP） | `src/App.tsx` | UI手動確認未実施 |
-| 詳細リザルト統計・加入・章報酬・次章遷移 | 未実装 | — |
+| 詳細リザルト統計・会話／加入イベント・キャンペーン選択／分岐 | 未実装 | — |
 | 経験値・レベルアップ | 実装済み（PR #6） | `src/domain/progression/level-up.ts`, `src/application/perform-attack.ts` |
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
@@ -49,8 +49,9 @@
 | 正式な昇格ボーナス・上限・昇格後移動／武器データ | 未決定（現行は仮値） | `src/content/classes.ts` | playtest／仕様決定待ち |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
 | 砦のフェイズ開始回復 | 実装済み（該当陣営の生存ユニット／最大HPの10%／端数切り捨ては暫定） | `src/domain/rules/apply-fort-recovery.ts`, `src/application/resolve-enemy-phase.ts` |
-| 章間引き継ぎロジック | 実装済み（勝利後の次章state構築、永続データ引き継ぎ、撃破者除外、新規加入者／敵テンプレート、HP方針明示） | `src/application/prepare-next-chapter.ts` | application tests。App／IndexedDB接続・実際の次章コンテンツは未実装 |
-| 章報酬・章間アイテム配布・リザルトUI・次章選択 | 未実装（報酬内容／数量／次章コンテンツが未定義） | — |
+| 章間引き継ぎ・次章開始UI | 実装済み（章レジストリ、章ID別マップ復元、勝利後の次章開始、レベル／能力／所持品引き継ぎ、撃破者除外、RNG継続、auto slot保存） | `src/content/chapters.ts`, `src/application/prepare-next-chapter.ts`, `src/App.tsx` | 次章は遷移確認用の試作データ |
+| 章報酬 | データ駆動の適用処理実装済み（章定義のitemId／recipient／quantityを検証して配布。各所持品5枠上限） | `src/application/apply-chapter-rewards.ts`, `src/content/chapters.ts` | 現在登録した試作章の報酬は空配列。実際の報酬内容・数量は未決定 |
+| 第2章マップ | 試作データ実装済み（第1章からの遷移とセーブ復元を確認するための仮配置） | `src/content/maps/chapter-02.ts` | 正式なマップ／敵構成ではない |
 | UI／スマートフォン実機確認 | 未実施 | — |
 
 ## 3. 検証コマンド
@@ -67,7 +68,7 @@
 - クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。
 - 1戦闘中に複数回ダメージを与えた場合、現行はstrikeごとに+10 EXPを付与する解釈。
 - HP成長時は最大HPのみ増やし、現在HPは維持。
-- 詳細統計・加入イベント・正式な章報酬・章間アイテム配布・章間遷移UI／次章コンテンツ・キャンペーン選択は未実装。章間の味方データを引き継ぐapplication基盤は実装済み。クラスチェンジアイテムの正式な配布ルールも未決定。
+- 正式な章マップ／敵構成／報酬品目・数量、会話／加入イベント、キャンペーン選択／分岐／解放管理は未実装。第2章はUI／引き継ぎ確認用の試作データ。クラスチェンジアイテムの正式な入手・配布ルールも未決定。
 - ブラウザ統合テスト・モバイル実機・IndexedDB再開動作は未実施。
 
 ## 5. 次の作業候補
