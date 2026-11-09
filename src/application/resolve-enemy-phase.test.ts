@@ -41,7 +41,6 @@ describe("enemy phase controller", () => {
   it("recovers enemy units on forts when the enemy phase begins", () => {
     const player = {
       ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
-      position: { x: 4, y: 4 },
       currentHp: 10
     };
     const enemy = {
@@ -81,6 +80,24 @@ describe("enemy phase controller", () => {
     expect(result.phaseStartRecoveries).toEqual([
       { unitId: player.id, unitName: player.name, recoveredHp: 2 }
     ]);
+  });
+
+
+  it("does not reapply enemy fort recovery when resuming a saved enemy phase", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      currentHp: 20
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 4, y: 4 },
+      currentHp: 12,
+      hasActed: true
+    };
+    const savedEnemyPhase = battleState([player, enemy], "enemy");
+    const result = runEnemyPhase(savedEnemyPhase, mapWithFortAt(4, 4));
+
+    expect(result.nextState.units.find((unit) => unit.id === enemy.id)?.currentHp).toBe(12);
   });
 
   it("attacks a player unit already in range and advances the round", () => {
