@@ -124,6 +124,33 @@ describe("preparePlayerDeployment", () => {
     )).toThrow(/surviving player unit exactly once/);
   });
 
+  it("moves non-selected survivors into reserves and allows a later redeployment", () => {
+    const selectedIds = ["unit_001", "unit_003"];
+    const benched = preparePlayerDeployment(INITIAL_GAME_STATE, CHAPTER_01_MAP, [
+      { unitId: "unit_001", position: { x: 1, y: 8 } },
+      { unitId: "unit_003", position: { x: 3, y: 8 } }
+    ], selectedIds);
+    expect(benched.units.filter((unit) => unit.faction === "player").map((unit) => unit.id)).toEqual(selectedIds);
+    expect(benched.reserveUnits.map((unit) => unit.id).sort()).toEqual(["unit_002", "unit_004"]);
+
+    const redeployed = preparePlayerDeployment(benched, CHAPTER_01_MAP, [
+      { unitId: "unit_002", position: { x: 1, y: 8 } }
+    ], ["unit_002"]);
+    expect(redeployed.units.find((unit) => unit.id === "unit_002")).toMatchObject({
+      faction: "player", position: { x: 1, y: 8 }, hasMoved: false, hasActed: false
+    });
+    expect(redeployed.reserveUnits.map((unit) => unit.id).sort()).toEqual(["unit_001", "unit_003"]);
+  });
+
+  it("requires at least one selected unit and keeps a critical target deployed", () => {
+    expect(() => preparePlayerDeployment(INITIAL_GAME_STATE, CHAPTER_01_MAP, [], []))
+      .toThrow(/At least one living player unit/);
+    const map = { ...CHAPTER_01_MAP, defeatCondition: { type: "unit_defeated" as const, targetUnitId: "unit_001" } };
+    expect(() => preparePlayerDeployment(INITIAL_GAME_STATE, map, [
+      { unitId: "unit_002", position: { x: 1, y: 8 } }
+    ], ["unit_002"])).toThrow(/critical player unit/);
+  });
+
   it("rejects deployment after the first action, outside turn one, or outside player phase", () => {
     const actedState = {
       ...INITIAL_GAME_STATE,
