@@ -560,7 +560,12 @@ export default function App() {
         const positionKey = deploymentAssignments[unitId];
         if (!unit || !positionKey) return [];
 
-        const [x, y] = positionKey.split(",").map(Number);
+        const [xPart, yPart] = positionKey.split(",");
+        if (xPart === undefined || yPart === undefined) {
+          throw new Error(unit.name + "の出撃位置が正しくありません。");
+        }
+        const x = Number(xPart);
+        const y = Number(yPart);
         if (!Number.isInteger(x) || !Number.isInteger(y)) {
           throw new Error(unit.name + "の出撃位置が正しくありません。");
         }
