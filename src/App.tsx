@@ -46,6 +46,47 @@ function deploymentPositionKey(position: Position): string {
   return position.x + "," + position.y;
 }
 
+interface DeploymentCandidate {
+  id: string;
+  name: string;
+  level: number;
+  currentHp: number;
+  stats: UnitStats;
+  position: Position;
+}
+
+function getDeploymentCandidate(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  unitId: string
+): DeploymentCandidate | undefined {
+  const deployment = map.playerDeployment.find((candidate) => candidate.unitId === unitId);
+  if (!deployment) return undefined;
+  const active = state.units.find((candidate) =>
+    candidate.id === unitId && candidate.faction === "player" && candidate.currentHp > 0
+  );
+  if (active) {
+    return {
+      id: active.id,
+      name: active.name,
+      level: active.level,
+      currentHp: active.currentHp,
+      stats: active.stats,
+      position: active.position
+    };
+  }
+  const reserve = state.reserveUnits.find((candidate) => candidate.id === unitId);
+  if (!reserve) return undefined;
+  return {
+    id: reserve.id,
+    name: reserve.name,
+    level: reserve.level,
+    currentHp: reserve.currentHp,
+    stats: reserve.stats,
+    position: { x: deployment.x, y: deployment.y }
+  };
+}
+
 function createDeploymentAssignments(
   state: GameStateSnapshot,
   map: GameMapDefinition
@@ -53,30 +94,34 @@ function createDeploymentAssignments(
   const available = new Set(map.playerDeployment.map(deploymentPositionKey));
   const used = new Set<string>();
   const assignments: Record<string, string> = {};
-
   for (const deployment of map.playerDeployment) {
-    const unit = state.units.find((candidate) =>
-      candidate.id === deployment.unitId &&
-      candidate.faction === "player" &&
-      candidate.currentHp > 0
-    );
-    if (!unit) continue;
-
-    const currentPosition = deploymentPositionKey(unit.position);
+    const candidate = getDeploymentCandidate(state, map, deployment.unitId);
+    if (!candidate) continue;
+    const currentPosition = deploymentPositionKey(candidate.position);
     const fallbackPosition = deploymentPositionKey(deployment);
     const selectedPosition = available.has(currentPosition) && !used.has(currentPosition)
       ? currentPosition
       : !used.has(fallbackPosition)
         ? fallbackPosition
         : [...available].find((position) => !used.has(position));
-
     if (selectedPosition) {
-      assignments[unit.id] = selectedPosition;
+      assignments[candidate.id] = selectedPosition;
       used.add(selectedPosition);
     }
   }
-
   return assignments;
+}
+
+function createDeploymentSelection(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): string[] {
+  return map.playerDeployment.flatMap(({ unitId }) => {
+    const active = state.units.find((unit) =>
+      unit.id === unitId && unit.faction === "player" && unit.currentHp > 0
+    );
+    return active ? [unitId] : [];
+  });
 }
 
 function strikeKindLabel(kind: AttackPlan["forecast"]["strikes"][number]["kind"]): string {
@@ -173,6 +218,9 @@ export default function App() {
   const [deploymentAssignments, setDeploymentAssignments] = useState<Record<string, string>>(
     () => createDeploymentAssignments(INITIAL_CHAPTER.initialState, INITIAL_CHAPTER.map)
   );
+  const [deploymentSelectedUnitIds, setDeploymentSelectedUnitIds] = useState<string[]>(
+    () => createDeploymentSelection(INITIAL_CHAPTER.initialState, INITIAL_CHAPTER.map)
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -189,6 +237,7 @@ export default function App() {
           };
           setGameState(freshState);
           setDeploymentAssignments(createDeploymentAssignments(freshState, INITIAL_CHAPTER.map));
+          setDeploymentSelectedUnitIds(createDeploymentSelection(freshState, INITIAL_CHAPTER.map));
           setDeploymentPending(true);
           setSaveStatus("ready");
           return;
@@ -218,6 +267,7 @@ export default function App() {
         setActiveChapter(restoredChapter);
         setGameState(restoredState);
         setDeploymentAssignments(createDeploymentAssignments(restoredState, restoredChapter.map));
+        setDeploymentSelectedUnitIds(createDeploymentSelection(restoredState, restoredChapter.map));
         setDeploymentPending(false);
         if (migration.migrated) {
           setSaveStatus("saving");
@@ -529,18 +579,34 @@ export default function App() {
     setDeploymentAssignments((current) => {
       const currentPosition = current[unitId];
       const occupiedBy = Object.entries(current).find(
-        ([otherUnitId, position]) => otherUnitId !== unitId && position === nextPosition
+        ([otherUnitId, position]) =>
+          otherUnitId !== unitId &&
+          deploymentSelectedUnitIds.includes(otherUnitId) &&
+          position === nextPosition
       )?.[0];
-
       if (occupiedBy && currentPosition) {
-        return {
-          ...current,
-          [unitId]: nextPosition,
-          [occupiedBy]: currentPosition
-        };
+        return { ...current, [unitId]: nextPosition, [occupiedBy]: currentPosition };
       }
-
       return { ...current, [unitId]: nextPosition };
+    });
+  }
+
+  function handleDeploymentSelectionChange(unitId: string, selected: boolean): void {
+    if (!selected) {
+      setDeploymentSelectedUnitIds((current) => current.filter((id) => id !== unitId));
+      return;
+    }
+    setDeploymentSelectedUnitIds((current) => {
+      if (current.includes(unitId)) return current;
+      const used = new Set(current.map((id) => deploymentAssignments[id]).filter(Boolean));
+      const currentPosition = deploymentAssignments[unitId];
+      const availablePosition = currentPosition && !used.has(currentPosition)
+        ? currentPosition
+        : deploymentSlots.find((slot) => !used.has(slot.value))?.value;
+      if (!availablePosition) return current;
+      if (availablePosition === currentPosition) return [...current, unitId];
+      setDeploymentAssignments((assignments) => ({ ...assignments, [unitId]: availablePosition }));
+      return [...current, unitId];
     });
   }
 
@@ -553,26 +619,26 @@ export default function App() {
     ) return;
 
     try {
-      const assignments = currentMap.playerDeployment.flatMap(({ unitId }) => {
-        const unit = gameState.units.find((candidate) =>
-          candidate.id === unitId && candidate.faction === "player" && candidate.currentHp > 0
-        );
+      const assignments = deploymentSelectedUnitIds.map((unitId) => {
+        const candidate = getDeploymentCandidate(gameState, currentMap, unitId);
         const positionKey = deploymentAssignments[unitId];
-        if (!unit || !positionKey) return [];
-
+        if (!candidate || !positionKey) {
+          throw new Error("選択した味方の出撃位置を確認できません。");
+        }
         const [xPart, yPart] = positionKey.split(",");
         if (xPart === undefined || yPart === undefined) {
-          throw new Error(unit.name + "の出撃位置が正しくありません。");
+          throw new Error(candidate.name + "の出撃位置が正しくありません。");
         }
         const x = Number(xPart);
         const y = Number(yPart);
         if (!Number.isInteger(x) || !Number.isInteger(y)) {
-          throw new Error(unit.name + "の出撃位置が正しくありません。");
+          throw new Error(candidate.name + "の出撃位置が正しくありません。");
         }
-
-        return [{ unitId, position: { x, y } }];
+        return { unitId, position: { x, y } };
       });
-      const nextState = preparePlayerDeployment(gameState, currentMap, assignments);
+      const nextState = preparePlayerDeployment(
+        gameState, currentMap, assignments, deploymentSelectedUnitIds
+      );
 
       setGameState(nextState);
       setSelectedUnitId(null);
@@ -654,6 +720,7 @@ export default function App() {
       setActiveChapter(targetChapter);
       setGameState(nextState);
       setDeploymentAssignments(createDeploymentAssignments(nextState, targetChapter.map));
+      setDeploymentSelectedUnitIds(createDeploymentSelection(nextState, targetChapter.map));
       setDeploymentPending(true);
       setSelectedUnitId(null);
       setCombatTargetId(null);
@@ -712,12 +779,12 @@ export default function App() {
     selectedUnit.level >= 10 &&
     promotionItemCount > 0
   );
-  const deploymentUnits = currentMap.playerDeployment.flatMap(({ unitId }) => {
-    const unit = gameState.units.find((candidate) =>
-      candidate.id === unitId && candidate.faction === "player" && candidate.currentHp > 0
-    );
-    return unit ? [unit] : [];
+  const deploymentCandidates = currentMap.playerDeployment.flatMap(({ unitId }) => {
+    const candidate = getDeploymentCandidate(gameState, currentMap, unitId);
+    return candidate ? [candidate] : [];
   });
+  const deploymentSelectedSet = new Set(deploymentSelectedUnitIds);
+  const deploymentUnits = deploymentCandidates.filter((candidate) => deploymentSelectedSet.has(candidate.id));
   const deploymentSlots = currentMap.playerDeployment.map(({ x, y }) => ({
     value: x + "," + y,
     label: positionLabel({ x, y })
@@ -754,32 +821,50 @@ export default function App() {
               <p className="eyebrow">DEPLOYMENT</p>
               <h2 id="deployment-heading">出撃準備</h2>
             </div>
-            <span>{deploymentUnits.length}人出撃</span>
+            <span>{deploymentUnits.length}人出撃 / {deploymentCandidates.length - deploymentUnits.length}人控え</span>
           </div>
           <p className="helper-text">
-            味方全員が出撃します。章マップで指定された出撃位置を入れ替えられます。
-            同じ位置を選ぶと、該当するユニット同士の配置が入れ替わります。
+            出撃する味方を選択し、出撃位置を設定します。選ばなかった生存者は控えとして保持され、次章以降に出撃できます。
+            配置は章マップに登録された候補と出撃マスの範囲内で変更できます。
           </p>
           <div className="deployment-list">
-            {deploymentUnits.map((unit) => (
-              <label className="deployment-unit" key={unit.id}>
-                <span className="deployment-unit-info">
-                  <strong>{unit.name}</strong>
-                  <span>Lv.{unit.level} · HP {unit.currentHp}/{unit.stats.hp}</span>
-                </span>
-                <select
-                  aria-label={unit.name + "の出撃位置"}
-                  value={deploymentAssignments[unit.id] ?? deploymentPositionKey(unit.position)}
-                  disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
-                  onChange={(event) => handleDeploymentPositionChange(unit.id, event.target.value)}
-                >
-                  {deploymentSlots.map((slot) => (
-                    <option value={slot.value} key={slot.value}>{slot.label}</option>
-                  ))}
-                </select>
-              </label>
-            ))}
+            {deploymentCandidates.map((unit) => {
+              const selected = deploymentSelectedSet.has(unit.id);
+              return (
+                <div className={"deployment-unit" + (selected ? " is-deployed" : " is-reserve")} key={unit.id}>
+                  <label className="deployment-unit-choice">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
+                      onChange={(event) => handleDeploymentSelectionChange(unit.id, event.target.checked)}
+                    />
+                    <span className="deployment-unit-info">
+                      <strong>{unit.name}</strong>
+                      <span>Lv.{unit.level} · HP {unit.currentHp}/{unit.stats.hp}</span>
+                    </span>
+                  </label>
+                  {selected ? (
+                    <select
+                      aria-label={unit.name + "の出撃位置"}
+                      value={deploymentAssignments[unit.id] ?? deploymentPositionKey(unit.position)}
+                      disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
+                      onChange={(event) => handleDeploymentPositionChange(unit.id, event.target.value)}
+                    >
+                      {deploymentSlots.map((slot) => (
+                        <option value={slot.value} key={slot.value}>{slot.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="deployment-reserve-label">控え</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
+          {deploymentUnits.length === 0 && (
+            <p className="helper-text">戦闘を開始するには、少なくとも1人の味方を選択してください。</p>
+          )}
           <button
             className="primary-button block-button"
             type="button"
@@ -791,10 +876,10 @@ export default function App() {
             }
             onClick={() => void handleConfirmDeployment()}
           >
-            出撃配置を確定して戦闘開始
+            出撃メンバーと配置を確定して戦闘開始
           </button>
           <p className="helper-text">
-            配置確定までは戦闘データを保存しません。配置確定後に自動保存します。
+            配置確定までは戦闘データを保存しません。確定時に出撃中の味方と控えを分けて自動保存します。
           </p>
         </section>
       )}
