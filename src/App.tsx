@@ -58,9 +58,19 @@ function formatEnemyPhaseSummary(execution: ReturnType<typeof runEnemyPhase>): s
 }
 
 function formatLevelUps(levelUps: LevelUpRecord[]): string {
+  const statLabels: Record<keyof LevelUpRecord["gains"], string> = {
+    hp: "HP",
+    strength: "力",
+    magic: "魔力",
+    skill: "技",
+    speed: "速さ",
+    luck: "幸運",
+    defense: "守備",
+    resistance: "魔防"
+  };
   return levelUps.map((levelUp) => {
     const gains = Object.entries(levelUp.gains)
-      .map(([stat, value]) => stat.toUpperCase() + "+" + String(value))
+      .map(([stat, value]) => statLabels[stat as keyof LevelUpRecord["gains"]] + "+" + String(value))
       .join("・");
     return "Lv." + levelUp.newLevel + "へレベルアップ" +
       (gains ? "（" + gains + "）" : "（能力上昇なし）");
@@ -560,6 +570,9 @@ export default function App() {
                 </div>
                 <div className="unit-details">
                   <div><span>HP</span><strong>{selectedUnit.currentHp} / {selectedUnit.stats.hp}</strong></div>
+                  {selectedUnit.faction === "player" && (
+                    <div><span>経験値</span><strong>EXP {selectedUnit.experience} / 100</strong></div>
+                  )}
                   <div><span>移動力</span><strong>{selectedUnit.move}</strong></div>
                   <div><span>移動種別</span><strong>{selectedUnit.movementType === "infantry" ? "歩兵" : "騎馬"}</strong></div>
                   <div><span>行動状態</span><strong>{selectedStatus}</strong></div>
