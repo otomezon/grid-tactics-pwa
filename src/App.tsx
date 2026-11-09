@@ -121,6 +121,7 @@ export default function App() {
   const [message, setMessage] = useState("味方ユニットを選択してください。");
   const [loadBlocked, setLoadBlocked] = useState(false);
   const [promotionConfirmUnitId, setPromotionConfirmUnitId] = useState<string | null>(null);
+  const [isStartingNextChapter, setIsStartingNextChapter] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -243,7 +244,7 @@ export default function App() {
         .filter((unit) => unit.id !== selectedUnit.id)
         .map((unit) => unit.position)
     });
-  }, [gameState.units, selectedUnit]);
+  }, [gameState.units, selectedUnit, currentMap]);
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked &&
@@ -289,7 +290,7 @@ export default function App() {
         error: getErrorMessage(error)
       };
     }
-  }, [gameState, selectedUnit, combatTargetId]);
+  }, [gameState, selectedUnit, combatTargetId, currentMap]);
 
   async function persist(
     nextState: GameStateSnapshot,
@@ -501,9 +502,11 @@ export default function App() {
       battleOutcome !== "victory" ||
       saveStatus === "saving" ||
       saveStatus === "loading" ||
-      loadBlocked
+      loadBlocked ||
+      isStartingNextChapter
     ) return;
 
+    setIsStartingNextChapter(true);
     try {
       const rewardExecution = applyChapterRewards(
         gameState,
@@ -513,7 +516,10 @@ export default function App() {
       const nextState = prepareNextChapter({
         previousState: rewardExecution.nextState,
         previousMap: currentMap,
-        nextChapterInitialState: targetChapter.initialState,
+        nextChapterInitialState: {
+          ...targetChapter.initialState,
+          rngState: gameState.rngState
+        },
         nextMap: targetChapter.map,
         // Inter-chapter HP handling is not defined in the game design yet.
         currentHpPolicy: "preserve"
@@ -537,6 +543,8 @@ export default function App() {
       );
     } catch (error) {
       setMessage(getErrorMessage(error));
+    } finally {
+      setIsStartingNextChapter(false);
     }
   }
 
@@ -641,10 +649,10 @@ export default function App() {
                   <button
                     className="primary-button block-button"
                     type="button"
-                    disabled={saveStatus === "saving" || saveStatus === "loading" || loadBlocked}
+                    disabled={saveStatus === "saving" || saveStatus === "loading" || loadBlocked || isStartingNextChapter}
                     onClick={() => void handleStartNextChapter()}
                   >
-                    {nextChapter.title}を開始
+                    {isStartingNextChapter ? "次章を準備中…" : nextChapter.title + "を開始"}
                   </button>
                 </div>
               ) : (
