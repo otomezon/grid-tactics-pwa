@@ -93,16 +93,20 @@ function scoreAttack(enemy: GameUnit, target: GameUnit, plan: AttackPlan): numbe
   if (!opening) return Number.NEGATIVE_INFINITY;
 
   const expectedDamage = opening.normalDamage * opening.hitRate / 100;
-  const canDefeat = opening.normalDamage >= target.currentHp;
+  const canDefeat = opening.hitRate > 0 && (
+    opening.normalDamage >= target.currentHp ||
+    (opening.criticalRate > 0 && opening.criticalDamage >= target.currentHp)
+  );
   const triangleBonus = opening.weaponTriangleHitModifier > 0 ? TRIANGLE_BONUS : 0;
   const lowHpBonus = (target.stats.hp - target.currentHp) * LOW_HP_BONUS_PER_POINT;
   const counter = plan.forecast.strikes.find((strike) => strike.kind === "counter");
   const counterExpectedDamage = counter
     ? counter.normalDamage * counter.hitRate / 100
     : 0;
-  const counterLethalPenalty = counter && counter.normalDamage >= enemy.currentHp
-    ? COUNTER_LETHAL_PENALTY
-    : 0;
+  const counterLethalPenalty = counter && counter.hitRate > 0 && (
+    counter.normalDamage >= enemy.currentHp ||
+    (counter.criticalRate > 0 && counter.criticalDamage >= enemy.currentHp)
+  ) ? COUNTER_LETHAL_PENALTY : 0;
 
   return (
     (canDefeat ? KILL_BONUS : 0) +
