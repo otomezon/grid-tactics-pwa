@@ -2,36 +2,47 @@
 
 スマートフォンのブラウザで遊べる、オフライン対応を目指したターン制タクティカルSRPGのプロジェクトです。
 
-> **現状に関する注意（2026-11-09）**: 初回監査（このドキュメント一式をアップロードする前）にはGitHub APIが空リポジトリと応答しました。その後、ベースライン文書が `main` に追加されています。現在確認できるのは設計・開発ドキュメントであり、アプリケーションのソースコード・設定ファイル・テストは確認できていません。したがって、以下の技術構成と機能は添付設計書に記載された**初期実装向け提案**であり、実装済みの事実ではありません。
+## 現在の開発状況
 
-## 企画概要
+- PR #1でAI開発ドキュメント基盤を整備し、mainへマージ済み。
+- 現在の作業ブランチではPhase 0のReact／TypeScript／Vite／PWA基盤と、Phase 1の10×10マップ・ユニット選択・移動範囲・移動の初期プロトタイプを追加しています。
+- マップとユニットは操作確認用の仮データです。戦闘、敵AI、フェイズ進行、成長、章選択は未実装です。
+- 実装状況は [docs/current-state.md](docs/current-state.md) を参照してください。
 
-- 仮称: Tactical SRPG PWA
-- ジャンル: ターン制・マス目移動型タクティカルSRPG
-- 対象: スマートフォン、PCブラウザ
-- 目標: タップ／マウス操作、インストール可能なPWA、初回読み込み後の基本的なオフラインプレイ
-- 方針: 既存作品の移植・複製ではないオリジナル作品。既存作品の名称・キャラクター・台詞・マップ・画像・音源を使用しない。
+## 技術スタック
 
-## 技術構成（設計提案）
+- Node.js 26（許容: Node 22.12+、24+、26+）
+- npm
+- React 19.3.1 / React DOM 19.3.1
+- TypeScript 7.0.2
+- Vite 8.3.6
+- vite-plugin-pwa 2.0.0
+- Vitest 5.1.0
+- IndexedDB（ブラウザ内の自動保存）
 
-TypeScript、Vite、React、CSS Grid（初期のマップ描画案）、`vite-plugin-pwa`、IndexedDBが推奨されています。導入状況・バージョン・パッケージマネージャーは未確認です。
+## セットアップ
 
-## 開発状況
+```bash
+npm install
+npm run dev
+```
 
-- GitHubデフォルトブランチ: `main`
-- リポジトリ監査: 初回監査時（ドキュメント投入前）は空。その後、設計・開発ドキュメント10ファイルを `main` に追加（コミット [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea)）。アプリ本体・設定・テストは未確認。Issue／PRは今回のベースライン作成前の確認で0件。
-- ライセンス: 未確認／未設定（空リポジトリのため確認できるライセンスファイルなし）。
-- 実装・テスト・CI/CD・ホスティング: 未確認。現時点では存在を確認できない。
+主な確認コマンド:
 
-## セットアップ・起動
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run preview
+```
 
-現在リポジトリにアプリケーションコードや `package.json` がないため、実行可能なセットアップ／起動コマンドはありません。開発環境の作成後、実際のマニフェストとスクリプトに基づいて [`docs/development.md`](docs/development.md) を更新してください。
+初回の `npm install` で `package-lock.json` を生成し、依存関係の再現性を確保するため別途コミットしてください。詳細は [docs/development.md](docs/development.md) を参照。
 
 ## ドキュメント
 
 - [AIエージェント向け開発ルール](AGENTS.md)
 - [ドキュメント目次](docs/README.md)
-- [ゲーム設計書 v1.0（添付原文）](docs/game-design.md)
+- [ゲーム設計書 v1.0](docs/game-design.md)
 - [アーキテクチャ](docs/architecture.md)
 - [開発環境・手順](docs/development.md)
 - [データ保存設計](docs/database.md)
@@ -39,6 +50,6 @@ TypeScript、Vite、React、CSS Grid（初期のマップ描画案）、`vite-pl
 - [実装状況](docs/current-state.md)
 - [設計と実装の照合](docs/design-reconciliation.md)
 
-## 最初の開発目標
+## 開発方針
 
-設計書では、まず1マップで味方・敵が交互に行動し、戦闘・成長・勝敗・保存まで成立させることを最初のマイルストーンとしています。チュートリアル込み3ステージ等のコンテンツ拡張は、その後に進めます。詳細は `docs/game-design.md` を参照してください。
+ゲーム設計の基準は [docs/game-design.md](docs/game-design.md) です。設計提案と実装済み仕様を混同せず、未決定のゲームルールを推測で確定しないでください。AI開発時は必ず [AGENTS.md](AGENTS.md) を参照してください。
