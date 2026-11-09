@@ -3,58 +3,53 @@
 ## 1. 対象と判定基準
 
 - 基準資料: `docs/game-design.md`（v1.0、2026-11-09、初期実装向け設計案）
-- PR #1（文書基盤）とPR #2（PWA／マップ初期基盤）はマージ済み。現在のブランチで戦闘domain kernelを追加。
+- PR #1（文書基盤）、PR #2（PWA／マップ初期基盤）、PR #3（戦闘計算kernel）はmainへマージ済み。現在のブランチで戦闘UI・攻撃コマンド・RNG保存・旧save migrationを追加。
 - A: 設計記載と実装が一致
 - B: 設計済み・未実装
 - C: 実装済み・未文書化
-- D: 不一致・要確認、または設計案に判断待ち
+- D: 不一致・要確認、または設計案に対する暫定判断
 
-## 2. A：一致（設計要件の初期部分）
+## 2. A：設計案と実装が一致する項目
 
 | 対象 | 設計書 | 現在の実装 | 根拠 |
 |---|---|---|---|
-| 技術基盤 | TypeScript + Vite + React推奨 | 指定バージョンで導入 | `package.json`, `vite.config.ts` |
-| PWA基盤 | Manifest、Service Worker、静的アセットキャッシュ | vite-plugin-pwaで生成・登録設定 | `vite.config.ts`, `src/main.tsx` |
-| マップ規模 | 標準10×10 | 10×10試作マップ表示 | `src/content/maps/chapter-01.ts` |
-| 4方向移動 | 上下左右、斜めなし | 4近傍の探索 | `calculate-reachable-tiles.ts` |
-| 地形コスト | 平地／道1、森は歩兵2・騎馬3、山は歩兵2・騎馬不可、砦1、壁・水域進入不可 | 地形定義と到達範囲計算に反映 | `src/content/terrain.ts` |
-| 占有マス | 他ユニットのいるマスには進入不可 | occupied tileを探索対象から除外 | `calculate-reachable-tiles.ts` |
-| 行動回数 | 1ユニット1フェイズ原則1回 | 試作UIに移動済み／行動済み状態を保持 | `src/App.tsx`, `game.ts` |
-| IndexedDB保存 | 行動確定後等に自動保存 | 移動／待機確定後にauto slot保存 | `src/persistence/save-repository.ts` |
-| 保存version | saveVersionと将来マイグレーション | saveVersion 1とロード時検証 | `game.ts`, `validate-game-state.ts` |
-| 武器三すくみ | 剣・槍・斧に命中±20、弓・魔法は対象外 | `getWeaponTriangleHitModifier` に反映 | `src/domain/combat/combat.ts` |
-| 戦闘計算 | 初期案の攻撃力・ダメージ・命中・必殺式 | domainの純粋関数に実装 | `src/domain/combat/combat.ts` |
-| 必殺ダメージ | 通常ダメージ×3 | 定数と予測・解決処理に反映 | `src/domain/combat/combat.ts` |
-| 反撃・追撃 | 攻撃→可能なら反撃→速さ差4以上の追撃 | 予測・決定論的解決に反映 | `src/domain/combat/combat.ts` |
+| PWA／React／TypeScript | 初期技術案 | 構成済み | package.json、vite.config.ts |
+| マップ規模・移動 | 10×10、4方向 | 10×10試作マップと4近傍探索 | chapter-01.ts、movement |
+| 地形移動・防御・回避 | terrain定義へ集約 | content/terrain.tsで管理 | terrain.ts |
+| 三すくみ | 剣／槍／斧の命中±20、弓／魔法対象外 | domain combatに反映 | combat.ts |
+| 戦闘計算 | 初期案の攻撃力・ダメージ・命中・必殺式 | domain関数に実装 | combat.ts |
+| 必殺・追撃 | 必殺×3、速さ差4 | 定数とforecast／resolverに反映 | combat.ts |
+| 攻撃順 | 先制→可能なら反撃→追撃 | forecast／resolverに反映 | combat.ts |
+| 戦闘予測・攻撃操作 | 予測UIと実戦闘 | マップで対象選択、予測確認、攻撃確定 | App.tsx、perform-attack.ts |
+| 状態・RNG保存 | 行動後自動保存、乱数状態保存 | saveVersion 2でHP／行動状態／RNG stateを保存 | game.ts、save-repository.ts |
+| save互換性 | saveVersionとmigration | version1→2を追加 | migrations.ts |
 
 ## 3. B：設計済み・未実装
 
-正式な武器データ／数値、攻撃距離の座標計算、武器選択UI、戦闘予測UI、戦闘結果のゲーム状態反映、乱数シード／状態の生成・保存、フェイズ進行、敵AI、経験値・成長・クラスチェンジ、アイテム・イベント、勝敗判定、リザルト、章選択・複数ステージ、複数slot・セーブマイグレーションは未実装。
+敵AI・敵フェイズ・ターン進行、勝利／敗北判定、リザルト、経験値・成長・クラスチェンジ、アイテム・イベント、章選択・複数ステージ、複数slot・backup・export/import、戦闘演出・専用ログ画面は未実装。
 
 ## 4. C：実装済み・未文書化
 
-現時点で該当なし。今回追加した機能は本書、`combat.md`、`current-state.md` に記録する。
+現時点で該当なし。今回追加した機能は `combat.md`、`database.md`、`architecture.md`、`current-state.md` に記録する。
 
-## 5. D：不一致・要確認
+## 5. D：暫定実装・要確認
 
 | 項目 | 現状 | 判断・影響 |
 |---|---|---|
-| 縦画面／横画面 | UIはレスポンシブな縦並び／横並びの切替。正式優先方向は未決定 | 実機確認後に正式化 |
-| アート方式 | 地形・ユニットは仮のCSS図形とラベル | ピクセルアート採用等は未決定 |
-| 試作コンテンツ | マップ・ユニット名・能力値は操作検証用 | 正式キャラクター・章設定ではない |
-| 追撃条件 | 速さ差4以上の追撃は実装。反撃不能な防御側が速さ優位の場合は追撃しない暫定解釈 | 全条件の仕様確認 |
-| 攻撃距離 | `buildCombatForecast` は呼び出し元から整数distanceを受け取る | マンハッタン／チェビシェフ等の座標距離を決定 |
-| 武器数値・選択 | WeaponDefinitionモデルのみ。具体的な数値・装備選択フィールドなし | 初期武器の能力値と装備・反撃武器選択を決定 |
-| RNG | resolverは呼び出し側からロール列を受け取る。GameStateにはRNG状態なし | RNG方式、シード／消費位置、saveVersion migrationを設計 |
-| 武器ランク・回復手段 | 設計書 §17で確認事項 | 初期版の要否を決定 |
-| IndexedDBスキーマ | 初期Object Storeを実装 | 複数slot・migration・backup等は未決定 |
+| 仮武器数値 | 鉄の剣は設計書 §12.2の例。他4種は操作確認用の暫定値 | 正式な武器データ・能力値を決める |
+| 攻撃距離 | Manhattan距離を暫定採用 | 正式なdistance metricを決める。斜め攻撃の距離解釈に影響 |
+| 反撃武器 | 防御側のequippedWeaponIdを使用 | 複数武器時の最適選択やユーザー選択を決める |
+| 追撃全条件 | 設計書初期案の速さ差4と攻撃順を実装 | 反撃不可能な場合など全端条件を正式確認 |
+| RNG方式 | Xorshift32を実装しsaveVersion 2で状態保存 | 実装方式は再現性のため固定。将来変更時はmigrationが必要 |
+| 試作コンテンツ | マップ・ユニット・仮武器を表示・操作に利用 | 正式な物語／コンテンツ／バランスではない |
+| IndexedDB | database version 1、save schema version 2 | 複数slot・backup・import/export等は未決定 |
 
-Dはコードとの差異を検出したという意味ではない。設計案の判断待ちを記録する。
+Dは実装バグの断定ではなく、設計書で最終決定されていない仕様を暫定実装している項目を示す。
 
 ## 6. 検証上の制約
 
-- 実行環境からGitHub clone／npm registryへの接続ができず、ローカル依存インストール・test・buildは未実施。
-- GitHub Actionsで型チェック・テスト・buildを実行するworkflowを追加。結果はPRのChecksで確認する。
-- 実ブラウザ・スマートフォンでのタップ／オフライン／IndexedDB復元テストは未実施。
+- ローカルnpm install／typecheck／test／buildは未実施。PRのGitHub Actionsで検証する。
+- 実ブラウザ／スマートフォンでの攻撃操作、セーブmigration、PWAオフライン挙動は未実施。
+- 既存version1 saveを実ブラウザIndexedDBから移行する統合テストは未実施。
 
-戦闘domain kernelの詳細は [`combat.md`](combat.md) を参照。
+詳細は [`combat.md`](combat.md) と [`database.md`](database.md) を参照。
