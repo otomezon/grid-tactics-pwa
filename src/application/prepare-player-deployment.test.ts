@@ -34,7 +34,7 @@ describe("preparePlayerDeployment", () => {
     );
   });
 
-  it("preserves progression, inventory, HP, RNG, and turn while resetting action flags", () => {
+  it("preserves progression, inventory, HP, RNG, and turn without consuming an action", () => {
     const state: GameStateSnapshot = {
       ...INITIAL_GAME_STATE,
       rngState: 123456789,
@@ -64,6 +64,19 @@ describe("preparePlayerDeployment", () => {
     expect(result.rngState).toBe(123456789);
     expect(result.turn).toBe(1);
     expect(result.phase).toBe("player");
+  });
+
+  it("does not carry a zero-HP player into the prepared battle roster", () => {
+    const state = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) =>
+        unit.id === "unit_002" ? { ...unit, currentHp: 0 } : unit
+      )
+    };
+    const result = preparePlayerDeployment(state, CHAPTER_01_MAP, assignments(state));
+
+    expect(result.units.some((unit) => unit.id === "unit_002")).toBe(false);
+    expect(result.units.filter((unit) => unit.faction === "player")).toHaveLength(3);
   });
 
   it("requires one unique, valid slot for every surviving player unit", () => {
