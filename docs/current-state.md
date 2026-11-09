@@ -7,6 +7,7 @@
 - デフォルトブランチ: `main`
 - PR #1〜#4はマージ済み。PR #4のマージコミット: `99b1d26589bc2132aa0e1bd9c916d875f337f118`
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
+- PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - 現在の開発対象: 敵AI・敵軍フェイズ、勝敗判定、ターン進行。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
@@ -25,6 +26,7 @@
 | 敵AI（攻撃対象評価） | 基本実装・暫定スコア | `src/application/resolve-enemy-phase.ts` |
 | 敵AI（移動後攻撃／接近／待機） | 基本実装 | 同上、`src/domain/movement/` |
 | 敵行動順の固定 | 実装済み（ID辞書順） | `src/application/resolve-enemy-phase.ts` |
+| 敵軍フェイズ／AI／勝敗判定テスト | 実装済み | `src/application/resolve-enemy-phase.test.ts`, `src/domain/rules/evaluate-battle-outcome.test.ts` | 9 test files／54 tests、GitHub Actions run #90成功 |
 | ターン進行・行動フラグreset | 実装済み | 同上 |
 | 敵軍フェイズ中セーブからの再開 | 実装済み | `src/App.tsx`, `src/persistence/save-repository.ts` |
 | 勝利（defeat_all／defeat_boss） | 実装済み | `src/domain/rules/evaluate-battle-outcome.ts` |
