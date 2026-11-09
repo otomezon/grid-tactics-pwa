@@ -105,7 +105,6 @@ export default function App() {
               setMessage("セーブデータは読み込みましたが、新形式への保存に失敗しました。次の行動時に再保存します。");
             }
           }
-          return;
         }
 
         if (restoredState.phase === "enemy") {
@@ -127,10 +126,15 @@ export default function App() {
           return;
         }
 
-        setSaveStatus("saved");
-        setMessage(migration.migrated
-          ? "以前のセーブデータを新しい形式へ移行しました。"
-          : "前回の自動保存データを復元しました。");
+        setSaveStatus((current) => current === "failed" ? "failed" : "saved");
+        const restoredOutcome = evaluateBattleOutcome(restoredState, CHAPTER_01_MAP);
+        setMessage(restoredOutcome === "victory"
+          ? "勝利条件を達成しています。"
+          : restoredOutcome === "defeat"
+            ? "味方ユニットが全滅しています。"
+            : migration.migrated
+              ? "以前のセーブデータを新しい形式へ移行しました。"
+              : "前回の自動保存データを復元しました。");
       } catch {
         if (!cancelled) {
           setSaveStatus("unavailable");
