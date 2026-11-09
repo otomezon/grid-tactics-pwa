@@ -1,3 +1,4 @@
+import { isValidGameMapDefinition } from "./validate-game-map";
 import {
   SAVE_VERSION,
   type GameMapDefinition,
@@ -76,7 +77,7 @@ export function isValidGameStateSnapshot(
   value: unknown,
   map: GameMapDefinition
 ): value is GameStateSnapshot {
-  if (!isRecord(value)) return false;
+  if (!isValidGameMapDefinition(map) || !isRecord(value)) return false;
 
   if (
     value.saveVersion !== SAVE_VERSION ||

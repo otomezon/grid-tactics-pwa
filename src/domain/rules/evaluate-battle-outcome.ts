@@ -1,3 +1,4 @@
+import { isValidGameMapDefinition } from "../models/validate-game-map";
 import type { GameMapDefinition, GameStateSnapshot } from "../models/game";
 
 export type BattleOutcome = "playing" | "victory" | "defeat";
@@ -11,6 +12,10 @@ export function evaluateBattleOutcome(
   state: GameStateSnapshot,
   map: GameMapDefinition
 ): BattleOutcome {
+  if (!isValidGameMapDefinition(map)) {
+    throw new Error("The battle map definition is invalid.");
+  }
+
   const livingPlayers = state.units.filter(
     (unit) => unit.faction === "player" && unit.currentHp > 0
   );
