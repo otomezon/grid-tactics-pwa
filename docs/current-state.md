@@ -2,16 +2,17 @@
 
 ## 1. 監査スナップショット
 
-- 確認日: 2026-11-09
+- 初回監査日: 2026-11-09（ベースライン文書のアップロード前）
+- 再確認日: 2026-11-09（文書アップロード後）
 - Repository: `otomezon/grid-tactics-pwa`
 - 公開状態: Public
 - デフォルトブランチ: `main`
-- GitHub APIのリポジトリサイズ: `0`
-- README、package manifest、Vite／TypeScript設定、`src/`、AGENTS.md、LICENSE、`.github/workflows/`を取得できず、GitHub APIは「This repository is empty」と応答。
-- 確認できたIssue: 0件
-- 確認できたPull Request: 0件
-- ブランチ検索結果: なし（空リポジトリと整合）
-- ソースコード・ビルド・テスト・デプロイ実行: 不可能。ファイルが存在しないため。
+- 初回監査時のGitHub API応答: `This repository is empty`。
+- 初回監査後、設計・開発ドキュメント10ファイルが `main` に追加された（コミット [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea)）。
+- 文書アップロード後の確認では、`AGENTS.md`、`README.md`、`docs/README.md`、`docs/architecture.md`、`docs/development.md`、`docs/database.md`、`docs/security.md`、`docs/current-state.md`、`docs/design-reconciliation.md`、`docs/game-design.md`を取得できた。
+- `package.json`、ロックファイル、Vite／TypeScript設定、`src/`、LICENSE、`.github/workflows/`は確認できていない。
+- 文書アップロード後のIssue: 0件、Pull Request: 0件（本ベースラインPR作成前の確認）。
+- アプリケーションソースがないため、ビルド・テスト・デプロイは実行できない。
 
 ## 2. 機能別ステータス
 
@@ -51,7 +52,7 @@
 
 ## 5. リスク・注意事項
 
-- 現在は空リポジトリのため、設計と実装の実差分、既知不具合、技術的負債をコードから評価できない。
+- 現在GitHubで確認できるのは設計・開発ドキュメントであり、アプリケーション実装がないため、設計と実装の実差分、既知不具合、技術的負債をコードから評価できない。
 - 設計書は「初期実装向け設計案」であり、特に技術構成・戦闘式・バランス値は確定済み仕様とみなさない。
 - save schema、PWA cache更新、RNGアルゴリズム、UI操作の状態遷移など、実装時に設計を具体化する必要がある。
-- 初期コミットをmainに直接作ることは、今回指定されたブランチ運用ルールに反するため実施していない。
+- ベースライン文書はユーザーによるアップロードで `main` に登録済み。本作業で追加する修正は専用ブランチ上で行い、PRでレビュー可能にする。
