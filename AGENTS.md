@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - The product name in the supplied design is the provisional name **Tactical SRPG PWA**. Treat naming as open until confirmed.
 - The supplied baseline design is [`docs/game-design.md`](docs/game-design.md), version 1.0, dated 2026-11-09, status “initial implementation design proposal”.
-- **Repository audit status (2026-11-09): the GitHub repository was empty. No application source, package manifest, tests, CI, deployment configuration, README, or prior development rules were available.** This document set is a planning baseline, not evidence that the application has been implemented.
+- **Initial repository audit (2026-11-09, before the documentation upload):** the repository contained no application source, package manifest, tests, CI, deployment configuration, README, or prior development rules. The baseline documentation was subsequently uploaded to `main` in commit [`11cda17`](https://github.com/otomezon/grid-tactics-pwa/commit/11cda17c71cc332ec5527737c9bafe2aaa3174ea). The repository now contains the documentation baseline, but no application implementation has been confirmed. This document set is a planning baseline, not evidence that the application has been implemented.
 - When implementation is added, source code, executable tests, configuration, and observed runtime behavior are evidence of current implementation. They do not automatically override intended product requirements. Record conflicts in `docs/design-reconciliation.md` and request a product decision where necessary.
 
 ## 2. Critical instructions for AI agents
