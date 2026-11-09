@@ -4,10 +4,11 @@
 
 ## 現在の開発状況
 
-- PR #1でAI開発ドキュメント基盤を整備し、mainへマージ済み。
-- 現在の作業ブランチではPhase 0のReact／TypeScript／Vite／PWA基盤と、Phase 1の10×10マップ・ユニット選択・移動範囲・移動の初期プロトタイプを追加しています。
-- マップとユニットは操作確認用の仮データです。戦闘の計算・予測・決定論的な解決エンジンは追加中ですが、UI・正式な武器データ・セーブ済み乱数状態とは未接続です。敵AI、フェイズ進行、成長、章選択も未実装です。
-- 実装状況は [docs/current-state.md](docs/current-state.md) を参照してください。
+- PR #1でAI開発ドキュメント基盤、PR #2でReact／TypeScript／Vite／PWAとマップ・移動の初期プロトタイプ、PR #3で戦闘計算エンジンをmainへマージ済み。
+- 現在の開発ブランチでは、装備武器の選択、攻撃可能な敵の表示、戦闘予測、攻撃実行、HP・撃破の反映、乱数状態の自動保存を接続しています。
+- マップ・ユニット・武器の能力値は操作確認用の仮データです。仮武器の数値は正式なバランス値ではありません。
+- 敵AI、敵フェイズ、ターン進行、経験値・成長、勝敗・章進行は未実装です。
+- 実装状況は [docs/current-state.md](docs/current-state.md)、戦闘ルールの実装境界は [docs/combat.md](docs/combat.md) を参照してください。
 
 ## 技術スタック
 
@@ -18,7 +19,7 @@
 - Vite 8.3.6
 - vite-plugin-pwa 2.0.0
 - Vitest 5.0.0
-- IndexedDB（ブラウザ内の自動保存）
+- IndexedDB（ブラウザ内の自動保存、saveVersion 2）
 
 ## セットアップ
 
@@ -53,4 +54,4 @@ npm run preview
 
 ## 開発方針
 
-ゲーム設計の基準は [docs/game-design.md](docs/game-design.md) です。設計提案と実装済み仕様を混同せず、未決定のゲームルールを推測で確定しないでください。AI開発時は必ず [AGENTS.md](AGENTS.md) を参照してください。
+ゲーム設計の基準は [docs/game-design.md](docs/game-design.md) です。設計提案、仮データによる実装上の選択、正式に決定した仕様を混同せず、未決定のゲームルールを確定扱いしないでください。AI開発時は必ず [AGENTS.md](AGENTS.md) を参照してください。
