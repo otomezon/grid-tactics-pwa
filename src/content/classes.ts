@@ -22,10 +22,12 @@ const PROTOTYPE_STAT_CAPS: UnitStats = {
 
 export const PROTOTYPE_CLASS_STAT_CAPS: Readonly<Record<string, UnitStats>> = {
   swordsman: PROTOTYPE_STAT_CAPS,
-  archer: PROTOTYPE_STAT_CAPS,
+  mercenary: PROTOTYPE_STAT_CAPS,
+  fighter: PROTOTYPE_STAT_CAPS,
   soldier: PROTOTYPE_STAT_CAPS,
   cavalry: PROTOTYPE_STAT_CAPS,
-  fighter: PROTOTYPE_STAT_CAPS,
+  archer: PROTOTYPE_STAT_CAPS,
+  mage: PROTOTYPE_STAT_CAPS,
   swordmaster: PROTOTYPE_STAT_CAPS,
   hero: PROTOTYPE_STAT_CAPS,
   warrior: PROTOTYPE_STAT_CAPS,
@@ -63,6 +65,27 @@ export function getPromotionTargetClassId(classId: string): string | undefined {
   return CLASS_PROMOTION_TARGETS[classId as keyof typeof CLASS_PROMOTION_TARGETS];
 }
 
+
+export const CLASS_DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  swordsman: "剣士",
+  mercenary: "傭兵",
+  fighter: "戦士",
+  soldier: "ソルジャー",
+  cavalry: "騎兵",
+  archer: "アーチャー",
+  mage: "魔道士",
+  swordmaster: "ソードマスター",
+  hero: "勇者",
+  warrior: "ウォーリア",
+  general: "ジェネラル",
+  paladin: "パラディン",
+  sniper: "スナイパー",
+  sage: "賢者"
+};
+
+export function getClassDisplayName(classId: string): string {
+  return CLASS_DISPLAY_NAMES[classId] ?? classId;
+}
 
 /**
  * Temporary stat bonuses for the playable prototype.
