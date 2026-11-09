@@ -58,13 +58,15 @@ function hasValidCampaignUnitData(value: unknown): value is CampaignUnit {
   );
 }
 function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
-  if (!hasValidCampaignUnitData(value) || !isRecord(value) || !isRecord(value.position)) return false;
-  const position = value.position;
+  if (!isRecord(value)) return false;
+  const fields = value;
+  if (!hasValidCampaignUnitData(value) || !isRecord(fields.position)) return false;
+  const position = fields.position;
   return (
-    (value.faction === "player" || value.faction === "enemy") &&
+    (fields.faction === "player" || fields.faction === "enemy") &&
     isNonNegativeInteger(position.x) && isNonNegativeInteger(position.y) &&
     position.x < map.width && position.y < map.height &&
-    typeof value.hasMoved === "boolean" && typeof value.hasActed === "boolean"
+    typeof fields.hasMoved === "boolean" && typeof fields.hasActed === "boolean"
   );
 }
 
