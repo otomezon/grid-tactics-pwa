@@ -92,7 +92,7 @@ function createInput(options: {
   attackerStats?: Partial<GameUnit["stats"]>;
   defenderStats?: Partial<GameUnit["stats"]>;
   attackerWeapon?: WeaponDefinition;
-  defenderWeapon?: WeaponDefinition;
+  defenderWeapon?: WeaponDefinition | null;
   attackerTerrain?: TerrainDefinition;
   defenderTerrain?: TerrainDefinition;
   distance?: number;
@@ -119,8 +119,8 @@ function createInput(options: {
     defender: {
       unit: createUnit("defender", "enemy", {
         stats: options.defenderStats,
-        weaponTypes: [defenderWeapon.weaponType],
-        inventory: [defenderWeapon.id]
+        weaponTypes: defenderWeapon ? [defenderWeapon.weaponType] : [],
+        inventory: defenderWeapon ? [defenderWeapon.id] : []
       }),
       terrain: options.defenderTerrain ?? createTerrain()
     },
