@@ -707,6 +707,16 @@ export default function App() {
     selectedUnit.level >= 10 &&
     promotionItemCount > 0
   );
+  const deploymentUnits = currentMap.playerDeployment.flatMap(({ unitId }) => {
+    const unit = gameState.units.find((candidate) =>
+      candidate.id === unitId && candidate.faction === "player" && candidate.currentHp > 0
+    );
+    return unit ? [unit] : [];
+  });
+  const deploymentSlots = currentMap.playerDeployment.map(({ x, y }) => ({
+    value: x + "," + y,
+    label: positionLabel({ x, y })
+  }));
 
   return (
     <main className="app-shell">
@@ -731,6 +741,58 @@ export default function App() {
         <strong>開発プロトタイプ</strong>
         <span>仮マップ・仮ユニット・仮武器を使用しています。基本的な敵AI・フェイズ進行・勝敗判定を実装した開発版です。</span>
       </div>
+
+      {deploymentPending && battleOutcome === "playing" && (
+        <section className="deployment-panel" aria-labelledby="deployment-heading">
+          <div className="deployment-heading">
+            <div>
+              <p className="eyebrow">DEPLOYMENT</p>
+              <h2 id="deployment-heading">出撃準備</h2>
+            </div>
+            <span>{deploymentUnits.length}人出撃</span>
+          </div>
+          <p className="helper-text">
+            味方全員が出撃します。章マップで指定された出撃位置を入れ替えられます。
+            同じ位置を選ぶと、該当するユニット同士の配置が入れ替わります。
+          </p>
+          <div className="deployment-list">
+            {deploymentUnits.map((unit) => (
+              <label className="deployment-unit" key={unit.id}>
+                <span className="deployment-unit-info">
+                  <strong>{unit.name}</strong>
+                  <span>Lv.{unit.level} · HP {unit.currentHp}/{unit.stats.hp}</span>
+                </span>
+                <select
+                  aria-label={unit.name + "の出撃位置"}
+                  value={deploymentAssignments[unit.id] ?? deploymentPositionKey(unit.position)}
+                  disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
+                  onChange={(event) => handleDeploymentPositionChange(unit.id, event.target.value)}
+                >
+                  {deploymentSlots.map((slot) => (
+                    <option value={slot.value} key={slot.value}>{slot.label}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+          <button
+            className="primary-button block-button"
+            type="button"
+            disabled={
+              deploymentUnits.length === 0 ||
+              saveStatus === "loading" ||
+              saveStatus === "saving" ||
+              loadBlocked
+            }
+            onClick={() => void handleConfirmDeployment()}
+          >
+            出撃配置を確定して戦闘開始
+          </button>
+          <p className="helper-text">
+            配置確定までは戦闘データを保存しません。配置確定後に自動保存します。
+          </p>
+        </section>
+      )}
 
       {battleOutcome !== "playing" && (
         <section className={"battle-outcome " + (battleOutcome === "victory" ? "outcome-victory" : "outcome-defeat")} role="status">
