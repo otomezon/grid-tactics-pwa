@@ -10,7 +10,7 @@
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- 現在の開発対象: 章レジストリ、データ駆動の章報酬、リザルトからの次章開始、章IDに応じたセーブ復元を接続。
+- 現在の開発対象: 戦闘ルール／進行の仕様差分を埋め、章・マップデータへ安全に接続する。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
 
