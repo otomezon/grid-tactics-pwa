@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
 - Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal.
-- PR #1–#14 are merged. Current implementation includes fort recovery, a data-driven chapter registry, validated chapter item rewards, chapter carry-over, next-chapter UI, chapter-aware save restoration, map-specific defeat conditions, static map-definition validation, and saved-unit deployment roster validation. The current development branch adds a pre-battle position assignment screen; party selection, reserves, and deployment limits remain undefined. Chapter 2 is explicitly prototype content; reward values, protagonist identity, and final campaign map data remain product decisions.
+- PR #1–#15 are merged. Current implementation includes fort recovery, a data-driven chapter registry, validated chapter item rewards, chapter carry-over, next-chapter UI, chapter-aware save restoration, map-specific defeat conditions, static map-definition validation, saved-unit deployment roster validation, and pre-battle deployment positioning. The current development branch adds a persistent campaign reserve roster and party selection. Chapter-specific minimum/maximum party rules remain undefined. Chapter 2 is explicitly prototype content; reward values, protagonist identity, and final campaign map data remain product decisions.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 
 ## 2. Critical instructions
@@ -29,7 +29,7 @@
 - `domain/progression`: experience threshold, deterministic level growth, and data-driven class promotion rules.
 - `application`: player/enemy combat commands, class-promotion command, chapter reward command, next-chapter preparation, validated player deployment preparation, and deterministic enemy-phase resolution.
 - `App.tsx`: chapter-aware prototype map UI, deployment preparation, battle forecast, phase-end control, results/rewards summary, next-chapter launch, inventory display, and class-promotion confirmation.
-- `persistence`: IndexedDB and saveVersion 1→2 migration.
+- `persistence`: IndexedDB and saveVersion 1／2→3 migration with campaign reserves.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 
@@ -46,7 +46,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - Game state is serializable plain data.
 - UI actions go through validated application/domain commands.
 - Xorshift32 state is persisted as non-zero 32-bit `rngState`; do not change without migration/tests.
-- saveVersion is 2; preserve version 1 migration tests.
+- saveVersion is 3; preserve version 1 and version 2 migration tests.
 - Enemy IDs are processed in stable lexical order. Current AI score and Manhattan distance are provisional, not approved final rules.
 
 ## 5. Coding and design rules
