@@ -89,7 +89,7 @@ export function preparePlayerDeployment(
   }
   const selectedSet = new Set(selectedUnitIds);
   if (assignments.length !== selectedUnitIds.length) {
-    throw new Error("Every selected player unit must have exactly one deployment position.");
+    throw new Error("Every surviving selected player unit must have exactly one deployment position.");
   }
 
   const availablePositions = new Set(map.playerDeployment.map(({ x, y }) => x + "," + y));
@@ -98,7 +98,7 @@ export function preparePlayerDeployment(
   for (const assignment of assignments) {
     const key = assignment.position.x + "," + assignment.position.y;
     if (!selectedSet.has(assignment.unitId) || assignmentsByUnitId.has(assignment.unitId)) {
-      throw new Error("Deployment assignments must reference each selected player unit exactly once.");
+      throw new Error("Deployment assignments must reference each surviving player unit exactly once.");
     }
     if (!availablePositions.has(key) || assignedPositions.has(key)) {
       throw new Error("Each unit must use a unique configured player deployment tile.");
