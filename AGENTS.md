@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
 - Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal.
-- PR #1–#13 are merged. Current implementation includes fort recovery, a data-driven chapter registry, validated chapter item rewards, chapter carry-over, next-chapter UI, chapter-aware save restoration, map-specific defeat conditions, static map-definition validation, and saved-unit deployment roster validation. Chapter 2 is explicitly prototype content; reward values, protagonist identity, and final campaign map data remain product decisions.
+- PR #1–#14 are merged. Current implementation includes fort recovery, a data-driven chapter registry, validated chapter item rewards, chapter carry-over, next-chapter UI, chapter-aware save restoration, map-specific defeat conditions, static map-definition validation, and saved-unit deployment roster validation. The current development branch adds a pre-battle position assignment screen; party selection, reserves, and deployment limits remain undefined. Chapter 2 is explicitly prototype content; reward values, protagonist identity, and final campaign map data remain product decisions.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 
 ## 2. Critical instructions
@@ -27,8 +27,8 @@
 - `domain/random`: Xorshift32.
 - `domain/rules`: battle outcome evaluation and fort recovery at faction phase start.
 - `domain/progression`: experience threshold, deterministic level growth, and data-driven class promotion rules.
-- `application`: player/enemy combat commands, class-promotion command, chapter reward command, next-chapter preparation, and deterministic enemy-phase resolution.
-- `App.tsx`: chapter-aware prototype map UI, battle forecast, phase-end control, results/rewards summary, next-chapter launch, inventory display, and class-promotion confirmation.
+- `application`: player/enemy combat commands, class-promotion command, chapter reward command, next-chapter preparation, validated player deployment preparation, and deterministic enemy-phase resolution.
+- `App.tsx`: chapter-aware prototype map UI, deployment preparation, battle forecast, phase-end control, results/rewards summary, next-chapter launch, inventory display, and class-promotion confirmation.
 - `persistence`: IndexedDB and saveVersion 1→2 migration.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.

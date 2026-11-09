@@ -2,7 +2,7 @@
 
 ## 1. 現在の構成
 
-PR #1〜#13で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、セーブ名簿検証をmainに追加した。
+PR #1〜#14で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証をmainに追加した。開発ブランチでは出撃準備の配置コマンドとUIを追加中。
 
 ```text
 src/
@@ -12,6 +12,7 @@ src/
 │   ├── perform-class-change.ts
 │   ├── apply-chapter-rewards.ts
 │   ├── prepare-next-chapter.ts
+│   ├── prepare-player-deployment.ts
 │   └── resolve-enemy-phase.ts
 ├── content/
 │   ├── terrain.ts
@@ -47,7 +48,7 @@ src/
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
 | domain/rules | defeat_all／defeat_boss／味方全滅／マップ指定ユニット撃破の勝敗判定、砦回復 | 実装あり。主人公ID未決定のため試作マップの個別敗北対象は未設定。回復端数は暫定切り捨て |
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
-| application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、敵AI／フェイズ進行 | 実装あり。報酬は章データで明示したアイテムのみ適用 |
+| application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、敵AI／フェイズ進行 | 出撃準備は開発ブランチで実装中。報酬は章データで明示したアイテムのみ適用 |
 | ui | 章別マップ、戦闘UI、装備／所持品／クラスチェンジ、結果／報酬表示、次章開始 | 試作実装。第2章は遷移検証用で正式な章データではない |
 | persistence | IndexedDB、saveVersion 1→2 migration | 実装あり |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
@@ -65,6 +66,8 @@ src/
 ## 4. 章間遷移
 
 `content/chapters.ts` が章ID・マップ・初期状態・クリア報酬を登録する。起動時は保存されたchapterIdに対応するマップでセーブを検証・復元する。勝利後は `apply-chapter-rewards.ts` が設定済み報酬を生存味方へ付与し、`prepare-next-chapter.ts` が次章stateを構築する。Appは章別マップへ切り替え、通常のIndexedDB auto slotへ保存する。撃破済み味方を復帰させず、章間HPは現在の設計未決定のためUIでは暫定的に維持する。saveVersion 2の形は変更しない。
+
+出撃準備は `prepare-player-deployment.ts` がturn 1のplayer phaseかつ味方未行動であることを確認し、マップの `playerDeployment` に定義された座標を一意に割り当てる。Appは新規ゲーム／次章開始直後に配置画面を表示し、確定時に既存snapshotを保存してから戦闘操作を有効化する。次章stateは配置確定までauto slotへ保存せず、前章の勝利セーブを保持する。現行は生存味方全員を出撃させる。控え・出撃選択・人数上限は未実装。
 
 ## 5. 依存方向のルール
 
