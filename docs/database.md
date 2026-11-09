@@ -39,7 +39,7 @@
 
 ## 5. 検証
 
-saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、座標、重複ID／占有、能力値、所持品、装備武器を検証する。勝敗は既存stateから派生判定するため、save schemaへのbattleStatus追加は行っていない。
+saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、座標、重複ID／占有、能力値、所持品、装備武器を検証する。さらに保存内の全ユニットIDとfactionが対応マップのplayerDeployment／enemyDeploymentに一致することを検証する。配置名簿の全ユニットが保存内に存在することは要求しないため、撃破済みユニットのstateからの除外を許可する。これにより未配置ユニットの混入や陣営改変を拒否する。勝敗は既存stateから派生判定するため、save schemaへのbattleStatus追加は行っていない。
 
 ## 6. 章間遷移と保存
 

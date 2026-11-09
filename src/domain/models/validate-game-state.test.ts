@@ -23,6 +23,44 @@ describe("isValidGameStateSnapshot", () => {
     expect(isValidGameStateSnapshot(duplicatePosition, CHAPTER_01_MAP)).toBe(false);
   });
 
+  it("rejects units that are not part of the map deployment roster", () => {
+    const unexpectedUnit = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit, index) =>
+        index === 0 ? { ...unit, id: "undeployed_unit" } : unit
+      )
+    };
+
+    expect(isValidGameStateSnapshot(unexpectedUnit, CHAPTER_01_MAP)).toBe(false);
+  });
+
+  it("rejects a deployed unit whose saved faction differs from its deployment faction", () => {
+    const changedFaction = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit, index) =>
+        index === 0 ? { ...unit, faction: "enemy" as const } : unit
+      )
+    };
+
+    expect(isValidGameStateSnapshot(changedFaction, CHAPTER_01_MAP)).toBe(false);
+  });
+
+  it("accepts a surviving roster after defeated deployed units have been removed", () => {
+    const defeatedEnemiesRemoved = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) =>
+        unit.faction === "player" || unit.id !== "enemy_001"
+      )
+    };
+    const defeatedAllyRemoved = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_002")
+    };
+
+    expect(isValidGameStateSnapshot(defeatedEnemiesRemoved, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot(defeatedAllyRemoved, CHAPTER_01_MAP)).toBe(true);
+  });
+
   it("rejects unsupported save versions and invalid coordinates", () => {
     expect(isValidGameStateSnapshot(
       { ...INITIAL_GAME_STATE, saveVersion: 99 },

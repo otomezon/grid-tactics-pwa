@@ -92,11 +92,24 @@ export function isValidGameStateSnapshot(
     return false;
   }
 
+  const deployedFactionByUnitId = new Map<string, GameUnit["faction"]>();
+  for (const deployment of map.playerDeployment) {
+    deployedFactionByUnitId.set(deployment.unitId, "player");
+  }
+  for (const deployment of map.enemyDeployment) {
+    deployedFactionByUnitId.set(deployment.unitId, "enemy");
+  }
+
   const ids = new Set<string>();
   const occupied = new Set<string>();
 
   for (const candidate of value.units) {
-    if (!isGameUnit(candidate, map)) return false;
+    if (
+      !isGameUnit(candidate, map) ||
+      deployedFactionByUnitId.get(candidate.id) !== candidate.faction
+    ) {
+      return false;
+    }
 
     const positionKey = candidate.position.x + "," + candidate.position.y;
     if (ids.has(candidate.id) || occupied.has(positionKey)) return false;
