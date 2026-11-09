@@ -14,14 +14,17 @@ export interface ClassChangeExecution {
 
 /**
  * Applies one configured player-unit promotion and returns an immutable state.
- * Item grants, UI, and final promotion balance are intentionally owned by later
- * content work; this command requires every unresolved value explicitly.
+ * Promotion values and item content are supplied by the content layer.
  */
 export function performClassChange(
   state: GameStateSnapshot,
   unitId: string,
   definition: ClassPromotionDefinition
 ): ClassChangeExecution {
+  if (state.phase !== "player") {
+    throw new Error("Class changes can only be performed during the player phase.");
+  }
+
   const unit = state.units.find((candidate) => candidate.id === unitId);
   if (!unit) {
     throw new Error("The selected unit does not exist.");

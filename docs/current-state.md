@@ -5,12 +5,12 @@
 - 更新日: 2026-11-09
 - Repository: `otomezon/grid-tactics-pwa`
 - デフォルトブランチ: `main`
-- PR #1〜#6はマージ済み。PR #6のマージコミット: `e49a4d115ea119db578b2ac7a6dfb528d0ef8bd1`
+- PR #1〜#7はマージ済み。PR #7のマージコミット: `faa20a45e0e5b8640320c75d3136a9bba405f18b`
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- 現在の開発対象: クラスチェンジのルール／application基盤。
+- 現在の開発対象: クラスチェンジの試作アイテム配布・所持品表示・確認UI接続。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
 
@@ -41,17 +41,19 @@
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
 | ステージ結果表示 | 実装済み（勝敗・撃破数・生存味方のLv/EXP/HP） | `src/App.tsx` | UI手動確認未実施 |
 | 選択ユニットの経験値表示 | 実装済み（EXP x/100） | `src/App.tsx` | CI build。実機操作未確認 |
-| progression／attack／class-change tests | mainのPR #6と今回のPR #7で実装済み | `src/domain/progression/`, `src/application/` | GitHub Actions run #142: 12 test files／75 tests成功 |
+| progression／attack／class-change／content tests | mainのPR #6〜#7と今回のPR #8で実装済み | `src/domain/progression/`, `src/application/`, `src/content/class-promotion.test.ts` | GitHub Actions run #168: 13 test files／78 tests成功 |
 | 昇格先パス | 実装済み（設計書§5.5の7系統） | `src/content/classes.ts` | mapping tests |
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み（ボーナス／上限／EXP方針は外部設定） | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts` | GitHub Actions run #142で12 test files／75 tests成功 |
-| クラスチェンジUI・アイテム配布・正式な昇格データ | 未実装 | — |
+| 試作クラスチェンジアイテム・所持品表示 | 実装済み（新規初期状態の味方01に1個） | `src/content/items.ts`, `src/content/maps/chapter-01.ts`, `src/App.tsx` | content tests |
+| クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ条件） | `src/App.tsx`, `src/application/perform-class-change.ts` | typecheck／build。画面手動確認は未実施 |
+| 正式な昇格ボーナス・上限・昇格後移動／武器データ | 未決定（現行は仮値） | `src/content/classes.ts` | playtest／仕様決定待ち |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
 | 砦のフェイズ開始回復 | 未実装（10%回復の整数端数未決定） | `docs/game-design.md` §4.2 |
 | UI／スマートフォン実機確認 | 未実施 | — |
 
 ## 3. 検証コマンド
 
-`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #7 latest head `90e0c1c2` のrun #142で型チェック成功、12 test files／75 tests成功、本番ビルド成功、PWA precache 11 entriesを確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
+`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 code head `c6fef376` のrun #168で型チェック成功、13 test files／78 tests成功、本番ビルド成功、PWA precache 11 entriesを確認。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
 
 ## 4. 暫定・未決定事項
 
@@ -63,12 +65,12 @@
 - クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。
 - 1戦闘中に複数回ダメージを与えた場合、現行はstrikeごとに+10 EXPを付与する解釈。
 - HP成長時は最大HPのみ増やし、現在HPは維持。
-- 詳細統計・加入・章報酬・クラスチェンジUI／アイテム配布・キャンペーン進行は未実装。
+- 詳細統計・加入・正式な章報酬・章間引き継ぎ・キャンペーン進行は未実装。クラスチェンジUIと試作アイテムは実装したが、正式な配布ルールは未決定。
 - ブラウザ統合テスト・モバイル実機・IndexedDB再開動作は未実施。
 
 ## 5. 次の作業候補
 
-1. クラス別の正式上限・昇格ボーナス・EXP方針を決定し、アイテム入手／使用UIを接続。
-2. 章報酬・章間引き継ぎ・次ステージ解放を設計。
+1. クラス別の正式上限・昇格ボーナス・EXP方針と昇格後移動／武器データを決定。
+2. 章報酬・章間引き継ぎ・次ステージ解放を設計し、証の正式な配布経路を追加。
 3. 主人公識別と敗北条件、砦回復の端数規則を決定。
 4. 1ステージの開始からクリアまでをブラウザ／スマートフォンで検証。

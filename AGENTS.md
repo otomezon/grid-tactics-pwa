@@ -6,7 +6,7 @@
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
 - Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal.
-- PR #1–#6 are merged. The current branch adds a class-promotion rules/application foundation. Promotion UI, item distribution, final promotion bonuses/caps, and campaign progression remain unimplemented.
+- PR #1–#7 are merged. The current branch connects a prototype promotion item, inventory display, promotion confirmation UI, and autosave. Final promotion balance and chapter reward/campaign progression remain unimplemented.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 
 ## 2. Critical instructions
@@ -20,7 +20,7 @@
 
 ## 3. Current architecture
 
-- `content`: terrain, test map/units, provisional weapon content.
+- `content`: terrain, test map/units, provisional weapon content, promotion paths/bonuses and promotion-item definitions.
 - `domain/models`: serializable game state and save validation.
 - `domain/movement`: terrain-cost reachability.
 - `domain/combat`: weapon compatibility, formulas, forecast, deterministic resolver, provisional Manhattan distance.
@@ -28,7 +28,7 @@
 - `domain/rules`: battle outcome evaluation.
 - `domain/progression`: experience threshold, deterministic level growth, and data-driven class promotion rules.
 - `application`: player/enemy combat commands, class-promotion command, and deterministic enemy-phase resolution.
-- `App.tsx`: prototype map UI, battle forecast, phase-end control, and battle result.
+- `App.tsx`: prototype map UI, battle forecast, phase-end control, battle result, inventory display, and class-promotion confirmation.
 - `persistence`: IndexedDB and saveVersion 1→2 migration.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.

@@ -25,8 +25,7 @@ function eligibleState(): GameStateSnapshot {
         ? {
             ...unit,
             level: 10,
-            experience: 35,
-            inventory: [...unit.inventory, "promotion_seal"]
+            experience: 35
           }
         : unit
     )
@@ -70,6 +69,13 @@ describe("performClassChange", () => {
     expect(isValidGameStateSnapshot(result.nextState, CHAPTER_01_MAP)).toBe(true);
     expect(result.nextState.units.find((unit) => unit.id === "unit_002")).toEqual(otherUnit);
     expect(state.units.find((unit) => unit.id === "unit_001")?.classId).toBe("swordsman");
+  });
+
+  it("rejects class changes outside the player phase", () => {
+    const enemyPhase = { ...eligibleState(), phase: "enemy" as const };
+    expect(() =>
+      performClassChange(enemyPhase, "unit_001", definition())
+    ).toThrow(/player phase/);
   });
 
   it("rejects an unknown unit or a target outside the configured promotion path", () => {
