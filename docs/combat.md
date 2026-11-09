@@ -61,7 +61,7 @@
 - HPが0のユニットをマップのunits配列から除く。勝敗・敗北状態の判定は未実装。
 - 実行後の状態とRNG stateを同一のGameStateSnapshotとしてIndexedDBへ自動保存する。
 
-RNGはXorshift32を使用し、GameStateSnapshotの非ゼロ32bit `rngState` を保存する。新規ゲーム開始時はWeb Cryptoでseedを作成する。Web Cryptoが使用できない場合は固定fallback seedを使う。攻撃可能な最大strike数分rollを生成し、実際に消費されたstrike分だけ保存stateを進める。同じ初期stateと戦闘入力なら同じ結果を再現できる。
+RNGはXorshift32を使用し、GameStateSnapshotの非ゼロ32bit `rngState` を保存する。Xorshift32はゲーム判定の再現性を目的とする疑似乱数であり、暗号用途の乱数ではない。新規ゲーム開始時はWeb Cryptoでseedを作成する。Web Cryptoが使用できない場合は固定fallback seedを使う。攻撃可能な最大strike数分rollを生成し、実際に消費されたstrike分だけ保存stateを進める。同じ初期stateと戦闘入力なら同じ結果を再現できる。
 
 ## 7. まだ未実装／未決定の事項
 
