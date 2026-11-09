@@ -282,10 +282,9 @@ export function resolveCombat(input: CombatInput, rolls: readonly StrikeRoll[]):
       attacker: actor,
       defender: target,
       weapon: actorWeapon,
-      opponentWeaponType:
-        actorSide === "attacker"
-          ? input.defenderWeapon?.weaponType
-          : input.attackerWeapon.weaponType
+      ...(actorSide === "attacker"
+        ? (input.defenderWeapon ? { opponentWeaponType: input.defenderWeapon.weaponType } : {})
+        : { opponentWeaponType: input.attackerWeapon.weaponType })
     });
 
     const roll = rolls[consumedRolls];
