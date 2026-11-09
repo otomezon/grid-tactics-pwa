@@ -596,18 +596,21 @@ export default function App() {
       setDeploymentSelectedUnitIds((current) => current.filter((id) => id !== unitId));
       return;
     }
-    setDeploymentSelectedUnitIds((current) => {
-      if (current.includes(unitId)) return current;
-      const used = new Set(current.map((id) => deploymentAssignments[id]).filter(Boolean));
-      const currentPosition = deploymentAssignments[unitId];
-      const availablePosition = currentPosition && !used.has(currentPosition)
-        ? currentPosition
-        : deploymentSlots.find((slot) => !used.has(slot.value))?.value;
-      if (!availablePosition) return current;
-      if (availablePosition === currentPosition) return [...current, unitId];
+    if (deploymentSelectedUnitIds.includes(unitId)) return;
+    const used = new Set(
+      deploymentSelectedUnitIds.map((id) => deploymentAssignments[id]).filter(Boolean)
+    );
+    const currentPosition = deploymentAssignments[unitId];
+    const availablePosition = currentPosition && !used.has(currentPosition)
+      ? currentPosition
+      : deploymentSlots.find((slot) => !used.has(slot.value))?.value;
+    if (!availablePosition) return;
+    if (availablePosition !== currentPosition) {
       setDeploymentAssignments((assignments) => ({ ...assignments, [unitId]: availablePosition }));
-      return [...current, unitId];
-    });
+    }
+    setDeploymentSelectedUnitIds((current) =>
+      current.includes(unitId) ? current : [...current, unitId]
+    );
   }
 
   async function handleConfirmDeployment(): Promise<void> {
