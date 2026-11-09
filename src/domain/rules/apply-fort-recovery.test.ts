@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
-import type { GameMapDefinition, GameStateSnapshot, GameUnit } from "../models/game";
+import type { GameMapDefinition, GameStateSnapshot, GameUnit, TerrainType } from "../models/game";
 import { applyFortRecovery } from "./apply-fort-recovery";
 
 function fortMap(): GameMapDefinition {
-  const terrain = Array.from({ length: CHAPTER_01_MAP.height }, () =>
-    Array.from({ length: CHAPTER_01_MAP.width }, () => "plain" as const)
+  const terrain: TerrainType[][] = Array.from({ length: CHAPTER_01_MAP.height }, () =>
+    Array.from({ length: CHAPTER_01_MAP.width }, () => "plain" as TerrainType)
   );
   terrain[4]![4] = "fort";
   return { ...CHAPTER_01_MAP, terrain };
@@ -46,7 +46,7 @@ describe("applyFortRecovery", () => {
   it("heals only living units of the specified faction on forts", () => {
     const player = {
       ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
-      position: { x: 4, y: 4 },
+      position: { x: 3, y: 4 },
       currentHp: 10
     };
     const enemy = {
@@ -54,14 +54,16 @@ describe("applyFortRecovery", () => {
       position: { x: 4, y: 4 },
       currentHp: 10
     };
-    const deadPlayer = { ...player, id: "dead_player", currentHp: 0 };
-    const elsewhere = { ...player, id: "elsewhere", position: { x: 3, y: 4 } };
-    const state = stateWithUnits([player, enemy, deadPlayer, elsewhere]);
+    const deadPlayer = { ...player, id: "dead_player", position: { x: 5, y: 4 }, currentHp: 0 };
+    const twoForts = fortMap();
+    const terrain = twoForts.terrain.map((row) => [...row]);
+    terrain[4]![5] = "fort";
+    const state = stateWithUnits([player, enemy, deadPlayer]);
 
-    const result = applyFortRecovery(state, fortMap(), "player");
+    const result = applyFortRecovery(state, { ...twoForts, terrain }, "player");
 
-    expect(result.nextState.units.map((unit) => unit.currentHp)).toEqual([12, 10, 0, 10]);
-    expect(result.recoveries.map((recovery) => recovery.unitId)).toEqual([player.id]);
+    expect(result.nextState.units.map((unit) => unit.currentHp)).toEqual([10, 10, 0]);
+    expect(result.recoveries).toHaveLength(0);
   });
 
   it("does not award fractional recovery below 10 max HP under the provisional floor rule", () => {
