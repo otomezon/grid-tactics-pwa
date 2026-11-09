@@ -42,7 +42,7 @@
 - `npm test`: Vitest単体テスト
 - `npm run build`: 型チェック後に本番ビルド
 - `npm run preview`: ビルド成果物のローカル確認
-- GitHub Actions: `.github/workflows/ci.yml` でPR／main push時に型チェック・テスト・ビルドを実行。
+- GitHub Actions: `.github/workflows/ci.yml` でPR／main push／feature branch push時に型チェック・テスト・ビルドを実行。
 
 この作業環境ではGitHub clone／npm registryへの接続ができず、ローカル依存インストール・実行は未実施。CIの結果をPR上で確認する。
 
