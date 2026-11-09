@@ -45,6 +45,7 @@ export interface GameUnit {
   move: number;
   usableWeaponTypes: WeaponType[];
   inventory: string[];
+  equippedWeaponId: string | null;
   position: Position;
   hasMoved: boolean;
   hasActed: boolean;
@@ -79,12 +80,14 @@ export interface GameMapDefinition {
   objective: MapObjective;
 }
 
-export const SAVE_VERSION = 1 as const;
+export const SAVE_VERSION = 2 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
   chapterId: string;
   phase: BattlePhase;
   turn: number;
+  /** Xorshift32 state. Must be an unsigned, non-zero 32-bit integer. */
+  rngState: number;
   units: GameUnit[];
 }
