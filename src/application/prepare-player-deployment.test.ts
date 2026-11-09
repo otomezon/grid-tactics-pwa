@@ -46,8 +46,8 @@ describe("preparePlayerDeployment", () => {
               experience: 63,
               currentHp: 12,
               inventory: [...unit.inventory, "vulnerary"],
-              hasMoved: true,
-              hasActed: true
+              hasMoved: false,
+              hasActed: false
             }
           : unit
       )
