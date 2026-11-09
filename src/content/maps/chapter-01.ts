@@ -121,5 +121,6 @@ export const INITIAL_GAME_STATE: GameStateSnapshot = {
   phase: "player",
   turn: 1,
   rngState: 0x6d2b79f5,
-  units: INITIAL_UNITS
+  units: INITIAL_UNITS,
+  reserveUnits: []
 };
