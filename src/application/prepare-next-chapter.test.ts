@@ -1,0 +1,173 @@
+import { describe, expect, it } from "vitest";
+import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
+import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
+import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
+import { prepareNextChapter } from "./prepare-next-chapter";
+
+function nextChapterFixture(): { map: GameMapDefinition; state: GameStateSnapshot } {
+  const map: GameMapDefinition = {
+    ...CHAPTER_01_MAP,
+    id: "chapter_02_map",
+    playerDeployment: CHAPTER_01_MAP.playerDeployment.map((deployment, index) => ({
+      ...deployment,
+      x: index,
+      y: 9
+    }))
+  };
+  return {
+    map,
+    state: { ...INITIAL_GAME_STATE, chapterId: map.id }
+  };
+}
+
+function clearedState(overrides: Partial<GameStateSnapshot> = {}): GameStateSnapshot {
+  return {
+    ...INITIAL_GAME_STATE,
+    units: INITIAL_GAME_STATE.units.filter((unit) => unit.faction === "player"),
+    ...overrides
+  };
+}
+
+describe("prepareNextChapter", () => {
+  it("carries player progression and inventory into the next map deployment", () => {
+    const previousState = clearedState({
+      units: INITIAL_GAME_STATE.units
+        .filter((unit) => unit.faction === "player")
+        .map((unit) => unit.id === "unit_001"
+          ? {
+              ...unit,
+              level: 12,
+              experience: 42,
+              stats: { ...unit.stats, hp: 27, strength: 11 },
+              currentHp: 9,
+              inventory: [...unit.inventory, "vulnerary"]
+            }
+          : unit)
+    });
+    const next = nextChapterFixture();
+    const result = prepareNextChapter({
+      previousState,
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap: next.map,
+      currentHpPolicy: "preserve"
+    });
+    const carried = result.units.find((unit) => unit.id === "unit_001")!;
+
+    expect(result.chapterId).toBe("chapter_02_map");
+    expect(result.turn).toBe(1);
+    expect(result.phase).toBe("player");
+    expect(result.rngState).toBe(next.state.rngState);
+    expect(carried.position).toEqual({ x: 0, y: 9 });
+    expect(carried.level).toBe(12);
+    expect(carried.experience).toBe(42);
+    expect(carried.stats).toEqual({ ...previousState.units[0]!.stats, hp: 27, strength: 11 });
+    expect(carried.currentHp).toBe(9);
+    expect(carried.inventory).toContain("vulnerary");
+    expect(carried.hasMoved).toBe(false);
+    expect(carried.hasActed).toBe(false);
+    expect(isValidGameStateSnapshot(result, next.map)).toBe(true);
+  });
+
+  it("restores carried units to their new maximum HP only when the policy requests it", () => {
+    const previousState = clearedState({
+      units: INITIAL_GAME_STATE.units
+        .filter((unit) => unit.faction === "player")
+        .map((unit) => unit.id === "unit_001"
+          ? { ...unit, stats: { ...unit.stats, hp: 27 }, currentHp: 9 }
+          : unit)
+    });
+    const next = nextChapterFixture();
+    const result = prepareNextChapter({
+      previousState,
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap: next.map,
+      currentHpPolicy: "restore"
+    });
+
+    expect(result.units.find((unit) => unit.id === "unit_001")?.currentHp).toBe(27);
+  });
+
+  it("does not bring back a player unit that was defeated in the previous chapter", () => {
+    const previousState = clearedState({
+      units: INITIAL_GAME_STATE.units.filter(
+        (unit) => unit.faction === "player" && unit.id !== "unit_002"
+      )
+    });
+    const next = nextChapterFixture();
+    const result = prepareNextChapter({
+      previousState,
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap: next.map,
+      currentHpPolicy: "preserve"
+    });
+
+    expect(result.units.some((unit) => unit.id === "unit_002")).toBe(false);
+  });
+
+  it("includes a newly introduced player unit from the next chapter template", () => {
+    const next = nextChapterFixture();
+    const newUnit = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      id: "unit_005",
+      name: "新加入",
+      position: { x: 4, y: 9 }
+    };
+    const nextMap = {
+      ...next.map,
+      playerDeployment: [...next.map.playerDeployment, { unitId: "unit_005", x: 4, y: 9 }]
+    };
+    const nextState = { ...next.state, units: [...next.state.units, newUnit] };
+    const result = prepareNextChapter({
+      previousState: clearedState(),
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: nextState,
+      nextMap,
+      currentHpPolicy: "preserve"
+    });
+
+    expect(result.units.find((unit) => unit.id === "unit_005")?.name).toBe("新加入");
+    expect(result.units.find((unit) => unit.id === "unit_005")?.position).toEqual({ x: 4, y: 9 });
+  });
+
+  it("takes enemies and the RNG seed from the next chapter template", () => {
+    const next = nextChapterFixture();
+    const result = prepareNextChapter({
+      previousState: clearedState(),
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: { ...next.state, rngState: 123456789 },
+      nextMap: next.map,
+      currentHpPolicy: "preserve"
+    });
+
+    expect(result.units.filter((unit) => unit.faction === "enemy").map((unit) => unit.id)).toEqual(
+      next.map.enemyDeployment.map((deployment) => deployment.unitId)
+    );
+    expect(result.rngState).toBe(123456789);
+    expect(result.units.every((unit) => !unit.hasMoved && !unit.hasActed)).toBe(true);
+  });
+
+  it("rejects a transition before victory", () => {
+    const next = nextChapterFixture();
+    expect(() => prepareNextChapter({
+      previousState: INITIAL_GAME_STATE,
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap: next.map,
+      currentHpPolicy: "preserve"
+    })).toThrow(/only begin after a chapter victory/);
+  });
+
+  it("rejects an invalid next chapter template", () => {
+    const next = nextChapterFixture();
+    expect(() => prepareNextChapter({
+      previousState: clearedState(),
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: { ...next.state, turn: 2 },
+      nextMap: next.map,
+      currentHpPolicy: "preserve"
+    })).toThrow(/player-phase turn 1/);
+  });
+});
