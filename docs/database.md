@@ -15,7 +15,7 @@
 
 ## 2. SaveVersion 2
 
-`GameStateSnapshot` は `saveVersion`、`chapterId`、`phase`、`turn`、`rngState`、`units` を保持する。フェイズは既存の `player`／`enemy` のenumを利用し、今回の敵AI追加でsave schemaは変更していない。
+`GameStateSnapshot` は `saveVersion`、`chapterId`、`phase`、`turn`、`rngState`、`units` を保持する。フェイズは既存の `player`／`enemy` のenumを利用する。EXP・level・stats・growthRatesはGameUnitに既存のフィールドであり、今回の成長処理でもsave schemaは変更しない。EXPは0〜99の未使用分だけ保存し、成長判定後のXorshift32 stateは既存rngStateに反映する。
 
 ## 3. SaveVersion 1 → 2 migration
 
