@@ -1,72 +1,77 @@
 # アーキテクチャ
 
-## 1. ステータスと根拠
+## 1. 現在の構成
 
-本書は、添付設計書 v1.0（2026-11-09）の**推奨アーキテクチャ**を整理したものです。初回監査（ベースライン文書の投入前）ではリポジトリは空でした。その後 `main` に文書一式が追加されていますが、アプリケーションのソースコードは確認できておらず、以下の構成・技術・フローは実装済みではなく設計提案です。
+添付設計書 v1.0 のレイヤー分離方針を踏まえ、Phase 0のアプリ基盤とマップ・移動の試作実装を追加した。
 
-## 2. システム概要（設計目標）
+```text
+.
+├── AGENTS.md
+├── index.html
+├── package.json
+├── vite.config.ts
+├── vitest.config.ts
+├── tsconfig.json
+├── .github/workflows/ci.yml
+├── public/
+│   ├── favicon.svg
+│   └── icons/
+└── src/
+    ├── App.tsx
+    ├── main.tsx
+    ├── styles.css
+    ├── content/
+    │   ├── terrain.ts
+    │   └── maps/chapter-01.ts
+    ├── domain/
+    │   ├── models/
+    │   └── movement/
+    └── persistence/
+```
 
-- スマートフォン／PCブラウザで動作する2Dタイル式のシングルプレイSRPG。
-- ターン制。プレイヤー／敵フェイズを交互に進行する。
-- 初回ロード後に基本プレイを継続できるオフライン対応PWAを目標とする。
-- ゲームロジックとUIを分離し、マップ・キャラクター・武器・地形・章イベントをデータ定義で管理する。
-- 設計資料にはサーバー、アカウント、オンライン同期、HTTP APIは定義されていない。
+単体テストは対象モジュールと同じ階層に `*.test.ts` として置く。
 
-## 3. 推奨レイヤー
+## 2. レイヤーと責務
 
-| レイヤー | 責務 | 想定要素（設計書の例） |
+| レイヤー | 現在の責務 | 状態 |
 |---|---|---|
-| `content` | ゲームの静的データ | characters, classes, weapons, terrains, maps, chapters, events |
-| `domain` / `engine` | ゲーム規則・計算 | models, movement, combat, progression, AI, victory/defeat rules |
-| `application` | ユースケースと進行制御 | game controller, phase controller, commands, save timing |
-| `ui` | 表示と入力 | screens, map, panels, menus, combat forecast, results |
-| `persistence` | セーブデータの永続化 | IndexedDB access, save repository, migrations |
-| `pwa` | インストール・オフライン | manifest, service worker, static asset cache |
+| content | 地形定義、試作マップ、試作ユニット・初期状態 | 実装あり |
+| domain/models | ゲーム型、セーブ状態検証 | 実装あり |
+| domain/movement | 地形コストと占有を考慮した到達可能範囲計算 | 実装あり |
+| application | UIイベントと状態更新を `App.tsx` が暫定的に制御 | 今後分離 |
+| ui | React画面、マップ、情報パネル、レスポンシブCSS | 試作実装あり |
+| persistence | IndexedDBの初期化、読込、保存 | saveVersion 1を実装 |
+| pwa | manifest、Service Worker生成・登録、静的アセットキャッシュ | Vite plugin設定あり |
 
-境界の要点:
+独立したapplication／engine controller／event layerは今後の作業で必要性を評価する。設計書の理想レイヤーをすべて実装済みとみなさないこと。
 
-- UIからHPや座標を直接変更しない。検証済みのゲームエンジン／コマンドを経由する。
-- 計算式はUI・コンテンツ定義に散在させず、domain層に集約する。
-- マップや敵配置、イベントをステージ固有の処理として直書きせず、データとして定義する。
-- ゲーム状態は保存可能なプレーンデータにし、DOM要素や関数を含めない。
-- 表示演出と乱数判定を分離し、ロード後も再現できる乱数状態を保持する。
+## 3. 現在のデータフロー
 
-## 4. 想定データフロー
+1. `chapter-01.ts` が試作マップ・地形・ユニットの初期値を提供する。
+2. `App.tsx` がIndexedDBのauto slotを読み、保存があれば型・範囲・重複占有を検証する。
+3. プレイヤーがユニットをタップすると、選択ユニットと移動可能マスを計算する。
+4. `calculate-reachable-tiles.ts` が4方向の到達範囲を地形コスト付きで探索する。占有マスと進入不可地形は通過しない。
+5. 移動確定または待機確定でゲーム状態を更新し、`save-repository.ts` 経由でIndexedDBに保存する。
+6. `vite-plugin-pwa` がビルド時にmanifestとService Workerを生成し、静的アセットをキャッシュする。
 
-1. `content`から章・マップ・ユニット等の定義を読み込む。
-2. `application`が初期ゲーム状態を構築し、`domain`の規則に従ってコマンドを受け付ける。
-3. `ui`は状態と計算結果を表示し、プレイヤーの入力をコマンドとして渡す。
-4. `domain`が移動・攻撃・成長・勝敗等を検証・計算する。
-5. `application`がフェイズ進行と保存タイミングを制御する。
-6. `persistence`がIndexedDBに状態を保存・復元する。
-7. `pwa`のService Workerがアプリ本体・静的アセットをキャッシュする。
+## 4. 依存方向のルール
 
-これは提案フローであり、実装の確認結果ではありません。
+- domainはReact／DOMに依存しない。
+- contentはゲームデータと定義を保持し、計算処理を持たない。
+- UIはdomainの計算結果を表示し、移動計算式を再実装しない。
+- persistenceは型付きの保存状態を扱い、UIからIndexedDB APIを直接呼ばない。
+- UIからユニット座標を直接変更する処理は、将来application commandへ移管する。
 
-## 5. 主要処理領域
+## 5. これからの分割候補
 
-- **移動**: 4方向、地形コスト、移動力、他ユニット占有マスの除外。BFS等で到達可能範囲を計算する案。
-- **戦闘**: 武器射程、剣・槍・斧の三すくみ、命中・回避・必殺・ダメージ・追撃。予測と実結果は同一の計算規則を使う。
-- **成長**: 経験値、成長率に基づく能力上昇、クラス上限、クラスチェンジ。
-- **敵AI**: 現在攻撃可能な対象、移動後攻撃、接近、待機の順で判断する単純なルールベース案。
-- **勝敗・イベント**: 敵将撃破／敵全滅、主人公撃破／味方全滅など。章イベントをデータ定義する。
-- **保存**: 行動確定、フェイズ終了、レベルアップ・クラスチェンジ確定、ステージクリア等で自動保存する案。
+- `application/gameController.ts`: コマンド検証・状態遷移・行動確定。
+- `domain/combat/`: 射程、三すくみ、戦闘予測、実際の解決処理。
+- `domain/progression/`: 経験値・成長・クラスチェンジ。
+- `domain/ai/`: 敵行動選択。
+- `content/classes/`、`content/weapons/`、`content/chapters/`: 静的コンテンツ。
+- `persistence/migrations.ts`: saveVersion更新時の明示的移行。
+- UIコンポーネント分割。現状は `App.tsx` に集約。
 
-詳細な数値・例外は [`game-design.md`](game-design.md) を参照してください。
+## 6. 外部サービス
 
-## 6. 外部サービス・認証・通信
-
-設計書では、オンラインサービスやサーバー連携、ユーザー認証、認可方式、APIエンドポイントは定義されていません。初期コンセプトはローカル保存・オフラインプレイを中心にしています。これは「実装済みの認証がない」という確認ではなく、資料に仕様記載がないという意味です。
-
-## 7. ディレクトリ構成案
-
-設計書に `src/app`, `src/content`, `src/domain`, `src/application`, `src/ui`, `src/persistence`, `src/pwa`, `src/styles`, `src/tests` の案があります。実装開始時は実際の構成を確認し、必要な範囲で採用してください。提案構成を理由に無条件で空のディレクトリを作らないでください。
-
-## 8. 今後確認すること
-
-- 実際に採用するUI状態管理、ルーティング、描画方式。
-- domain/application/persistenceの実際の依存方向。
-- IndexedDBラッパー／スキーマ／トランザクション／バックアップ方式。
-- Service Workerの更新・キャッシュ失効戦略。
-- アセット分割ロード、実機での性能・メモリ目標。
-- 外部サービスやサーバー機能を追加するかどうか。
+現時点でサーバー、アカウント、オンライン同期、HTTP APIは追加していない。PWAのオフライン利用とローカルIndexedDB保存を基本とする。
