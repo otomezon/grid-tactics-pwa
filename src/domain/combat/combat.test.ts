@@ -98,14 +98,14 @@ function createInput(options: {
   distance?: number;
 } = {}): CombatInput {
   const attackerWeapon = options.attackerWeapon ?? createWeapon();
-  const defenderWeapon = options.defenderWeapon ?? createWeapon({
+  const defenderWeapon = options.defenderWeapon === null ? undefined : (options.defenderWeapon ?? createWeapon({
     id: "iron-lance",
     name: "Test Lance",
     weaponType: "lance",
     power: 4,
     hit: 75,
     critical: 10
-  });
+  }));
 
   return {
     attacker: {
@@ -125,7 +125,7 @@ function createInput(options: {
       terrain: options.defenderTerrain ?? createTerrain()
     },
     attackerWeapon,
-    defenderWeapon,
+    ...(defenderWeapon ? { defenderWeapon } : {}),
     distance: options.distance ?? 1
   };
 }
@@ -233,7 +233,7 @@ describe("combat formulas", () => {
         minRange: 1,
         maxRange: 2
       }),
-      defenderWeapon: undefined,
+      defenderWeapon: null,
       defenderTerrain: createTerrain(2, 0)
     });
 
@@ -253,7 +253,7 @@ describe("combat formulas", () => {
       attackerStats: { skill: 100, luck: 100 },
       defenderStats: { speed: 0, luck: 0 },
       attackerWeapon: createWeapon({ hit: 100, critical: 100 }),
-      defenderWeapon: undefined
+      defenderWeapon: null
     });
     const forecast = calculateStrikeForecast({
       kind: "initial",
