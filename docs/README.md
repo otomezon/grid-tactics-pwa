@@ -6,6 +6,7 @@
 |---|---|---|
 | [game-design.md](game-design.md) | 添付されたゲーム設計書v1.0の原文 | 仕様改訂時。原文を無断で書き換えない |
 | [architecture.md](architecture.md) | 現在の構成、責務、データフロー、今後の分割 | モジュール／データフロー変更時 |
+| [combat.md](combat.md) | 戦闘計算・予測・解決、武器モデル、未決定ルール | 戦闘式・武器モデル・解決順変更時 |
 | [development.md](development.md) | 実際の開発環境、セットアップ、テスト、CI | ツールや手順が変更された時 |
 | [database.md](database.md) | IndexedDBの実スキーマと制約 | 保存形式・マイグレーション変更時 |
 | [security.md](security.md) | 実装済み対策、未確認事項、運用上の注意 | 認証・保存・外部接続・配信変更時 |
@@ -15,6 +16,7 @@
 ## 文書の使い分け
 
 - ゲームの**何を作るか**は `game-design.md`。
+- **戦闘計算をどう実装したか／何が未決定か**は `combat.md`。
 - **どう分割する設計か／現在どう動くか**は `architecture.md`。
 - **どう開発・検証するか**は `development.md`。
 - **どう保存するか**は `database.md`。
