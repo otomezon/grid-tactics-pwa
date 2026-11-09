@@ -22,7 +22,7 @@ describe("applyChapterRewards", () => {
     const result = applyChapterRewards(state, CHAPTER_01_MAP, rewards);
 
     expect(result.nextState.units.find((unit) => unit.id === "unit_002")?.inventory)
-      .toEqual(["weapon_bow", "promotion_seal", "promotion_seal"]);
+      .toEqual(["short_bow", "promotion_seal", "promotion_seal"]);
     expect(result.rewardsApplied).toEqual([
       {
         recipientUnitId: "unit_002",
@@ -32,7 +32,7 @@ describe("applyChapterRewards", () => {
         itemName: "クラスチェンジの証"
       }
     ]);
-    expect(state.units.find((unit) => unit.id === "unit_002")?.inventory).toEqual(["weapon_bow"]);
+    expect(state.units.find((unit) => unit.id === "unit_002")?.inventory).toEqual(["short_bow"]);
   });
 
   it("returns an unchanged party when a chapter has no configured rewards", () => {
