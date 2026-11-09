@@ -10,7 +10,6 @@
 - クラスチェンジの能力ボーナス／クラス上限は暫定値です。章報酬は設定データが定義された場合のみ配布し、未設定の試作章にアイテムを勝手に付与しません。
 - 実装状況は [docs/current-state.md](docs/current-state.md)、敵AIの判断と未決定事項は [docs/enemy-ai.md](docs/enemy-ai.md) を参照してください。
 
-
 ## 技術スタック
 
 - Node.js 26（許容: Node 22.12+、24+、26+）
