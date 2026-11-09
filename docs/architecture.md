@@ -2,23 +2,26 @@
 
 ## 1. 現在の構成
 
-PR #1〜#5で文書基盤、PWA／マップ／移動、戦闘計算、戦闘UI・攻撃・RNG保存、敵AI／フェイズ進行をmainに追加した。現在の開発ブランチで経験値・レベルアップ・リザルトを実装している。
+PR #1〜#6で文書基盤、PWA／マップ／移動、戦闘計算、戦闘UI・攻撃・RNG保存、敵AI／フェイズ進行、経験値・レベルアップ・ステージ結果をmainに追加した。現在の開発ブランチでは、クラスチェンジのルール基盤を追加している。
 
 ```text
 src/
 ├── App.tsx
 ├── application/
 │   ├── perform-attack.ts
+│   ├── perform-class-change.ts
 │   └── resolve-enemy-phase.ts
 ├── content/
 │   ├── terrain.ts
 │   ├── weapons.ts
+│   ├── classes.ts
 │   └── maps/chapter-01.ts
 ├── domain/
 │   ├── models/
 │   ├── movement/
 │   ├── combat/
 │   ├── random/
+│   ├── progression/
 │   └── rules/
 │       └── evaluate-battle-outcome.ts
 └── persistence/
@@ -36,8 +39,8 @@ src/
 | domain/combat | 武器適合、式、射程、予測、決定論的解決、暫定Manhattan距離 | 実装あり |
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
 | domain/rules | defeat_all／defeat_boss／味方全滅の勝敗判定 | 実装あり |
-| domain/progression | EXP閾値、個別成長判定、複数レベルアップ | 実装あり。クラス上限は仮データ |
-| application | プレイヤー／敵の攻撃、敵AI行動選択、敵フェイズ解決、ターン進行 | 基本実装 |
+| domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
+| application | プレイヤー／敵の攻撃、クラスチェンジコマンド、敵AI行動選択、敵フェイズ解決、ターン進行 | 基本実装。クラスチェンジUI／アイテム配布は未実装 |
 | ui | マップ、戦闘UI、装備、フェイズ終了、勝敗表示 | 試作実装 |
 | persistence | IndexedDB、saveVersion 1→2 migration | 実装あり |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
@@ -64,10 +67,10 @@ src/
 
 - `application/gameController.ts`: 移動、装備、攻撃、待機、フェイズ進行を統合する。
 - 敵AIは現在単純なスコア式。役割タグ、戦略の追加、プレイテストを別途行う。
-- `domain/progression/`: クラスチェンジ、成長ルールの拡張。経験値・レベルアップは実装済み。
+- `domain/progression/`: EXP・成長とクラス昇格ルールの基盤を実装。正式な昇格値・UI・アイテム配布は未実装。
 - `domain/events/`: ターン／撃破／勝利イベント。
 - UIコンポーネント分割。現状は `App.tsx` に集約。
-- 勝敗後のリザルト／報酬／章進行は未実装。
+- 基本的なステージ結果概要は実装済み。詳細統計／加入／章報酬／次章進行は未実装。
 
 ## 6. 外部サービス
 

@@ -17,6 +17,10 @@
 
 `GameStateSnapshot` は `saveVersion`、`chapterId`、`phase`、`turn`、`rngState`、`units` を保持する。フェイズは既存の `player`／`enemy` のenumを利用する。EXP・level・stats・growthRatesはGameUnitに既存のフィールドであり、今回の成長処理でもsave schemaは変更しない。EXPは0〜99の未使用分だけ保存し、成長判定後のXorshift32 stateは既存rngStateに反映する。
 
+## 2.1 所持品内のクラスチェンジアイテム
+
+`GameUnit.inventory` は既存の最大5枠のID配列を維持し、クラスチェンジアイテムもアイテムIDとして保持できる。昇格コマンドは指定アイテムIDを1つだけ消費し、他の所持品と装備武器IDを保持する。アイテムの種類を別フィールドへ分割していないため、今回のルール基盤ではGameStateの形／saveVersionを変更しない。実際の配布・表示・アイテム管理は未実装。
+
 ## 3. SaveVersion 1 → 2 migration
 
 `src/persistence/migrations.ts` が旧version 1の所持品・装備・乱数stateを変換し、version 2として検証する。不正／未対応データは自動初期化・上書きしない。
