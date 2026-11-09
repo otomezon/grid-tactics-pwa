@@ -839,7 +839,7 @@ export default function App() {
                     <input
                       type="checkbox"
                       checked={selected}
-                      disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
+                      disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked || currentMap.defeatCondition?.targetUnitId === unit.id}
                       onChange={(event) => handleDeploymentSelectionChange(unit.id, event.target.checked)}
                     />
                     <span className="deployment-unit-info">
