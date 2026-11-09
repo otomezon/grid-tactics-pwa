@@ -10,6 +10,7 @@ import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
 import type { GameStateSnapshot, Position } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
+import type { LevelUpRecord } from "./domain/progression/level-up";
 import { createRandomSeed } from "./domain/random/xorshift32";
 import { migrateGameStateSnapshot } from "./persistence/migrations";
 import { loadGameState, saveGameState } from "./persistence/save-repository";
@@ -54,6 +55,26 @@ function formatEnemyPhaseSummary(execution: ReturnType<typeof runEnemyPhase>): s
   }
   return (actions ? actions + "。" : "敵軍は行動できませんでした。") +
     "敵軍フェイズ終了。第" + execution.nextState.turn + "ターン・自軍フェイズです。";
+}
+
+function formatLevelUps(levelUps: LevelUpRecord[]): string {
+  const statLabels: Record<keyof LevelUpRecord["gains"], string> = {
+    hp: "HP",
+    strength: "力",
+    magic: "魔力",
+    skill: "技",
+    speed: "速さ",
+    luck: "幸運",
+    defense: "守備",
+    resistance: "魔防"
+  };
+  return levelUps.map((levelUp) => {
+    const gains = Object.entries(levelUp.gains)
+      .map(([stat, value]) => statLabels[stat as keyof LevelUpRecord["gains"]] + "+" + String(value))
+      .join("・");
+    return "Lv." + levelUp.newLevel + "へレベルアップ" +
+      (gains ? "（" + gains + "）" : "（能力上昇なし）");
+  }).join(" / ");
 }
 
 export default function App() {
@@ -330,7 +351,17 @@ export default function App() {
         return actor + "の" + strikeKindLabel(event.kind) + "：" + outcome + "（" + event.damage + "ダメージ）";
       }).join(" / ");
       const defeated = execution.result.defenderHp <= 0;
-      const successMessage = log + (defeated ? "。" + targetName + "を撃破しました。" : "。");
+      const experienceText = execution.experienceAwarded > 0
+        ? " +" + execution.experienceAwarded + " EXP。"
+        : "";
+      const levelUpText = execution.levelUps.length > 0
+        ? " " + formatLevelUps(execution.levelUps) + "。"
+        : "";
+      const successMessage =
+        log +
+        (defeated ? "。" + targetName + "を撃破しました。" : "。") +
+        experienceText +
+        levelUpText;
       setGameState(execution.nextState);
       setCombatTargetId(null);
       if (!execution.nextState.units.some((unit) => unit.id === selectedUnit.id)) {
@@ -416,8 +447,33 @@ export default function App() {
 
       {battleOutcome !== "playing" && (
         <section className={"battle-outcome " + (battleOutcome === "victory" ? "outcome-victory" : "outcome-defeat")} role="status">
-          <strong>{battleOutcome === "victory" ? "ステージクリア" : "敗北"}</strong>
-          <span>{battleOutcome === "victory" ? "勝利条件を達成しました。" : "味方ユニットが全滅しました。"}</span>
+          <div className="result-heading">
+            <strong>{battleOutcome === "victory" ? "ステージクリア" : "敗北"}</strong>
+            <span>{battleOutcome === "victory" ? "勝利条件を達成しました。" : "味方ユニットが全滅しました。"}</span>
+          </div>
+          <div className="result-summary">
+            <div><span>撃破数</span><strong>{Math.max(0, CHAPTER_01_MAP.enemyDeployment.length - gameState.units.filter((unit) => unit.faction === "enemy").length)}</strong></div>
+            <div><span>生存味方</span><strong>{gameState.units.filter((unit) => unit.faction === "player").length}</strong></div>
+          </div>
+          <div className="result-units">
+            <h2>味方ユニットの成長状況</h2>
+            {gameState.units.filter((unit) => unit.faction === "player").length > 0 ? (
+              gameState.units
+                .filter((unit) => unit.faction === "player")
+                .sort((left, right) => left.id.localeCompare(right.id))
+                .map((unit) => (
+                  <div className="result-unit" key={unit.id}>
+                    <strong>{unit.name}</strong>
+                    <span>Lv.{unit.level}</span>
+                    <span>EXP {unit.experience}/100</span>
+                    <span>HP {unit.currentHp}/{unit.stats.hp}</span>
+                  </div>
+                ))
+            ) : (
+              <p className="helper-text">生存している味方ユニットはいません。</p>
+            )}
+          </div>
+          <p className="helper-text">この画面は現在のステージ結果を表示します。経験値・能力値・撃破状態は自動保存済みのゲームデータに反映されています。</p>
         </section>
       )}
 
@@ -514,6 +570,9 @@ export default function App() {
                 </div>
                 <div className="unit-details">
                   <div><span>HP</span><strong>{selectedUnit.currentHp} / {selectedUnit.stats.hp}</strong></div>
+                  {selectedUnit.faction === "player" && (
+                    <div><span>経験値</span><strong>EXP {selectedUnit.experience} / 100</strong></div>
+                  )}
                   <div><span>移動力</span><strong>{selectedUnit.move}</strong></div>
                   <div><span>移動種別</span><strong>{selectedUnit.movementType === "infantry" ? "歩兵" : "騎馬"}</strong></div>
                   <div><span>行動状態</span><strong>{selectedStatus}</strong></div>

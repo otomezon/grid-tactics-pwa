@@ -76,5 +76,15 @@ describe("isValidGameStateSnapshot", () => {
     };
     expect(isValidGameStateSnapshot(invalidEquipment, CHAPTER_01_MAP)).toBe(false);
   });
-
+  it("rejects saved experience at or above the level-up threshold", () => {
+    const first = INITIAL_GAME_STATE.units[0]!;
+    const invalid = {
+      ...INITIAL_GAME_STATE,
+      units: [
+        { ...first, experience: 100 },
+        ...INITIAL_GAME_STATE.units.slice(1)
+      ]
+    };
+    expect(isValidGameStateSnapshot(invalid, CHAPTER_01_MAP)).toBe(false);
+  });
 });
