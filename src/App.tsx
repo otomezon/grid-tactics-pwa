@@ -14,7 +14,7 @@ import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
-import type { GameStateSnapshot, Position, UnitStats } from "./domain/models/game";
+import type { GameMapDefinition, GameStateSnapshot, Position, UnitStats } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
 import type { LevelUpRecord } from "./domain/progression/level-up";
 import { createRandomSeed } from "./domain/random/xorshift32";
@@ -58,7 +58,16 @@ function formatFortRecoverySummary(recoveries: FortRecoveryRecord[]): string {
     .join("、");
 }
 
-function formatEnemyPhaseSummary(execution: ReturnType<typeof runEnemyPhase>): string {
+function formatDefeatMessage(map: GameMapDefinition): string {
+  return map.defeatCondition?.type === "unit_defeated"
+    ? "敗北条件に指定された味方ユニットが撃破されました。"
+    : "味方ユニットが全滅しました。";
+}
+
+function formatEnemyPhaseSummary(
+  execution: ReturnType<typeof runEnemyPhase>,
+  map: GameMapDefinition
+): string {
   const actions = execution.actions.map((action) => action.message).join("。");
   const details = [actions, formatFortRecoverySummary(execution.phaseStartRecoveries)]
     .filter(Boolean)
@@ -67,7 +76,7 @@ function formatEnemyPhaseSummary(execution: ReturnType<typeof runEnemyPhase>): s
     return (details ? details + "。" : "") + "勝利条件を達成しました。";
   }
   if (execution.outcome === "defeat") {
-    return (details ? details + "。" : "") + "味方ユニットが全滅しました。";
+    return (details ? details + "。" : "") + formatDefeatMessage(map);
   }
   return (details ? details + "。" : "敵軍は行動できませんでした。") +
     "敵軍フェイズ終了。第" + execution.nextState.turn + "ターン・自軍フェイズです。";
@@ -187,7 +196,7 @@ export default function App() {
             await saveGameState(restoredState);
             if (!cancelled) {
               setSaveStatus("saved");
-              setMessage(formatEnemyPhaseSummary(enemyPhase));
+              setMessage(formatEnemyPhaseSummary(enemyPhase, restoredChapter.map));
             }
           } catch {
             if (!cancelled) {
@@ -203,7 +212,7 @@ export default function App() {
         setMessage(restoredOutcome === "victory"
           ? "勝利条件を達成しています。"
           : restoredOutcome === "defeat"
-            ? "味方ユニットが全滅しています。"
+            ? formatDefeatMessage(restoredChapter.map)
             : migration.migrated
               ? "以前のセーブデータを新しい形式へ移行しました。"
               : "前回の自動保存データを復元しました。");
@@ -489,7 +498,7 @@ export default function App() {
 
       const execution = runEnemyPhase(enemyPhaseState, currentMap);
       setGameState(execution.nextState);
-      await persist(execution.nextState, formatEnemyPhaseSummary(execution));
+      await persist(execution.nextState, formatEnemyPhaseSummary(execution, currentMap));
     } catch (error) {
       setMessage(getErrorMessage(error));
     }
@@ -612,7 +621,7 @@ export default function App() {
         <section className={"battle-outcome " + (battleOutcome === "victory" ? "outcome-victory" : "outcome-defeat")} role="status">
           <div className="result-heading">
             <strong>{battleOutcome === "victory" ? "ステージクリア" : "敗北"}</strong>
-            <span>{battleOutcome === "victory" ? "勝利条件を達成しました。" : "味方ユニットが全滅しました。"}</span>
+            <span>{battleOutcome === "victory" ? "勝利条件を達成しました。" : formatDefeatMessage(currentMap)}</span>
           </div>
           <div className="result-summary">
             <div><span>撃破数</span><strong>{Math.max(0, currentMap.enemyDeployment.length - gameState.units.filter((unit) => unit.faction === "enemy").length)}</strong></div>
