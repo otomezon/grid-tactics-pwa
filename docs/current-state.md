@@ -8,7 +8,8 @@
 - PR #1〜#5はマージ済み。PR #5のマージコミット: `d63981b9a51e36286a53ebfc1922bbaba2d6fafc`
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- PR #6 latest head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
+- PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
+- PR #6 UI-complete head (`b09ebc61`) CI run #116: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - 現在の開発対象: 経験値報酬、レベルアップ、ステージ結果表示。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
@@ -38,6 +39,7 @@
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
 | ステージ結果表示 | 実装済み（勝敗・撃破数・生存味方のLv/EXP/HP） | `src/App.tsx` | UI手動確認未実施 |
+| 選択ユニットの経験値表示 | 実装済み（EXP x/100） | `src/App.tsx` | CI build。実機操作未確認 |
 | progression／attack tests | 実装済み | `src/domain/progression/level-up.test.ts`, `src/application/perform-attack.test.ts` | 10 test files／66 tests、GitHub Actions run #112成功 |
 | クラスチェンジ | 未実装 | — |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
