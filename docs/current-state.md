@@ -2,7 +2,7 @@
 
 ## 1. 監査スナップショット
 
-- 更新日: 2026-11-09
+- 更新日: 2026-11-10
 - Repository: `otomezon/grid-tactics-pwa`
 - デフォルトブランチ: `main`
 - PR #1〜#12はすべてマージ済み。PR #11（章報酬／次章開始フロー）のマージコミット: `29fc033f11a01dda36768a00a6a3a7476cc6de3b`。PR #12（マップ指定ユニット撃破による敗北条件）のマージコミット: `7d9a25e2472cc5bd42529cfe48cb7b313109bcca`。
@@ -12,7 +12,7 @@
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - 現在の開発対象: 戦闘ルール／進行の仕様差分を埋め、章・マップデータへ安全に接続する。
 - Node.js 26、npm、Vitest 5.0.0。
-- Game save schema: `saveVersion: 2`。今回のフェイズ進行ではGameStateの形を変更しない。
+- Game save schema: `saveVersion: 2`。マップ定義の検証はセーブ状態検証と勝敗判定の入口で実施し、GameStateの形は変更しない。
 
 ## 2. 機能別ステータス
 
