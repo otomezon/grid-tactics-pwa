@@ -3,6 +3,7 @@ import { INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
 import type { GameUnit, UnitStats } from "../models/game";
 import {
   applyClassPromotion,
+  getClassPromotionStatPreview,
   type ClassPromotionDefinition
 } from "./class-change";
 
@@ -174,6 +175,72 @@ describe("applyClassPromotion", () => {
         definition()
       )
     ).toThrow(/cannot be equipped/);
+  });
+
+  it("previews all eight stat changes using the same cap rules as promotion", () => {
+    const currentStats: UnitStats = {
+      hp: 59,
+      strength: 32,
+      magic: 3,
+      skill: 29,
+      speed: 30,
+      luck: 1,
+      defense: 4,
+      resistance: 2
+    };
+    const originalStats = { ...currentStats };
+    const preview = getClassPromotionStatPreview(
+      currentStats,
+      definition({
+        statBonuses: {
+          hp: 5,
+          strength: 2,
+          magic: 1,
+          skill: 3,
+          speed: 2,
+          luck: 1,
+          defense: 0,
+          resistance: 4
+        },
+        statCaps: {
+          ...caps,
+          hp: 60,
+          strength: 30,
+          skill: 30,
+          speed: 30
+        }
+      })
+    );
+
+    expect(preview.changes).toHaveLength(8);
+    expect(preview.changes).toEqual([
+      { key: "hp", currentValue: 59, requestedBonus: 5, appliedBonus: 1, nextValue: 60, cap: 60, currentValueExceedsCap: false },
+      { key: "strength", currentValue: 32, requestedBonus: 2, appliedBonus: 0, nextValue: 32, cap: 30, currentValueExceedsCap: true },
+      { key: "magic", currentValue: 3, requestedBonus: 1, appliedBonus: 1, nextValue: 4, cap: 30, currentValueExceedsCap: false },
+      { key: "skill", currentValue: 29, requestedBonus: 3, appliedBonus: 1, nextValue: 30, cap: 30, currentValueExceedsCap: false },
+      { key: "speed", currentValue: 30, requestedBonus: 2, appliedBonus: 0, nextValue: 30, cap: 30, currentValueExceedsCap: false },
+      { key: "luck", currentValue: 1, requestedBonus: 1, appliedBonus: 1, nextValue: 2, cap: 30, currentValueExceedsCap: false },
+      { key: "defense", currentValue: 4, requestedBonus: 0, appliedBonus: 0, nextValue: 4, cap: 30, currentValueExceedsCap: false },
+      { key: "resistance", currentValue: 2, requestedBonus: 4, appliedBonus: 4, nextValue: 6, cap: 30, currentValueExceedsCap: false }
+    ]);
+    expect(preview.stats).toEqual({
+      hp: 60,
+      strength: 32,
+      magic: 4,
+      skill: 30,
+      speed: 30,
+      luck: 2,
+      defense: 4,
+      resistance: 6
+    });
+    expect(preview.appliedBonuses).toEqual({
+      hp: 1,
+      magic: 1,
+      skill: 1,
+      luck: 1,
+      resistance: 4
+    });
+    expect(currentStats).toEqual(originalStats);
   });
 
   it("requires explicit promotion bonuses, caps, and experience policy", () => {
