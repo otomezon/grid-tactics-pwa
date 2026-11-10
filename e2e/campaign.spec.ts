@@ -484,8 +484,8 @@ test.describe("browser campaign flow", () => {
 
       const bounds = await viewport.boundingBox();
       if (!bounds) throw new Error("The map viewport has no visible bounds.");
-      const startX = bounds.x + bounds.width * 0.82;
-      const endX = bounds.x + bounds.width * 0.22;
+      const startX = bounds.x + bounds.width * 0.95;
+      const endX = bounds.x + bounds.width * 0.05;
       const centerY = bounds.y + bounds.height / 2;
       const client = await context.newCDPSession(page);
 
@@ -516,8 +516,13 @@ test.describe("browser campaign flow", () => {
 
       const rightSideUnit = page.getByRole("button", { name: /味方04/ });
       await expect(rightSideUnit).toBeVisible();
-      const unitBounds = await rightSideUnit.boundingBox();
-      if (!unitBounds) throw new Error("The unit near the right edge has no visible bounds.");
+      const [viewportBounds, unitBounds] = await Promise.all([
+        viewport.boundingBox(),
+        rightSideUnit.boundingBox()
+      ]);
+      if (!viewportBounds || !unitBounds) throw new Error("The viewport or right-side unit has no visible bounds.");
+      expect(unitBounds.x).toBeGreaterThanOrEqual(viewportBounds.x);
+      expect(unitBounds.x + unitBounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width);
 
       await page.touchscreen.tap(
         unitBounds.x + unitBounds.width / 2,
