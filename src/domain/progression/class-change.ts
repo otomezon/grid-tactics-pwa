@@ -11,7 +11,7 @@ const STAT_KEYS: readonly (keyof UnitStats)[] = [
   "resistance"
 ];
 
-export type PromotionExperiencePolicy = "preserve" | "reset";
+export type PromotionExperiencePolicy = "preserve";
 
 export interface ClassPromotionDefinition {
   fromClassId: string;
@@ -19,7 +19,7 @@ export interface ClassPromotionDefinition {
   requiredItemId: string;
   statBonuses: Partial<UnitStats>;
   statCaps: UnitStats;
-  /** The design proposal does not specify whether partial EXP survives promotion. */
+  /** Approved initial policy: preserve the unit's partial EXP when level resets to 1. */
   experiencePolicy: PromotionExperiencePolicy;
 }
 
@@ -43,8 +43,8 @@ function validateDefinition(definition: ClassPromotionDefinition): void {
     throw new RangeError("A promotion must define distinct source and target classes and an item ID.");
   }
 
-  if (definition.experiencePolicy !== "preserve" && definition.experiencePolicy !== "reset") {
-    throw new RangeError("A promotion must explicitly choose how partial experience is handled.");
+  if (definition.experiencePolicy !== "preserve") {
+    throw new RangeError("Class promotion must preserve partial experience.");
   }
 
   if (
@@ -137,7 +137,7 @@ export function applyClassPromotion(
       ...unit,
       classId: definition.toClassId,
       level: 1,
-      experience: definition.experiencePolicy === "reset" ? 0 : unit.experience,
+      experience: unit.experience,
       stats,
       currentHp: unit.currentHp,
       inventory,
