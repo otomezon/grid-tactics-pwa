@@ -28,7 +28,7 @@
 - `domain/rules`: battle outcome evaluation and fort recovery at faction phase start.
 - `domain/progression`: experience threshold, deterministic level growth, and data-driven class promotion rules.
 - `application`: player/enemy combat commands, class-promotion command, chapter reward command, next-chapter preparation, validated player deployment preparation, and deterministic enemy-phase resolution.
-- `App.tsx`: chapter-aware prototype map UI, deployment preparation and read-only candidate details, battle forecast, phase-end control, results/rewards summary, next-chapter launch, inventory display, and class-promotion confirmation.
+- `App.tsx`: chapter-aware prototype map UI, deployment preparation and read-only candidate details, battle forecast, phase-end control, results/rewards summary, next-chapter launch, inventory display, and class-promotion confirmation with an eight-stat preview, HP/EXP outcomes, item/action cost, and preserved movement/weapon/equipment details. The preview shares the domain calculation with the promotion command; all numeric values remain provisional and do not settle CP-15.
 - `persistence`: IndexedDB, saveVersion 1／2→3 migration, versioned JSON save export/import, and three-generation local backup/restore.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
