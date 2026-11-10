@@ -419,6 +419,51 @@ test.describe("production PWA shell", () => {
     await page.getByTestId("restore-backup-1").click();
     await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");
     expect(await readAutoSave(page)).toEqual(autoSaveBeforeInvalidRestore);
+
+    await page.evaluate(async () => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("grid-tactics-pwa", 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error("Could not open save database."));
+      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const transaction = database.transaction("game-saves", "readwrite");
+          const store = transaction.objectStore("game-saves");
+          const request = store.getAll();
+          request.onsuccess = () => {
+            const records = request.result as Array<{
+              slotId: string;
+              savedAt: number;
+              data: Record<string, unknown>;
+            }>;
+            const invalidSnapshot = records.find((record) => record.slotId === "backup-2");
+            const unknownChapter = records.find((record) => record.slotId === "backup-3");
+            if (!invalidSnapshot || !unknownChapter) {
+              transaction.abort();
+              reject(new Error("Expected backup generations are missing."));
+              return;
+            }
+            store.put({ ...invalidSnapshot, data: { ...invalidSnapshot.data, turn: 0 } });
+            store.put({ ...unknownChapter, data: { ...unknownChapter.data, chapterId: "unknown_chapter" } });
+          };
+          request.onerror = () => reject(request.error ?? new Error("Could not read backups to validate."));
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error ?? new Error("Could not prepare invalid backups."));
+          transaction.onabort = () => reject(transaction.error ?? new Error("Invalid backup update was aborted."));
+        });
+      } finally {
+        database.close();
+      }
+    });
+
+    await page.getByTestId("restore-backup-2").click();
+    await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");
+    expect(await readAutoSave(page)).toEqual(autoSaveBeforeInvalidRestore);
+
+    await page.getByTestId("restore-backup-3").click();
+    await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");
+    expect(await readAutoSave(page)).toEqual(autoSaveBeforeInvalidRestore);
     await expect(page.locator(".phase-badge")).toHaveText("第4ターン · 自軍フェイズ");
   });
 
