@@ -123,6 +123,26 @@ describe("calculateEnemyThreatenedTiles", () => {
     )).toEqual([]);
   });
 
+  it("includes the enemy's current attack range when it cannot move", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 1, y: 0 }
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 1, y: 1 },
+      move: 0
+    };
+
+    const threatened = calculateEnemyThreatenedTiles(
+      playerPhase([player, enemy]),
+      openMap(),
+      WEAPONS_BY_ID
+    );
+
+    expect(containsPosition(threatened, player.position)).toBe(true);
+  });
+
   it("does not expose an upcoming-phase preview during the enemy phase", () => {
     const player = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
     const enemy = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
