@@ -115,6 +115,50 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
+  test("shows the resolved player attack strikes and keeps the report transient", async ({ page }) => {
+    await startBattle(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const preparedState = await readAutoSave(page) as {
+      rngState: number;
+      units: Array<{ id: string; faction: string; position: { x: number; y: number }; hasMoved: boolean; hasActed: boolean }>;
+    };
+    const player = preparedState.units.find((unit) => unit.id === "unit_001");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
+    if (!player || !enemy) throw new Error("Combat report test units are missing from the auto save.");
+    player.position = { x: 1, y: 1 }; player.hasMoved = false; player.hasActed = false;
+    enemy.position = { x: 1, y: 2 }; enemy.hasMoved = false; enemy.hasActed = false;
+    preparedState.units = [player, enemy];
+    preparedState.rngState = 0x6d2b79f5;
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
+    await page.getByRole("button", { name: "攻撃を確定" }).click();
+
+    const report = page.getByTestId("player-attack-report");
+    await expect(report).toBeVisible();
+    await expect(report).toContainText("味方01 vs 敵01");
+    await expect(report.getByTestId("player-attack-strike")).toHaveCount(2);
+    await expect(report).toContainText("先制攻撃");
+    await expect(report).toContainText("反撃");
+    await expect(report).toContainText("試作の鉄の剣");
+    await expect(report).toContainText("獲得EXP：+10");
+    await expect(report).toContainText(/HP 20 → \d+/);
+    const dimensions = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      reportWidth: document.querySelector("[data-testid=player-attack-report]")?.getBoundingClientRect().width ?? 0
+    }));
+    expect(dimensions.reportWidth).toBeGreaterThan(0);
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    const savedState = await readAutoSave(page);
+    expect(savedState).not.toHaveProperty("lastPlayerAttackReport");
+    await page.reload();
+    await expect(page.getByTestId("player-attack-report")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(savedState);
+  });
+
   test("toggles the enemy threat range before the enemy phase", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 390, height: 844 });

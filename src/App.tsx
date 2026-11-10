@@ -11,6 +11,8 @@ import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
+import { getPlayerAttackReport } from "./application/get-player-attack-report";
+import type { PlayerAttackReport } from "./application/get-player-attack-report";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import type { EnemyActionLog } from "./application/resolve-enemy-phase";
@@ -266,6 +268,7 @@ export default function App() {
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
   const [lastEnemyPhaseActions, setLastEnemyPhaseActions] = useState<EnemyActionLog[] | null>(null);
+  const [lastPlayerAttackReport, setLastPlayerAttackReport] = useState<PlayerAttackReport | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [message, setMessage] = useState("味方ユニットを選択してください。");
   const [loadBlocked, setLoadBlocked] = useState(false);
@@ -351,7 +354,10 @@ export default function App() {
           const enemyPhase = runEnemyPhase(restoredState, restoredChapter.map);
           restoredState = enemyPhase.nextState;
           setGameState(restoredState);
-          if (!cancelled) setLastEnemyPhaseActions(enemyPhase.actions);
+          if (!cancelled) {
+            setLastEnemyPhaseActions(enemyPhase.actions);
+            setLastPlayerAttackReport(null);
+          }
           try {
             await saveGameState(restoredState);
             if (!cancelled) {
@@ -649,6 +655,7 @@ export default function App() {
       setActiveChapter(chapter);
       setGameState(restoredState);
       setLastEnemyPhaseActions(restoredEnemyPhaseActions);
+      setLastPlayerAttackReport(null);
       setDeploymentAssignments(createDeploymentAssignments(restoredState, chapter.map));
       setDeploymentSelectedUnitIds(createDeploymentSelection(restoredState, chapter.map));
       setDeploymentPending(false);
@@ -730,6 +737,7 @@ export default function App() {
       setActiveChapter(chapter);
       setGameState(importedState);
       setLastEnemyPhaseActions(importedEnemyPhaseActions);
+      setLastPlayerAttackReport(null);
       setDeploymentAssignments(createDeploymentAssignments(importedState, chapter.map));
       setDeploymentSelectedUnitIds(createDeploymentSelection(importedState, chapter.map));
       setDeploymentPending(false);
@@ -868,6 +876,8 @@ export default function App() {
         combatTargetId
       );
       const targetName = gameState.units.find((unit) => unit.id === combatTargetId)?.name ?? "敵";
+      setLastPlayerAttackReport(getPlayerAttackReport(execution));
+      setLastEnemyPhaseActions(null);
       const log = execution.result.events.map((event) => {
         const actor = gameState.units.find((unit) => unit.id === event.attackerId)?.name ?? "ユニット";
         const outcome = !event.hit ? "ミス" : event.critical ? "必殺" : "命中";
@@ -1005,6 +1015,7 @@ export default function App() {
     if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
 
     setLastEnemyPhaseActions(null);
+    setLastPlayerAttackReport(null);
     try {
       const phaseStart = beginEnemyPhase(gameState, currentMap);
       const enemyPhaseState = phaseStart.nextState;
@@ -1062,6 +1073,7 @@ export default function App() {
       setActiveChapter(targetChapter);
       setGameState(nextState);
       setLastEnemyPhaseActions(null);
+      setLastPlayerAttackReport(null);
       setDeploymentAssignments(createDeploymentAssignments(nextState, targetChapter.map));
       setDeploymentSelectedUnitIds(createDeploymentSelection(nextState, targetChapter.map));
       setDeploymentPending(true);
@@ -1785,6 +1797,45 @@ export default function App() {
             <h2>戦況メッセージ</h2>
             <p className="message-text" role="status" aria-live="polite">{message}</p>
           </section>
+
+          {lastPlayerAttackReport !== null && (
+            <section className="info-card enemy-phase-report player-attack-report" aria-labelledby="player-attack-report-heading" data-testid="player-attack-report">
+              <div className="enemy-phase-report-meta">
+                <p className="eyebrow">COMBAT REPORT</p>
+                <span>{lastPlayerAttackReport.strikes.length}回</span>
+              </div>
+              <h2 id="player-attack-report-heading">直前の味方攻撃</h2>
+              <p className="forecast-header">
+                <strong>{lastPlayerAttackReport.attackerName} vs {lastPlayerAttackReport.defenderName}</strong>
+                <span>{lastPlayerAttackReport.defenderDefeated ? "撃破" : "残りHP " + lastPlayerAttackReport.defenderRemainingHp}</span>
+              </p>
+              {lastPlayerAttackReport.strikes.length > 0 ? (
+                <ol className="enemy-phase-action-list">
+                  {lastPlayerAttackReport.strikes.map((strike, index) => (
+                    <li className="enemy-phase-action" key={String(index) + "-" + strike.kind} data-testid="player-attack-strike">
+                      <div className="enemy-phase-action-heading">
+                        <span className="enemy-phase-action-number">{index + 1}</span>
+                        <strong>{strike.actorName} → {strike.targetName}</strong>
+                        <span className="enemy-phase-action-kind">{strike.kindLabel}</span>
+                      </div>
+                      <p>
+                        {strike.weaponName} · {strike.outcome === "miss" ? "ミス" : strike.outcome === "critical" ? "必殺" : "命中"}（{strike.damage}ダメージ）
+                        · HP {strike.targetHpBefore} → {strike.targetHpAfter}
+                        · 命中率 {strike.hitRate}%／必殺率 {strike.criticalRate}%
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="helper-text">実行された攻撃はありませんでした。</p>
+              )}
+              <p className="helper-text">獲得EXP：+{lastPlayerAttackReport.experienceAwarded}</p>
+              {lastPlayerAttackReport.levelUps.length > 0 && (
+                <p className="helper-text">{formatLevelUps(lastPlayerAttackReport.levelUps)}</p>
+              )}
+              <p className="helper-text enemy-phase-report-note">実際に解決した攻撃だけを表示します。予測上の後続攻撃は、途中で撃破された場合など実行されないことがあります。この記録は一時表示で、セーブデータには含まれません。</p>
+            </section>
+          )}
 
           {lastEnemyPhaseActions !== null && (
             <section className="info-card enemy-phase-report" aria-labelledby="enemy-phase-report-heading" data-testid="enemy-phase-report">

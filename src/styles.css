@@ -632,3 +632,7 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .enemy-phase-action > p { margin:7px 0 0 29px; color:var(--text-muted); font-size:.78rem; line-height:1.55; overflow-wrap:anywhere; }
 .enemy-phase-report-note { margin-top:12px; }
 @media (max-width:380px) { .enemy-phase-action { padding:9px; } .enemy-phase-action > p { margin-left:0; } }
+
+.player-attack-report .forecast-header { margin:10px 0 0; flex-wrap:wrap; white-space:normal; }
+.player-attack-report .forecast-header span { white-space:nowrap; }
+.player-attack-report .enemy-phase-action > p { font-variant-numeric:tabular-nums; }

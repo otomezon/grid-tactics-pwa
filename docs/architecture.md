@@ -2,13 +2,14 @@
 
 ## 1. 現在の構成
 
-PR #1〜#41で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択、候補詳細、ブラウザE2E、PWA更新検証、JSONセーブexport/import、3世代ローカルバックアップ／復元、詳細なステージ結果表示をmainに追加した。PR #41のマージコミットは `30ebbfcc155a0d8a533ff8d5ef7a2debc9c85c5c`。PR #42のブランチでは敵軍フェイズの一時行動記録表示を追加する。
+PR #1〜#42で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択、候補詳細、ブラウザE2E、PWA更新検証、JSONセーブexport/import、3世代ローカルバックアップ／復元、詳細なステージ結果表示、敵軍フェイズの一時行動記録をmainに追加した。PR #42のマージコミットは `8b5b3b583ad4cd6f7fae3f2cccd8b8ebbefe0e4f`。PR #43のブランチでは味方攻撃のstrike別一時結果表示を追加する。
 
 ```text
 src/
 ├── App.tsx
 ├── application/
 │   ├── perform-attack.ts
+│   ├── get-player-attack-report.ts
 │   ├── perform-class-change.ts
 │   ├── apply-chapter-rewards.ts
 │   ├── prepare-next-chapter.ts
@@ -50,7 +51,7 @@ src/
 | domain/rules | defeat_all／defeat_boss／味方全滅／マップ指定ユニット撃破の勝敗判定、砦回復 | 実装あり。主人公ID未決定のため試作マップの個別敗北対象は未設定。回復端数は暫定切り捨て |
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、敵AI／フェイズ進行 | 出撃準備は開発ブランチで実装中。報酬は章データで明示したアイテムのみ適用 |
-| ui | 章別マップ、戦闘UI、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルは開発ブランチ。第2章は遷移検証用 |
+| ui | 章別マップ、戦闘予測／味方攻撃結果／敵軍フェイズ行動記録、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルは開発ブランチ。第2章は遷移検証用 |
 | persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2→3 migration、JSON export/import | 3世代backup／復元、export/importともmain実装済み。PR #23で最大3世代の保持、最古世代ローテーション、auto不変、確認付き復元をCI検証。DB version／saveVersionは据え置き |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
