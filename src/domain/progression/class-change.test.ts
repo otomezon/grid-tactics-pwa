@@ -80,6 +80,17 @@ describe("applyClassPromotion", () => {
     expect(result.unit.experience).toBe(73);
   });
 
+  it.each([0, 99])("preserves the EXP boundary value %i when promotion resets the level", (experience) => {
+    const unit = eligibleUnit({ experience });
+    const result = applyClassPromotion(
+      unit,
+      definition({ experiencePolicy: "preserve" })
+    );
+
+    expect(result.unit.level).toBe(1);
+    expect(result.unit.experience).toBe(experience);
+  });
+
   it("caps bonus gains without reducing an existing stat above the new cap", () => {
     const unit = eligibleUnit({
       stats: { ...eligibleUnit().stats, strength: 32, speed: 29 }
@@ -103,6 +114,34 @@ describe("applyClassPromotion", () => {
 
     expect(result.unit.stats.hp).toBe(unit.stats.hp + 5);
     expect(result.unit.currentHp).toBe(4);
+  });
+
+  it("preserves near-death and full current HP when maximum HP increases", () => {
+    const base = eligibleUnit();
+    const stats = { ...base.stats, hp: 20 };
+
+    for (const currentHp of [1, 20]) {
+      const unit = eligibleUnit({ stats, currentHp });
+      const result = applyClassPromotion(
+        unit,
+        definition({ statBonuses: { hp: 5 } })
+      );
+
+      expect(result.unit.stats.hp).toBe(25);
+      expect(result.unit.currentHp).toBe(currentHp);
+    }
+  });
+
+  it("limits an HP promotion bonus at the class cap without healing current HP", () => {
+    const unit = eligibleUnit({
+      stats: { ...eligibleUnit().stats, hp: 59 },
+      currentHp: 59
+    });
+    const result = applyClassPromotion(unit, definition({ statBonuses: { hp: 5 } }));
+
+    expect(result.unit.stats.hp).toBe(60);
+    expect(result.unit.currentHp).toBe(59);
+    expect(result.appliedBonuses).toEqual({ hp: 1 });
   });
 
   it("rejects units below level 10, enemy units, and mismatched source classes", () => {
