@@ -23,7 +23,7 @@
 | 味方ユニット移動 | 実装済み | `src/domain/movement/` |
 | 仮武器・装備選択 | 実装済み（仮値） | `src/content/weapons.ts`, `src/App.tsx` |
 | 戦闘予測・プレイヤー攻撃 | 実装済み | `src/domain/combat/`, `src/application/perform-attack.ts` |
-| 敵攻撃範囲の表示切替 | 実装中（自軍フェイズでON／OFF。生存・未行動敵の現在位置と移動可能マス、装備中で使用可能な武器の射程からマスを予測。敵AIの移動先・対象の確定予告ではない。距離は暫定Manhattan。表示状態はセーブしない） | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/App.tsx`, `src/styles.css` | 本PRのE2E／CI検証中 |
+| 敵攻撃範囲の表示切替 | 実装済み（PR #40オーナー確認待ち。自軍フェイズでON／OFF。生存・未行動敵の現在位置と、地形・占有を考慮した移動可能マス、装備中で使用可能な武器の射程から脅威マスを予測。敵AIの移動先・対象の確定予告ではない。距離は暫定Manhattan。表示状態はセーブしない） | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/App.tsx`, `src/styles.css` | PR #40 CI run #554: typecheck、23 test files／154 tests、production build、Chromium E2E 12件成功 |
 | RNG state・save migration | 実装済み（saveVersion 3、version 1／2→3） | `src/domain/random/`, `src/persistence/migrations.ts` |
 | 自軍フェイズ終了／敵軍開始 | 実装済み | `src/application/resolve-enemy-phase.ts`, `src/App.tsx` |
 | 敵AI（攻撃対象評価） | 基本実装・暫定スコア | `src/application/resolve-enemy-phase.ts` |
