@@ -151,7 +151,16 @@ test.describe("browser campaign flow", () => {
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmation).toContainText("昇格後は行動済みになります");
-    await confirmation.getByRole("button", { name: "昇格を確定" }).click();
+
+    const beforeCancel = await readAutoSave(page);
+    await confirmation.getByRole("button", { name: "キャンセル" }).click();
+    await expect(page.getByRole("group", { name: "クラスチェンジ確認" })).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(beforeCancel);
+
+    await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
+    const confirmedAgain = page.getByRole("group", { name: "クラスチェンジ確認" });
+    await expect(confirmedAgain).toContainText("昇格後は行動済みになります");
+    await confirmedAgain.getByRole("button", { name: "昇格を確定" }).click();
     await expect(page.getByRole("status")).toContainText("このフェイズの行動を消費しました");
 
     const promotedState = await readAutoSave(page) as {

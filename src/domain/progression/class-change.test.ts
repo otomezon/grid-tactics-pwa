@@ -57,7 +57,10 @@ describe("applyClassPromotion", () => {
       },
       currentHp: 12,
       inventory: ["iron_sword", "promotion_seal"],
-      equippedWeaponId: "iron_sword",
+      move: unit.move,
+      movementType: unit.movementType,
+      usableWeaponTypes: unit.usableWeaponTypes,
+      equippedWeaponId: unit.equippedWeaponId,
       hasMoved: false,
       hasActed: true
     });
