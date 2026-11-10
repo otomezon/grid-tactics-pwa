@@ -66,6 +66,14 @@ describe("performClassChange", () => {
     expect(result.promotedUnit.experience).toBe(35);
     expect(result.promotedUnit.hasMoved).toBe(false);
     expect(result.promotedUnit.hasActed).toBe(true);
+    expect(result.promotedUnit.move).toBe(state.units.find((unit) => unit.id === "unit_001")?.move);
+    expect(result.promotedUnit.movementType).toBe(state.units.find((unit) => unit.id === "unit_001")?.movementType);
+    expect(result.promotedUnit.usableWeaponTypes).toEqual(
+      state.units.find((unit) => unit.id === "unit_001")?.usableWeaponTypes
+    );
+    expect(result.promotedUnit.equippedWeaponId).toBe(
+      state.units.find((unit) => unit.id === "unit_001")?.equippedWeaponId
+    );
     expect(result.promotedUnit.inventory).not.toContain(PROMOTION_ITEM_ID);
     expect(result.consumedItemId).toBe("promotion_seal");
     expect(result.appliedBonuses).toEqual({ hp: 2, strength: 1 });
