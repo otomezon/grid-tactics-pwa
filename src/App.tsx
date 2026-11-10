@@ -10,6 +10,7 @@ import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
+import { getBattleResultDetails } from "./application/get-battle-result-details";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
@@ -442,6 +443,12 @@ export default function App() {
   }, [gameState.units, selectedUnit, currentMap]);
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
+  const battleResultDetails = useMemo(
+    () => battleOutcome === "playing"
+      ? null
+      : getBattleResultDetails(gameState, currentMap, activeChapter.initialState),
+    [activeChapter.initialState, battleOutcome, currentMap, gameState]
+  );
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
     !deploymentPending && gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
@@ -1382,22 +1389,39 @@ export default function App() {
             </>
           )}
           <div className="result-units">
+            <h2>敵軍の状況</h2>
+            {battleResultDetails && battleResultDetails.enemies.length > 0 ? (
+              battleResultDetails.enemies.map((enemy) => (
+                <div className="result-detail-row result-enemy-row" key={enemy.id} data-testid={"result-enemy-" + enemy.id}>
+                  <strong>{enemy.name}</strong>
+                  <span>{getClassDisplayName(enemy.classId)}</span>
+                  <span className={enemy.status === "alive" ? "result-status-alive" : "result-status-defeated"}>
+                    {enemy.status === "alive" ? "生存" : "撃破"}
+                  </span>
+                  <span>{enemy.currentHp === null ? "HP —" : "HP " + enemy.currentHp + "/" + enemy.maxHp}</span>
+                </div>
+              ))
+            ) : (
+              <p className="helper-text">このマップに敵軍配置はありません。</p>
+            )}
+            <p className="helper-text">撃破済み敵ユニットの最終HPはセーブデータに残らないため表示していません。</p>
+          </div>
+          <div className="result-units">
             <h2>味方ユニットの成長状況</h2>
-            {gameState.units.filter((unit) => unit.faction === "player").length > 0 ? (
-              gameState.units
-                .filter((unit) => unit.faction === "player")
-                .sort((left, right) => left.id.localeCompare(right.id))
-                .map((unit) => (
-                  <div className="result-unit" key={unit.id}>
-                    <strong>{unit.name}</strong>
-                    <span>Lv.{unit.level}</span>
-                    <span>EXP {unit.experience}/100</span>
-                    <span>HP {unit.currentHp}/{unit.stats.hp}</span>
-                  </div>
-                ))
+            {battleResultDetails && battleResultDetails.survivingPlayers.length > 0 ? (
+              battleResultDetails.survivingPlayers.map((unit) => (
+                <div className="result-detail-row result-player-row" key={unit.id} data-testid={"result-player-" + unit.id}>
+                  <strong>{unit.name}</strong>
+                  <span>{getClassDisplayName(unit.classId)}</span>
+                  <span>Lv.{unit.level}</span>
+                  <span>EXP {unit.experience}/100</span>
+                  <span>HP {unit.currentHp}/{unit.maxHp}</span>
+                </div>
+              ))
             ) : (
               <p className="helper-text">生存している味方ユニットはいません。</p>
             )}
+            <p className="helper-text">撃破された味方の最終状態や撃破者別の戦闘記録は保存していないため、生存中の味方のみを表示しています。</p>
           </div>
           <p className="helper-text">この画面は現在のステージ結果を表示します。経験値・能力値・撃破状態は自動保存済みのゲームデータに反映されています。</p>
         </section>
