@@ -19,6 +19,7 @@
 | 敵行動順 | §7.3 | ID辞書順で固定 | 同上 |
 | 敵の現在位置から攻撃 | §7.1 | 射程と装備武器を検証し攻撃 | 同上、`perform-attack.ts` |
 | 敵の移動後攻撃 | §7.1 | 到達可能マスから攻撃可能位置を探索 | 同上 |
+| 敵攻撃範囲表示 | §4.4／§9.2 | 自軍フェイズ中に切替。敵の現在位置・合法な移動先と装備武器の射程から脅威マスを予測 | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/App.tsx` |
 | 攻撃できない場合に接近／待機 | §7.1 | 最近接味方との距離を基準に移動、不可なら待機 | 同上 |
 | 勝利条件 | §3.2 | defeat_all／defeat_boss | `evaluate-battle-outcome.ts` |
 | 味方全滅時の敗北 | §3.2 | player rosterが0なら敗北 | 同上 |
@@ -35,7 +36,7 @@
 
 ## 5. C：実装済み・未文書化
 
-敵攻撃範囲表示は実装済み。自軍フェイズ中の表示切替、敵の現在位置と合法な移動後位置、装備武器の射程を使った脅威マス予測を `src/domain/combat/calculate-enemy-threatened-tiles.ts` と `src/App.tsx` に実装した。これは敵AIの移動先や攻撃対象の確定予告ではなく、暫定Manhattan距離に基づく範囲表示である。今回のAIルール・結果判定は `docs/enemy-ai.md` に記録する。
+現時点で該当なし。今回のAIルール・結果判定は `docs/enemy-ai.md` に記録する。
 
 ## 6. D：暫定実装・要確認
 
