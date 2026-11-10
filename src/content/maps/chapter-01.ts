@@ -8,7 +8,6 @@ import type {
 } from "../../domain/models/game";
 import { SAVE_VERSION } from "../../domain/models/game";
 import { WEAPON_ID_BY_TYPE } from "../weapons";
-import { PROMOTION_ITEM_ID } from "../items";
 
 const terrain = [
   ["plain", "plain", "plain", "forest", "forest", "plain", "plain", "road", "road", "plain"],
@@ -104,7 +103,7 @@ function createPrototypeUnit(
 
 // Temporary placeholder content for movement and combat interaction verification only.
 export const INITIAL_UNITS: GameUnit[] = [
-  createPrototypeUnit("unit_001", "味方01", "player", "swordsman", 1, 8, 5, "infantry", ["sword"], [PROMOTION_ITEM_ID]),
+  createPrototypeUnit("unit_001", "味方01", "player", "swordsman", 1, 8, 5, "infantry", ["sword"]),
   createPrototypeUnit("unit_002", "味方02", "player", "archer", 3, 8, 5, "infantry", ["bow"]),
   createPrototypeUnit("unit_003", "味方03", "player", "soldier", 5, 8, 5, "infantry", ["lance"]),
   createPrototypeUnit("unit_004", "味方04", "player", "cavalry", 8, 8, 6, "cavalry", ["sword", "lance"]),

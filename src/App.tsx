@@ -791,6 +791,11 @@ export default function App() {
 
   async function handleClassChange(): Promise<void> {
     if (!selectedUnit || !interactive || selectedUnit.faction !== "player") return;
+    if (selectedUnit.hasMoved || selectedUnit.hasActed) {
+      setPromotionConfirmUnitId(null);
+      setMessage("クラスチェンジは移動・行動前のみ実行できます。");
+      return;
+    }
 
     const definition = getClassPromotionDefinition(selectedUnit.classId);
     if (!definition) {
@@ -809,7 +814,7 @@ export default function App() {
       await persist(
         execution.nextState,
         selectedUnit.name + "は" + targetName + "へクラスチェンジしました。能力ボーナス：" + bonusText +
-          "。クラスチェンジの証を1個消費しました。"
+          "。クラスチェンジの証を1個消費し、このフェイズの行動を消費しました。"
       );
     } catch (error) {
       setPromotionConfirmUnitId(null);
@@ -1076,6 +1081,8 @@ export default function App() {
     selectedUnit.faction === "player" &&
     interactive &&
     promotionDefinition &&
+    !selectedUnit.hasMoved &&
+    !selectedUnit.hasActed &&
     selectedUnit.level >= 10 &&
     promotionItemCount > 0
   );
@@ -1519,6 +1526,11 @@ export default function App() {
                           {promotionItemCount === 0 && (
                             <p className="helper-text">クラスチェンジの証を所持していません。</p>
                           )}
+                          {(selectedUnit.hasMoved || selectedUnit.hasActed) && (
+                            <p className="helper-text">
+                              クラスチェンジは移動・行動前のみ可能です。昇格するとこのフェイズの行動を消費します。
+                            </p>
+                          )}
                           <button
                             className="secondary-button block-button"
                             type="button"
@@ -1531,12 +1543,12 @@ export default function App() {
                             <div className="promotion-confirmation" role="group" aria-label="クラスチェンジ確認">
                               <strong>{getClassDisplayName(promotionDefinition.toClassId)}へ昇格しますか？</strong>
                               <p>能力ボーナス（暫定）：{formatPromotionBonuses(promotionDefinition.statBonuses)}</p>
-                              <p>レベルは1に戻り、現在EXPは保持します。証を1個消費します。</p>
+                              <p>レベルは1に戻り、現在EXPは保持します。証を1個消費し、昇格後は行動済みになります。</p>
                               <div className="command-actions">
                                 <button
                                   className="primary-button"
                                   type="button"
-                                  disabled={!interactive}
+                                  disabled={!interactive || selectedUnit.hasMoved || selectedUnit.hasActed}
                                   onClick={() => void handleClassChange()}
                                 >
                                   昇格を確定

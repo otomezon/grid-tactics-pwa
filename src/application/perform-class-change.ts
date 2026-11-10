@@ -29,6 +29,9 @@ export function performClassChange(
   if (!unit) {
     throw new Error("The selected unit does not exist.");
   }
+  if (unit.hasMoved || unit.hasActed) {
+    throw new Error("Class changes must be performed before the unit moves or acts.");
+  }
 
   const expectedTarget = getPromotionTargetClassId(unit.classId);
   if (!expectedTarget || definition.toClassId !== expectedTarget) {

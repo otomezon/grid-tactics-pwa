@@ -31,6 +31,45 @@ async function readAutoSave(page: Page) {
   });
 }
 
+
+async function writeAutoSave(page: Page, data: unknown): Promise<void> {
+  await page.evaluate(async (nextData) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("grid-tactics-pwa", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error("Could not open save database."));
+    });
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction("game-saves", "readwrite");
+        const store = transaction.objectStore("game-saves");
+        const request = store.get("auto");
+
+        request.onsuccess = () => {
+          const record = request.result as {
+            slotId: string;
+            savedAt: number;
+            data: unknown;
+          } | undefined;
+          if (!record) {
+            transaction.abort();
+            reject(new Error("Auto save record does not exist."));
+            return;
+          }
+          store.put({ ...record, savedAt: Date.now(), data: nextData });
+        };
+        request.onerror = () => reject(request.error ?? new Error("Could not read auto save."));
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error ?? new Error("Could not write auto save."));
+        transaction.onabort = () => reject(transaction.error ?? new Error("Auto save transaction aborted."));
+      });
+    } finally {
+      database.close();
+    }
+  }, data);
+}
+
 test.describe("browser campaign flow", () => {
   test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
     await page.goto("/");
@@ -42,7 +81,7 @@ test.describe("browser campaign flow", () => {
     const detailPanel = page.locator("#deployment-detail-panel");
     await expect(detailPanel.getByRole("heading", { name: "味方01" })).toBeVisible();
     await expect(detailPanel).toContainText("試作の鉄の剣");
-    await expect(detailPanel).toContainText("クラスチェンジの証");
+    await expect(detailPanel).not.toContainText("クラスチェンジの証");
 
     const fourthCandidate = page.locator(".deployment-unit").filter({ hasText: "味方04" });
     await fourthCandidate.getByRole("checkbox").uncheck();
@@ -72,6 +111,68 @@ test.describe("browser campaign flow", () => {
 
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await page.getByRole("button", { name: /味方01/ }).click();
+    await expect(page.locator(".unit-details")).toContainText("行動済み");
+  });
+
+  test("allows promotion only before movement and consumes the unit action", async ({ page }) => {
+    await startBattle(page);
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        level: number;
+        inventory: string[];
+        hasMoved: boolean;
+        hasActed: boolean;
+        classId: string;
+      }>;
+    };
+    const preparedUnit = preparedState.units.find((unit) => unit.id === "unit_001");
+    if (!preparedUnit) throw new Error("Promotion test unit is missing from the auto save.");
+
+    preparedUnit.level = 10;
+    preparedUnit.inventory = [...preparedUnit.inventory, "promotion_seal"];
+    preparedUnit.hasMoved = true;
+    preparedUnit.hasActed = false;
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+
+    await page.getByRole("button", { name: /味方01/ }).click();
+    const promotionPanel = page.locator(".promotion-panel");
+    await expect(promotionPanel).toContainText("移動・行動前のみ可能");
+    await expect(promotionPanel.getByRole("button", { name: "クラスチェンジを確認" })).toBeDisabled();
+
+    preparedUnit.hasMoved = false;
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+
+    await page.getByRole("button", { name: /味方01/ }).click();
+    await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
+    const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
+    await expect(confirmation).toContainText("昇格後は行動済みになります");
+    await confirmation.getByRole("button", { name: "昇格を確定" }).click();
+    await expect(page.getByRole("status")).toContainText("このフェイズの行動を消費しました");
+
+    const promotedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        classId: string;
+        level: number;
+        hasMoved: boolean;
+        hasActed: boolean;
+        inventory: string[];
+      }>;
+    };
+    expect(promotedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+      classId: "swordmaster",
+      level: 1,
+      hasMoved: false,
+      hasActed: true
+    });
+    expect(promotedState.units.find((unit) => unit.id === "unit_001")?.inventory).not.toContain("promotion_seal");
+
+    await page.reload();
     await page.getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
