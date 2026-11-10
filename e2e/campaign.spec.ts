@@ -156,16 +156,29 @@ test.describe("browser campaign flow", () => {
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmation).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
-    await expect(confirmation).toContainText("レベルは1に戻り、現在EXPは保持します。");
-    await expect(confirmation).toContainText("証を1個消費し、昇格後は行動済みになります");
+    await expect(confirmation).toContainText("Lv.10 → Lv.1");
+    await expect(confirmation).toContainText("EXP 73（保持）");
+    await expect(confirmation).toContainText("昇格後は行動済み");
 
     const statPreview = confirmation.getByRole("table", { name: "昇格後の能力値プレビュー" });
     await expect(statPreview.locator("tbody tr")).toHaveCount(8);
-    await expect(page.getByTestId("promotion-stat-hp")).toContainText("20");
-    await expect(page.getByTestId("promotion-stat-hp")).toContainText("22");
-    await expect(page.getByTestId("promotion-stat-hp")).toContainText("+2 / 60");
-    await expect(page.getByTestId("promotion-stat-strength")).toContainText("32");
-    await expect(page.getByTestId("promotion-stat-strength")).toContainText("+0 / 30");
+    const expectedStatPreview = [
+      { key: "hp", current: "20", next: "22", change: "+2 / 60" },
+      { key: "strength", current: "32", next: "32", change: "+0 / 30" },
+      { key: "magic", current: "0", next: "0", change: "+0 / 30" },
+      { key: "skill", current: "7", next: "8", change: "+1 / 30" },
+      { key: "speed", current: "8", next: "9", change: "+1 / 30" },
+      { key: "luck", current: "4", next: "4", change: "+0 / 30" },
+      { key: "defense", current: "5", next: "5", change: "+0 / 30" },
+      { key: "resistance", current: "1", next: "1", change: "+0 / 30" }
+    ] as const;
+    for (const expected of expectedStatPreview) {
+      const cells = page.getByTestId(`promotion-stat-${expected.key}`).locator("td");
+      await expect(cells).toHaveCount(3);
+      await expect(cells.nth(0)).toHaveText(expected.current);
+      await expect(cells.nth(1)).toHaveText(expected.next);
+      await expect(cells.nth(2)).toContainText(expected.change);
+    }
     await expect(page.getByTestId("promotion-stat-strength")).toContainText("既存値を維持");
     await expect(confirmation).toContainText("20 → 20（回復なし）");
     await expect(confirmation).toContainText("歩兵・5（維持）");
@@ -182,8 +195,9 @@ test.describe("browser campaign flow", () => {
     const confirmedAgain = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmedAgain).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
     await expect(confirmedAgain.getByRole("table", { name: "昇格後の能力値プレビュー" }).locator("tbody tr")).toHaveCount(8);
-    await expect(confirmedAgain).toContainText("レベルは1に戻り、現在EXPは保持します。");
-    await expect(confirmedAgain).toContainText("証を1個消費し、昇格後は行動済みになります");
+    await expect(confirmedAgain).toContainText("Lv.10 → Lv.1");
+    await expect(confirmedAgain).toContainText("EXP 73（保持）");
+    await expect(confirmedAgain).toContainText("昇格後は行動済み");
     await confirmedAgain.getByRole("button", { name: "昇格を確定" }).click();
     await expect(page.getByRole("status")).toContainText("このフェイズの行動を消費しました");
 
