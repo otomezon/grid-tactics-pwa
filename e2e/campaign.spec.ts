@@ -513,6 +513,17 @@ test.describe("browser campaign flow", () => {
       await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
       const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(documentWidth).toBeLessThanOrEqual(320);
+
+      const rightSideUnit = page.getByRole("button", { name: /味方04/ });
+      await expect(rightSideUnit).toBeVisible();
+      const unitBounds = await rightSideUnit.boundingBox();
+      if (!unitBounds) throw new Error("The unit near the right edge has no visible bounds.");
+
+      await page.touchscreen.tap(
+        unitBounds.x + unitBounds.width / 2,
+        unitBounds.y + unitBounds.height / 2
+      );
+      await expect(page.locator(".unit-heading")).toContainText("味方04");
     } finally {
       await context.close();
     }
