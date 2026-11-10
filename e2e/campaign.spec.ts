@@ -157,6 +157,7 @@ test.describe("browser campaign flow", () => {
     await expect(threatenedTile).toHaveClass(/is-enemy-threatened/);
     await expect(safeTile).not.toHaveAttribute("aria-label", /敵攻撃範囲/);
     await expect(page.locator(".map-legend")).toContainText("敵攻撃範囲（予測）");
+    await expect(page.getByText(/実際の移動先や攻撃対象を確定する予告ではありません/)).toBeVisible();
 
     await hideButton.click();
     await expect(showButton).toHaveAttribute("aria-pressed", "false");
