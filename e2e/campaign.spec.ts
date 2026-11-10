@@ -76,6 +76,18 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
+  test("resolves the enemy phase and restores the next player turn", async ({ page }) => {
+    await startBattle(page);
+
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", {
+      timeout: 15_000
+    });
+
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
+  });
+
   test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
