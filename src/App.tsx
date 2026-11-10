@@ -8,6 +8,7 @@ import { performClassChange } from "./application/perform-class-change";
 import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
+import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
@@ -824,22 +825,9 @@ export default function App() {
   const deploymentDetailCandidate = deploymentCandidates.find(
     (candidate) => candidate.id === deploymentDetailUnitId
   );
-  const deploymentDetailWeapons = deploymentDetailCandidate
-    ? deploymentDetailCandidate.inventory
-        .map((itemId) => WEAPONS_BY_ID[itemId])
-        .filter((weapon): weapon is NonNullable<typeof weapon> => Boolean(weapon))
-    : [];
-  const deploymentDetailItems = deploymentDetailCandidate
-    ? deploymentDetailCandidate.inventory
-        .filter((itemId) => !WEAPONS_BY_ID[itemId])
-        .map((itemId) => ({
-          id: itemId,
-          definition: INVENTORY_ITEMS_BY_ID[itemId]
-        }))
-    : [];
-  const equippedDeploymentWeapon = deploymentDetailCandidate?.equippedWeaponId
-    ? WEAPONS_BY_ID[deploymentDetailCandidate.equippedWeaponId]
-    : undefined;
+  const deploymentDetail = deploymentDetailCandidate
+    ? getDeploymentUnitDetails(deploymentDetailCandidate)
+    : null;
   const deploymentSlots = currentMap.playerDeployment.map(({ x, y }) => ({
     value: x + "," + y,
     label: positionLabel({ x, y })
@@ -948,7 +936,7 @@ export default function App() {
               <div className="deployment-detail-overview">
                 <div><span>HP</span><strong>{deploymentDetailCandidate.currentHp} / {deploymentDetailCandidate.stats.hp}</strong></div>
                 <div><span>移動</span><strong>{deploymentDetailCandidate.movementType === "infantry" ? "歩兵" : "騎馬"} · {deploymentDetailCandidate.move}</strong></div>
-                <div><span>装備中</span><strong>{equippedDeploymentWeapon?.name ?? "未装備"}</strong></div>
+                <div><span>装備中</span><strong>{deploymentDetail?.equippedWeapon?.name ?? "未装備"}</strong></div>
                 <div><span>武器適性</span><strong>{deploymentDetailCandidate.usableWeaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join("・") || "なし"}</strong></div>
               </div>
               <div className="deployment-detail-stats" aria-label="能力値">
@@ -962,13 +950,13 @@ export default function App() {
               <div className="deployment-detail-inventory">
                 <section>
                   <h4>所持武器</h4>
-                  {deploymentDetailWeapons.length > 0 ? (
+                  {deploymentDetail && deploymentDetail.weapons.length > 0 ? (
                     <ul>
-                      {deploymentDetailWeapons.map((weapon) => (
-                        <li key={weapon.id}>
+                      {deploymentDetail.weapons.map((weapon) => (
+                        <li key={weapon.id + "-" + weapon.inventoryIndex}>
                           <div>
                             <strong>{weapon.name}</strong>
-                            {deploymentDetailCandidate.equippedWeaponId === weapon.id && (
+                            {weapon.isEquipped && (
                               <span className="equipped-weapon-label">装備中</span>
                             )}
                           </div>
@@ -984,12 +972,12 @@ export default function App() {
                 </section>
                 <section>
                   <h4>所持アイテム</h4>
-                  {deploymentDetailItems.length > 0 ? (
+                  {deploymentDetail && deploymentDetail.items.length > 0 ? (
                     <ul>
-                      {deploymentDetailItems.map((item) => (
-                        <li key={item.id}>
-                          <strong>{item.definition?.name ?? item.id}</strong>
-                          {item.definition && <span>{item.definition.description}</span>}
+                      {deploymentDetail.items.map((item) => (
+                        <li key={item.id + "-" + item.inventoryIndex}>
+                          <strong>{item.name}</strong>
+                          {item.description && <span>{item.description}</span>}
                         </li>
                       ))}
                     </ul>
