@@ -11,7 +11,7 @@
 | 言語 | TypeScript 7.0.2 |
 | 開発・ビルド | Vite 8.3.6、`@vitejs/plugin-react` 6.2.1 |
 | PWA | `vite-plugin-pwa` 2.0.0 |
-| テスト | Vitest 5.0.0 |
+| テスト | Vitest 5.0.0、Playwright Test 1.65.0（Chromium E2E） |
 
 直接依存のバージョンは `package.json` に固定している。現時点ではnpm lockfileは未作成。PWA plugin 2.0.0はNode.js 20.19.0以上を要求し、Vitest 5系のNode要件も満たすようNode 26を標準にしている。
 
@@ -34,6 +34,8 @@ Viteが表示するローカルURLをブラウザで開く。スマートフォ�
 npm run typecheck
 npm test
 npm run build
+npx playwright install chromium
+npm run test:e2e
 npm run preview
 ```
 
@@ -41,10 +43,11 @@ npm run preview
 - `test`: Vitest単体テスト。
 - `build`: 型チェック後にVite本番ビルド。PWA manifest／Service Workerも生成対象。
 - `preview`: build後の成果物をローカルで確認。
+- `test:e2e`: PlaywrightでVite開発サーバーを起動し、Chromiumで出撃準備・控え名簿保存・行動状態復元・モバイル幅を確認する。`playwright.config.ts` と `e2e/` が定義元。
 
 ## 4. CI
 
-`.github/workflows/ci.yml` を追加した。Pull Requestと `main`／`feature/**` へのpushでNode.jsを `.nvmrc` からセットアップし、`npm install`、型チェック、Vitest、Vite buildを実行する。PRのChecksで実行結果を確認すること。ローカル実行・CI実行済みであると推測して報告してはいけない。
+`.github/workflows/ci.yml` を追加した。Pull Requestと `main`／`feature/**` へのpushでNode.jsを `.nvmrc` からセットアップし、`npm install`、型チェック、Vitest、Vite build、Playwright用Chromiumの導入、ブラウザE2Eテストを実行する。PRのChecksで実行結果を確認すること。ローカル実行・CI実行済みであると推測して報告してはいけない。
 
 ## 5. PWA
 
