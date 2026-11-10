@@ -23,6 +23,22 @@ export interface ClassPromotionDefinition {
   experiencePolicy: PromotionExperiencePolicy;
 }
 
+export interface PromotionStatChange {
+  key: keyof UnitStats;
+  currentValue: number;
+  requestedBonus: number;
+  appliedBonus: number;
+  nextValue: number;
+  cap: number;
+  currentValueExceedsCap: boolean;
+}
+
+export interface ClassPromotionStatPreview {
+  stats: UnitStats;
+  appliedBonuses: Partial<UnitStats>;
+  changes: PromotionStatChange[];
+}
+
 export interface ClassPromotionResult {
   unit: GameUnit;
   consumedItemId: string;
@@ -73,6 +89,53 @@ function validateDefinition(definition: ClassPromotionDefinition): void {
   }
 }
 
+function calculateClassPromotionStatPreview(
+  currentStats: UnitStats,
+  definition: ClassPromotionDefinition
+): ClassPromotionStatPreview {
+  const stats: UnitStats = { ...currentStats };
+  const appliedBonuses: Partial<UnitStats> = {};
+  const changes = STAT_KEYS.map((key): PromotionStatChange => {
+    const currentValue = currentStats[key];
+    const requestedBonus = definition.statBonuses[key] ?? 0;
+    const nextValue = Math.max(
+      currentValue,
+      Math.min(currentValue + requestedBonus, definition.statCaps[key])
+    );
+    const appliedBonus = nextValue - currentValue;
+
+    if (appliedBonus > 0) {
+      stats[key] = nextValue;
+      appliedBonuses[key] = appliedBonus;
+    }
+
+    return {
+      key,
+      currentValue,
+      requestedBonus,
+      appliedBonus,
+      nextValue,
+      cap: definition.statCaps[key],
+      currentValueExceedsCap: currentValue > definition.statCaps[key]
+    };
+  });
+
+  return { stats, appliedBonuses, changes };
+}
+
+/**
+ * Calculates the exact stat result used by promotion without mutating the unit.
+ * All class caps and bonuses are supplied by content; this helper does not
+ * choose or approve any balance values.
+ */
+export function getClassPromotionStatPreview(
+  currentStats: UnitStats,
+  definition: ClassPromotionDefinition
+): ClassPromotionStatPreview {
+  validateDefinition(definition);
+  return calculateClassPromotionStatPreview(currentStats, definition);
+}
+
 /**
  * Applies a configured promotion without choosing balance values.
  *
@@ -114,21 +177,7 @@ export function applyClassPromotion(
     throw new Error("The required class-change item cannot be equipped as a weapon.");
   }
 
-  const stats: UnitStats = { ...unit.stats };
-  const appliedBonuses: Partial<UnitStats> = {};
-
-  for (const key of STAT_KEYS) {
-    const requestedBonus = definition.statBonuses[key] ?? 0;
-    const previousValue = stats[key];
-    const cappedValue = Math.min(previousValue + requestedBonus, definition.statCaps[key]);
-    const nextValue = Math.max(previousValue, cappedValue);
-
-    if (nextValue > previousValue) {
-      stats[key] = nextValue;
-      appliedBonuses[key] = nextValue - previousValue;
-    }
-  }
-
+  const statPreview = calculateClassPromotionStatPreview(unit.stats, definition);
   const inventory = [...unit.inventory];
   inventory.splice(itemIndex, 1);
 
@@ -138,12 +187,12 @@ export function applyClassPromotion(
       classId: definition.toClassId,
       level: 1,
       experience: definition.experiencePolicy === "reset" ? 0 : unit.experience,
-      stats,
+      stats: statPreview.stats,
       currentHp: unit.currentHp,
       inventory,
       hasActed: true
     },
     consumedItemId: definition.requiredItemId,
-    appliedBonuses
+    appliedBonuses: statPreview.appliedBonuses
   };
 }
