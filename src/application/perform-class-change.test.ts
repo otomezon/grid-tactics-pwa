@@ -62,6 +62,8 @@ describe("performClassChange", () => {
     expect(result.promotedUnit.classId).toBe("swordmaster");
     expect(result.promotedUnit.level).toBe(1);
     expect(result.promotedUnit.experience).toBe(35);
+    expect(result.promotedUnit.hasMoved).toBe(false);
+    expect(result.promotedUnit.hasActed).toBe(true);
     expect(result.promotedUnit.inventory).not.toContain("promotion_seal");
     expect(result.consumedItemId).toBe("promotion_seal");
     expect(result.appliedBonuses).toEqual({ hp: 2, strength: 1 });
@@ -76,6 +78,29 @@ describe("performClassChange", () => {
     expect(() =>
       performClassChange(enemyPhase, "unit_001", definition())
     ).toThrow(/player phase/);
+  });
+
+  it("rejects promotion after the selected unit has moved or acted", () => {
+    const state = eligibleState();
+    const movedState = {
+      ...state,
+      units: state.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, hasMoved: true } : unit
+      )
+    };
+    const actedState = {
+      ...state,
+      units: state.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, hasActed: true } : unit
+      )
+    };
+
+    expect(() =>
+      performClassChange(movedState, "unit_001", definition())
+    ).toThrow(/must not have moved or acted/);
+    expect(() =>
+      performClassChange(actedState, "unit_001", definition())
+    ).toThrow(/must not have moved or acted/);
   });
 
   it("rejects an unknown unit or a target outside the configured promotion path", () => {
