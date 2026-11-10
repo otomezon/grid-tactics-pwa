@@ -322,16 +322,41 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
-  test("resolves the enemy phase and restores the next player turn", async ({ page }) => {
+  test("resolves the enemy phase and shows its action report", async ({ page }) => {
     await startBattle(page);
-
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
-    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", {
-      timeout: 15_000
-    });
-
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+    const report = page.getByTestId("enemy-phase-report");
+    await expect(report).toBeVisible();
+    await expect(report.getByTestId("enemy-phase-action")).toHaveCount(5);
+    for (const enemyName of ["敵01", "敵02", "敵03", "敵04", "敵05"]) await expect(report).toContainText(enemyName);
+    await expect(report).toContainText(/攻撃|移動|待機/);
+    await expect(report).toContainText("セーブデータには含まれません");
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
+    await expect(page.getByTestId("enemy-phase-report")).toHaveCount(0);
+  });
+
+  test("resumes a saved enemy phase once and rebuilds its action report", async ({ page }) => {
+    await startBattle(page);
+    const checkpoint = await readAutoSave(page) as {
+      phase: "player" | "enemy"; turn: number;
+      units: Array<{ id: string; faction: "player" | "enemy"; hasActed: boolean }>;
+    };
+    checkpoint.phase = "enemy";
+    await writeAutoSave(page, checkpoint);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+    const report = page.getByTestId("enemy-phase-report");
+    await expect(report).toBeVisible();
+    await expect(report.getByTestId("enemy-phase-action")).toHaveCount(5);
+    const resolvedState = await readAutoSave(page) as { phase: string; turn: number; [key: string]: unknown };
+    expect(resolvedState.phase).toBe("player");
+    expect(resolvedState.turn).toBe(2);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
+    await expect(page.getByTestId("enemy-phase-report")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(resolvedState);
   });
 
   test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {

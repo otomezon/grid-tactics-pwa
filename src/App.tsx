@@ -13,6 +13,7 @@ import { getDeploymentUnitDetails } from "./application/get-deployment-unit-deta
 import { getBattleResultDetails } from "./application/get-battle-result-details";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
+import type { EnemyActionLog } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
@@ -66,6 +67,13 @@ const WEAPON_TYPE_LABELS: Record<WeaponType, string> = {
   axe: "斧",
   bow: "弓",
   magic: "魔法"
+};
+
+const ENEMY_ACTION_KIND_LABELS: Record<EnemyActionLog["kind"], string> = {
+  attacked: "攻撃",
+  "moved-and-attacked": "移動して攻撃",
+  moved: "移動",
+  waited: "待機"
 };
 
 function samePosition(left: Position, right: Position): boolean {
@@ -257,6 +265,7 @@ export default function App() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
+  const [lastEnemyPhaseActions, setLastEnemyPhaseActions] = useState<EnemyActionLog[] | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [message, setMessage] = useState("味方ユニットを選択してください。");
   const [loadBlocked, setLoadBlocked] = useState(false);
@@ -342,6 +351,7 @@ export default function App() {
           const enemyPhase = runEnemyPhase(restoredState, restoredChapter.map);
           restoredState = enemyPhase.nextState;
           setGameState(restoredState);
+          if (!cancelled) setLastEnemyPhaseActions(enemyPhase.actions);
           try {
             await saveGameState(restoredState);
             if (!cancelled) {
@@ -616,6 +626,7 @@ export default function App() {
     setSaveStatus("saving");
     try {
       let restoredState = migration.snapshot;
+      let restoredEnemyPhaseActions: EnemyActionLog[] | null = null;
       let restoreMessage = migration.migrated
         ? "旧形式のバックアップを変換して復元しました。"
         : "バックアップからゲーム状態を復元しました。";
@@ -623,6 +634,7 @@ export default function App() {
       if (restoredState.phase === "enemy") {
         const enemyPhase = runEnemyPhase(restoredState, chapter.map);
         restoredState = enemyPhase.nextState;
+        restoredEnemyPhaseActions = enemyPhase.actions;
         restoreMessage = formatEnemyPhaseSummary(enemyPhase, chapter.map);
       } else {
         const outcome = evaluateBattleOutcome(restoredState, chapter.map);
@@ -636,6 +648,7 @@ export default function App() {
       await restoreGameStateBackup(backup, restoredState);
       setActiveChapter(chapter);
       setGameState(restoredState);
+      setLastEnemyPhaseActions(restoredEnemyPhaseActions);
       setDeploymentAssignments(createDeploymentAssignments(restoredState, chapter.map));
       setDeploymentSelectedUnitIds(createDeploymentSelection(restoredState, chapter.map));
       setDeploymentPending(false);
@@ -694,6 +707,7 @@ export default function App() {
     setSaveStatus("saving");
     try {
       let importedState = migration.snapshot;
+      let importedEnemyPhaseActions: EnemyActionLog[] | null = null;
       let importMessage = migration.migrated
         ? "旧形式のセーブを変換して読み込みました。"
         : "セーブファイルからゲーム状態を復元しました。";
@@ -701,6 +715,7 @@ export default function App() {
       if (importedState.phase === "enemy") {
         const enemyPhase = runEnemyPhase(importedState, chapter.map);
         importedState = enemyPhase.nextState;
+        importedEnemyPhaseActions = enemyPhase.actions;
         importMessage = formatEnemyPhaseSummary(enemyPhase, chapter.map);
       } else {
         const outcome = evaluateBattleOutcome(importedState, chapter.map);
@@ -714,6 +729,7 @@ export default function App() {
       await saveGameState(importedState);
       setActiveChapter(chapter);
       setGameState(importedState);
+      setLastEnemyPhaseActions(importedEnemyPhaseActions);
       setDeploymentAssignments(createDeploymentAssignments(importedState, chapter.map));
       setDeploymentSelectedUnitIds(createDeploymentSelection(importedState, chapter.map));
       setDeploymentPending(false);
@@ -988,6 +1004,7 @@ export default function App() {
   async function handleEndPlayerPhase(): Promise<void> {
     if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
 
+    setLastEnemyPhaseActions(null);
     try {
       const phaseStart = beginEnemyPhase(gameState, currentMap);
       const enemyPhaseState = phaseStart.nextState;
@@ -1004,6 +1021,7 @@ export default function App() {
       );
 
       const execution = runEnemyPhase(enemyPhaseState, currentMap);
+      setLastEnemyPhaseActions(execution.actions);
       setGameState(execution.nextState);
       await persist(execution.nextState, formatEnemyPhaseSummary(execution, currentMap));
     } catch (error) {
@@ -1043,6 +1061,7 @@ export default function App() {
 
       setActiveChapter(targetChapter);
       setGameState(nextState);
+      setLastEnemyPhaseActions(null);
       setDeploymentAssignments(createDeploymentAssignments(nextState, targetChapter.map));
       setDeploymentSelectedUnitIds(createDeploymentSelection(nextState, targetChapter.map));
       setDeploymentPending(true);
@@ -1766,6 +1785,35 @@ export default function App() {
             <h2>戦況メッセージ</h2>
             <p className="message-text" role="status" aria-live="polite">{message}</p>
           </section>
+
+          {lastEnemyPhaseActions !== null && (
+            <section className="info-card enemy-phase-report" aria-labelledby="enemy-phase-report-heading" data-testid="enemy-phase-report">
+              <div className="enemy-phase-report-meta">
+                <p className="eyebrow">ENEMY PHASE</p>
+                <span>{lastEnemyPhaseActions.length}件</span>
+              </div>
+              <h2 id="enemy-phase-report-heading">直前の敵軍フェイズ</h2>
+              {lastEnemyPhaseActions.length > 0 ? (
+                <ol className="enemy-phase-action-list">
+                  {lastEnemyPhaseActions.map((action, index) => (
+                    <li className="enemy-phase-action" key={action.enemyId} data-testid="enemy-phase-action">
+                      <div className="enemy-phase-action-heading">
+                        <span className="enemy-phase-action-number">{index + 1}</span>
+                        <strong>{action.enemyName}</strong>
+                        <span className="enemy-phase-action-kind">{ENEMY_ACTION_KIND_LABELS[action.kind]}</span>
+                      </div>
+                      <p>{action.message}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="helper-text">敵ユニットの行動はありませんでした。</p>
+              )}
+              <p className="helper-text enemy-phase-report-note">
+                この記録は画面内だけの一時表示で、セーブデータには含まれません。通常の再読み込み後は残りませんが、敵軍フェイズ中断時は保存済みフェイズの再解決時に再生成されます。
+              </p>
+            </section>
+          )}
 
           <section className="info-card">
             <p className="eyebrow">TERRAIN</p>
