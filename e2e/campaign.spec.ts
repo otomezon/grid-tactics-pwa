@@ -514,7 +514,7 @@ test.describe("browser campaign flow", () => {
       const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(documentWidth).toBeLessThanOrEqual(320);
 
-      const rightSideUnit = page.getByRole("button", { name: /味方04/ });
+      const rightSideUnit = page.locator(".map-grid").getByRole("button", { name: /味方04/ });
       await expect(rightSideUnit).toBeVisible();
       const [viewportBounds, unitBounds] = await Promise.all([
         viewport.boundingBox(),
@@ -524,10 +524,20 @@ test.describe("browser campaign flow", () => {
       expect(unitBounds.x).toBeGreaterThanOrEqual(viewportBounds.x);
       expect(unitBounds.x + unitBounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width);
 
-      await page.touchscreen.tap(
-        unitBounds.x + unitBounds.width / 2,
-        unitBounds.y + unitBounds.height / 2
-      );
+      // Let the touch scroll settle before starting a separate tap gesture.
+      await page.waitForTimeout(500);
+      const tapPoint = {
+        x: unitBounds.x + unitBounds.width / 2,
+        y: unitBounds.y + unitBounds.height / 2
+      };
+      const hitTarget = await page.evaluate(({ x, y }) => {
+        const element = document.elementFromPoint(x, y);
+        return element?.closest("button")?.getAttribute("aria-label") ?? null;
+      }, tapPoint);
+      expect(hitTarget).toContain("味方04");
+
+      await page.touchscreen.tap(tapPoint.x, tapPoint.y);
+      await expect(rightSideUnit).toHaveAttribute("aria-pressed", "true");
       await expect(page.locator(".unit-heading")).toContainText("味方04");
     } finally {
       await context.close();
