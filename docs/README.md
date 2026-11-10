@@ -10,6 +10,7 @@
 | [combat.md](combat.md) | 戦闘計算・UI・武器データ・距離・未決定ルール | 戦闘式・武器モデル変更時 |
 | [enemy-ai.md](enemy-ai.md) | 敵AI、フェイズ進行、勝敗判定、暫定スコア | AI行動・ターン進行・目標変更時 |
 | [progression.md](progression.md) | 経験値報酬・レベルアップ・クラス上限・リザルト | EXP・成長・クラス能力上限の変更時 |
+| [class-promotion.md](class-promotion.md) | クラスチェンジの設計根拠、未決定事項、互換性、実装計画 | 昇格条件・能力値・クラス性能・アイテム配布を決定／変更した時 |
 | [development.md](development.md) | 実際の開発環境、セットアップ、テスト、CI | ツールや手順が変更された時 |
 | [database.md](database.md) | IndexedDBの実スキーマ、saveVersion、マイグレーション | 保存形式・マイグレーション変更時 |
 | [security.md](security.md) | 実装済み対策、未確認事項、運用上の注意 | 認証・保存・外部接続・配信変更時 |
@@ -21,7 +22,7 @@
 - ゲームの**何を作るか**は `game-design.md`。
 - **戦闘計算・予測・攻撃UI**は `combat.md`。
 - **敵AI・フェイズ進行・勝敗判定と未決事項**は `enemy-ai.md`。
-- **経験値・能力成長・クラスチェンジ基盤・ステージ結果**は `progression.md`。
+- **経験値・能力成長・現行実装の詳細**は `progression.md`。**クラスチェンジの正式決定事項・未決定事項と実装計画**は `class-promotion.md`。
 - **どう分割する設計か／現在どう動くか**は `architecture.md`。
 - **出撃準備と配置ルール**は `deployment.md`。
 - **どう開発・検証するか**は `development.md`。

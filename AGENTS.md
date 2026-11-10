@@ -95,6 +95,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - `combat.md`: combat calculations and unresolved combat rules.
 - `enemy-ai.md`: phase progression, AI scoring, outcomes, and open decisions.
 - `progression.md`: EXP rewards, growth checks, provisional stat caps, and stage results.
+- `class-promotion.md`: class-promotion design basis, unresolved decisions, save compatibility, and implementation plan.
 - `development.md`: confirmed commands and CI.
 - `database.md`: IndexedDB schema and migrations.
 - `current-state.md`: feature/test status.
