@@ -403,6 +403,69 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(resolvedState);
   });
 
+  test("keeps map tiles finger-sized and keyboard-scrollable at 320px", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await startBattle(page);
+    const viewport = page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    });
+    await expect(viewport).toBeVisible();
+    const dimensions = await page.evaluate(() => {
+      const viewport = document.querySelector(".map-viewport");
+      const grid = document.querySelector(".map-grid");
+      const tile = document.querySelector(".map-grid .map-tile");
+      if (!(viewport instanceof HTMLElement) || !(grid instanceof HTMLElement) || !(tile instanceof HTMLElement)) {
+        throw new Error("The map viewport, grid, or first tile is missing.");
+      }
+      const tileRect = tile.getBoundingClientRect();
+      return {
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportClientWidth: viewport.clientWidth,
+        viewportScrollWidth: viewport.scrollWidth,
+        gridScrollWidth: grid.scrollWidth,
+        tileWidth: tileRect.width,
+        tileHeight: tileRect.height
+      };
+    });
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.viewportScrollWidth).toBeGreaterThan(dimensions.viewportClientWidth);
+    expect(dimensions.gridScrollWidth).toBeGreaterThan(dimensions.viewportClientWidth);
+    expect(dimensions.tileWidth).toBeGreaterThanOrEqual(40);
+    expect(dimensions.tileHeight).toBeGreaterThanOrEqual(40);
+    await viewport.focus();
+    await viewport.press("ArrowRight");
+    await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  });
+
+  test("selects a unit with touch input on the narrow map viewport", async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: "http://127.0.0.1:4173",
+      viewport: { width: 320, height: 720 },
+      hasTouch: true
+    });
+
+    try {
+      const page = await context.newPage();
+      await startBattle(page);
+
+      const unitTile = page.getByRole("button", { name: /味方01/ });
+      await expect(unitTile).toBeVisible();
+      await unitTile.scrollIntoViewIfNeeded();
+
+      const bounds = await unitTile.boundingBox();
+      if (!bounds) throw new Error("The player unit tile has no visible bounds.");
+
+      await page.touchscreen.tap(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2
+      );
+      await expect(page.locator(".unit-heading")).toContainText("味方01");
+    } finally {
+      await context.close();
+    }
+  });
+
   test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");

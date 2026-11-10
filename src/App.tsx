@@ -1488,10 +1488,19 @@ export default function App() {
             </div>
           )}
           <div
-            className="map-grid"
-            style={{ gridTemplateColumns: "repeat(" + currentMap.width + ", minmax(0, 1fr))" }}
-            aria-label={currentMap.width + "列" + currentMap.height + "行の戦闘マップ"}
+            className="map-viewport"
+            role="region"
+            aria-label="戦闘マップ。狭い画面では左右にスクロールできます"
+            tabIndex={0}
           >
+            <div
+              className="map-grid"
+              style={{
+                gridTemplateColumns: "repeat(" + currentMap.width + ", minmax(0, 1fr))",
+                minWidth: "max(100%, " + (currentMap.width * 40 + 4) + "px)"
+              }}
+              aria-label={currentMap.width + "列" + currentMap.height + "行の戦闘マップ"}
+            >
             {Array.from({ length: currentMap.height }, (_, y) =>
               Array.from({ length: currentMap.width }, (_, x) => {
                 const position = { x, y };
@@ -1545,7 +1554,9 @@ export default function App() {
                 );
               })
             )}
+            </div>
           </div>
+          <p className="map-scroll-hint" aria-hidden="true">マップは左右にスクロールして全てのマスを表示できます。</p>
 
           <div className="map-legend" aria-label="マップ凡例">
             <span><i className="legend-swatch ally" />味方</span>
