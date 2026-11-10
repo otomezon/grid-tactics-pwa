@@ -115,6 +115,60 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
+  test("toggles the enemy threat range before the enemy phase", async ({ page }) => {
+    await startBattle(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        position: { x: number; y: number };
+        move: number;
+        hasMoved: boolean;
+        hasActed: boolean;
+      }>;
+    };
+    const player = preparedState.units.find((unit) => unit.id === "unit_001");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
+    if (!player || !enemy) throw new Error("Threat-range test units are missing from the auto save.");
+
+    player.position = { x: 4, y: 1 };
+    enemy.position = { x: 1, y: 1 };
+    enemy.move = 2;
+    enemy.hasMoved = false;
+    enemy.hasActed = false;
+    preparedState.units = [player, enemy];
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const showButton = page.getByRole("button", { name: "敵の攻撃範囲を表示" });
+    await expect(showButton).toBeVisible();
+    await expect(showButton).toHaveAttribute("aria-pressed", "false");
+
+    const threatenedTile = page.locator(".map-tile").nth(14);
+    const safeTile = page.locator(".map-tile").nth(15);
+    await expect(threatenedTile).not.toHaveAttribute("aria-label", /敵攻撃範囲/);
+
+    await showButton.click();
+    const hideButton = page.getByRole("button", { name: "敵の攻撃範囲を隠す" });
+    await expect(hideButton).toHaveAttribute("aria-pressed", "true");
+    await expect(threatenedTile).toHaveAttribute("aria-label", /敵攻撃範囲（移動後を含む予測）/);
+    await expect(threatenedTile).toHaveClass(/is-enemy-threatened/);
+    await expect(safeTile).not.toHaveAttribute("aria-label", /敵攻撃範囲/);
+    await expect(page.locator(".map-legend")).toContainText("敵攻撃範囲（予測）");
+    await expect(page.getByText(/実際の移動先や攻撃対象を確定する予告ではありません/)).toBeVisible();
+
+    await hideButton.click();
+    await expect(showButton).toHaveAttribute("aria-pressed", "false");
+    await expect(threatenedTile).not.toHaveClass(/is-enemy-threatened/);
+
+    await showButton.click();
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await expect(page.getByRole("button", { name: "敵の攻撃範囲を表示" })).toHaveAttribute("aria-pressed", "false");
+  });
+
   test("allows promotion only before movement and consumes the unit action", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 390, height: 844 });

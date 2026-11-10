@@ -17,6 +17,7 @@ import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
+import { calculateEnemyThreatenedTiles } from "./domain/combat/calculate-enemy-threatened-tiles";
 import type { CampaignUnit, GameMapDefinition, GameStateSnapshot, Position, UnitStats, WeaponType } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
 import type { LevelUpRecord } from "./domain/progression/level-up";
@@ -254,6 +255,7 @@ export default function App() {
   const nextChapter = getNextChapter(activeChapter.id);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
+  const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [message, setMessage] = useState("味方ユニットを選択してください。");
   const [loadBlocked, setLoadBlocked] = useState(false);
@@ -468,6 +470,15 @@ export default function App() {
         .map((unit) => String(unit.position.x) + "," + String(unit.position.y))
     );
   }, [gameState.units, selectedUnit, selectedWeapon]);
+
+  const enemyThreatenedKeys = useMemo(() => {
+    if (!showEnemyThreatRange || gameState.phase !== "player") return new Set<string>();
+
+    return new Set(
+      calculateEnemyThreatenedTiles(gameState, currentMap, WEAPONS_BY_ID)
+        .map((position) => String(position.x) + "," + String(position.y))
+    );
+  }, [currentMap, gameState, showEnemyThreatRange]);
 
   const combatPlan = useMemo(() => {
     if (!selectedUnit || !combatTargetId) return null;
@@ -1402,6 +1413,25 @@ export default function App() {
             <span className="map-size">{currentMap.width} × {currentMap.height}</span>
           </div>
 
+          {gameState.phase === "player" && battleOutcome === "playing" && (
+            <div className="map-controls">
+              <button
+                className="secondary-button enemy-threat-toggle"
+                type="button"
+                aria-pressed={showEnemyThreatRange}
+                disabled={!interactive}
+                onClick={() => setShowEnemyThreatRange((current) => !current)}
+              >
+                {showEnemyThreatRange ? "敵の攻撃範囲を隠す" : "敵の攻撃範囲を表示"}
+              </button>
+              {showEnemyThreatRange && (
+                <p className="map-threat-help">
+                  敵の現在位置と移動可能マスから、装備中の使用可能な武器で攻撃できる範囲を表示しています。
+                  実際の移動先や攻撃対象を確定する予告ではありません。距離計算は暫定です。
+                </p>
+              )}
+            </div>
+          )}
           <div
             className="map-grid"
             style={{ gridTemplateColumns: "repeat(" + currentMap.width + ", minmax(0, 1fr))" }}
@@ -1415,6 +1445,7 @@ export default function App() {
                 const isSelected = unit?.id === selectedUnitId;
                 const isReachable = reachableKeys.has(String(x) + "," + String(y));
                 const isAttackable = attackableKeys.has(String(x) + "," + String(y));
+                const isEnemyThreatened = enemyThreatenedKeys.has(String(x) + "," + String(y));
                 const isTargeted = unit?.id === combatTargetId;
                 const classes = [
                   "map-tile",
@@ -1423,13 +1454,15 @@ export default function App() {
                   isSelected ? "is-selected" : "",
                   isReachable ? "is-reachable" : "",
                   isAttackable ? "is-attackable" : "",
+                  isEnemyThreatened ? "is-enemy-threatened" : "",
                   isTargeted ? "is-targeted" : ""
                 ].filter(Boolean).join(" ");
                 const ariaLabel = positionLabel(position) + "、" + TERRAIN_DEFINITIONS[terrain].label +
                   (unit ? "、" + unit.name : "") +
                   (isSelected ? "、選択中" : "") +
                   (isReachable ? "、移動可能" : "") +
-                  (isAttackable ? "、攻撃可能" : "");
+                  (isAttackable ? "、攻撃可能" : "") +
+                  (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "");
 
                 return (
                   <button
@@ -1464,6 +1497,7 @@ export default function App() {
             <span><i className="legend-swatch enemy" />敵</span>
             <span><i className="legend-swatch move" />移動可能</span>
             <span><i className="legend-swatch attack" />攻撃可能</span>
+            {showEnemyThreatRange && <span><i className="legend-swatch enemy-threat" />敵攻撃範囲（予測）</span>}
             <span><i className="legend-swatch selected" />選択中</span>
           </div>
         </section>
