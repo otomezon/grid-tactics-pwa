@@ -92,6 +92,9 @@ export function applyClassPromotion(
   if (unit.classId !== definition.fromClassId) {
     throw new Error("The unit's current class does not match this promotion.");
   }
+  if (unit.hasMoved || unit.hasActed) {
+    throw new Error("A unit must not have moved or acted before changing class.");
+  }
   if (!Number.isInteger(unit.level) || unit.level < 10) {
     throw new Error("A unit must reach level 10 before changing class.");
   }
@@ -137,7 +140,8 @@ export function applyClassPromotion(
       experience: definition.experiencePolicy === "reset" ? 0 : unit.experience,
       stats,
       currentHp: unit.currentHp,
-      inventory
+      inventory,
+      hasActed: true
     },
     consumedItemId: definition.requiredItemId,
     appliedBonuses
