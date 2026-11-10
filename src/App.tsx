@@ -5,6 +5,7 @@ import { WEAPONS_BY_ID } from "./content/weapons";
 import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
 import { getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
 import { performClassChange } from "./application/perform-class-change";
+import { getClassPromotionStatPreview } from "./domain/progression/class-change";
 import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
@@ -1076,6 +1077,18 @@ export default function App() {
   const promotionItemCount = selectedUnit?.inventory.filter(
     (itemId) => itemId === PROMOTION_ITEM_ID
   ).length ?? 0;
+  const promotionStatPreview = selectedUnit && promotionDefinition
+    ? getClassPromotionStatPreview(selectedUnit.stats, promotionDefinition)
+    : undefined;
+  const promotionMovementLabel = selectedUnit
+    ? (selectedUnit.movementType === "infantry" ? "歩兵" : "騎馬") + "・" + selectedUnit.move
+    : "";
+  const promotionWeaponAccessLabel = selectedUnit
+    ? selectedUnit.usableWeaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join("・") || "なし"
+    : "";
+  const promotionEquippedWeaponLabel = selectedUnit?.equippedWeaponId
+    ? WEAPONS_BY_ID[selectedUnit.equippedWeaponId]?.name ?? selectedUnit.equippedWeaponId
+    : "未装備";
   const canStartClassChange = Boolean(
     selectedUnit &&
     selectedUnit.faction === "player" &&
@@ -1539,11 +1552,48 @@ export default function App() {
                           >
                             クラスチェンジを確認
                           </button>
-                          {promotionConfirmUnitId === selectedUnit.id && (
+                          {promotionConfirmUnitId === selectedUnit.id && promotionStatPreview && (
                             <div className="promotion-confirmation" role="group" aria-label="クラスチェンジ確認">
                               <strong>{getClassDisplayName(promotionDefinition.toClassId)}へ昇格しますか？</strong>
-                              <p>能力ボーナス（暫定）：{formatPromotionBonuses(promotionDefinition.statBonuses)}</p>
-                              <p>レベルは1に戻り、現在EXPは保持します。証を1個消費し、昇格後は行動済みになります。</p>
+                              <p className="promotion-preview-notice">
+                                能力ボーナス・クラス上限はすべて試作値です。正式なバランスではありません。
+                                既存能力が仮上限を超えていても、昇格時に能力を下げることはありません。
+                              </p>
+                              <section className="promotion-preview-section" aria-labelledby="promotion-stat-preview-heading">
+                                <h4 id="promotion-stat-preview-heading">能力値の変化（仮上限適用後）</h4>
+                                <table className="promotion-stat-table" aria-label="昇格後の能力値プレビュー">
+                                  <thead>
+                                    <tr><th scope="col">能力</th><th scope="col">現在</th><th scope="col">昇格後</th><th scope="col">実増加 / 仮上限</th></tr>
+                                  </thead>
+                                  <tbody>
+                                    {promotionStatPreview.changes.map((change) => {
+                                      const statLabel = DEPLOYMENT_STAT_LABELS.find(({ key }) => key === change.key)?.label ?? change.key;
+                                      return (
+                                        <tr key={change.key} data-testid={`promotion-stat-${change.key}`}>
+                                          <th scope="row">{statLabel}</th>
+                                          <td>{change.currentValue}</td>
+                                          <td>{change.nextValue}</td>
+                                          <td>
+                                            +{change.appliedBonus} / {change.cap}
+                                            {change.currentValueExceedsCap && <small>既存値を維持</small>}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </section>
+                              <dl className="promotion-impact-grid">
+                                <div><dt>レベル</dt><dd>Lv.{selectedUnit.level} → Lv.1</dd></div>
+                                <div><dt>経験値</dt><dd>EXP {selectedUnit.experience}（保持）</dd></div>
+                                <div><dt>最大HP</dt><dd>{selectedUnit.stats.hp} → {promotionStatPreview.stats.hp}</dd></div>
+                                <div><dt>現在HP</dt><dd>{selectedUnit.currentHp} → {selectedUnit.currentHp}（回復なし）</dd></div>
+                                <div><dt>移動性能</dt><dd>{promotionMovementLabel}（維持）</dd></div>
+                                <div><dt>武器適性</dt><dd>{promotionWeaponAccessLabel}（維持）</dd></div>
+                                <div><dt>装備中</dt><dd>{promotionEquippedWeaponLabel}（維持）</dd></div>
+                                <div><dt>昇格の証</dt><dd>{promotionItemCount} → {promotionItemCount - 1}個（1個消費）</dd></div>
+                                <div><dt>行動</dt><dd>昇格後は行動済み</dd></div>
+                              </dl>
                               <div className="command-actions">
                                 <button
                                   className="primary-button"

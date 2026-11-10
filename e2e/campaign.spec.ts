@@ -117,12 +117,14 @@ test.describe("browser campaign flow", () => {
 
   test("allows promotion only before movement and consumes the unit action", async ({ page }) => {
     await startBattle(page);
+    await page.setViewportSize({ width: 390, height: 844 });
 
     const preparedState = await readAutoSave(page) as {
       units: Array<{
         id: string;
         level: number;
         experience: number;
+        stats: { strength: number };
         inventory: string[];
         hasMoved: boolean;
         hasActed: boolean;
@@ -134,6 +136,7 @@ test.describe("browser campaign flow", () => {
 
     preparedUnit.level = 10;
     preparedUnit.experience = 73;
+    preparedUnit.stats.strength = 32;
     preparedUnit.inventory = [...preparedUnit.inventory, "promotion_seal"];
     preparedUnit.hasMoved = true;
     preparedUnit.hasActed = false;
@@ -152,9 +155,23 @@ test.describe("browser campaign flow", () => {
     await page.getByRole("button", { name: /味方01/ }).click();
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
-    await expect(confirmation).toContainText("能力ボーナス（暫定）");
+    await expect(confirmation).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
     await expect(confirmation).toContainText("レベルは1に戻り、現在EXPは保持します。");
     await expect(confirmation).toContainText("証を1個消費し、昇格後は行動済みになります");
+
+    const statPreview = confirmation.getByRole("table", { name: "昇格後の能力値プレビュー" });
+    await expect(statPreview.locator("tbody tr")).toHaveCount(8);
+    await expect(page.getByTestId("promotion-stat-hp")).toContainText("20");
+    await expect(page.getByTestId("promotion-stat-hp")).toContainText("22");
+    await expect(page.getByTestId("promotion-stat-hp")).toContainText("+2 / 60");
+    await expect(page.getByTestId("promotion-stat-strength")).toContainText("32");
+    await expect(page.getByTestId("promotion-stat-strength")).toContainText("+0 / 30");
+    await expect(page.getByTestId("promotion-stat-strength")).toContainText("既存値を維持");
+    await expect(confirmation).toContainText("20 → 20（回復なし）");
+    await expect(confirmation).toContainText("歩兵・5（維持）");
+    await expect(confirmation).toContainText("剣（維持）");
+    await expect(confirmation).toContainText("試作の鉄の剣（維持）");
+    await expect(confirmation).toContainText("1 → 0個（1個消費）");
 
     const beforeCancel = await readAutoSave(page);
     await confirmation.getByRole("button", { name: "キャンセル" }).click();
@@ -163,7 +180,8 @@ test.describe("browser campaign flow", () => {
 
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmedAgain = page.getByRole("group", { name: "クラスチェンジ確認" });
-    await expect(confirmedAgain).toContainText("能力ボーナス（暫定）");
+    await expect(confirmedAgain).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
+    await expect(confirmedAgain.getByRole("table", { name: "昇格後の能力値プレビュー" }).locator("tbody tr")).toHaveCount(8);
     await expect(confirmedAgain).toContainText("レベルは1に戻り、現在EXPは保持します。");
     await expect(confirmedAgain).toContainText("証を1個消費し、昇格後は行動済みになります");
     await confirmedAgain.getByRole("button", { name: "昇格を確定" }).click();
@@ -175,6 +193,7 @@ test.describe("browser campaign flow", () => {
         classId: string;
         level: number;
         experience: number;
+        stats: { strength: number };
         hasMoved: boolean;
         hasActed: boolean;
         inventory: string[];
@@ -184,6 +203,7 @@ test.describe("browser campaign flow", () => {
       classId: "swordmaster",
       level: 1,
       experience: 73,
+      stats: { strength: 32 },
       hasMoved: false,
       hasActed: true
     });

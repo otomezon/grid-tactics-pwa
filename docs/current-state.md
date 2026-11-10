@@ -49,7 +49,7 @@
 | 昇格先パス | 実装済み（設計書§5.5の7系統） | `src/content/classes.ts` | mapping tests |
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み。採択済みCP-12により移動・行動前のみ実行可、成功時に行動済みとなる。CP-09／10の移動・武器適性・装備維持、7経路すべての一段階昇格を回帰テスト化。PR #32でCP-07／08のEXP 0／99保持、現在HP 1／満タン維持、HP上限でのボーナス制限を追加 | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts`, `src/domain/progression/class-change.test.ts`, `src/content/class-promotion.test.ts` | PR #32 CI run #503: 22 test files／146 tests、Chromium E2E 11件成功 |
 | クラスチェンジアイテム定義・所持品表示 | アイテム定義と表示は実装済み。採択済みCP-13により初期付与を廃止し、章報酬／イベント定義による配布のみ許可。具体的な報酬は未登録。PR #29で明示報酬は勝利後のみ付与、所持枠満杯時は状態を変更せず拒否することを検証 | `src/content/items.ts`, `src/content/maps/chapter-01.ts`, `src/application/apply-chapter-rewards.ts`, `src/App.tsx` | PR #29 CI run #497: chapter-reward tests passed |
-| クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ／未移動・未行動条件。確定でユニットの行動を消費） | `src/App.tsx`, `src/application/perform-class-change.ts` | PR #28／#29で行動消費・キャンセル時のオートセーブ不変を検証。PR #36では73 EXPの保持、確認画面の現行説明、確定後リロード時の状態維持をE2Eで確認（CI run #510: 22 files／147 tests／E2E 11件成功） |
+| クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ／未移動・未行動条件。確定でユニットの行動を消費）。確認画面に8能力の現在値・昇格後予測・実増加量・仮上限、最大HP／現在HP、Lv.1化・EXP保持、証消費、移動／武器適性／装備の維持、行動消費を表示する（暫定表示でありCP-15の最終仕様ではない） | `src/App.tsx`, `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts` | 既存のキャンセル／保存E2Eに加え、今回の統合PRで8能力の表示値・上限適用後の実増加量・HP等の維持表示を確認予定。既存PR #36では73 EXPの保持とリロード後の状態を検証済み（CI run #510） |
 | 正式な昇格ボーナス・上限・昇格後移動／武器データ | 未決定（現行は仮値） | `src/content/classes.ts` | playtest／仕様決定待ち |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
 | 砦のフェイズ開始回復 | 実装済み（該当陣営の生存ユニット／最大HPの10%／端数切り捨ては暫定） | `src/domain/rules/apply-fort-recovery.ts`, `src/application/resolve-enemy-phase.ts` |
@@ -74,7 +74,7 @@
 - 役割タグは現在のユニットモデルにないためスコア対象外。
 - 敗北条件は味方全滅に加え、マップが `defeatCondition: { type: "unit_defeated", targetUnitId }` を設定すれば指定味方の撃破でも成立する。主人公の正式IDは未決定のため試作マップでは未設定。
 - 砦回復は実装済み。端数切り捨ては暫定判断で、設計書に正式規則はない。最大HP9以下では回復量0。
-- クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。
+- クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。昇格確認画面では仮上限適用後の実増加量を表示するが、CP-15の最終表示要件は未決定。
 - 1戦闘中に複数回ダメージを与えた場合、現行はstrikeごとに+10 EXPを付与する解釈。
 - HP成長時は最大HPのみ増やし、現在HPは維持。
 - 正式な章マップ／敵構成／報酬品目・数量、会話／加入イベント、キャンペーン選択／分岐／解放管理は未実装。第2章はUI／引き継ぎ確認用の試作データ。クラスチェンジ証は採択済みCP-13に従い章報酬／イベントのみで配布するが、具体的な報酬定義は未登録。CP-04／CP-05の正式な数値バランスは未決定。
