@@ -59,14 +59,17 @@
 
 ## 6. セーブ互換性
 
-- `GameUnit` は以前から `level`、`experience`、`stats`、`growthRates` を保存している。
-- レベルアップ時の乱数消費は既存 `rngState` に反映する。
-- 新しいGameState fieldは追加していないため `SAVE_VERSION` は2のまま。
+- `GameUnit` は `level`、`experience`、`stats`、`growthRates` を保存し、`GameStateSnapshot` は既存の `rngState` を保持する。
+- 現行の `SAVE_VERSION` は3。saveVersion 1／2からの既存migrationを維持する。
+- クラスチェンジ処理は既存フィールド（`classId`、`level`、`experience`、`stats`、`currentHp`、`inventory`）を更新するだけで、専用のGameState fieldを追加しない。
 - GameState validatorはEXPを0〜99に制限し、レベルアップ前の未処理100 EXPが保存されることを防ぐ。
+- クラス定義の静的な数値変更だけならsnapshot schema変更は不要。新フィールドを追加する場合は、現行v3からのmigrationとvalidator／JSON／backup互換テストを先に設計する。
 
 ## 7. クラスチェンジ基盤
 
-根拠: 設計書 §5.4（クラスチェンジ）・§5.5（初期クラス案）。
+正式仕様の未決定項目、現行仮実装との相違、段階的な決定・実装順は [クラスチェンジ仕様・未決定事項と実装計画](class-promotion.md) に集約する。
+
+根拠: 設計書 §5.4（クラスチェンジ）・§5.5（初期クラス案）。正式決定の台帳と実装順は [class-promotion.md](class-promotion.md) を参照。
 
 設計書が示す昇格先を `src/content/classes.ts` にIDとして定義した。
 
@@ -94,7 +97,7 @@
 - chapter-01 の新規初期状態では、味方01（剣士）に証を1個だけ付与する。これは動作確認用の仮配布で、章報酬ルールではない。
 - `src/App.tsx` に武器以外の所持品表示とクラスチェンジパネルを追加。対象ユニットが味方、基本職Lv.10以上、証を所持し、自軍フェイズ中の操作可能状態である場合だけ確認ボタンを有効にする。
 - 確認後、`performClassChange` を呼び出し、クラス変更・証消費・能力反映を行ってIndexedDBへ保存する。クラスチェンジ自体では `hasActed`／`hasMoved` を変更しない（行動消費の仕様が設計書にないため）。
-- 旧saveVersion 2の既存セーブへ証は自動付与しない。アイテム配布を含むセーブマイグレーションは行わない。
+- 既存saveVersion 2を含む既存セーブへ証は自動付与しない。アイテム配布を含むセーブマイグレーションは行わない。
 
 ### 試作ボーナス（暫定）
 
@@ -112,7 +115,7 @@
 
 昇格先の仮上限は、レベルアップ時の試作上限と同じHP60／他能力30。昇格時のEXPは保持する暫定方針。移動力・移動種別・使用可能武器は変更せず、基本職から引き継ぐ。昇格後クラスの正式なクラス定義が整うまでの動作確認用である。
 
-所持品とクラスデータはcontent層で管理する。GameStateにフィールドを追加しないためsaveVersion 2を維持する。
+所持品とクラスデータはcontent層で管理する。現行の `SAVE_VERSION` は3であり、クラスチェンジ固有のGameState fieldを追加していない。
 
 ## 8. 章間引き継ぎ基盤
 
@@ -124,10 +127,10 @@
 - 引き継ぎユニットはレベル、EXP、能力値／成長率、クラス、所持品、装備、移動・武器適性を保持する。位置は次章配置へ変更し、移動／行動済みフラグをresetする。
 - 敵ユニット、章ID、turn=1、player phase、RNG stateは次章初期stateを採用する。
 - 章間HPは設計書に規定がないため、呼び出し側が `preserve`（現在HP維持）または `restore`（次章開始時に最大HPへ回復）を必ず指定する。
-- GameStateSnapshotの形は変えず、saveVersion 2のまま。作成された次章stateは既存validatorで検証する。
+- GameStateSnapshotの形は変えず、現行 `SAVE_VERSION` 3のまま。作成された次章stateは既存validatorで検証する。
 - `src/content/chapters.ts` に章ID・表示名・マップ・初期state・クリア報酬を登録し、保存された `chapterId` から対応するマップを選択してセーブを検証／復元する。
 - `src/application/apply-chapter-rewards.ts` は勝利後にだけ、章データが明示したアイテム報酬を指定された生存味方へ付与する。未定義アイテム、非生存／非味方の受取人、1〜5以外の数量、所持品5枠超過は拒否する。
-- リザルト画面から次章を開始すると、報酬付与→`prepareNextChapter`→章切替→既存IndexedDB auto slot保存を行う。セーブ形式は引き続きsaveVersion 2。
+- リザルト画面から次章を開始すると、報酬付与→`prepareNextChapter`→章切替→既存IndexedDB auto slot保存を行う。章間引き継ぎ自体はsnapshot fieldを追加せず、現行saveVersion 3の形式を利用する。
 - `chapter-02` は同じ味方／敵構成を用いた遷移動作確認用の試作マップ。正式シナリオ・敵配置・報酬は定義していない。両試作章の `clearRewards` は空配列。
 - 現在HPは設計未決定のため、UIでは暫定的に維持する。乱数stateは章をまたいで引き継ぐ。
 - 詳細戦闘統計、会話／加入イベント、キャンペーン選択・分岐／解放管理は未実装。
