@@ -117,12 +117,14 @@ test.describe("browser campaign flow", () => {
 
   test("allows promotion only before movement and consumes the unit action", async ({ page }) => {
     await startBattle(page);
+    await page.setViewportSize({ width: 390, height: 844 });
 
     const preparedState = await readAutoSave(page) as {
       units: Array<{
         id: string;
         level: number;
         experience: number;
+        stats: { strength: number };
         inventory: string[];
         hasMoved: boolean;
         hasActed: boolean;
@@ -134,6 +136,7 @@ test.describe("browser campaign flow", () => {
 
     preparedUnit.level = 10;
     preparedUnit.experience = 73;
+    preparedUnit.stats.strength = 32;
     preparedUnit.inventory = [...preparedUnit.inventory, "promotion_seal"];
     preparedUnit.hasMoved = true;
     preparedUnit.hasActed = false;
@@ -161,8 +164,9 @@ test.describe("browser campaign flow", () => {
     await expect(page.getByTestId("promotion-stat-hp")).toContainText("20");
     await expect(page.getByTestId("promotion-stat-hp")).toContainText("22");
     await expect(page.getByTestId("promotion-stat-hp")).toContainText("+2 / 60");
-    await expect(page.getByTestId("promotion-stat-strength")).toContainText("6");
+    await expect(page.getByTestId("promotion-stat-strength")).toContainText("32");
     await expect(page.getByTestId("promotion-stat-strength")).toContainText("+0 / 30");
+    await expect(page.getByTestId("promotion-stat-strength")).toContainText("既存値を維持");
     await expect(confirmation).toContainText("20 → 20（回復なし）");
     await expect(confirmation).toContainText("歩兵・5（維持）");
     await expect(confirmation).toContainText("剣（維持）");
@@ -189,6 +193,7 @@ test.describe("browser campaign flow", () => {
         classId: string;
         level: number;
         experience: number;
+        stats: { strength: number };
         hasMoved: boolean;
         hasActed: boolean;
         inventory: string[];
@@ -198,6 +203,7 @@ test.describe("browser campaign flow", () => {
       classId: "swordmaster",
       level: 1,
       experience: 73,
+      stats: { strength: 32 },
       hasMoved: false,
       hasActed: true
     });
