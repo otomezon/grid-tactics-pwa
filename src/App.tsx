@@ -267,6 +267,7 @@ export default function App() {
   );
   const [deploymentDetailUnitId, setDeploymentDetailUnitId] = useState<string | null>(null);
   const [saveBackups, setSaveBackups] = useState<SaveBackupRecord[]>([]);
+  const [backupListLoaded, setBackupListLoaded] = useState(false);
   const [backupActionPending, setBackupActionPending] = useState(false);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
 
@@ -384,6 +385,9 @@ export default function App() {
       })
       .catch(() => {
         // Backup storage is optional; the main auto-save remains usable.
+      })
+      .finally(() => {
+        if (!cancelled) setBackupListLoaded(true);
       });
 
     return () => {
@@ -1671,7 +1675,7 @@ export default function App() {
               className="secondary-button block-button"
               type="button"
               data-testid="create-save-backup"
-              disabled={saveStatus !== "saved" || backupActionPending}
+              disabled={saveStatus !== "saved" || backupActionPending || !backupListLoaded}
               onClick={() => void handleCreateSaveBackup()}
             >
               現在の自動セーブからバックアップを作成
