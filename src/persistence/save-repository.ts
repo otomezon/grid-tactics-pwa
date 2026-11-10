@@ -201,7 +201,7 @@ export async function loadGameStateBackup(slotId: string): Promise<SaveBackupRec
  * Copies the current auto-save into generation 1 and rotates older generations
  * in one readwrite transaction. The auto-save record is never modified.
  */
-export async function createGameStateBackup(): Promise<SaveBackupRecord> {
+export async function createGameStateBackup(expectedSnapshot: GameStateSnapshot): Promise<SaveBackupRecord> {
   const database = await openDatabase();
   const transaction = database.transaction(SAVE_STORE, "readwrite");
   const completed = transactionCompleted(transaction);
@@ -218,6 +218,9 @@ export async function createGameStateBackup(): Promise<SaveBackupRecord> {
         );
         if (!isStoredRecord(autoSave) || !isStoredRecord(autoSave.data)) {
           throw new Error("有効な自動セーブがないため、バックアップを作成できません。");
+        }
+        if (JSON.stringify(autoSave.data) !== JSON.stringify(expectedSnapshot)) {
+          throw new Error("バックアップ作成中に自動セーブが更新されました。状態を確認してから再試行してください。");
         }
 
         const existingBackups = records
