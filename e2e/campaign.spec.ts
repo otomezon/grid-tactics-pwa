@@ -186,7 +186,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, clearedState);
     await page.reload();
 
-    await expect(page.getByRole("status")).toContainText("ステージクリア");
+    await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
     const enemyRoster = page.getByTestId("result-enemy-roster");
     await expect(enemyRoster.locator(".result-enemy-row")).toHaveCount(5);
     await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("敵01");
@@ -204,7 +204,7 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".battle-outcome")).toContainText("撃破者別の戦闘記録は保存していない");
 
     await page.reload();
-    await expect(page.getByRole("status")).toContainText("ステージクリア");
+    await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
     await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("撃破");
     await expect(page.locator(".result-player-row")).toHaveCount(4);
   });
