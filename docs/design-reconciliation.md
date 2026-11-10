@@ -4,8 +4,8 @@
 
 - 更新日: 2026-11-11
 - 基準: `docs/game-design.md` v1.0（2026-11-09、初期実装向け設計案）
-- PR #1〜#48はmainにマージ済み。現在の機能・実装・テスト状況の詳細は [current-state.md](current-state.md) と [architecture.md](architecture.md) を参照する。この文書では初期設計案との適合、未実装項目、暫定判断を整理する。
-- PR #45はPR #44後の文書同期、PR #46は320px幅のタッチ横スワイプE2E、PR #47はスワイプ後の右端ユニット選択E2Eを追加した。PR #48で関連するREADME・開発ルール・アーキテクチャ・実装状況を同期した。PR #46／#47はテストと文書のみで、ゲームルールやセーブ形式は変更していない。CI run #607（PR #48）はtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功。
+- PR #1〜#49はmainにマージ済み。現在の機能・実装・テスト状況の詳細は [current-state.md](current-state.md) と [architecture.md](architecture.md) を参照する。この文書では初期設計案との適合、未実装項目、暫定判断を整理する。
+- PR #45はPR #44後の文書同期、PR #46は320px幅のタッチ横スワイプE2E、PR #47はスワイプ後の右端ユニット選択E2Eを追加した。PR #48で関連するREADME・開発ルール・アーキテクチャ・実装状況を同期した。PR #46／#47はテストと文書のみで、ゲームルールやセーブ形式は変更していない。CI run #607（PR #48）はtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功。PR #49ではこの照合文書自体の更新をmainへ反映した（merge commit `d73d8419dc085ef535da7fe73c5609e05f33b40d`、CI run #609: typecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功）。
 - A: 初期設計案と実装が一致
 - B: 設計済み・未実装
 - C: 実装済み・未文書化
