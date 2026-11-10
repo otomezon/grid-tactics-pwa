@@ -51,7 +51,7 @@ src/
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、敵AI／フェイズ進行 | 出撃準備は開発ブランチで実装中。報酬は章データで明示したアイテムのみ適用 |
 | ui | 章別マップ、戦闘UI、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルは開発ブランチ。第2章は遷移検証用 |
-| persistence | IndexedDB、saveVersion 1／2→3 migration、JSON export/import、3世代ローカルバックアップ／復元 | PR #23で追加中。DB version／saveVersionは据え置き |
+| persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2→3 migration、JSON export/import | export/importはmain実装済み。3世代backup／復元はPR #23で実装・CI検証済み、レビュー待ち。DB version／saveVersionは据え置き |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
 ## 3. 現在のデータフロー
