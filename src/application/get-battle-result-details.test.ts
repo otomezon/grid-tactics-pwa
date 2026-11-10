@@ -42,7 +42,8 @@ describe("getBattleResultDetails", () => {
 
     expect(details.survivingPlayers.map((unit) => unit.id)).toEqual([
       "unit_001",
-      "unit_003"
+      "unit_003",
+      "unit_004"
     ]);
     expect(details.survivingPlayers[0]).toMatchObject({
       name: "味方01",
