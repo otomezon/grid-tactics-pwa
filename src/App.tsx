@@ -1077,7 +1077,9 @@ export default function App() {
     interactive &&
     promotionDefinition &&
     selectedUnit.level >= 10 &&
-    promotionItemCount > 0
+    promotionItemCount > 0 &&
+    !selectedUnit.hasMoved &&
+    !selectedUnit.hasActed
   );
   const deploymentCandidates = currentMap.playerDeployment.flatMap(({ unitId }) => {
     const candidate = getDeploymentCandidate(gameState, currentMap, unitId);
@@ -1519,6 +1521,12 @@ export default function App() {
                           {promotionItemCount === 0 && (
                             <p className="helper-text">クラスチェンジの証を所持していません。</p>
                           )}
+                          {selectedUnit.hasActed && (
+                            <p className="helper-text">行動済みのため、このフェイズ中はクラスチェンジできません。</p>
+                          )}
+                          {!selectedUnit.hasActed && selectedUnit.hasMoved && (
+                            <p className="helper-text">移動後はクラスチェンジできません。移動前に実行してください。</p>
+                          )}
                           <button
                             className="secondary-button block-button"
                             type="button"
@@ -1531,12 +1539,12 @@ export default function App() {
                             <div className="promotion-confirmation" role="group" aria-label="クラスチェンジ確認">
                               <strong>{getClassDisplayName(promotionDefinition.toClassId)}へ昇格しますか？</strong>
                               <p>能力ボーナス（暫定）：{formatPromotionBonuses(promotionDefinition.statBonuses)}</p>
-                              <p>レベルは1に戻り、現在EXPは保持します。証を1個消費します。</p>
+                              <p>レベルは1に戻り、現在EXPは保持します。証を1個消費し、このユニットの行動も消費します。</p>
                               <div className="command-actions">
                                 <button
                                   className="primary-button"
                                   type="button"
-                                  disabled={!interactive}
+                                  disabled={!canStartClassChange}
                                   onClick={() => void handleClassChange()}
                                 >
                                   昇格を確定
