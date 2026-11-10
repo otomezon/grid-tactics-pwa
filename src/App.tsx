@@ -21,7 +21,15 @@ import type { AttackPlan } from "./application/perform-attack";
 import type { LevelUpRecord } from "./domain/progression/level-up";
 import { createRandomSeed } from "./domain/random/xorshift32";
 import { migrateGameStateSnapshot } from "./persistence/migrations";
-import { loadGameState, saveGameState } from "./persistence/save-repository";
+import {
+  createGameStateBackup,
+  loadGameState,
+  loadGameStateBackup,
+  loadGameStateBackups,
+  restoreGameStateBackup,
+  saveGameState,
+  type SaveBackupRecord
+} from "./persistence/save-repository";
 import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
@@ -258,6 +266,9 @@ export default function App() {
     () => createDeploymentSelection(INITIAL_CHAPTER.initialState, INITIAL_CHAPTER.map)
   );
   const [deploymentDetailUnitId, setDeploymentDetailUnitId] = useState<string | null>(null);
+  const [saveBackups, setSaveBackups] = useState<SaveBackupRecord[]>([]);
+  const [backupListLoaded, setBackupListLoaded] = useState(false);
+  const [backupActionPending, setBackupActionPending] = useState(false);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -365,6 +376,43 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void loadGameStateBackups()
+      .then((backups) => {
+        if (!cancelled) setSaveBackups(backups);
+      })
+      .catch(() => {
+        // Backup storage is optional; the main auto-save remains usable.
+      })
+      .finally(() => {
+        if (!cancelled) setBackupListLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const saveBackupViews = saveBackups.map((backup) => {
+    const storedData = backup.data;
+    const chapterId = typeof storedData === "object" && storedData !== null &&
+      "chapterId" in storedData && typeof storedData.chapterId === "string"
+      ? storedData.chapterId
+      : null;
+    const chapter = chapterId ? getChapterById(chapterId) : undefined;
+    const migration = chapter ? migrateGameStateSnapshot(storedData, chapter.map) : null;
+
+    return {
+      ...backup,
+      generation: Number(backup.slotId.slice("backup-".length)),
+      chapterId: chapterId ?? "不明",
+      chapterTitle: chapter?.title ?? "不明な章",
+      restorable: Boolean(migration)
+    };
+  });
+
   const selectedUnit = useMemo(
     () => gameState.units.find((unit) => unit.id === selectedUnitId) ?? null,
     [gameState.units, selectedUnitId]
@@ -391,7 +439,7 @@ export default function App() {
   }, [gameState.units, selectedUnit, currentMap]);
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
-  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked &&
+  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
     !deploymentPending && gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
     () => new Set(reachableTiles.map((tile) => String(tile.x) + "," + String(tile.y))),
@@ -485,6 +533,105 @@ export default function App() {
       setMessage("セーブデータを書き出しました。ファイルを別の場所にも保管してください。");
     } catch (error) {
       setMessage("セーブデータの書き出しに失敗しました。" + getErrorMessage(error));
+    }
+  }
+
+  async function handleCreateSaveBackup(): Promise<void> {
+    if (backupActionPending || !backupListLoaded || saveStatus !== "saved") return;
+    setBackupActionPending(true);
+
+    try {
+      const stored = await loadGameState();
+      const savedChapterId = typeof stored === "object" && stored !== null &&
+        "chapterId" in stored && typeof stored.chapterId === "string"
+        ? stored.chapterId
+        : null;
+      const chapter = savedChapterId ? getChapterById(savedChapterId) : undefined;
+      const migration = chapter ? migrateGameStateSnapshot(stored, chapter.map) : null;
+      if (!chapter || !migration) {
+        throw new Error("現在の自動セーブの章IDまたは保存形式を検証できません。");
+      }
+
+      await createGameStateBackup(migration.snapshot);
+      setSaveBackups(await loadGameStateBackups());
+      setMessage("現在の自動セーブからバックアップを作成しました。自動セーブ自体は変更していません。");
+    } catch (error) {
+      setMessage("バックアップを作成できませんでした。" + getErrorMessage(error));
+    } finally {
+      setBackupActionPending(false);
+    }
+  }
+
+  async function handleRestoreSaveBackup(slotId: string): Promise<void> {
+    if (backupActionPending || saveStatus === "loading" || saveStatus === "saving") return;
+
+    let backup: SaveBackupRecord;
+    let chapter: ReturnType<typeof getChapterById>;
+    let migration: ReturnType<typeof migrateGameStateSnapshot>;
+    try {
+      const storedBackup = await loadGameStateBackup(slotId);
+      if (!storedBackup) throw new Error("選択したバックアップが見つかりません。");
+
+      const chapterId = typeof storedBackup.data === "object" && storedBackup.data !== null &&
+        "chapterId" in storedBackup.data && typeof storedBackup.data.chapterId === "string"
+        ? storedBackup.data.chapterId
+        : null;
+      chapter = chapterId ? getChapterById(chapterId) : undefined;
+      migration = chapter ? migrateGameStateSnapshot(storedBackup.data, chapter.map) : null;
+      if (!chapter || !migration) {
+        throw new Error("章ID、saveVersion、または章マップに対する保存データの検証に失敗しました。");
+      }
+      backup = storedBackup;
+    } catch (error) {
+      setMessage("バックアップを復元できません。" + getErrorMessage(error));
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "「" + chapter.title + "」の第" + slotId.slice("backup-".length) +
+      "世代バックアップで、現在の自動セーブを置き換えます。現在の進行状態は失われます。続行しますか？"
+    );
+    if (!confirmed) return;
+
+    setBackupActionPending(true);
+    setSaveStatus("saving");
+    try {
+      let restoredState = migration.snapshot;
+      let restoreMessage = migration.migrated
+        ? "旧形式のバックアップを変換して復元しました。"
+        : "バックアップからゲーム状態を復元しました。";
+
+      if (restoredState.phase === "enemy") {
+        const enemyPhase = runEnemyPhase(restoredState, chapter.map);
+        restoredState = enemyPhase.nextState;
+        restoreMessage = formatEnemyPhaseSummary(enemyPhase, chapter.map);
+      } else {
+        const outcome = evaluateBattleOutcome(restoredState, chapter.map);
+        if (outcome === "victory") {
+          restoreMessage = "勝利条件を達成したバックアップを復元しました。";
+        } else if (outcome === "defeat") {
+          restoreMessage = formatDefeatMessage(chapter.map);
+        }
+      }
+
+      await restoreGameStateBackup(backup, restoredState);
+      setActiveChapter(chapter);
+      setGameState(restoredState);
+      setDeploymentAssignments(createDeploymentAssignments(restoredState, chapter.map));
+      setDeploymentSelectedUnitIds(createDeploymentSelection(restoredState, chapter.map));
+      setDeploymentPending(false);
+      setSelectedUnitId(null);
+      setCombatTargetId(null);
+      setPromotionConfirmUnitId(null);
+      setDeploymentDetailUnitId(null);
+      setLoadBlocked(false);
+      setSaveStatus("saved");
+      setMessage(restoreMessage);
+    } catch (error) {
+      setSaveStatus("failed");
+      setMessage("バックアップの復元に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
+    } finally {
+      setBackupActionPending(false);
     }
   }
 
@@ -1518,6 +1665,45 @@ export default function App() {
             <h2>ローカル保存</h2>
             <p className="message-text">{SAVE_STATUS_LABELS[saveStatus]}</p>
             <p className="helper-text">移動・武器変更・攻撃・待機の確定時にIndexedDBへ自動保存します。戦闘乱数の状態も保存します。</p>
+          </section>
+
+          <section className="info-card save-backup-card" aria-labelledby="save-backups-heading">
+            <p className="eyebrow">SAVE BACKUPS</p>
+            <h2 id="save-backups-heading">セーブの世代バックアップ</h2>
+            <p className="helper-text">現在の自動セーブを手動で保存します。新しいものを第1世代として最大3世代を保持し、4回目以降は最古の世代を入れ替えます。作成しても自動セーブは変更しません。</p>
+            <button
+              className="secondary-button block-button"
+              type="button"
+              data-testid="create-save-backup"
+              disabled={saveStatus !== "saved" || backupActionPending || !backupListLoaded}
+              onClick={() => void handleCreateSaveBackup()}
+            >
+              現在の自動セーブからバックアップを作成
+            </button>
+            {saveBackupViews.length > 0 ? (
+              <div className="save-backup-list" aria-label="保存済みバックアップ">
+                {saveBackupViews.map((backup) => (
+                  <div className="save-backup-item" key={backup.slotId} data-testid={"save-backup-entry-" + backup.slotId}>
+                    <div className="save-backup-meta">
+                      <strong>第{backup.generation}世代 · {new Date(backup.savedAt).toLocaleString()}</strong>
+                      <span>{backup.chapterTitle}（章ID: {backup.chapterId}）</span>
+                    </div>
+                    <p className="helper-text">{backup.restorable ? "保存形式と章マップを検証済みです。" : "保存形式または章IDを検証できません。復元は拒否されます。"}</p>
+                    <button
+                      className="secondary-button block-button"
+                      type="button"
+                      data-testid={"restore-" + backup.slotId}
+                      disabled={backupActionPending || saveStatus === "loading" || saveStatus === "saving"}
+                      onClick={() => void handleRestoreSaveBackup(backup.slotId)}
+                    >
+                      第{backup.generation}世代を復元
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="helper-text">バックアップはまだありません。</p>
+            )}
           </section>
         </aside>
       </div>

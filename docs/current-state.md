@@ -5,7 +5,7 @@
 - 更新日: 2026-11-10
 - Repository: `otomezon/grid-tactics-pwa`
 - デフォルトブランチ: `main`
-- PR #1〜#21はすべてマージ済み。PR #16（キャンペーン控え名簿・出撃メンバー選択）のマージコミット: `fcbf021ce3fd978eb026251ff6c6005c0f0350f0`。PR #15（章開始前の出撃配置準備）のマージコミット: `4954d65843d4a9a1d0340a6ac36da50e7e09d408`。PR #14（セーブ内ユニットの出撃名簿照合）のマージコミット: `4a22f50680262808157a1232cc3e66909eee9626`。PR #11（章報酬／次章開始フロー）のマージコミット: `29fc033f11a01dda36768a00a6a3a7476cc6de3b`。PR #12（マップ指定ユニット撃破による敗北条件）のマージコミット: `7d9a25e2472cc5bd42529cfe48cb7b313109bcca`。PR #13（マップ定義検証）のマージコミット: `6a775ad1b0f33d3cd335bec7356728219740d9b7`。
+- PR #1〜#22はすべてマージ済み。PR #22（バージョン付きJSONセーブexport/import）のマージコミット: `e70206fe92592c0c892171cb1e4d31abf0f53a42`。PR #16（キャンペーン控え名簿・出撃メンバー選択）のマージコミット: `fcbf021ce3fd978eb026251ff6c6005c0f0350f0`。PR #15（章開始前の出撃配置準備）のマージコミット: `4954d65843d4a9a1d0340a6ac36da50e7e09d408`。PR #14（セーブ内ユニットの出撃名簿照合）のマージコミット: `4a22f50680262808157a1232cc3e66909eee9626`。PR #11（章報酬／次章開始フロー）のマージコミット: `29fc033f11a01dda36768a00a6a3a7476cc6de3b`。PR #12（マップ指定ユニット撃破による敗北条件）のマージコミット: `7d9a25e2472cc5bd42529cfe48cb7b313109bcca`。PR #13（マップ定義検証）のマージコミット: `6a775ad1b0f33d3cd335bec7356728219740d9b7`。
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
@@ -59,12 +59,13 @@
 | ブラウザE2E（出撃準備・控え保存・行動状態復元・敵軍フェイズ／ターン復元・モバイル幅） | 実装済み（Playwright 4ケース、CI run #374成功） | `playwright.config.ts`, `e2e/campaign.spec.ts`, `.github/workflows/ci.yml` |
 | PWA manifest／Service Worker／オフライン起動E2E | 実装済み（PR #20、本番Previewで2ケースをCI検証） | `playwright.config.ts`, `e2e/pwa.spec.ts`, `vite.config.ts` |
 | Service Worker更新・自動再読み込み後のセーブ復元E2E | 実装済み（PR #21、CI run #408で更新／オンライン／オフライン復元を検証） | `e2e/pwa-preview-server.mjs`, `e2e/pwa.spec.ts` |
-| ローカルセーブのJSON書き出し／読み込み | PR #22のブランチで実装・CI検証済み（バージョン付きJSON、章・マップ・saveVersion検証、上書き前確認、不正ファイルによる既存セーブ保護。mainマージ待ち） | `src/persistence/save-file.ts`, `src/persistence/save-file.test.ts`, `src/App.tsx`, `e2e/pwa.spec.ts` |
+| ローカルセーブのJSON書き出し／読み込み | 実装済み（PR #22でmainへマージ済み。バージョン付きJSON、章・マップ・saveVersion検証、上書き前確認、不正ファイルによる既存セーブ保護） | `src/persistence/save-file.ts`, `src/persistence/save-file.test.ts`, `src/App.tsx`, `e2e/pwa.spec.ts` |
+| ローカルセーブの3世代バックアップ | PR #23で実装・Chromium E2E追加済み、レビュー待ち（最大3世代、4回目の最古ローテーション、auto不変、確認付き復元、migration／validatorによる不正データ拒否） | `src/persistence/save-repository.ts`, `src/App.tsx`, `e2e/pwa.spec.ts` |
 | UI／スマートフォン実機確認 | 未実施 | — |
 
 ## 3. 検証コマンド
 
-`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9をmainへ同期したhead（run #201）でTypeScript型チェック成功、15 test files／93 tests成功、Vite build成功、PWA precache 11 entries（282.60 KiB）を確認。章レジストリ／報酬／画面接続の実装head（run #226）ではTypeScript型チェック成功、17 test files／103 tests成功、Vite build成功、PWA precache 11 entries（289.58 KiB）を確認。PR #11 merge後のmain（run #235）、PR #12 merge後のmain（run #248）、PR #13 merge後のmain（run #266）とPR #14 merge後のmain（run #280）も成功。PR #18のmainマージ後CI（run #360）では既存のTypeScript型チェック、20 test files／131 tests、Vite buildが成功。PR #19のブランチCI（run #374）ではTypeScript型チェック、20 test files／131 tests、Vite buildに加え、ChromiumブラウザE2E 4ケースが成功。PR #20のCI run #392では20 test files／131 tests、Vite build、ChromiumブラウザE2E 6ケースが成功。PR #21のCI run #408では20 test files／131 tests、Vite build、ChromiumブラウザE2E 7ケース（Service Worker更新／オンライン・オフラインのセーブ復元を含む）が成功。PR #22のCI run #42730007977では21 test files／136 tests、Vite build、ChromiumブラウザE2E 9ケース（セーブ書き出し／別コンテキスト復元／不正ファイル拒否を含む）が成功。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
+`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9をmainへ同期したhead（run #201）でTypeScript型チェック成功、15 test files／93 tests成功、Vite build成功、PWA precache 11 entries（282.60 KiB）を確認。章レジストリ／報酬／画面接続の実装head（run #226）ではTypeScript型チェック成功、17 test files／103 tests成功、Vite build成功、PWA precache 11 entries（289.58 KiB）を確認。PR #11 merge後のmain（run #235）、PR #12 merge後のmain（run #248）、PR #13 merge後のmain（run #266）とPR #14 merge後のmain（run #280）も成功。PR #18のmainマージ後CI（run #360）では既存のTypeScript型チェック、20 test files／131 tests、Vite buildが成功。PR #19のブランチCI（run #374）ではTypeScript型チェック、20 test files／131 tests、Vite buildに加え、ChromiumブラウザE2E 4ケースが成功。PR #20のCI run #392では20 test files／131 tests、Vite build、ChromiumブラウザE2E 6ケースが成功。PR #21のCI run #408では20 test files／131 tests、Vite build、ChromiumブラウザE2E 7ケース（Service Worker更新／オンライン・オフラインのセーブ復元を含む）が成功。PR #22の最終CI run #42730207663（同一headのpush run #42730200764も成功）では21 test files／136 tests、Vite build、ChromiumブラウザE2E 9ケース（セーブ書き出し／別コンテキスト復元／不正ファイル拒否を含む）が成功。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
 
 ## 4. 暫定・未決定事項
 
@@ -79,7 +80,7 @@
 - 正式な章マップ／敵構成／報酬品目・数量、会話／加入イベント、キャンペーン選択／分岐／解放管理は未実装。第2章はUI／引き継ぎ確認用の試作データ。クラスチェンジアイテムの正式な入手・配布ルールも未決定。
 - マップ定義validatorは主要な構造・参照整合性を検証し、セーブ状態validatorはユニットID／陣営を出撃名簿と照合する。ただし地形と移動種別の通行可否や実際のプレイバランスは検証しない。
 - 出撃準備のメンバー選択・控え保存・章間引き継ぎと、候補詳細のインベントリ表示データ整形はCIテスト対象。ブラウザ／スマートフォン実機でのUI／IndexedDB通し確認は未実施。
-- PlaywrightによるChromium E2Eは出撃準備・名簿保存・行動状態復元・敵軍フェイズ／ターン復元・幅390pxのレイアウトを確認済み。PWA manifest／Service Worker／precache／オフライン起動も本番Previewで検証済み。Service Worker更新時の自動再読み込みとセーブ復元はPR #21で検証済み。セーブファイルのexport/importはPR #22のCIで単体・ブラウザテスト済み（mainマージ待ち）。実スマートフォンへのインストール・オフライン操作の手動確認は未実施。
+- PlaywrightによるChromium E2Eは出撃準備・名簿保存・行動状態復元・敵軍フェイズ／ターン復元・幅390pxのレイアウトを確認済み。PWA manifest／Service Worker／precache／オフライン起動も本番Previewで検証済み。Service Worker更新時の自動再読み込みとセーブ復元はPR #21で検証済み。セーブファイルのexport/importはPR #22のCIで単体・ブラウザテスト済み（mainマージ済み）。3世代バックアップはPR #23のCI run #42733990929でChromium E2E 10ケースを含む全検証が成功。実スマートフォンへのインストール・オフライン操作の手動確認は未実施。
 
 ## 5. 次の作業候補
 

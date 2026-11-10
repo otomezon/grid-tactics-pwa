@@ -11,6 +11,7 @@
 | Object Store | `game-saves` |
 | Key path | `slotId` |
 | 自動保存slot | `auto` |
+| 手動バックアップslot | `backup-1`（最新）〜`backup-3`（最古） |
 | Game save schema | `saveVersion: 3` |
 
 ## 2. SaveVersion 3
@@ -52,12 +53,12 @@ saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、戦闘ユニ
 
 ## 7. 未実装
 
-複数slot、backup世代、quota超過・private browsing時の復旧案内、敵軍フェイズ中の各行動ごとの個別autosave。
+複数の任意slot、quota超過・private browsing時の復旧案内、敵軍フェイズ中の各行動ごとの個別autosave。
 
 
 ## 8. ブラウザ統合テスト
 
-Playwrightは本番ビルドを配信するPreviewサーバーに対して実行する。行動確定後のauto slotをIndexedDBから読み、Service Worker更新によるアプリの自動再読み込み後に行動状態が復元されること、さらにオフライン再読み込み後にも同じ状態が保持されることを検証する。これはブラウザ上の自動テストであり、実機OSによるアプリ停止・再開やストレージ容量不足時の挙動までは保証しない。
+Playwrightは本番ビルドを配信するPreviewサーバーに対して実行する。行動確定後のauto slotをIndexedDBから読み、Service Worker更新によるアプリの自動再読み込み後に行動状態が復元されること、さらにオフライン再読み込み後にも同じ状態が保持されることを検証する。PR #23のChromium E2Eではバックアップ3世代の保持、4回目のローテーション、作成後のauto不変、復元成功、確認キャンセル、saveVersion 2 migration、未知version拒否を確認する。これはブラウザ上の自動テストであり、実機OSによるアプリ停止・再開やストレージ容量不足時の挙動までは保証しない。
 
 
 ## 9. セーブファイル
@@ -67,3 +68,12 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 - 未対応形式・不正JSON・不正snapshot・未知の章IDは拒否し、確認ダイアログおよび検証が完了するまで既存auto slotを変更しない。
 - 読み込み確定後にだけauto slotを置き換える。IndexedDBのschemaとGameStateSnapshot saveVersionは変更しない。
 - JSONファイルは平文であり暗号化されない。共有・保管先に注意する。
+
+## 10. ローカルバックアップ世代
+
+- 手動バックアップは既存の `game-saves` object store と `slotId` key pathを再利用し、`backup-1`（最新）から `backup-3`（最古）までの3世代を保持する。各レコードは既存slotと同じ `slotId`、`savedAt`、`data` を持つ。
+- ユーザーが明示的に作成した時点のauto snapshotを第1世代へコピーする。既存の第1・第2世代を第2・第3世代へ移し、既存の最古世代を破棄する。4回目以降も同じ規則を繰り返す。
+- 世代の削除・移動・新規書き込みは単一のIndexedDB `readwrite` transactionで行う。transactionがabortした場合は全変更がロールバックされる。auto slotは書き換えない。読み込み・検証したsnapshotとtransaction内のauto dataが一致しない場合は作成を中止する。
+- 一覧には世代番号、作成日時、章名、章IDを表示する。バックアップを復元する前に章IDを解決し、既存のsaveVersion migrationとsnapshot／map validatorを通す。不正形式や未知versionは拒否する。
+- 復元は確認後にだけauto slotを置き換える。書き込みtransaction内でも選択されたバックアップレコードの内容を再確認し、変更・削除されていれば中止する。確認キャンセルでは保存データも画面状態も変更しない。`phase: enemy` のデータは既存の敵軍フェイズ復旧処理に従う。
+- IndexedDB versionは1、GameStateSnapshot `saveVersion`は3のまま。JSON export/import envelopeとも独立し、追加依存はない。バックアップは同じブラウザ内のローカル保存であり、暗号化・改ざん防止・クラウド同期を提供しない。
