@@ -64,7 +64,7 @@
 | Service Worker更新・自動再読み込み後のセーブ復元E2E | 実装済み（PR #21、CI run #408で更新／オンライン／オフライン復元を検証） | `e2e/pwa-preview-server.mjs`, `e2e/pwa.spec.ts` |
 | ローカルセーブのJSON書き出し／読み込み | 実装済み（PR #22でmainへマージ済み。バージョン付きJSON、章・マップ・saveVersion検証、上書き前確認、不正ファイルによる既存セーブ保護） | `src/persistence/save-file.ts`, `src/persistence/save-file.test.ts`, `src/App.tsx`, `e2e/pwa.spec.ts` |
 | ローカルセーブの3世代バックアップ | 実装済み（PR #23でmainへマージ済み。最大3世代、4回目の最古ローテーション、auto不変、確認付き復元、migration／validatorによる不正データ拒否） | `src/persistence/save-repository.ts`, `src/App.tsx`, `e2e/pwa.spec.ts` |
-| 狭幅スマートフォンのマップ操作 | PR #44で対応中（320px幅で各マス40pxを維持し、マップ領域内の横スクロールとキーボード操作を提供。ページ全体の横はみ出しなし） | `src/App.tsx`, `src/styles.css`, `e2e/campaign.spec.ts` |
+| 狭幅スマートフォンのマップ操作 | PR #44で対応中（320px幅で各マス40pxを維持し、マップ領域内の横スクロール・キーボード操作・タッチ入力によるユニット選択を提供。ページ全体の横はみ出しなし） | `src/App.tsx`, `src/styles.css`, `e2e/campaign.spec.ts` |
 | UI／スマートフォン実機確認 | 未実施（Chromium E2Eは実機のタッチ操作・OS表示を代替しない） | — |
 
 ## 3. 検証コマンド
