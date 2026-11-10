@@ -57,7 +57,9 @@ describe("applyClassPromotion", () => {
       },
       currentHp: 12,
       inventory: ["iron_sword", "promotion_seal"],
-      equippedWeaponId: "iron_sword"
+      equippedWeaponId: "iron_sword",
+      hasMoved: false,
+      hasActed: true
     });
     expect(result.consumedItemId).toBe("promotion_seal");
     expect(result.appliedBonuses).toEqual({ hp: 3, strength: 2, speed: 1 });
@@ -104,6 +106,16 @@ describe("applyClassPromotion", () => {
     expect(() => applyClassPromotion(eligibleUnit({ level: 9 }), definition())).toThrow(/level 10/);
     expect(() => applyClassPromotion(eligibleUnit({ faction: "enemy" }), definition())).toThrow(/player units/);
     expect(() => applyClassPromotion(eligibleUnit({ classId: "archer" }), definition())).toThrow(/current class/);
+  });
+
+  it("rejects units that have moved or acted before promotion", () => {
+    expect(() =>
+      applyClassPromotion(eligibleUnit({ hasMoved: true }), definition())
+    ).toThrow(/must not have moved or acted/);
+
+    expect(() =>
+      applyClassPromotion(eligibleUnit({ hasActed: true }), definition())
+    ).toThrow(/must not have moved or acted/);
   });
 
   it("requires the class-change item and does not consume an equipped weapon", () => {
