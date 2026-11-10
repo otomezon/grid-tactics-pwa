@@ -35,13 +35,7 @@ describe("getBattleResultDetails", () => {
   it("shows only living deployed players with their current progression and HP", () => {
     const state: GameStateSnapshot = {
       ...INITIAL_GAME_STATE,
-      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_002"),
-      reserveUnits: [
-        {
-          ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_004")!,
-          faction: undefined as never
-        }
-      ]
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_002")
     };
 
     const details = getBattleResultDetails(state, CHAPTER_01_MAP, INITIAL_GAME_STATE);
