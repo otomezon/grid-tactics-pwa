@@ -70,4 +70,34 @@ describe("applyChapterRewards with the class-promotion item", () => {
     expect(state.units.find((unit) => unit.id === "unit_001")?.inventory)
       .not.toContain(PROMOTION_ITEM_ID);
   });
+  it("does not partially apply earlier rewards when a later reward in the same batch is rejected", () => {
+    const state = clearedState();
+    state.units = state.units.map((unit) =>
+      unit.id === "unit_001"
+        ? {
+            ...unit,
+            inventory: ["iron_sword", "item_02", "item_03", "item_04"]
+          }
+        : unit
+    );
+    const originalState = structuredClone(state);
+
+    expect(() => applyChapterRewards(state, CHAPTER_01_MAP, [
+      {
+        recipientUnitId: "unit_001",
+        itemId: PROMOTION_ITEM_ID,
+        quantity: 1
+      },
+      {
+        recipientUnitId: "unit_001",
+        itemId: PROMOTION_ITEM_ID,
+        quantity: 1
+      }
+    ])).toThrow(/does not have enough free slots/);
+
+    expect(state).toEqual(originalState);
+    expect(state.units.find((unit) => unit.id === "unit_001")?.inventory)
+      .not.toContain(PROMOTION_ITEM_ID);
+  });
+
 });
