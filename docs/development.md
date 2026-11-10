@@ -43,7 +43,7 @@ npm run preview
 - `test`: Vitest単体テスト。
 - `build`: 型チェック後にVite本番ビルド。PWA manifest／Service Workerも生成対象。
 - `preview`: build後の成果物をローカルで確認。
-- `test:e2e`: PlaywrightでVite Previewサーバー（事前に生成した本番ビルド）を起動し、Chromiumで出撃準備・控え名簿保存・行動状態復元・敵軍フェイズ・モバイル幅・PWA manifest／Service Worker／オフライン起動を確認する。`playwright.config.ts` と `e2e/` が定義元。
+- `test:e2e`: Playwrightで `e2e/pwa-preview-server.mjs` を起動し、Vite Previewが事前に生成した本番ビルドを配信する。Chromiumで出撃準備・控え名簿保存・行動状態復元・敵軍フェイズ・モバイル幅・PWA manifest／Service Worker／オフライン起動・Service Worker更新時の自動再読み込みとセーブ復元を確認する。`playwright.config.ts` と `e2e/` が定義元。テストサーバーにある `/__test/force-sw-update` はテスト中だけ `dist/sw.js` にコメントを追記し、Service Workerの更新検知を発生させる専用エンドポイントである。
 
 ## 4. CI
 
@@ -51,7 +51,7 @@ npm run preview
 
 ## 5. PWA
 
-`vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。実際のインストール・オフライン動作・更新挙動はHTTPS配信または対応するローカル環境で実機確認すること。
+`vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。CIのブラウザE2Eでは、本番Preview上でmanifest・制御状態・precache・オフライン起動に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。
 
 ## 6. 環境変数・外部サービス・デプロイ
 

@@ -40,7 +40,7 @@
 - 起動時に `phase: enemy` のセーブがあれば、敵軍処理を再開して結果を保存
 - 出撃準備確定時：選択された出撃ユニットと控え名簿を同じsnapshotで保存
 
-敵軍フェイズのAI解決は同期的に状態を作成してから保存する。ブラウザ統合テストでは、フェイズ開始状態から再開して二重行動が発生しないことを確認する必要がある。
+敵軍フェイズのAI解決は同期的に状態を作成してから保存する。PlaywrightのブラウザE2Eでは、行動確定後のIndexedDB保存と再読み込み後の復元、Service Worker更新時の自動再読み込み後の復元を確認する。
 
 ## 5. 検証
 
@@ -52,4 +52,9 @@ saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、戦闘ユニ
 
 ## 7. 未実装
 
-複数slot、backup世代、export/import、IndexedDBブラウザ統合テスト、quota超過・private browsing時の復旧案内、敵軍フェイズ中の各行動ごとの個別autosave。
+複数slot、backup世代、export/import、quota超過・private browsing時の復旧案内、敵軍フェイズ中の各行動ごとの個別autosave。
+
+
+## 8. ブラウザ統合テスト
+
+Playwrightは本番ビルドを配信するPreviewサーバーに対して実行する。行動確定後のauto slotをIndexedDBから読み、Service Worker更新によるアプリの自動再読み込み後に行動状態が復元されること、さらにオフライン再読み込み後にも同じ状態が保持されることを検証する。これはブラウザ上の自動テストであり、実機OSによるアプリ停止・再開やストレージ容量不足時の挙動までは保証しない。
