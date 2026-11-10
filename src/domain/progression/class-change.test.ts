@@ -36,7 +36,7 @@ function definition(overrides: Partial<ClassPromotionDefinition> = {}): ClassPro
     requiredItemId: "promotion_seal",
     statBonuses: { hp: 3, strength: 2, speed: 1 },
     statCaps: caps,
-    experiencePolicy: "reset",
+    experiencePolicy: "preserve",
     ...overrides
   };
 }
@@ -49,7 +49,7 @@ describe("applyClassPromotion", () => {
     expect(result.unit).toMatchObject({
       classId: "swordmaster",
       level: 1,
-      experience: 0,
+      experience: 45,
       stats: {
         hp: unit.stats.hp + 3,
         strength: unit.stats.strength + 2,
@@ -75,6 +75,17 @@ describe("applyClassPromotion", () => {
 
     expect(result.unit.level).toBe(1);
     expect(result.unit.experience).toBe(73);
+  });
+
+  it("preserves the full partial-EXP range at promotion boundaries", () => {
+    for (const experience of [0, 99]) {
+      const result = applyClassPromotion(
+        eligibleUnit({ experience }),
+        definition()
+      );
+      expect(result.unit.level).toBe(1);
+      expect(result.unit.experience).toBe(experience);
+    }
   });
 
   it("caps bonus gains without reducing an existing stat above the new cap", () => {
@@ -148,6 +159,6 @@ describe("applyClassPromotion", () => {
         eligibleUnit(),
         definition({ experiencePolicy: "unknown" as "preserve" })
       )
-    ).toThrow(/experience/);
+    ).toThrow(/preserve partial experience/);
   });
 });
