@@ -2,7 +2,7 @@
 
 ## 1. 現在の構成
 
-PR #1〜#22で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択、候補詳細、ブラウザE2E、PWA更新検証、JSONセーブexport/importをmainに追加した。PR #23では3世代ローカルバックアップと復元を追加中。
+PR #1〜#23で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択、候補詳細、ブラウザE2E、PWA更新検証、JSONセーブexport/import、3世代ローカルバックアップ／復元をmainに追加した。PR #23のマージコミット: `f283e38c67c4b4c822e47d93d54d7b7941b0abac`。
 
 ```text
 src/
@@ -51,7 +51,7 @@ src/
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、敵AI／フェイズ進行 | 出撃準備は開発ブランチで実装中。報酬は章データで明示したアイテムのみ適用 |
 | ui | 章別マップ、戦闘UI、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルは開発ブランチ。第2章は遷移検証用 |
-| persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2→3 migration、JSON export/import | export/importはmain実装済み。3世代backup／復元はPR #23で実装・CI検証済み、レビュー待ち。DB version／saveVersionは据え置き |
+| persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2→3 migration、JSON export/import | 3世代backup／復元、export/importともmain実装済み。PR #23で最大3世代の保持、最古世代ローテーション、auto不変、確認付き復元をCI検証。DB version／saveVersionは据え置き |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
 ## 3. 現在のデータフロー
