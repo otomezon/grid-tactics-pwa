@@ -481,6 +481,7 @@ test.describe("browser campaign flow", () => {
         name: "戦闘マップ。狭い画面では左右にスクロールできます"
       });
       await expect(viewport).toBeVisible();
+      await viewport.scrollIntoViewIfNeeded();
 
       const bounds = await viewport.boundingBox();
       if (!bounds) throw new Error("The map viewport has no visible bounds.");
@@ -516,6 +517,8 @@ test.describe("browser campaign flow", () => {
 
       const rightSideUnit = page.locator(".map-grid").getByRole("button", { name: /味方04/ });
       await expect(rightSideUnit).toBeVisible();
+      // Let the touch scroll settle before measuring the target's final on-screen bounds.
+      await page.waitForTimeout(500);
       const [viewportBounds, unitBounds] = await Promise.all([
         viewport.boundingBox(),
         rightSideUnit.boundingBox()
@@ -523,9 +526,9 @@ test.describe("browser campaign flow", () => {
       if (!viewportBounds || !unitBounds) throw new Error("The viewport or right-side unit has no visible bounds.");
       expect(unitBounds.x).toBeGreaterThanOrEqual(viewportBounds.x);
       expect(unitBounds.x + unitBounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width);
+      expect(unitBounds.y).toBeGreaterThanOrEqual(0);
+      expect(unitBounds.y + unitBounds.height).toBeLessThanOrEqual(720);
 
-      // Let the touch scroll settle before starting a separate tap gesture.
-      await page.waitForTimeout(500);
       const tapPoint = {
         x: unitBounds.x + unitBounds.width / 2,
         y: unitBounds.y + unitBounds.height / 2
