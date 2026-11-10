@@ -122,6 +122,7 @@ test.describe("browser campaign flow", () => {
       units: Array<{
         id: string;
         level: number;
+        experience: number;
         inventory: string[];
         hasMoved: boolean;
         hasActed: boolean;
@@ -132,6 +133,7 @@ test.describe("browser campaign flow", () => {
     if (!preparedUnit) throw new Error("Promotion test unit is missing from the auto save.");
 
     preparedUnit.level = 10;
+    preparedUnit.experience = 73;
     preparedUnit.inventory = [...preparedUnit.inventory, "promotion_seal"];
     preparedUnit.hasMoved = true;
     preparedUnit.hasActed = false;
@@ -150,7 +152,9 @@ test.describe("browser campaign flow", () => {
     await page.getByRole("button", { name: /味方01/ }).click();
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
-    await expect(confirmation).toContainText("昇格後は行動済みになります");
+    await expect(confirmation).toContainText("能力ボーナス（暫定）");
+    await expect(confirmation).toContainText("レベルは1に戻り、現在EXPは保持します。");
+    await expect(confirmation).toContainText("証を1個消費し、昇格後は行動済みになります");
 
     const beforeCancel = await readAutoSave(page);
     await confirmation.getByRole("button", { name: "キャンセル" }).click();
@@ -159,7 +163,9 @@ test.describe("browser campaign flow", () => {
 
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmedAgain = page.getByRole("group", { name: "クラスチェンジ確認" });
-    await expect(confirmedAgain).toContainText("昇格後は行動済みになります");
+    await expect(confirmedAgain).toContainText("能力ボーナス（暫定）");
+    await expect(confirmedAgain).toContainText("レベルは1に戻り、現在EXPは保持します。");
+    await expect(confirmedAgain).toContainText("証を1個消費し、昇格後は行動済みになります");
     await confirmedAgain.getByRole("button", { name: "昇格を確定" }).click();
     await expect(page.getByRole("status")).toContainText("このフェイズの行動を消費しました");
 
@@ -168,6 +174,7 @@ test.describe("browser campaign flow", () => {
         id: string;
         classId: string;
         level: number;
+        experience: number;
         hasMoved: boolean;
         hasActed: boolean;
         inventory: string[];
@@ -176,6 +183,7 @@ test.describe("browser campaign flow", () => {
     expect(promotedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
       classId: "swordmaster",
       level: 1,
+      experience: 73,
       hasMoved: false,
       hasActed: true
     });
