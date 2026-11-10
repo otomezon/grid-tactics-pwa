@@ -22,7 +22,7 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: "npm run preview -- --host 127.0.0.1 --port 4173 --strictPort",
+    command: "node e2e/pwa-preview-server.mjs",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000
