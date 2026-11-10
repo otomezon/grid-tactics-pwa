@@ -591,3 +591,28 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
     rgba(255, 207, 160, .3) 3px 6px
   );
 }
+
+.result-detail-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(18, 31, 43, .55);
+  font-size: .76rem;
+  font-variant-numeric: tabular-nums;
+}
+.result-player-row { grid-template-columns: minmax(80px, 1fr) auto auto auto auto; }
+.result-detail-row strong { color: #edf3f7; }
+.result-detail-row span { color: var(--text-muted); white-space: nowrap; }
+.result-detail-row .result-status-alive { color: #a9dfd0; }
+.result-detail-row .result-status-defeated { color: #f0b6a8; }
+@media (max-width: 480px) {
+  .result-detail-row,
+  .result-player-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .result-detail-row strong { grid-column: 1 / -1; }
+  .result-detail-row span { white-space: normal; }
+}
