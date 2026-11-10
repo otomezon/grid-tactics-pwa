@@ -481,11 +481,12 @@ test.describe("browser campaign flow", () => {
         name: "戦闘マップ。狭い画面では左右にスクロールできます"
       });
       await expect(viewport).toBeVisible();
+      await viewport.scrollIntoViewIfNeeded();
 
       const bounds = await viewport.boundingBox();
       if (!bounds) throw new Error("The map viewport has no visible bounds.");
-      const startX = bounds.x + bounds.width * 0.82;
-      const endX = bounds.x + bounds.width * 0.22;
+      const startX = bounds.x + bounds.width * 0.95;
+      const endX = bounds.x + bounds.width * 0.05;
       const centerY = bounds.y + bounds.height / 2;
       const client = await context.newCDPSession(page);
 
@@ -513,6 +514,34 @@ test.describe("browser campaign flow", () => {
       await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
       const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(documentWidth).toBeLessThanOrEqual(320);
+
+      const rightSideUnit = page.locator(".map-grid").getByRole("button", { name: /味方04/ });
+      await expect(rightSideUnit).toBeVisible();
+      // Let the touch scroll settle before measuring the target's final on-screen bounds.
+      await page.waitForTimeout(500);
+      const [viewportBounds, unitBounds] = await Promise.all([
+        viewport.boundingBox(),
+        rightSideUnit.boundingBox()
+      ]);
+      if (!viewportBounds || !unitBounds) throw new Error("The viewport or right-side unit has no visible bounds.");
+      expect(unitBounds.x).toBeGreaterThanOrEqual(viewportBounds.x);
+      expect(unitBounds.x + unitBounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width);
+      expect(unitBounds.y).toBeGreaterThanOrEqual(0);
+      expect(unitBounds.y + unitBounds.height).toBeLessThanOrEqual(720);
+
+      const tapPoint = {
+        x: unitBounds.x + unitBounds.width / 2,
+        y: unitBounds.y + unitBounds.height / 2
+      };
+      const hitTarget = await page.evaluate(({ x, y }) => {
+        const element = document.elementFromPoint(x, y);
+        return element?.closest("button")?.getAttribute("aria-label") ?? null;
+      }, tapPoint);
+      expect(hitTarget).toContain("味方04");
+
+      await page.touchscreen.tap(tapPoint.x, tapPoint.y);
+      await expect(rightSideUnit).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator(".unit-heading")).toContainText("味方04");
     } finally {
       await context.close();
     }
