@@ -96,6 +96,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - `enemy-ai.md`: phase progression, AI scoring, outcomes, and open decisions.
 - `progression.md`: EXP rewards, growth checks, provisional stat caps, and stage results.
 - `class-promotion.md`: class-promotion design basis, unresolved decisions, save compatibility, and implementation plan.
+- `class-promotion-balance-worksheet.md`: unapproved class stat-cap / promotion-bonus / movement / weapon worksheet and playtest record.
 - `development.md`: confirmed commands and CI.
 - `database.md`: IndexedDB schema and migrations.
 - `current-state.md`: feature/test status.
