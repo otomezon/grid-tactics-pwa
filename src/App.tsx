@@ -1388,7 +1388,7 @@ export default function App() {
               )}
             </>
           )}
-          <div className="result-units">
+          <div className="result-units" data-testid="result-enemy-roster">
             <h2>敵軍の状況</h2>
             {battleResultDetails && battleResultDetails.enemies.length > 0 ? (
               battleResultDetails.enemies.map((enemy) => (
