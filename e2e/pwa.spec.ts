@@ -313,8 +313,10 @@ test.describe("production PWA shell", () => {
 
     for (const turn of [2, 3, 4]) {
       await setAutoSaveTurn(page, turn);
+      const autoSaveBeforeBackup = await readAutoSave(page);
       await page.getByTestId("create-save-backup").click();
       await expect(page.getByRole("status")).toContainText("バックアップを作成しました。");
+      expect(await readAutoSave(page)).toEqual(autoSaveBeforeBackup);
     }
 
     const backups = await readBackupRecords(page);
@@ -358,6 +360,49 @@ test.describe("production PWA shell", () => {
           const request = store.get("backup-1");
           request.onsuccess = () => {
             const record = request.result as { slotId: string; savedAt: number; data: Record<string, unknown> };
+            const legacyData = { ...record.data, saveVersion: 2 };
+            delete legacyData.reserveUnits;
+            store.put({ ...record, data: legacyData });
+          };
+          request.onerror = () => reject(request.error ?? new Error("Could not read backup for migration test."));
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error ?? new Error("Could not prepare legacy backup."));
+          transaction.onabort = () => reject(transaction.error ?? new Error("Legacy backup update was aborted."));
+        });
+      } finally {
+        database.close();
+      }
+    });
+
+    page.once("dialog", async (dialog) => {
+      expect(dialog.message()).toContain("現在の自動セーブを置き換えます");
+      await dialog.accept();
+    });
+    await page.getByTestId("restore-backup-1").click();
+    await expect(page.getByRole("status")).toContainText("旧形式のバックアップを変換して復元しました。");
+    const migratedAutoSave = await readAutoSave(page) as {
+      turn: number;
+      saveVersion: number;
+      reserveUnits: unknown[];
+    };
+    expect(migratedAutoSave.turn).toBe(4);
+    expect(migratedAutoSave.saveVersion).toBe(3);
+    expect(migratedAutoSave.reserveUnits).toEqual([]);
+    await expect(page.locator(".phase-badge")).toHaveText("第4ターン · 自軍フェイズ");
+
+    await page.evaluate(async () => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("grid-tactics-pwa", 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error("Could not open save database."));
+      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const transaction = database.transaction("game-saves", "readwrite");
+          const store = transaction.objectStore("game-saves");
+          const request = store.get("backup-1");
+          request.onsuccess = () => {
+            const record = request.result as { slotId: string; savedAt: number; data: Record<string, unknown> };
             store.put({ ...record, data: { ...record.data, saveVersion: 99 } });
           };
           request.onerror = () => reject(request.error ?? new Error("Could not read backup to corrupt."));
@@ -374,7 +419,7 @@ test.describe("production PWA shell", () => {
     await page.getByTestId("restore-backup-1").click();
     await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");
     expect(await readAutoSave(page)).toEqual(autoSaveBeforeInvalidRestore);
-    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
+    await expect(page.locator(".phase-badge")).toHaveText("第4ターン · 自軍フェイズ");
   });
 
 });
