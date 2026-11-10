@@ -11,6 +11,7 @@
 | [enemy-ai.md](enemy-ai.md) | 敵AI、フェイズ進行、勝敗判定、暫定スコア | AI行動・ターン進行・目標変更時 |
 | [progression.md](progression.md) | 経験値報酬・レベルアップ・クラス上限・リザルト | EXP・成長・クラス能力上限の変更時 |
 | [class-promotion.md](class-promotion.md) | クラスチェンジの設計根拠、未決定事項、互換性、実装計画 | 昇格条件・能力値・クラス性能・アイテム配布を決定／変更した時 |
+| [class-promotion-balance-worksheet.md](class-promotion-balance-worksheet.md) | 14クラスの能力上限、7経路の昇格ボーナス、移動／武器データ、プレイテスト記録の入力表 | クラス数値・性能の検討／承認時 |
 | [development.md](development.md) | 実際の開発環境、セットアップ、テスト、CI | ツールや手順が変更された時 |
 | [database.md](database.md) | IndexedDBの実スキーマ、saveVersion、マイグレーション | 保存形式・マイグレーション変更時 |
 | [security.md](security.md) | 実装済み対策、未確認事項、運用上の注意 | 認証・保存・外部接続・配信変更時 |
