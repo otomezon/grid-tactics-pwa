@@ -103,6 +103,79 @@ test.describe("production PWA shell", () => {
     await expect(page.getByRole("heading", { name: "Grid Tactics" })).toBeVisible();
   });
 
+
+  test("exports a battle save and restores it in a fresh browser context", async ({ page, browser }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
+
+    await expect.poll(async () => {
+      const savedState = await readAutoSave(page) as {
+        units?: Array<{ faction?: string; hasActed?: boolean }>;
+      } | null;
+      return savedState?.units?.some((unit) => unit.faction === "player" && unit.hasActed) ?? false;
+    }).toBe(true);
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "セーブを書き出す" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^grid-tactics-chapter-01-.*\.json$/);
+    const filePath = await download.path();
+    expect(filePath).toBeTruthy();
+
+    const freshContext = await browser.newContext({ baseURL: "http://127.0.0.1:4173" });
+    try {
+      const importPage = await freshContext.newPage();
+      await importPage.goto("/");
+      await expect(importPage.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+      importPage.on("dialog", (dialog) => dialog.accept());
+
+      await importPage.locator('[data-testid="save-import-input"]').setInputFiles(filePath!);
+      await expect(importPage.getByRole("status")).toContainText("セーブファイルからゲーム状態を復元しました。");
+      await expect(importPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+      await importPage.getByRole("button", { name: /味方01/ }).click();
+      await expect(importPage.locator(".unit-details")).toContainText("行動済み");
+
+      const importedState = await readAutoSave(importPage) as {
+        units: Array<{ faction: string; hasActed: boolean }>;
+      };
+      expect(importedState.units.some((unit) => unit.faction === "player" && unit.hasActed)).toBe(true);
+    } finally {
+      await freshContext.close();
+    }
+  });
+
+  test("rejects an invalid save file without overwriting the current autosave", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
+
+    const originalSave = await readAutoSave(page);
+    expect(originalSave).not.toBeNull();
+
+    const invalidFile = {
+      name: "invalid-grid-tactics-save.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({
+        format: "grid-tactics-pwa-save",
+        formatVersion: 1,
+        exportedAt: "2026-11-10T12:00:00.000Z",
+        data: { saveVersion: 99, chapterId: "chapter_01_map" }
+      }))
+    };
+    await page.locator('[data-testid="save-import-input"]').setInputFiles(invalidFile);
+    await expect(page.getByRole("status")).toContainText("現在の章マップまたは保存形式と一致しません。");
+    expect(await readAutoSave(page)).toEqual(originalSave);
+  });
+
   test("reloads for a service-worker update without losing the autosaved battle state", async ({ page, context }) => {
     await page.addInitScript((key) => {
       const currentCount = Number(sessionStorage.getItem(key) ?? "0");

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
@@ -22,8 +22,11 @@ import type { LevelUpRecord } from "./domain/progression/level-up";
 import { createRandomSeed } from "./domain/random/xorshift32";
 import { migrateGameStateSnapshot } from "./persistence/migrations";
 import { loadGameState, saveGameState } from "./persistence/save-repository";
+import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
+
+const MAX_SAVE_FILE_BYTES = 1024 * 1024;
 
 const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
   loading: "読み込み中",
@@ -255,6 +258,7 @@ export default function App() {
     () => createDeploymentSelection(INITIAL_CHAPTER.initialState, INITIAL_CHAPTER.map)
   );
   const [deploymentDetailUnitId, setDeploymentDetailUnitId] = useState<string | null>(null);
+  const importSaveFileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -445,6 +449,118 @@ export default function App() {
     } catch {
       setSaveStatus("failed");
       setMessage("行動は画面に反映されましたが、セーブに失敗しました。ストレージ設定を確認してください。");
+    }
+  }
+
+  async function handleExportSaveFile(): Promise<void> {
+    try {
+      const stored = await loadGameState();
+      if (stored === null) {
+        setMessage("書き出せる自動セーブデータがありません。");
+        return;
+      }
+
+      const savedChapterId = typeof stored === "object" && stored !== null &&
+        "chapterId" in stored && typeof stored.chapterId === "string"
+        ? stored.chapterId
+        : null;
+      const chapter = savedChapterId ? getChapterById(savedChapterId) : undefined;
+      const migration = chapter ? migrateGameStateSnapshot(stored, chapter.map) : null;
+      if (!chapter || !migration) {
+        throw new Error("保存データの形式または章IDを検証できません。");
+      }
+
+      const fileContent = createSaveFileContent(migration.snapshot);
+      const blob = new Blob([fileContent], { type: "application/json;charset=utf-8" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const safeChapterId = migration.snapshot.chapterId.replace(/[^a-z0-9-]/gi, "-");
+      const date = new Date().toISOString().slice(0, 10);
+      link.href = downloadUrl;
+      link.download = "grid-tactics-" + safeChapterId + "-" + date + ".json";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1_000);
+      setMessage("セーブデータを書き出しました。ファイルを別の場所にも保管してください。");
+    } catch (error) {
+      setMessage("セーブデータの書き出しに失敗しました。" + getErrorMessage(error));
+    }
+  }
+
+  async function handleImportSaveFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+
+    if (file.size > MAX_SAVE_FILE_BYTES) {
+      setMessage("セーブファイルが大きすぎます。1 MiB以下のJSONファイルを選択してください。");
+      return;
+    }
+
+    let chapter: ReturnType<typeof getChapterById>;
+    let migration: ReturnType<typeof migrateGameStateSnapshot>;
+    try {
+      const fileContent = await file.text();
+      const importedData = parseSaveFileContent(fileContent);
+      const chapterId = typeof importedData === "object" && importedData !== null &&
+        "chapterId" in importedData && typeof importedData.chapterId === "string"
+        ? importedData.chapterId
+        : null;
+      chapter = chapterId ? getChapterById(chapterId) : undefined;
+      if (!chapter) {
+        throw new Error("ファイル内の章IDが現在のコンテンツに存在しません。");
+      }
+      migration = migrateGameStateSnapshot(importedData, chapter.map);
+      if (!migration) {
+        throw new Error("ファイル内のセーブデータが現在の章マップまたは保存形式と一致しません。");
+      }
+    } catch (error) {
+      setMessage("セーブファイルを読み込めませんでした。" + getErrorMessage(error));
+      return;
+    }
+
+    const confirmed = window.confirm(
+      chapter.title + "のセーブデータで、現在の自動セーブを上書きします。先に現在のセーブを書き出しましたか？"
+    );
+    if (!confirmed) return;
+
+    setSaveStatus("saving");
+    try {
+      let importedState = migration.snapshot;
+      let importMessage = migration.migrated
+        ? "旧形式のセーブを変換して読み込みました。"
+        : "セーブファイルからゲーム状態を復元しました。";
+
+      if (importedState.phase === "enemy") {
+        const enemyPhase = runEnemyPhase(importedState, chapter.map);
+        importedState = enemyPhase.nextState;
+        importMessage = formatEnemyPhaseSummary(enemyPhase, chapter.map);
+      } else {
+        const outcome = evaluateBattleOutcome(importedState, chapter.map);
+        if (outcome === "victory") {
+          importMessage = "勝利条件を達成したセーブデータを復元しました。";
+        } else if (outcome === "defeat") {
+          importMessage = formatDefeatMessage(chapter.map);
+        }
+      }
+
+      await saveGameState(importedState);
+      setActiveChapter(chapter);
+      setGameState(importedState);
+      setDeploymentAssignments(createDeploymentAssignments(importedState, chapter.map));
+      setDeploymentSelectedUnitIds(createDeploymentSelection(importedState, chapter.map));
+      setDeploymentPending(false);
+      setSelectedUnitId(null);
+      setCombatTargetId(null);
+      setPromotionConfirmUnitId(null);
+      setDeploymentDetailUnitId(null);
+      setLoadBlocked(false);
+      setSaveStatus("saved");
+      setMessage(importMessage);
+    } catch (error) {
+      setSaveStatus("failed");
+      setMessage("セーブファイルの保存に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
     }
   }
 
@@ -844,6 +960,31 @@ export default function App() {
         <div className="header-status">
           <span className="phase-badge">{deploymentPending ? "出撃準備" : battleOutcome === "victory" ? "勝利" : battleOutcome === "defeat" ? "敗北" : "第" + gameState.turn + "ターン · " + (gameState.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ")}</span>
           <span className={"save-badge save-" + saveStatus}>{SAVE_STATUS_LABELS[saveStatus]}</span>
+          <button
+            className="secondary-button save-file-button"
+            type="button"
+            disabled={saveStatus !== "saved"}
+            onClick={() => void handleExportSaveFile()}
+          >
+            セーブを書き出す
+          </button>
+          <button
+            className="secondary-button save-file-button"
+            type="button"
+            disabled={saveStatus === "loading" || saveStatus === "saving"}
+            onClick={() => importSaveFileInput.current?.click()}
+          >
+            セーブを読み込む
+          </button>
+          <input
+            ref={importSaveFileInput}
+            className="save-file-input"
+            data-testid="save-import-input"
+            type="file"
+            accept="application/json,.json"
+            aria-label="読み込むセーブファイル"
+            onChange={(event) => void handleImportSaveFile(event)}
+          />
           {battleOutcome === "playing" && gameState.phase === "player" && (
             <button className="secondary-button phase-end-button" type="button" disabled={!interactive} onClick={() => void handleEndPlayerPhase()}>
               自軍フェイズ終了
