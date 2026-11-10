@@ -26,6 +26,8 @@ h2 { margin-bottom: 0; font-size: 1.1rem; }
 h3 { margin: 0 0 3px; font-size: 1rem; }
 .subtitle { margin-bottom: 0; color: var(--text-muted); font-size: .9rem; }
 .header-status { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.save-file-button { min-height: 32px; padding: 6px 10px; font-size: .74rem; }
+.save-file-input { display: none; }
 .phase-badge, .save-badge, .map-size {
   display: inline-flex; align-items: center; min-height: 32px; padding: 6px 11px;
   border: 1px solid var(--line); border-radius: 999px; color: #dce8ed;

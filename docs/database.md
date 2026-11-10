@@ -52,9 +52,18 @@ saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、戦闘ユニ
 
 ## 7. 未実装
 
-複数slot、backup世代、export/import、quota超過・private browsing時の復旧案内、敵軍フェイズ中の各行動ごとの個別autosave。
+複数slot、backup世代、quota超過・private browsing時の復旧案内、敵軍フェイズ中の各行動ごとの個別autosave。
 
 
 ## 8. ブラウザ統合テスト
 
 Playwrightは本番ビルドを配信するPreviewサーバーに対して実行する。行動確定後のauto slotをIndexedDBから読み、Service Worker更新によるアプリの自動再読み込み後に行動状態が復元されること、さらにオフライン再読み込み後にも同じ状態が保持されることを検証する。これはブラウザ上の自動テストであり、実機OSによるアプリ停止・再開やストレージ容量不足時の挙動までは保証しない。
+
+
+## 9. セーブファイル
+
+- 自動セーブslotのスナップショットを、形式識別子 `grid-tactics-pwa-save` とファイル形式version 1を持つJSONファイルとして書き出す。
+- 読み込み時はJSON envelope、形式version、exportedAt、章ID、既存のsaveVersion 1／2／3 migration、章マップに対するsnapshot validatorを順に検証する。
+- 未対応形式・不正JSON・不正snapshot・未知の章IDは拒否し、確認ダイアログおよび検証が完了するまで既存auto slotを変更しない。
+- 読み込み確定後にだけauto slotを置き換える。IndexedDBのschemaとGameStateSnapshot saveVersionは変更しない。
+- JSONファイルは平文であり暗号化されない。共有・保管先に注意する。
