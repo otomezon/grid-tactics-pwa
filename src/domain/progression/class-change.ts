@@ -19,7 +19,7 @@ export interface ClassPromotionDefinition {
   requiredItemId: string;
   statBonuses: Partial<UnitStats>;
   statCaps: UnitStats;
-  /** The design proposal does not specify whether partial EXP survives promotion. */
+  /** Controls whether the current 0–99 EXP remainder is preserved when the level resets. */
   experiencePolicy: PromotionExperiencePolicy;
 }
 
