@@ -89,6 +89,9 @@ export function applyClassPromotion(
   if (unit.faction !== "player") {
     throw new Error("Only player units can change class.");
   }
+  if (unit.hasMoved || unit.hasActed) {
+    throw new Error("A unit must not have moved or acted before changing class.");
+  }
   if (unit.classId !== definition.fromClassId) {
     throw new Error("The unit's current class does not match this promotion.");
   }
@@ -137,7 +140,8 @@ export function applyClassPromotion(
       experience: definition.experiencePolicy === "reset" ? 0 : unit.experience,
       stats,
       currentHp: unit.currentHp,
-      inventory
+      inventory,
+      hasActed: true
     },
     consumedItemId: definition.requiredItemId,
     appliedBonuses
