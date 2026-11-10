@@ -466,6 +466,58 @@ test.describe("browser campaign flow", () => {
     }
   });
 
+  test("scrolls the narrow map viewport with a horizontal touch gesture at 320px", async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: "http://127.0.0.1:4173",
+      viewport: { width: 320, height: 720 },
+      hasTouch: true
+    });
+
+    try {
+      const page = await context.newPage();
+      await startBattle(page);
+
+      const viewport = page.getByRole("region", {
+        name: "戦闘マップ。狭い画面では左右にスクロールできます"
+      });
+      await expect(viewport).toBeVisible();
+
+      const bounds = await viewport.boundingBox();
+      if (!bounds) throw new Error("The map viewport has no visible bounds.");
+      const startX = bounds.x + bounds.width * 0.82;
+      const endX = bounds.x + bounds.width * 0.22;
+      const centerY = bounds.y + bounds.height / 2;
+      const client = await context.newCDPSession(page);
+
+      try {
+        await client.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: startX, y: centerY, radiusX: 4, radiusY: 4, force: 1 }]
+        });
+        await client.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x: startX - 35, y: centerY, radiusX: 4, radiusY: 4, force: 1 }]
+        });
+        await client.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x: endX, y: centerY, radiusX: 4, radiusY: 4, force: 1 }]
+        });
+        await client.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: []
+        });
+      } finally {
+        await client.detach();
+      }
+
+      await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+      const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+      expect(documentWidth).toBeLessThanOrEqual(320);
+    } finally {
+      await context.close();
+    }
+  });
+
   test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
