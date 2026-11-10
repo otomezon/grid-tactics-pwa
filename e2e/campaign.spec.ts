@@ -169,6 +169,46 @@ test.describe("browser campaign flow", () => {
     await expect(page.getByRole("button", { name: "敵の攻撃範囲を表示" })).toHaveAttribute("aria-pressed", "false");
   });
 
+  test("shows the defeated enemy roster and surviving allies in battle results", async ({ page }) => {
+    await startBattle(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        faction: "player" | "enemy";
+      }>;
+    };
+    const clearedState = {
+      ...preparedState,
+      units: preparedState.units.filter((unit) => unit.faction === "player")
+    };
+    await writeAutoSave(page, clearedState);
+    await page.reload();
+
+    await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
+    const enemyRoster = page.getByTestId("result-enemy-roster");
+    await expect(enemyRoster.locator(".result-enemy-row")).toHaveCount(5);
+    await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("敵01");
+    await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("撃破");
+    await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("HP —");
+    await expect(enemyRoster).toContainText("敵05");
+    await expect(enemyRoster).toContainText("撃破済み敵ユニットの最終HPはセーブデータに残らない");
+
+    const survivingPlayers = page.locator(".result-player-row");
+    await expect(survivingPlayers).toHaveCount(4);
+    await expect(page.getByTestId("result-player-unit_001")).toContainText("味方01");
+    await expect(page.getByTestId("result-player-unit_001")).toContainText("Lv.1");
+    await expect(page.getByTestId("result-player-unit_001")).toContainText("EXP 0/100");
+    await expect(page.getByTestId("result-player-unit_001")).toContainText("HP 20/20");
+    await expect(page.locator(".battle-outcome")).toContainText("撃破者別の戦闘記録は保存していない");
+
+    await page.reload();
+    await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
+    await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("撃破");
+    await expect(page.locator(".result-player-row")).toHaveCount(4);
+  });
+
   test("allows promotion only before movement and consumes the unit action", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 390, height: 844 });
