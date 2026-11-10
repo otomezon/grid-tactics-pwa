@@ -189,28 +189,26 @@ describe("applyClassPromotion", () => {
       resistance: 2
     };
     const originalStats = { ...currentStats };
-    const preview = getClassPromotionStatPreview(
-      currentStats,
-      definition({
-        statBonuses: {
-          hp: 5,
-          strength: 2,
-          magic: 1,
-          skill: 3,
-          speed: 2,
-          luck: 1,
-          defense: 0,
-          resistance: 4
-        },
-        statCaps: {
-          ...caps,
-          hp: 60,
-          strength: 30,
-          skill: 30,
-          speed: 30
-        }
-      })
-    );
+    const promotionDefinition = definition({
+      statBonuses: {
+        hp: 5,
+        strength: 2,
+        magic: 1,
+        skill: 3,
+        speed: 2,
+        luck: 1,
+        defense: 0,
+        resistance: 4
+      },
+      statCaps: {
+        ...caps,
+        hp: 60,
+        strength: 30,
+        skill: 30,
+        speed: 30
+      }
+    });
+    const preview = getClassPromotionStatPreview(currentStats, promotionDefinition);
 
     expect(preview.changes).toHaveLength(8);
     expect(preview.changes).toEqual([
@@ -240,6 +238,12 @@ describe("applyClassPromotion", () => {
       luck: 1,
       resistance: 4
     });
+    const promoted = applyClassPromotion(
+      eligibleUnit({ stats: currentStats }),
+      promotionDefinition
+    );
+    expect(promoted.unit.stats).toEqual(preview.stats);
+    expect(promoted.appliedBonuses).toEqual(preview.appliedBonuses);
     expect(currentStats).toEqual(originalStats);
   });
 
