@@ -554,3 +554,40 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .deployment-unit-actions .deployment-reserve-label { margin-right: auto; }
   .deployment-detail-inventory { grid-template-columns: 1fr; }
 }
+
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+}
+.enemy-threat-toggle { min-height: 40px; }
+.map-threat-help {
+  flex: 1 1 100%;
+  margin: 0;
+  color: #e7c9ab;
+  font-size: .74rem;
+  line-height: 1.5;
+}
+.map-tile.is-enemy-threatened::after {
+  position: absolute;
+  z-index: 0;
+  inset: 2px;
+  border: 1px dashed rgba(255, 207, 160, .96);
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(168, 68, 61, .32) 0 3px,
+    rgba(255, 207, 160, .12) 3px 7px
+  );
+  content: "";
+  pointer-events: none;
+}
+.legend-swatch.enemy-threat {
+  border: 1px dashed #ffd0a3;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(168, 68, 61, .85) 0 3px,
+    rgba(255, 207, 160, .3) 3px 6px
+  );
+}
