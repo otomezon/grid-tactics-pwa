@@ -51,6 +51,7 @@ npm run preview
 - [戦闘システム](docs/combat.md)
 - [敵AI・フェイズ進行](docs/enemy-ai.md)
 - [経験値・レベルアップ・リザルト](docs/progression.md)
+- [クラスチェンジの仕様・判断待ち・実装計画](docs/class-promotion.md)
 - [開発環境・手順](docs/development.md)
 - [データ保存設計](docs/database.md)
 - [セキュリティ](docs/security.md)
