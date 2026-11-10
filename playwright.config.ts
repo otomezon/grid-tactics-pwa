@@ -12,6 +12,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL,
+    serviceWorkers: "allow",
     trace: "retain-on-failure"
   },
   projects: [
@@ -21,7 +22,7 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",
+    command: "npm run preview -- --host 127.0.0.1 --port 4173 --strictPort",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000

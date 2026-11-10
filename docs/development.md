@@ -43,7 +43,7 @@ npm run preview
 - `test`: Vitest単体テスト。
 - `build`: 型チェック後にVite本番ビルド。PWA manifest／Service Workerも生成対象。
 - `preview`: build後の成果物をローカルで確認。
-- `test:e2e`: PlaywrightでVite開発サーバーを起動し、Chromiumで出撃準備・控え名簿保存・行動状態復元・モバイル幅を確認する。`playwright.config.ts` と `e2e/` が定義元。
+- `test:e2e`: PlaywrightでVite Previewサーバー（事前に生成した本番ビルド）を起動し、Chromiumで出撃準備・控え名簿保存・行動状態復元・敵軍フェイズ・モバイル幅・PWA manifest／Service Worker／オフライン起動を確認する。`playwright.config.ts` と `e2e/` が定義元。
 
 ## 4. CI
 

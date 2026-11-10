@@ -5,12 +5,12 @@
 - 更新日: 2026-11-10
 - Repository: `otomezon/grid-tactics-pwa`
 - デフォルトブランチ: `main`
-- PR #1〜#18はすべてマージ済み。PR #16（キャンペーン控え名簿・出撃メンバー選択）のマージコミット: `fcbf021ce3fd978eb026251ff6c6005c0f0350f0`。PR #15（章開始前の出撃配置準備）のマージコミット: `4954d65843d4a9a1d0340a6ac36da50e7e09d408`。PR #14（セーブ内ユニットの出撃名簿照合）のマージコミット: `4a22f50680262808157a1232cc3e66909eee9626`。PR #11（章報酬／次章開始フロー）のマージコミット: `29fc033f11a01dda36768a00a6a3a7476cc6de3b`。PR #12（マップ指定ユニット撃破による敗北条件）のマージコミット: `7d9a25e2472cc5bd42529cfe48cb7b313109bcca`。PR #13（マップ定義検証）のマージコミット: `6a775ad1b0f33d3cd335bec7356728219740d9b7`。
+- PR #1〜#19はすべてマージ済み。PR #16（キャンペーン控え名簿・出撃メンバー選択）のマージコミット: `fcbf021ce3fd978eb026251ff6c6005c0f0350f0`。PR #15（章開始前の出撃配置準備）のマージコミット: `4954d65843d4a9a1d0340a6ac36da50e7e09d408`。PR #14（セーブ内ユニットの出撃名簿照合）のマージコミット: `4a22f50680262808157a1232cc3e66909eee9626`。PR #11（章報酬／次章開始フロー）のマージコミット: `29fc033f11a01dda36768a00a6a3a7476cc6de3b`。PR #12（マップ指定ユニット撃破による敗北条件）のマージコミット: `7d9a25e2472cc5bd42529cfe48cb7b313109bcca`。PR #13（マップ定義検証）のマージコミット: `6a775ad1b0f33d3cd335bec7356728219740d9b7`。
 - PR #4 CI: TypeScript型チェック成功、7 test files／42 tests成功、Vite build／PWA Service Worker生成成功。
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- PR #17（出撃候補のキャラクター詳細・所持武器確認UI）とPR #18（詳細表示データ整形のテスト）はmainへマージ済み。PR #19でPlaywrightによるブラウザE2Eテストを追加し、CI検証済み。次はPWAインストール／オフラインとスマートフォン実機での手動確認。
+- PR #17（出撃候補のキャラクター詳細・所持武器確認UI）とPR #18（詳細表示データ整形のテスト）はmainへマージ済み。PR #19でPlaywrightによるブラウザE2Eテストを追加し、CI検証済み。現在は本番PreviewでのPWA manifest／Service Worker／オフライン起動テストを追加中。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 3`。マップ定義・戦闘ユニット・控え名簿の整合性を検証し、version 1／2から移行する。
 
@@ -57,6 +57,7 @@
 | 章報酬 | データ駆動の適用処理実装済み（章定義のitemId／recipient／quantityを検証して配布。各所持品5枠上限） | `src/application/apply-chapter-rewards.ts`, `src/content/chapters.ts` | 現在登録した試作章の報酬は空配列。実際の報酬内容・数量は未決定 |
 | 第2章マップ | 試作データ実装済み（第1章からの遷移とセーブ復元を確認するための仮配置） | `src/content/maps/chapter-02.ts` | 正式なマップ／敵構成ではない |
 | ブラウザE2E（出撃準備・控え保存・行動状態復元・敵軍フェイズ／ターン復元・モバイル幅） | 実装済み（Playwright 4ケース、CI run #374成功） | `playwright.config.ts`, `e2e/campaign.spec.ts`, `.github/workflows/ci.yml` |
+| PWA manifest／Service Worker／オフライン起動E2E | 実装中（本番Previewサーバー、Playwright） | `playwright.config.ts`, `e2e/pwa.spec.ts`, `vite.config.ts` |
 | UI／スマートフォン実機確認 | 未実施 | — |
 
 ## 3. 検証コマンド
@@ -76,7 +77,7 @@
 - 正式な章マップ／敵構成／報酬品目・数量、会話／加入イベント、キャンペーン選択／分岐／解放管理は未実装。第2章はUI／引き継ぎ確認用の試作データ。クラスチェンジアイテムの正式な入手・配布ルールも未決定。
 - マップ定義validatorは主要な構造・参照整合性を検証し、セーブ状態validatorはユニットID／陣営を出撃名簿と照合する。ただし地形と移動種別の通行可否や実際のプレイバランスは検証しない。
 - 出撃準備のメンバー選択・控え保存・章間引き継ぎと、候補詳細のインベントリ表示データ整形はCIテスト対象。ブラウザ／スマートフォン実機でのUI／IndexedDB通し確認は未実施。
-- PlaywrightによるChromium E2Eは出撃準備・名簿保存・行動状態復元・敵軍フェイズ／ターン復元・幅390pxのレイアウトを確認。実スマートフォン、PWAインストール、オフライン起動の手動確認は未実施。
+- PlaywrightによるChromium E2Eは出撃準備・名簿保存・行動状態復元・敵軍フェイズ／ターン復元・幅390pxのレイアウトを確認。PWA manifest／Service Worker／オフライン起動は今回の追加テストで検証中。実スマートフォンへのインストール・オフライン操作の手動確認は未実施。
 
 ## 5. 次の作業候補
 
