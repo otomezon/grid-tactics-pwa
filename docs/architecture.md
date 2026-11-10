@@ -2,7 +2,7 @@
 
 ## 1. 現在の構成
 
-PR #1〜#16で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択をmainに追加した。開発ブランチでは出撃候補の詳細・所持武器確認UIを追加中。
+PR #1〜#22で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択、候補詳細、ブラウザE2E、PWA更新検証、JSONセーブexport/importをmainに追加した。PR #23では3世代ローカルバックアップと復元を追加中。
 
 ```text
 src/
@@ -34,6 +34,7 @@ src/
 │       └── apply-fort-recovery.ts
 └── persistence/
     ├── save-repository.ts
+    ├── save-file.ts
     └── migrations.ts
 ```
 
@@ -50,7 +51,7 @@ src/
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、敵AI／フェイズ進行 | 出撃準備は開発ブランチで実装中。報酬は章データで明示したアイテムのみ適用 |
 | ui | 章別マップ、戦闘UI、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルは開発ブランチ。第2章は遷移検証用 |
-| persistence | IndexedDB、saveVersion 1／2→3 migration、控え名簿保存 | 実装あり |
+| persistence | IndexedDB、saveVersion 1／2→3 migration、JSON export/import、3世代ローカルバックアップ／復元 | PR #23で追加中。DB version／saveVersionは据え置き |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
 ## 3. 現在のデータフロー
@@ -62,6 +63,7 @@ src/
 5. 各戦闘は共通combat resolverと保存済みXorshift32 stateを利用する。HP・撃破・RNG stateはGameStateへ反映する。
 6. 戦闘継続中なら敵軍フェイズ後にturnを1増やし、残存ユニットの行動フラグをresetしてplayer phaseへ戻し、砦上の生存中の味方を最大HPの10%（端数切り捨て・暫定）回復する。勝敗ならterminal stateのままにする。
 7. 次状態をIndexedDBへ保存。起動時に `phase: enemy` の保存が読み込まれた場合は敵軍フェイズを再開・解決する。
+8. ユーザーが手動バックアップを作成すると、persistenceがauto slotを検証済みsnapshotと照合し、同じreadwrite transaction内で `backup-1`〜`backup-3` をローテーションする。復元時は章解決・migration・validator・確認後にauto slotを置き換える。
 
 ## 4. 章間遷移
 
