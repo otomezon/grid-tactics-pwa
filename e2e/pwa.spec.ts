@@ -360,7 +360,7 @@ test.describe("production PWA shell", () => {
           const request = store.get("backup-1");
           request.onsuccess = () => {
             const record = request.result as { slotId: string; savedAt: number; data: Record<string, unknown> };
-            const legacyData = { ...record.data, saveVersion: 2 };
+            const legacyData: Record<string, unknown> = { ...record.data, saveVersion: 2 };
             delete legacyData.reserveUnits;
             store.put({ ...record, data: legacyData });
           };
