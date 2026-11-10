@@ -2,8 +2,10 @@
 
 ## 1. 対象と判定基準
 
+- 更新日: 2026-11-11
 - 基準: `docs/game-design.md` v1.0（2026-11-09、初期実装向け設計案）
-- PR #1〜#8と#10はmainにマージ済み。PR #9では砦のフェイズ開始回復を実装し、main追従・再検証中。
+- PR #1〜#48はmainにマージ済み。現在の機能・実装・テスト状況の詳細は [current-state.md](current-state.md) と [architecture.md](architecture.md) を参照する。この文書では初期設計案との適合、未実装項目、暫定判断を整理する。
+- PR #45はPR #44後の文書同期、PR #46は320px幅のタッチ横スワイプE2E、PR #47はスワイプ後の右端ユニット選択E2Eを追加した。PR #48で関連するREADME・開発ルール・アーキテクチャ・実装状況を同期した。PR #46／#47はテストと文書のみで、ゲームルールやセーブ形式は変更していない。CI run #607（PR #48）はtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功。
 - A: 初期設計案と実装が一致
 - B: 設計済み・未実装
 - C: 実装済み・未文書化
@@ -62,6 +64,6 @@
 
 ## 6. 検証上の制約
 
-- ローカルnpm install／typecheck／test／buildは未実施。PR GitHub Actionsで検証する。
-- ブラウザ／スマートフォンで敵AIの挙動とIndexedDB再開を確認していない。
-- AIは初期ルールのプロトタイプであり、バランス調整前。
+- この監査作業ではローカルnpm install／typecheck／test／buildは実行していない。mainへマージされたPR #48の文書同期ブランチでは、GitHub Actions CI run #607によりtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件の成功を確認した。
+- Chromium E2Eはブラウザ自動テストであり、実機スマートフォンのタッチ操作・OS表示を代替しない。実機確認は未実施。
+- 敵AIの挙動、実機でのIndexedDB再開、正式バランスは実プレイを含む別途確認が必要。AIは初期ルールのプロトタイプであり、バランス調整前。
