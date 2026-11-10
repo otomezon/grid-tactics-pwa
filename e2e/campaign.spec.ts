@@ -156,8 +156,9 @@ test.describe("browser campaign flow", () => {
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmation).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
-    await expect(confirmation).toContainText("レベルは1に戻り、現在EXPは保持します。");
-    await expect(confirmation).toContainText("証を1個消費し、昇格後は行動済みになります");
+    await expect(confirmation).toContainText("Lv.10 → Lv.1");
+    await expect(confirmation).toContainText("EXP 73（保持）");
+    await expect(confirmation).toContainText("昇格後は行動済み");
 
     const statPreview = confirmation.getByRole("table", { name: "昇格後の能力値プレビュー" });
     await expect(statPreview.locator("tbody tr")).toHaveCount(8);
@@ -182,8 +183,9 @@ test.describe("browser campaign flow", () => {
     const confirmedAgain = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmedAgain).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
     await expect(confirmedAgain.getByRole("table", { name: "昇格後の能力値プレビュー" }).locator("tbody tr")).toHaveCount(8);
-    await expect(confirmedAgain).toContainText("レベルは1に戻り、現在EXPは保持します。");
-    await expect(confirmedAgain).toContainText("証を1個消費し、昇格後は行動済みになります");
+    await expect(confirmedAgain).toContainText("Lv.10 → Lv.1");
+    await expect(confirmedAgain).toContainText("EXP 73（保持）");
+    await expect(confirmedAgain).toContainText("昇格後は行動済み");
     await confirmedAgain.getByRole("button", { name: "昇格を確定" }).click();
     await expect(page.getByRole("status")).toContainText("このフェイズの行動を消費しました");
 
