@@ -10,7 +10,7 @@
 - PR #5 latest head (`e02012e4`) CI run #90: TypeScript型チェック成功、9 test files／54 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 initial implementation head (`4c8efb0b`) CI run #112: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
-- PR #17（出撃候補のキャラクター詳細・所持武器確認UI）とPR #18（詳細表示データ整形のテスト）はmainへマージ済み。現在の開発対象はPlaywrightによるブラウザE2Eテスト。
+- PR #17（出撃候補のキャラクター詳細・所持武器確認UI）とPR #18（詳細表示データ整形のテスト）はmainへマージ済み。PR #19でPlaywrightによるブラウザE2Eテストを追加し、CI検証済み。次はPWAインストール／オフラインとスマートフォン実機での手動確認。
 - Node.js 26、npm、Vitest 5.0.0。
 - Game save schema: `saveVersion: 3`。マップ定義・戦闘ユニット・控え名簿の整合性を検証し、version 1／2から移行する。
 
@@ -56,12 +56,12 @@
 | 章間引き継ぎ・次章開始UI | 実装済み（章レジストリ、章ID別マップ復元、勝利後の次章開始、レベル／能力／所持品引き継ぎ、撃破者除外、RNG継続、auto slot保存） | `src/content/chapters.ts`, `src/application/prepare-next-chapter.ts`, `src/App.tsx` | 次章は遷移確認用の試作データ |
 | 章報酬 | データ駆動の適用処理実装済み（章定義のitemId／recipient／quantityを検証して配布。各所持品5枠上限） | `src/application/apply-chapter-rewards.ts`, `src/content/chapters.ts` | 現在登録した試作章の報酬は空配列。実際の報酬内容・数量は未決定 |
 | 第2章マップ | 試作データ実装済み（第1章からの遷移とセーブ復元を確認するための仮配置） | `src/content/maps/chapter-02.ts` | 正式なマップ／敵構成ではない |
-| ブラウザE2E（出撃準備・控え保存・再読み込み復元・モバイル幅） | 実装中 | `playwright.config.ts`, `e2e/campaign.spec.ts`, `.github/workflows/ci.yml` |
+| ブラウザE2E（出撃準備・控え保存・行動状態復元・敵軍フェイズ／ターン復元・モバイル幅） | 実装済み（Playwright 4ケース、CI run #374成功） | `playwright.config.ts`, `e2e/campaign.spec.ts`, `.github/workflows/ci.yml` |
 | UI／スマートフォン実機確認 | 未実施 | — |
 
 ## 3. 検証コマンド
 
-`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9をmainへ同期したhead（run #201）でTypeScript型チェック成功、15 test files／93 tests成功、Vite build成功、PWA precache 11 entries（282.60 KiB）を確認。章レジストリ／報酬／画面接続の実装head（run #226）ではTypeScript型チェック成功、17 test files／103 tests成功、Vite build成功、PWA precache 11 entries（289.58 KiB）を確認。PR #11 merge後のmain（run #235）、PR #12 merge後のmain（run #248）、PR #13 merge後のmain（run #266）とPR #14 merge後のmain（run #280）も成功。PR #18のmainマージ後CI（run #360）では既存のTypeScript型チェック、20 test files／131 tests、Vite buildが成功。ブラウザE2Eは今回の変更で導入中。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
+`npm run typecheck`、`npm test`、`npm run build` をGitHub Actionsで実行する。PR #8 latest headで型チェック、13 test files／78 tests、本番ビルドが成功。PR #9をmainへ同期したhead（run #201）でTypeScript型チェック成功、15 test files／93 tests成功、Vite build成功、PWA precache 11 entries（282.60 KiB）を確認。章レジストリ／報酬／画面接続の実装head（run #226）ではTypeScript型チェック成功、17 test files／103 tests成功、Vite build成功、PWA precache 11 entries（289.58 KiB）を確認。PR #11 merge後のmain（run #235）、PR #12 merge後のmain（run #248）、PR #13 merge後のmain（run #266）とPR #14 merge後のmain（run #280）も成功。PR #18のmainマージ後CI（run #360）では既存のTypeScript型チェック、20 test files／131 tests、Vite buildが成功。PR #19のブランチCI（run #374）ではTypeScript型チェック、20 test files／131 tests、Vite buildに加え、ChromiumブラウザE2E 4ケースが成功。ローカルnpm実行およびブラウザ／スマートフォン実機確認は未実施。
 
 ## 4. 暫定・未決定事項
 
@@ -76,7 +76,7 @@
 - 正式な章マップ／敵構成／報酬品目・数量、会話／加入イベント、キャンペーン選択／分岐／解放管理は未実装。第2章はUI／引き継ぎ確認用の試作データ。クラスチェンジアイテムの正式な入手・配布ルールも未決定。
 - マップ定義validatorは主要な構造・参照整合性を検証し、セーブ状態validatorはユニットID／陣営を出撃名簿と照合する。ただし地形と移動種別の通行可否や実際のプレイバランスは検証しない。
 - 出撃準備のメンバー選択・控え保存・章間引き継ぎと、候補詳細のインベントリ表示データ整形はCIテスト対象。ブラウザ／スマートフォン実機でのUI／IndexedDB通し確認は未実施。
-- ブラウザE2E・モバイル実機での手動確認・IndexedDB再開動作の統合確認は、今回のPlaywright suiteで自動化する範囲を除き未確認。
+- PlaywrightによるChromium E2Eは出撃準備・名簿保存・行動状態復元・敵軍フェイズ／ターン復元・幅390pxのレイアウトを確認。実スマートフォン、PWAインストール、オフライン起動の手動確認は未実施。
 
 ## 5. 次の作業候補
 
