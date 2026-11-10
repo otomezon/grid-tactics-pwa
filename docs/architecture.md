@@ -2,7 +2,7 @@
 
 ## 1. 現在の構成
 
-PR #1〜#44で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択、候補詳細、ブラウザE2E、PWA更新検証、JSONセーブexport/import、3世代ローカルバックアップ／復元、詳細なステージ結果表示、敵軍フェイズの一時行動記録、味方攻撃のstrike別一時結果表示、狭幅画面マップの横スクロールとタッチ操作確認をmainに追加した。PR #42のマージコミットは `8b5b3b583ad4cd6f7fae3f2cccd8b8ebbefe0e4f`、PR #43のマージコミットは `8f0a3d023afab1a379dce99147f59bc9770084bb`、PR #44のマージコミットは `ef92a0c71d6de705a42a83fa64cf9a6b7529a9ba`。PR #44のCI run #596は25 test files／161 unit tests、本番ビルド、Chromium E2E 17件すべて成功した。
+PR #1〜#47で文書基盤、PWA／マップ／移動、戦闘・敵AI・経験値、クラスチェンジUI、砦回復、章間引き継ぎ、章報酬／次章開始UI、マップ別敗北条件、マップ／セーブ名簿検証、出撃配置準備、キャンペーン控え名簿と出撃メンバー選択、候補詳細、ブラウザE2E、PWA更新検証、JSONセーブexport/import、3世代ローカルバックアップ／復元、詳細なステージ結果表示、敵軍フェイズの一時行動記録、味方攻撃のstrike別一時結果表示、狭幅画面マップの横スクロールとタッチ操作確認をmainに追加した。PR #42のマージコミットは `8b5b3b583ad4cd6f7fae3f2cccd8b8ebbefe0e4f`、PR #43のマージコミットは `8f0a3d023afab1a379dce99147f59bc9770084bb`、PR #44のマージコミットは `ef92a0c71d6de705a42a83fa64cf9a6b7529a9ba`。PR #44のCI run #596は25 test files／161 unit tests、本番ビルド、Chromium E2E 17件すべて成功した。PR #45ではPR #44のマージ後にREADME・開発ルール・アーキテクチャ・実装状況等の文書を同期した（merge commit `b4e87c9261d81c0166bbcacdc41d3964d02ad1b0`、CI run #598成功）。PR #46では幅320pxのChromiumで指の横スワイプ後にマップ領域だけが横スクロールし、ページ全体が横にはみ出さないことをE2Eで検証した（merge commit `81d8f856c65251d85184d61402edca14c3aad16c`、CI run #599: 25 test files／161 unit tests、production build、Chromium E2E 18件成功）。PR #47では同じスワイプの後、マップ右端の味方04が表示領域内に収まり、タップで選択情報が更新されることを追加検証した（merge commit `fd1c98bdc3553b4f252c7ce3ca8a7356cbcda01d`、CI run #605: typecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功）。PR #46／#47はいずれもテストと文書のみで、ゲームルール・セーブ形式・能力値は変更していない。実機スマートフォンの操作確認は別途必要。
 
 ```text
 src/
@@ -51,7 +51,7 @@ src/
 | domain/rules | defeat_all／defeat_boss／味方全滅／マップ指定ユニット撃破の勝敗判定、砦回復 | 実装あり。主人公ID未決定のため試作マップの個別敗北対象は未設定。回復端数は暫定切り捨て |
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、敵AI／フェイズ進行 | 出撃準備は開発ブランチで実装中。報酬は章データで明示したアイテムのみ適用 |
-| ui | 章別マップ（狭幅画面では各40pxタイルの横スクロール領域）、戦闘予測／味方攻撃結果／敵軍フェイズ行動記録、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルはPR #17でmainに実装済み。狭幅マップ操作はPR #44でmainに実装済み。第2章は遷移検証用 |
+| ui | 章別マップ（狭幅画面では各40pxタイルの横スクロール領域）、戦闘予測／味方攻撃結果／敵軍フェイズ行動記録、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルはPR #17でmainに実装済み。狭幅マップ操作はPR #44でmainに実装済み。PR #46／#47で320px幅の横スワイプとスワイプ後の右端ユニット選択をChromium E2Eで検証済み（実機未確認）。第2章は遷移検証用 |
 | persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2→3 migration、JSON export/import | 3世代backup／復元、export/importともmain実装済み。PR #23で最大3世代の保持、最古世代ローテーション、auto不変、確認付き復元をCI検証。DB version／saveVersionは据え置き |
 | pwa | manifest、Service Worker、静的アセットキャッシュ | Vite plugin設定あり |
 
