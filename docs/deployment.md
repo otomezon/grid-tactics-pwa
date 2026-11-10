@@ -38,10 +38,10 @@
 ## 5. 実装・検証
 
 - application: `prepare-player-deployment.ts`、`prepare-next-chapter.ts`
-- UI: `src/App.tsx`
+- UI: `src/App.tsx`（PR #17で候補詳細・所持武器確認を追加）
 - validation: `src/domain/models/validate-game-state.ts`
 - persistence: `src/persistence/migrations.ts`
-- tests: deployment／chapter transition／migration suites
+- tests: deployment／chapter transition／migration suites、`get-deployment-unit-details.test.ts`（武器・アイテムの分類、装備中武器、未知ID、重複所持）
 
 ## 6. 出撃候補の詳細確認
 
@@ -57,5 +57,4 @@
 - 正式な最低／最大出撃数、章ごとの編成条件。
 - 加入・離脱イベントと、加入ユニットを章マップ候補へ登録する正式データフロー。
 - 主人公が控えにいる場合のストーリー上の扱い（マップ敗北対象に指定した場合は出撃必須）。
-- キャラクター詳細・武器確認の出撃準備専用UI。
 - ブラウザ／スマートフォン実機でのIndexedDBを含む通し操作確認。
