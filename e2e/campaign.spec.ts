@@ -438,6 +438,34 @@ test.describe("browser campaign flow", () => {
     await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   });
 
+  test("selects a unit with touch input on the narrow map viewport", async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: "http://127.0.0.1:4173",
+      viewport: { width: 320, height: 720 },
+      hasTouch: true
+    });
+
+    try {
+      const page = await context.newPage();
+      await startBattle(page);
+
+      const unitTile = page.getByRole("button", { name: /味方01/ });
+      await expect(unitTile).toBeVisible();
+      await unitTile.scrollIntoViewIfNeeded();
+
+      const bounds = await unitTile.boundingBox();
+      if (!bounds) throw new Error("The player unit tile has no visible bounds.");
+
+      await page.touchscreen.tap(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2
+      );
+      await expect(page.locator(".unit-heading")).toContainText("味方01");
+    } finally {
+      await context.close();
+    }
+  });
+
   test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
