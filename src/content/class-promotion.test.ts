@@ -27,12 +27,11 @@ describe("class promotion content", () => {
     }
   });
 
-  it("contains a named promotion item and grants one to the prototype sword unit", () => {
+  it("defines the promotion item without automatically granting it to the initial party", () => {
     expect(INVENTORY_ITEMS_BY_ID[PROMOTION_ITEM_ID]?.name).toBe("クラスチェンジの証");
 
-    const swordUnit = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001");
-    expect(swordUnit?.inventory.filter((itemId) => itemId === PROMOTION_ITEM_ID)).toHaveLength(1);
-    expect(swordUnit?.inventory).toHaveLength(2);
+    const playerUnits = INITIAL_GAME_STATE.units.filter((unit) => unit.faction === "player");
+    expect(playerUnits.every((unit) => !unit.inventory.includes(PROMOTION_ITEM_ID))).toBe(true);
     expect(isValidGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP)).toBe(true);
   });
 });
