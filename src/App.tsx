@@ -439,7 +439,7 @@ export default function App() {
   }, [gameState.units, selectedUnit, currentMap]);
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
-  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked &&
+  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
     !deploymentPending && gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
     () => new Set(reachableTiles.map((tile) => String(tile.x) + "," + String(tile.y))),
@@ -537,7 +537,7 @@ export default function App() {
   }
 
   async function handleCreateSaveBackup(): Promise<void> {
-    if (backupActionPending || saveStatus !== "saved") return;
+    if (backupActionPending || !backupListLoaded || saveStatus !== "saved") return;
     setBackupActionPending(true);
 
     try {
@@ -552,7 +552,7 @@ export default function App() {
         throw new Error("現在の自動セーブの章IDまたは保存形式を検証できません。");
       }
 
-      await createGameStateBackup();
+      await createGameStateBackup(migration.snapshot);
       setSaveBackups(await loadGameStateBackups());
       setMessage("現在の自動セーブからバックアップを作成しました。自動セーブ自体は変更していません。");
     } catch (error) {
