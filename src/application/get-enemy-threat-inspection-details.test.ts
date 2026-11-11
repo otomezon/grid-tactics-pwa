@@ -49,7 +49,7 @@ describe("getEnemyThreatInspectionDetails", () => {
     expect(getEnemyThreatInspectionDetails(
       INITIAL_GAME_STATE,
       CHAPTER_01_MAP,
-      { x: 9, y: 9 }
+      { x: 0, y: 9 }
     )).toMatchObject({ sourceCount: 0, attackOriginCount: 0, sources: [] });
 
     expect(getEnemyThreatInspectionDetails(
