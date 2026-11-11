@@ -43,7 +43,7 @@ npm run preview
 - `test`: Vitest単体テスト。
 - `build`: 型チェック後にVite本番ビルド。PWA manifest／Service Workerも生成対象。
 - `preview`: build後の成果物をローカルで確認。
-- `test:e2e`: Playwrightで `e2e/pwa-preview-server.mjs` を起動し、Vite Previewが事前に生成した本番ビルドを配信する。Chromiumで出撃準備・控え名簿保存・行動状態復元・敵軍フェイズ・幅320pxでの40pxマップタイル／キーボード横スクロール／タップ選択／指での横スワイプ後に右側ユニットを選択・幅390pxのレイアウト・PWA manifest／Service Worker／オフライン起動・Service Worker更新時の自動再読み込みとセーブ復元、セーブファイルの書き出し／読み込みと不正ファイル拒否、ローカルバックアップ3世代の保持・ローテーション・復元・キャンセル・migration・不正データ拒否を確認する。`playwright.config.ts` と `e2e/` が定義元。テストサーバーにある `/__test/force-sw-update` はテスト中だけ `dist/sw.js` にコメントを追記し、Service Workerの更新検知を発生させる専用エンドポイントである。
+- `test:e2e`: Playwrightで `e2e/pwa-preview-server.mjs` を起動し、Vite Previewが事前に生成した本番ビルドを配信する。Chromiumで出撃準備・控え名簿保存・行動状態復元・敵軍フェイズ・幅320px・高さ568／720pxでの40pxマップタイル／キーボード横スクロール／タップ選択／指での横スワイプ後に右側ユニットを選択・幅390pxのレイアウト・PWA manifest／Service Worker／オフライン起動・Service Worker更新時の自動再読み込みとセーブ復元、セーブファイルの書き出し／読み込みと不正ファイル拒否、ローカルバックアップ3世代の保持・ローテーション・復元・キャンセル・migration・不正データ拒否を確認する。`playwright.config.ts` と `e2e/` が定義元。テストサーバーにある `/__test/force-sw-update` はテスト中だけ `dist/sw.js` にコメントを追記し、Service Workerの更新検知を発生させる専用エンドポイントである。
 
 ## 4. CI
 
