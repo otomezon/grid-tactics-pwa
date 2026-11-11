@@ -8,7 +8,7 @@ export function PlayerInspector({ details }: PlayerInspectorProps) {
   return (
     <section className="info-card enemy-inspector player-inspector" aria-labelledby="player-inspector-heading" data-testid="player-inspector">
       <p className="eyebrow">ALLY INTEL</p>
-      <div className="unit-heading enemy-inspector-heading">
+      <div className="player-inspector-heading enemy-inspector-heading">
         <span className="large-unit-token unit-player" aria-hidden="true">味</span>
         <div><h2 id="player-inspector-heading">{details.name}</h2><p>Lv.{details.level} · {details.className}</p></div>
       </div>
