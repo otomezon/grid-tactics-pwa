@@ -257,8 +257,12 @@ describe("calculateEnemyThreatenedTiles", () => {
     expect(calculateEnemyThreatSourcesAtPosition(
       state, openMap(), WEAPONS_BY_ID, { x: 6, y: 1 }
     )).toEqual([]);
+    const noThreatState = playerPhase([player, { ...enemy, move: 0 }]);
     expect(calculateEnemyThreatSourcesAtPosition(
-      { ...state, phase: "enemy" }, openMap(), WEAPONS_BY_ID, player.position
+      noThreatState, openMap(), WEAPONS_BY_ID, { x: 5, y: 3 }
+    )).toEqual([]);
+    expect(calculateEnemyThreatSourcesAtPosition(
+      { ...state, phase: "enemy" }, openMap(), WEAPONS_BY_ID, { x: 2, y: 1 }
     )).toEqual([]);
   });
 
