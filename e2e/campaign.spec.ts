@@ -667,6 +667,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, preparedState);
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    const savedBeforeInspection = await readAutoSave(page);
 
     const showButton = page.getByRole("button", { name: "敵の攻撃範囲を表示" });
     await expect(showButton).toBeVisible();
@@ -683,6 +684,28 @@ test.describe("browser campaign flow", () => {
     await expect(safeTile).not.toHaveAttribute("aria-label", /敵攻撃範囲/);
     await expect(page.locator(".map-legend")).toContainText("敵攻撃範囲（予測）");
     await expect(page.getByText(/実際の移動先や攻撃対象を確定する予告ではありません/)).toBeVisible();
+
+    await page.locator('.map-grid [data-map-position="3,0"]').click();
+    const threatInspector = page.getByTestId("enemy-threat-inspector");
+    await expect(threatInspector).toBeVisible();
+    await expect(threatInspector).toContainText("4列・1行 · 敵 1体");
+    await expect(threatInspector.locator('[data-testid="enemy-threat-source"]')).toHaveCount(1);
+    const source = threatInspector.locator('[data-testid="enemy-threat-source"]').first();
+    await expect(source).toContainText("敵01");
+    await expect(source).toContainText("試作の鉄の斧");
+    await expect(source).toContainText("射程 1–1");
+    await expect(source).toContainText("攻撃可能な起点 2箇所");
+    await expect(source).toContainText("2列・2行");
+    await expect(source).toContainText("移動後");
+    await expect(source.getByTestId("enemy-threat-origin")).toHaveCount(2);
+    await expect(source).toContainText("3列・1行");
+    await expect(source).toContainText("4列・2行");
+    await expect(threatInspector).toContainText("敵AIが実際に選ぶ移動先");
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+
+    await safeTile.click();
+    await expect(threatInspector).toContainText("このマスを攻撃できる敵はいません。");
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
 
     await hideButton.click();
     await expect(showButton).toHaveAttribute("aria-pressed", "false");
