@@ -121,7 +121,7 @@ test.describe("browser campaign flow", () => {
       .getByRole("heading", { level: 3 })).toHaveText("出撃準備を整える");
   });
 
-  test("previews deployment positions, swaps assignments, and keeps the setup unsaved until confirmation", async ({ page }) => {
+  test("previews deployment positions, swaps assignments, and saves only after confirmation", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
@@ -173,6 +173,23 @@ test.describe("browser campaign flow", () => {
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
     expect(dimensions.gridWidth).toBeLessThanOrEqual(dimensions.previewWidth);
     expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    const committedState = await readAutoSave(page) as {
+      units: Array<{ id: string; faction: string; position: { x: number; y: number } }>;
+      reserveUnits: Array<{ id: string }>;
+    };
+    expect(committedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+      faction: "player",
+      position: { x: 5, y: 8 }
+    });
+    expect(committedState.units.find((unit) => unit.id === "unit_003")).toMatchObject({
+      faction: "player",
+      position: { x: 1, y: 8 }
+    });
+    expect(committedState.units.some((unit) => unit.id === "unit_004")).toBe(false);
+    expect(committedState.reserveUnits.map((unit) => unit.id)).toContain("unit_004");
   });
 
   test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
