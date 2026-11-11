@@ -876,10 +876,12 @@ export default function App() {
     setPromotionConfirmUnitId(null);
     setMessage(unit.name + "を選択しました。青は移動可能、赤は攻撃可能な敵です。");
 
-    const mapTile = document.querySelector<HTMLButtonElement>(
-      `.map-grid [data-map-position="${unit.position.x},${unit.position.y}"]`
-    );
-    mapTile?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    window.requestAnimationFrame(() => {
+      const mapTile = document.querySelector<HTMLButtonElement>(
+        `.map-grid [data-map-position="${unit.position.x},${unit.position.y}"]`
+      );
+      mapTile?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
   }
 
   function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
