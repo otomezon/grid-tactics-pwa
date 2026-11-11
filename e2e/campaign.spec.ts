@@ -1481,4 +1481,30 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
   });
 
+  test("navigates from a defeat-all objective to the living enemy roster without changing the save", async ({ page }) => {
+    await startBattle(page);
+    await page.setViewportSize({ width: 320, height: 720 });
+    const savedBeforeNavigation = await readAutoSave(page);
+    const objective = page.getByTestId("battle-objective");
+    const navigationButton = objective.getByRole("button", {
+      name: "残りの敵を一覧で確認、5体"
+    });
+    await expect(navigationButton).toBeVisible();
+    await navigationButton.click();
+
+    const enemyRoster = page.locator("#enemy-roster");
+    await expect(enemyRoster).toBeFocused();
+    await expect(enemyRoster).toContainText("敵ユニット一覧");
+    await expect(enemyRoster.getByRole("button", { name: /敵01/ })).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      rosterWidth: document.querySelector("#enemy-roster")?.getBoundingClientRect().width ?? 0
+    }));
+    expect(dimensions.rosterWidth).toBeGreaterThan(0);
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.rosterWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(await readAutoSave(page)).toEqual(savedBeforeNavigation);
+  });
+
 });

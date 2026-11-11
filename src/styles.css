@@ -1207,3 +1207,17 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .phase-end-review-forecast-grid dt { font-size: .62rem; }
   .phase-end-review-forecast-grid dd { font-size: .82rem; }
 }
+
+.objective-navigation-button {
+  width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+  min-height: 38px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.enemy-roster:focus {
+  outline: 3px solid #f1c879;
+  outline-offset: 3px;
+}
