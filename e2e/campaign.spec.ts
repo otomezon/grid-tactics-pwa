@@ -491,7 +491,9 @@ test.describe("browser campaign flow", () => {
     await page.reload();
 
     await page.getByRole("button", { name: /味方01/ }).click();
-    const useButton = page.getByRole("button", { name: "回復薬を使用" });
+    const useButtons = page.getByRole("button", { name: "回復薬を使用" });
+    await expect(useButtons).toHaveCount(2);
+    const useButton = useButtons.first();
     await expect(useButton).toBeEnabled();
 
     const beforeCancel = await readAutoSave(page);
