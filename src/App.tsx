@@ -620,6 +620,11 @@ export default function App() {
     );
   }, [gameState.units, movementPreviewPath, movementPreviewPosition, selectedUnit, selectedWeapon]);
 
+  const newlyAttackableKeys = useMemo(
+    () => new Set([...previewAttackableKeys].filter((key) => !attackableKeys.has(key))),
+    [attackableKeys, previewAttackableKeys]
+  );
+
   const enemyThreatenedKeys = useMemo(() => {
     if (!showEnemyThreatRange || gameState.phase !== "player") return new Set<string>();
 
@@ -1849,7 +1854,7 @@ export default function App() {
                 const pathStep = movementPathStepByKey.get(tileKey);
                 const isMovementPath = pathStep !== undefined;
                 const isAttackable = attackableKeys.has(tileKey);
-                const isAttackableAfterMove = previewAttackableKeys.has(tileKey) && !isAttackable;
+                const isAttackableAfterMove = newlyAttackableKeys.has(tileKey);
                 const isEnemyThreatened = enemyThreatenedKeys.has(tileKey);
                 const isTargeted = unit?.id === combatTargetId;
                 const classes = [
@@ -1953,7 +1958,7 @@ export default function App() {
             <span><i className="legend-swatch move" />移動可能（数字は累計コスト）</span>
             <span><i className="legend-swatch movement-path" />移動経路（数字は順番）</span>
             <span><i className="legend-swatch attack" />現在位置から攻撃可能</span>
-            {movementPreviewPath && previewAttackableKeys.size > 0 && (
+            {movementPreviewPath && newlyAttackableKeys.size > 0 && (
               <span><i className="legend-swatch attack-after-move" />移動プレビュー先から攻撃可能</span>
             )}
             {showEnemyThreatRange && <span><i className="legend-swatch enemy-threat" />敵攻撃範囲（予測）</span>}
@@ -1961,9 +1966,9 @@ export default function App() {
           </div>
           {movementPreviewPath && (
             <p className="map-attack-preview-help" data-testid="movement-attack-preview-help">
-              {previewAttackableKeys.size > 0
-                ? "橙色の枠はこの移動先から攻撃可能な敵です。"
-                : "この移動先から攻撃可能な敵はいません。"}
+              {newlyAttackableKeys.size > 0
+                ? "橙色の枠は、この移動先から新たに攻撃可能になる敵です。"
+                : "この移動先から新たに攻撃可能になる敵はいません。"}
               距離計算は暫定Manhattan方式です。ここで攻撃や移動は確定しません。
             </p>
           )}
