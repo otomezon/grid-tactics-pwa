@@ -30,6 +30,7 @@ import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateMovementPath, calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { calculateEnemyThreatenedTiles } from "./domain/combat/calculate-enemy-threatened-tiles";
+import { canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateAttackableEnemyPositions } from "./domain/combat/calculate-attackable-enemy-positions";
 import type { CampaignUnit, GameMapDefinition, GameStateSnapshot, GameUnit, Position, UnitStats, WeaponType } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
