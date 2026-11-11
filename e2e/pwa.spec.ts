@@ -231,7 +231,7 @@ test.describe("production PWA shell", () => {
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
 
@@ -276,7 +276,7 @@ test.describe("production PWA shell", () => {
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
 
@@ -357,7 +357,7 @@ test.describe("production PWA shell", () => {
 
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
 
@@ -387,13 +387,13 @@ test.describe("production PWA shell", () => {
     ).toBeGreaterThan(navigationCountBeforeUpdate);
 
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
 
     await context.setOffline(true);
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
   test("creates three backup generations, rotates the oldest, and validates confirmed restores", async ({ page }) => {
