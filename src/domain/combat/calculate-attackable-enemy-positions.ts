@@ -23,6 +23,7 @@ export function calculateAttackableEnemyPositions(
     attacker.currentHp <= 0 ||
     attacker.hasActed ||
     !weapon ||
+    attacker.equippedWeaponId !== weapon.id ||
     !canUnitUseWeapon(attacker, weapon)
   ) {
     return [];
