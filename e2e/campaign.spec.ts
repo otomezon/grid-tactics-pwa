@@ -1024,6 +1024,30 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
+  test("previews the deterministic enemy phase without changing the auto save", async ({ page }) => {
+    await startBattle(page);
+    const savedBeforePreview = await readAutoSave(page);
+    const forecast = page.getByTestId("enemy-phase-forecast");
+    await expect(forecast).toBeVisible();
+    const details = forecast.locator("details");
+    await expect(details.locator("summary")).toHaveText("行動順と予測結果を表示");
+    await details.locator("summary").click();
+    const projected = forecast.getByTestId("enemy-phase-forecast-action");
+    await expect(projected).toHaveCount(5);
+    const messages = await projected.locator("p").allTextContents();
+    await expect(forecast).toContainText("予測結果：");
+    await expect(forecast).toContainText("AIの評価値と距離方式は暫定です");
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+    const actual = page.getByTestId("battle-history").getByTestId("enemy-phase-action");
+    await expect(actual).toHaveCount(5);
+    expect(await actual.locator("p").allTextContents()).toEqual(messages);
+    await expect(forecast).toBeVisible();
+    await expect(forecast).toContainText("敵軍フェイズの行動予測");
+  });
+
   test("records enemy actions in the chronological battle history and clears it on reload", async ({ page }) => {
     await startBattle(page);
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
