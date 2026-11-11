@@ -1041,10 +1041,10 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .enemy-phase-forecast-summary {
   cursor: pointer; min-height: 40px; display: flex; align-items: center;
   padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px;
-  color: var(--text-main); background: rgba(12,24,34,.42);
+  color: #edf3f7; background: rgba(12,24,34,.42);
   font-size: .78rem; font-weight: 700;
 }
-.enemy-phase-forecast-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.enemy-phase-forecast-summary:focus-visible { outline: 2px solid #f1c879; outline-offset: 3px; }
 .enemy-phase-forecast-recoveries { margin-top: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
 .enemy-phase-forecast-recoveries h3 { margin: 0 0 6px; font-size: .78rem; }
 .enemy-phase-forecast-recoveries ul { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: .74rem; }
