@@ -223,13 +223,13 @@ test.describe("browser campaign flow", () => {
   test("persists a player action across reload", async ({ page }) => {
     await startBattle(page);
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
 
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
@@ -580,7 +580,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, preparedState);
     await page.reload();
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     const promotionPanel = page.locator(".promotion-panel");
     await expect(promotionPanel).toContainText("移動・行動前のみ可能");
     await expect(promotionPanel.getByRole("button", { name: "クラスチェンジを確認" })).toBeDisabled();
@@ -589,7 +589,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, preparedState);
     await page.reload();
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmation).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
@@ -661,7 +661,7 @@ test.describe("browser campaign flow", () => {
     expect(promotedState.units.find((unit) => unit.id === "unit_001")?.inventory).not.toContain("promotion_seal");
 
     await page.reload();
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
@@ -758,7 +758,7 @@ test.describe("browser campaign flow", () => {
       const page = await context.newPage();
       await startBattle(page);
 
-      const unitTile = page.getByRole("button", { name: /味方01/ });
+      const unitTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
       await expect(unitTile).toBeVisible();
       await unitTile.scrollIntoViewIfNeeded();
 
@@ -799,7 +799,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, preparedState);
     await page.reload();
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     const useButtons = page.getByRole("button", { name: "回復薬を使用" });
     const healingPotionRow = page.locator(".inventory-items li").filter({ hasText: "回復薬" });
     await expect(useButtons).toHaveCount(1);
@@ -844,7 +844,7 @@ test.describe("browser campaign flow", () => {
     await expect(healingPotionRow).toContainText("所持数：1個");
 
     await page.reload();
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details div").first()).toContainText(
       preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
     );
