@@ -67,7 +67,7 @@
 - 配置済みユニットのマストークンを選ぶと、既存の候補詳細パネルを開き、既存の詳細ボタンへフォーカスを移す。控え候補のマスは表示しない。
 - 配置の変更方法は従来のメンバーcheckboxと出撃位置selectのまま。プレビュー上のドラッグ、自由座標、マップ候補外の配置を追加しない。
 - プレビューと候補詳細は読み取り専用／一時UI状態。既存の「出撃メンバーと配置を確定して戦闘開始」を押すまでGameState／IndexedDB／saveVersionを変更しない。
-- Preview uses the same configured positions as `preparePlayerDeployment`; no new minimum/maximum party rule is inferred.
+- プレビューは `preparePlayerDeployment` が使う同じ登録済み出撃位置を表示し、新たな最低／最大人数ルールは設けない。
 
 ## 9. 未実装・判断待ち
 
