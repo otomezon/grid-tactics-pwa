@@ -35,7 +35,7 @@ export function DeploymentPreview({
   disabled,
   onSelectUnit
 }: DeploymentPreviewProps) {
-  const candidatesById = new Map(candidates.map((unit) => [unit.id, unit]));
+  const candidatesById = new Map(candidates.map((unit) => [unit.id, unit] as const));
   const assignedByPosition = new Map<string, DeploymentPreviewCandidate>();
   for (const unitId of selectedUnitIds) {
     const position = assignments[unitId];
