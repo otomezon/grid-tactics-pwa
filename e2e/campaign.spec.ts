@@ -1396,6 +1396,7 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforeReview = await readAutoSave(page);
+    await page.setViewportSize({ width: 320, height: 720 });
     const pendingAllies = allies.filter((unit) => !unit.hasActed);
     const phaseEndButton = page.getByRole("button", { name: "自軍フェイズ終了" });
     await expect(phaseEndButton).toHaveAttribute("aria-expanded", "false");
@@ -1414,6 +1415,14 @@ test.describe("browser campaign flow", () => {
     await expect(review).toContainText("敵の行動");
     await expect(review).toContainText("被ダメージ見込み");
     await expect(review.getByTestId("phase-end-review-defeated")).toBeVisible();
+    const reviewDimensions = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      reviewWidth: document.querySelector("[data-testid=phase-end-review]")?.getBoundingClientRect().width ?? 0
+    }));
+    expect(reviewDimensions.reviewWidth).toBeGreaterThan(0);
+    expect(reviewDimensions.documentWidth).toBeLessThanOrEqual(reviewDimensions.viewportWidth);
+    expect(reviewDimensions.reviewWidth).toBeLessThanOrEqual(reviewDimensions.viewportWidth);
     expect(await readAutoSave(page)).toEqual(savedBeforeReview);
 
     const selectedAlly = pendingAllies[0]!;
