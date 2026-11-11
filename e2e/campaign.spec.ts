@@ -697,6 +697,9 @@ test.describe("browser campaign flow", () => {
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
 
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    const phaseEndReview = page.getByTestId("phase-end-review");
+    await expect(phaseEndReview).toBeVisible();
+    await phaseEndReview.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
     await expect(report.getByTestId("battle-history-entry")).toHaveCount(2);
     const enemyPhase = report.getByTestId("battle-history-entry").nth(1);
@@ -1053,6 +1056,9 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedBeforePreview);
 
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    const phaseEndReview = page.getByTestId("phase-end-review");
+    await expect(phaseEndReview).toBeVisible();
+    await phaseEndReview.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
     const actual = page.getByTestId("battle-history").getByTestId("enemy-phase-action");
     await expect(actual).toHaveCount(5);
@@ -1072,6 +1078,9 @@ test.describe("browser campaign flow", () => {
   test("records enemy actions in the chronological battle history and clears it on reload", async ({ page }) => {
     await startBattle(page);
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    const phaseEndReview = page.getByTestId("phase-end-review");
+    await expect(phaseEndReview).toBeVisible();
+    await phaseEndReview.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
     const report = page.getByTestId("battle-history");
     await expect(report).toBeVisible();
@@ -1359,4 +1368,103 @@ test.describe("browser campaign flow", () => {
     expect(dimensions.panelWidth).toBeGreaterThan(0);
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
   });
+
+  test("reviews unacted allies and returns to a selected unit without saving UI state", async ({ page }) => {
+    await startBattle(page);
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        faction: string;
+        name: string;
+        hasMoved: boolean;
+        hasActed: boolean;
+        currentHp: number;
+        stats: { hp: number };
+        level: number;
+        classId: string;
+        position: { x: number; y: number };
+      }>;
+    };
+    const allies = preparedState.units.filter((unit) => unit.faction === "player");
+    if (allies.length < 2) throw new Error("The phase review fixture requires at least two deployed allies.");
+    allies[0]!.hasMoved = true;
+    allies[0]!.hasActed = false;
+    allies[1]!.hasMoved = true;
+    allies[1]!.hasActed = true;
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const savedBeforeReview = await readAutoSave(page);
+    const pendingAllies = allies.filter((unit) => !unit.hasActed);
+    const phaseEndButton = page.getByRole("button", { name: "自軍フェイズ終了" });
+    await expect(phaseEndButton).toHaveAttribute("aria-expanded", "false");
+    await phaseEndButton.click();
+
+    const review = page.getByTestId("phase-end-review");
+    await expect(review).toBeVisible();
+    await expect(review).toBeFocused();
+    await expect(phaseEndButton).toHaveAttribute("aria-expanded", "true");
+    await expect(review.getByTestId("phase-end-review-pending-unit")).toHaveCount(pendingAllies.length);
+    await expect(review).toContainText("まだ行動していない味方");
+    await expect(review).toContainText(allies[0]!.name);
+    await expect(review).toContainText("移動済み・未行動");
+    await expect(review).toContainText("未移動・未行動");
+    await expect(review).toContainText("次の敵軍フェイズ予測");
+    await expect(review).toContainText("敵の行動");
+    await expect(review).toContainText("被ダメージ見込み");
+    await expect(review.getByTestId("phase-end-review-defeated")).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(savedBeforeReview);
+
+    const selectedAlly = pendingAllies[0]!;
+    const pendingRow = review.locator('[data-unit-id="' + selectedAlly.id + '"]');
+    await pendingRow.getByRole("button", { name: selectedAlly.name + "を確認" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(phaseEndButton).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator(".unit-heading h3")).toHaveText(selectedAlly.name);
+    const selectedTile = page.locator(
+      '.map-grid [data-map-position="' + selectedAlly.position.x + "," + selectedAlly.position.y + '"]'
+    );
+    await expect(selectedTile).toHaveClass(/is-selected/);
+    await expect(selectedTile).toBeFocused();
+    expect(await readAutoSave(page)).toEqual(savedBeforeReview);
+  });
+
+  test("explicitly ends the phase after reviewing unused allies", async ({ page }) => {
+    await startBattle(page);
+    const savedBeforeReview = await readAutoSave(page);
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+
+    const review = page.getByTestId("phase-end-review");
+    await expect(review).toBeVisible();
+    const pendingCount = await review.getByTestId("phase-end-review-pending-unit").count();
+    expect(pendingCount).toBeGreaterThan(0);
+    expect(await readAutoSave(page)).toEqual(savedBeforeReview);
+
+    await review.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+    expect((await readAutoSave(page) as { turn: number; phase: string })).toMatchObject({
+      turn: 2,
+      phase: "player"
+    });
+  });
+
+  test("ends the player phase immediately without a review when every ally has acted", async ({ page }) => {
+    await startBattle(page);
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{ faction: string; hasActed: boolean }>;
+    };
+    for (const unit of preparedState.units) {
+      if (unit.faction === "player") unit.hasActed = true;
+    }
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    await expect(page.getByTestId("phase-end-review")).toHaveCount(0);
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+  });
+
 });
