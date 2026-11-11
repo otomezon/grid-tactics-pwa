@@ -317,6 +317,27 @@ test.describe("production PWA shell", () => {
     await page.locator('[data-testid="save-import-input"]').setInputFiles(invalidTerrainFile);
     await expect(page.getByRole("status")).toContainText("現在の章マップまたは保存形式と一致しません。");
     expect(await readAutoSave(page)).toEqual(originalSave);
+
+    const invalidReferenceSnapshot = JSON.parse(JSON.stringify(originalSave)) as {
+      units: Array<{ id: string; classId: string; inventory: string[] }>;
+    };
+    const swordsman = invalidReferenceSnapshot.units.find((unit) => unit.id === "unit_001");
+    if (!swordsman) throw new Error("Expected swordsman is missing from the autosave.");
+    swordsman.classId = "unregistered_class";
+
+    const invalidReferenceFile = {
+      name: "invalid-reference-grid-tactics-save.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({
+        format: "grid-tactics-pwa-save",
+        formatVersion: 1,
+        exportedAt: "2026-11-10T12:00:00.000Z",
+        data: invalidReferenceSnapshot
+      }))
+    };
+    await page.locator('[data-testid="save-import-input"]').setInputFiles(invalidReferenceFile);
+    await expect(page.getByRole("status")).toContainText("現在の章マップまたは保存形式と一致しません。");
+    expect(await readAutoSave(page)).toEqual(originalSave);
   });
 
   test("reloads for a service-worker update without losing the autosaved battle state", async ({ page, context }) => {
@@ -580,6 +601,59 @@ test.describe("production PWA shell", () => {
           transaction.oncomplete = () => resolve();
           transaction.onerror = () => reject(transaction.error ?? new Error("Could not prepare impassable backup."));
           transaction.onabort = () => reject(transaction.error ?? new Error("Impassable backup update was aborted."));
+        });
+      } finally {
+        database.close();
+      }
+    });
+
+    await page.getByTestId("restore-backup-3").click();
+    await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");
+    expect(await readAutoSave(page)).toEqual(autoSaveBeforeInvalidRestore);
+
+    await page.evaluate(async () => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("grid-tactics-pwa", 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error("Could not open save database."));
+      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const transaction = database.transaction("game-saves", "readwrite");
+          const store = transaction.objectStore("game-saves");
+          const request = store.get("backup-3");
+          request.onsuccess = () => {
+            const record = request.result as {
+              slotId: string;
+              savedAt: number;
+              data: Record<string, unknown>;
+            } | undefined;
+            const units = record?.data.units;
+            if (!record || !Array.isArray(units)) {
+              transaction.abort();
+              reject(new Error("Expected backup-3 units are missing."));
+              return;
+            }
+            const invalidUnits = units.map((candidate) => {
+              if (!candidate || typeof candidate !== "object") return candidate;
+              const unit = candidate as { id?: string };
+              return unit.id === "unit_004"
+                ? {
+                    ...candidate,
+                    position: { x: 8, y: 8 },
+                    inventory: [...(candidate as { inventory: string[] }).inventory, "unregistered_item"]
+                  }
+                : candidate;
+            });
+            store.put({
+              ...record,
+              data: { ...record.data, chapterId: "chapter_01_map", units: invalidUnits }
+            });
+          };
+          request.onerror = () => reject(request.error ?? new Error("Could not read backup for reference validation."));
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error ?? new Error("Could not prepare invalid reference backup."));
+          transaction.onabort = () => reject(transaction.error ?? new Error("Invalid reference backup update was aborted."));
         });
       } finally {
         database.close();

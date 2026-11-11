@@ -4,8 +4,8 @@
 
 - 更新日: 2026-11-11
 - 基準: `docs/game-design.md` v1.0（2026-11-09、初期実装向け設計案）
-- PR #1〜#55はmainにマージ済み。PR #55では既存のobjective／terrain定義を使う目標進行・マス情報パネルを追加した。本変更では、味方攻撃と敵軍フェイズの解決結果をターン順に表示するセッション内戦闘履歴を追加し、履歴を永続化せずsaveVersion 3を維持する。現在の機能・実装・テスト状況の詳細は [current-state.md](current-state.md) と [architecture.md](architecture.md) を参照する。この文書では初期設計案との適合、未実装項目、暫定判断を整理する。
-- PR #45はPR #44後の文書同期、PR #46は320px幅のタッチ横スワイプE2E、PR #47はスワイプ後の右端ユニット選択E2Eを追加した。PR #48で関連するREADME・開発ルール・アーキテクチャ・実装状況を同期した。PR #46／#47はテストと文書のみで、ゲームルールやセーブ形式は変更していない。CI run #607（PR #48）はtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功。PR #49ではこの照合文書自体の更新をmainへ反映した（merge commit `d73d8419dc085ef535da7fe73c5609e05f33b40d`、CI run #609: typecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功）。PR #50〜#54ではREADME等の文書同期、回復薬、採択済み昇格方針の表記同期、アイテム数量スタックと安全なID検証、PWAインストール案内をmainへ反映した。PR #54のマージコミット `146c5952713f1cae3916fcde3e0f8a2407f995e1` のCI run #643も成功。
+- PR #1〜#57はmainにマージ済み。PR #55では既存のobjective／terrain定義を使う目標進行・マス情報パネルを追加した。PR #56では味方攻撃と敵軍フェイズの解決結果をターン順に表示するセッション内戦闘履歴を追加し、履歴を永続化せずsaveVersion 3を維持した。PR #57ではセーブ内の地形通行可否を検証した。今回の変更ではクラス／武器／アイテムの参照整合性と装備適性、生存HPの検証を追加する。現在の機能・実装・テスト状況の詳細は [current-state.md](current-state.md) と [architecture.md](architecture.md) を参照する。この文書では初期設計案との適合、未実装項目、暫定判断を整理する。
+- PR #45はPR #44後の文書同期、PR #46は320px幅のタッチ横スワイプE2E、PR #47はスワイプ後の右端ユニット選択E2Eを追加した。PR #48で関連するREADME・開発ルール・アーキテクチャ・実装状況を同期した。PR #46／#47はテストと文書のみで、ゲームルールやセーブ形式は変更していない。CI run #607（PR #48）はtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功。PR #49ではこの照合文書自体の更新をmainへ反映した（merge commit `d73d8419dc085ef535da7fe73c5609e05f33b40d`、CI run #609: typecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功）。PR #50〜#54ではREADME等の文書同期、回復薬、採択済み昇格方針の表記同期、アイテム数量スタックと安全なID検証、PWAインストール案内をmainへ反映した。PR #54のマージコミット `146c5952713f1cae3916fcde3e0f8a2407f995e1` のCI run #643も成功。PR #57では地形通行可否のsave validatorと、JSONインポート／バックアップ復元のChromium回帰テストを追加した（CI run #679成功）。
 - A: 初期設計案と実装が一致
 - B: 設計済み・未実装
 - C: 実装済み・未文書化

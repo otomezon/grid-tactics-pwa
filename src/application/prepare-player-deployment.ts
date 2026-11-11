@@ -42,7 +42,14 @@ export function preparePlayerDeployment(
     .filter((unit) => unit.faction === "player" && unit.currentHp > 0)
     .map((unit) => unit.id)
 ): GameStateSnapshot {
-  if (!isValidGameMapDefinition(map) || !isValidGameStateSnapshot(state, map)) {
+  // Defeated player units may be present in a pre-deployment transition input.
+  // Validate the surviving snapshot; this command omits defeated units from
+  // both the prepared battle roster and the reserve roster.
+  const stateForValidation: GameStateSnapshot = {
+    ...state,
+    units: state.units.filter((unit) => unit.faction !== "player" || unit.currentHp > 0)
+  };
+  if (!isValidGameMapDefinition(map) || !isValidGameStateSnapshot(stateForValidation, map)) {
     throw new Error("The game state or map definition is invalid.");
   }
   if (state.phase !== "player" || state.turn !== 1) {

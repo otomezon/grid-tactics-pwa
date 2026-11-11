@@ -54,7 +54,7 @@ describe("applyChapterRewards with the class-promotion item", () => {
       unit.id === "unit_001"
         ? {
             ...unit,
-            inventory: ["iron_sword", "item_02", "item_03", "item_04", "item_05"]
+            inventory: ["iron_sword", "healing_potion", "promotion_seal", "iron_lance", "iron_axe"]
           }
         : unit
     );
@@ -68,7 +68,7 @@ describe("applyChapterRewards with the class-promotion item", () => {
 
     expect(state.units.find((unit) => unit.id === "unit_001")?.inventory).toEqual(originalInventory);
     expect(state.units.find((unit) => unit.id === "unit_001")?.inventory)
-      .not.toContain(PROMOTION_ITEM_ID);
+      .toEqual(originalInventory);
   });
   it("does not partially apply earlier rewards when a later reward in the same batch is rejected", () => {
     const state = clearedState();
@@ -76,7 +76,7 @@ describe("applyChapterRewards with the class-promotion item", () => {
       unit.id === "unit_001"
         ? {
             ...unit,
-            inventory: ["iron_sword", "item_02", "item_03", "item_04"]
+            inventory: ["iron_sword", "healing_potion", "promotion_seal", "iron_lance"]
           }
         : unit
     );
@@ -96,8 +96,6 @@ describe("applyChapterRewards with the class-promotion item", () => {
     ])).toThrow(/does not have enough free slots/);
 
     expect(state).toEqual(originalState);
-    expect(state.units.find((unit) => unit.id === "unit_001")?.inventory)
-      .not.toContain(PROMOTION_ITEM_ID);
   });
 
 });

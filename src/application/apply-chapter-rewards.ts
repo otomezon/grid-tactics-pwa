@@ -24,7 +24,14 @@ export function applyChapterRewards(
   map: GameMapDefinition,
   rewards: readonly ChapterRewardDefinition[]
 ): ApplyChapterRewardsResult {
-  if (!isValidGameStateSnapshot(state, map)) {
+  // A defeated unit may still be present in a command input before the caller
+  // has pruned it. Validate surviving units, then preserve the original list
+  // for the recipient-specific rejection below.
+  const stateForValidation: GameStateSnapshot = {
+    ...state,
+    units: state.units.filter((unit) => unit.currentHp > 0)
+  };
+  if (!isValidGameStateSnapshot(stateForValidation, map)) {
     throw new Error("The chapter state is invalid.");
   }
   if (evaluateBattleOutcome(state, map) !== "victory") {

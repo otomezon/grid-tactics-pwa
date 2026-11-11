@@ -40,7 +40,7 @@ describe("prepareNextChapter", () => {
               experience: 42,
               stats: { ...unit.stats, hp: 27, strength: 11 },
               currentHp: 9,
-              inventory: [...unit.inventory, "vulnerary"]
+              inventory: [...unit.inventory, "healing_potion"]
             }
           : unit)
     });
@@ -63,7 +63,7 @@ describe("prepareNextChapter", () => {
     expect(carried.experience).toBe(42);
     expect(carried.stats).toEqual({ ...previousState.units[0]!.stats, hp: 27, strength: 11 });
     expect(carried.currentHp).toBe(9);
-    expect(carried.inventory).toContain("vulnerary");
+    expect(carried.inventory).toContain("healing_potion");
     expect(carried.hasMoved).toBe(false);
     expect(carried.hasActed).toBe(false);
     expect(isValidGameStateSnapshot(result, next.map)).toBe(true);
@@ -150,7 +150,7 @@ describe("prepareNextChapter", () => {
         movementType: reserved.movementType,
         move: reserved.move,
         usableWeaponTypes: [...reserved.usableWeaponTypes],
-        inventory: [...reserved.inventory, "vulnerary"],
+        inventory: [...reserved.inventory, "healing_potion"],
         equippedWeaponId: reserved.equippedWeaponId
       }]
     });
@@ -168,7 +168,7 @@ describe("prepareNextChapter", () => {
       experience: 31,
       stats: { hp: 25, strength: 9 },
       currentHp: 13,
-      inventory: [...reserved.inventory, "vulnerary"]
+      inventory: [...reserved.inventory, "healing_potion"]
     });
     expect(isValidGameStateSnapshot(result, next.map)).toBe(true);
   });

@@ -45,7 +45,7 @@ describe("preparePlayerDeployment", () => {
               level: 4,
               experience: 63,
               currentHp: 12,
-              inventory: [...unit.inventory, "vulnerary"],
+              inventory: [...unit.inventory, "healing_potion"],
               hasMoved: false,
               hasActed: false
             }
@@ -58,7 +58,7 @@ describe("preparePlayerDeployment", () => {
     expect(unit.level).toBe(4);
     expect(unit.experience).toBe(63);
     expect(unit.currentHp).toBe(12);
-    expect(unit.inventory).toContain("vulnerary");
+    expect(unit.inventory).toContain("healing_potion");
     expect(unit.hasMoved).toBe(false);
     expect(unit.hasActed).toBe(false);
     expect(result.rngState).toBe(123456789);

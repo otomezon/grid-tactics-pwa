@@ -126,7 +126,10 @@ describe("isValidGameStateSnapshot", () => {
     expect(isValidGameStateSnapshot(invalidHp, CHAPTER_01_MAP)).toBe(false);
     const invalidInventory = {
       ...INITIAL_GAME_STATE,
-      units: [{ ...first, inventory: ["a", "b", "c", "d", "e", "f"] }, ...INITIAL_GAME_STATE.units.slice(1)]
+      units: [{
+        ...first,
+        inventory: ["iron_sword", "iron_sword", "iron_sword", "healing_potion", "promotion_seal", "iron_sword"]
+      }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalidInventory, CHAPTER_01_MAP)).toBe(false);
   });
@@ -139,6 +142,77 @@ describe("isValidGameStateSnapshot", () => {
       units: [{ ...first, equippedWeaponId: "missing-weapon" }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalidEquipment, CHAPTER_01_MAP)).toBe(false);
+  });
+
+  it("accepts registered weapons and inventory items, including unequipped consumables", () => {
+    const withRegisteredItems = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) =>
+        unit.id === "unit_001"
+          ? { ...unit, inventory: [...unit.inventory, "healing_potion", "promotion_seal"] }
+          : unit
+      )
+    };
+    const promotedClass = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, classId: "swordmaster" } : unit
+      )
+    };
+
+    expect(isValidGameStateSnapshot(withRegisteredItems, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot(promotedClass, CHAPTER_01_MAP)).toBe(true);
+  });
+
+  it("rejects unknown classes and unregistered inventory item IDs", () => {
+    const unknownClass = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit, index) =>
+        index === 0 ? { ...unit, classId: "unregistered_class" } : unit
+      )
+    };
+    const unknownItem = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit, index) =>
+        index === 0 ? { ...unit, inventory: [...unit.inventory, "unregistered_item"] } : unit
+      )
+    };
+
+    expect(isValidGameStateSnapshot(unknownClass, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot(unknownItem, CHAPTER_01_MAP)).toBe(false);
+  });
+
+  it("rejects equipped items that are not registered usable weapons", () => {
+    const itemEquippedAsWeapon = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit, index) =>
+        index === 0
+          ? { ...unit, inventory: [...unit.inventory, "healing_potion"], equippedWeaponId: "healing_potion" }
+          : unit
+      )
+    };
+    const incompatibleWeapon = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit, index) =>
+        index === 0
+          ? { ...unit, inventory: [...unit.inventory, "short_bow"], equippedWeaponId: "short_bow" }
+          : unit
+      )
+    };
+
+    expect(isValidGameStateSnapshot(itemEquippedAsWeapon, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot(incompatibleWeapon, CHAPTER_01_MAP)).toBe(false);
+  });
+
+  it("rejects defeated units retained in the active battle roster", () => {
+    const defeatedUnitRetained = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit, index) =>
+        index === 0 ? { ...unit, currentHp: 0 } : unit
+      )
+    };
+
+    expect(isValidGameStateSnapshot(defeatedUnitRetained, CHAPTER_01_MAP)).toBe(false);
   });
 
   it("rejects saved experience at or above the level-up threshold", () => {
