@@ -107,10 +107,8 @@ export function calculateEnemyThreatenedTiles(
   const profiles = getEnemyAttackProfiles(state, map, weaponsById);
   if (profiles.length === 0) return [];
 
-  const livingEnemyTiles = new Set(
-    state.units
-      .filter((unit) => unit.faction === "enemy" && unit.currentHp > 0)
-      .map((enemy) => `${enemy.position.x},${enemy.position.y}`)
+  const activeEnemyTiles = new Set(
+    profiles.map((profile) => `${profile.enemyPosition.x},${profile.enemyPosition.y}`)
   );
   const threatenedTiles = new Map<string, Position>();
 
@@ -118,7 +116,7 @@ export function calculateEnemyThreatenedTiles(
     for (let x = 0; x < map.width; x += 1) {
       const target = { x, y };
       const key = `${x},${y}`;
-      if (livingEnemyTiles.has(key)) continue;
+      if (activeEnemyTiles.has(key)) continue;
 
       const canBeAttacked = profiles.some((profile) =>
         profile.attackOrigins.some((origin) =>
@@ -157,12 +155,10 @@ export function calculateEnemyThreatSourcesAtPosition(
     return [];
   }
 
-  const livingEnemyTiles = new Set(
-    state.units
-      .filter((unit) => unit.faction === "enemy" && unit.currentHp > 0)
-      .map((enemy) => `${enemy.position.x},${enemy.position.y}`)
+  const activeEnemyTiles = new Set(
+    profiles.map((profile) => `${profile.enemyPosition.x},${profile.enemyPosition.y}`)
   );
-  if (livingEnemyTiles.has(`${target.x},${target.y}`)) return [];
+  if (activeEnemyTiles.has(`${target.x},${target.y}`)) return [];
 
   return getEnemyAttackProfiles(state, map, weaponsById)
     .map((profile): EnemyThreatSource | null => {
