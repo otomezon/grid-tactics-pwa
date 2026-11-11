@@ -257,6 +257,23 @@ describe("calculateEnemyThreatenedTiles", () => {
     expect(calculateEnemyThreatSourcesAtPosition(
       state, openMap(), WEAPONS_BY_ID, { x: 6, y: 1 }
     )).toEqual([]);
+
+    const unarmedEnemy = {
+      ...enemy,
+      id: "enemy_unarmed",
+      position: { x: 3, y: 0 },
+      inventory: [],
+      equippedWeaponId: null
+    };
+    const withUnarmedOccupant = playerPhase([player, { ...enemy, move: 2 }, unarmedEnemy]);
+    expect(calculateEnemyThreatSourcesAtPosition(
+      withUnarmedOccupant, openMap(), WEAPONS_BY_ID, unarmedEnemy.position
+    )).toEqual([]);
+    expect(containsPosition(
+      calculateEnemyThreatenedTiles(withUnarmedOccupant, openMap(), WEAPONS_BY_ID),
+      unarmedEnemy.position
+    )).toBe(false);
+
     const noThreatState = playerPhase([player, { ...enemy, move: 0 }]);
     expect(calculateEnemyThreatSourcesAtPosition(
       noThreatState, openMap(), WEAPONS_BY_ID, { x: 5, y: 3 }
