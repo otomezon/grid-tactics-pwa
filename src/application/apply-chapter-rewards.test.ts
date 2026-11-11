@@ -54,7 +54,7 @@ describe("applyChapterRewards with the class-promotion item", () => {
       unit.id === "unit_001"
         ? {
             ...unit,
-            inventory: ["iron_sword", "item_02", "item_03", "item_04", "item_05"]
+            inventory: ["iron_sword", "healing_potion", "promotion_seal", "iron_lance", "iron_axe"]
           }
         : unit
     );
@@ -76,7 +76,7 @@ describe("applyChapterRewards with the class-promotion item", () => {
       unit.id === "unit_001"
         ? {
             ...unit,
-            inventory: ["iron_sword", "item_02", "item_03", "item_04"]
+            inventory: ["iron_sword", "healing_potion", "promotion_seal", "iron_lance"]
           }
         : unit
     );
