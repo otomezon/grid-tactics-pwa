@@ -925,3 +925,58 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .operation-guide-footer { gap: 7px; }
   .operation-guide-footer button { min-width: 0; padding: 6px 9px; }
 }
+
+/* Read-only enemy intelligence shown when a living enemy tile is inspected */
+.enemy-inspector-heading { margin-bottom: 10px; }
+.enemy-inspector-heading h2 { margin: 0; font-size: .98rem; }
+.enemy-inspector-heading p { margin: 4px 0 0; }
+.enemy-inspector-health { display: flex; align-items: center; gap: 9px; }
+.enemy-inspector-health progress { width: 100%; min-width: 36px; height: 9px; accent-color: #d77f7f; }
+.enemy-inspector-health strong { flex: 0 0 auto; color: #f0dada; font-size: .74rem; font-variant-numeric: tabular-nums; }
+.enemy-inspector-overview {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+  margin: 11px 0 0;
+}
+.enemy-inspector-overview > div {
+  display: grid; gap: 4px; min-width: 0; padding: 8px 6px;
+  border: 1px solid rgba(145, 166, 180, .2); border-radius: 7px;
+  background: rgba(18, 31, 43, .45);
+}
+.enemy-inspector-overview dt { color: var(--text-muted); font-size: .64rem; }
+.enemy-inspector-overview dd { margin: 0; color: #edf3f7; font-size: .74rem; font-weight: 800; overflow-wrap: anywhere; }
+.enemy-inspector-section { display: grid; gap: 7px; margin-top: 13px; }
+.enemy-inspector-section h3 { margin: 0; color: #edf3f7; font-size: .8rem; }
+.enemy-inspector-stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0;
+}
+.enemy-inspector-stat {
+  display: grid; gap: 3px; min-width: 0; padding: 7px 5px;
+  border: 1px solid rgba(145, 166, 180, .2); border-radius: 7px;
+  text-align: center; background: rgba(28, 44, 58, .42);
+}
+.enemy-inspector-stat dt { color: var(--text-muted); font-size: .64rem; }
+.enemy-inspector-stat dd { margin: 0; color: #f0f5f8; font-size: .86rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.enemy-inspector-weapons { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.enemy-inspector-weapon {
+  display: grid; gap: 6px; min-width: 0; padding: 9px;
+  border: 1px solid var(--line); border-radius: 8px; background: rgba(18, 31, 43, .55);
+}
+.enemy-inspector-weapon.is-equipped { border-color: rgba(215, 127, 127, .72); background: rgba(115, 61, 57, .13); }
+.enemy-inspector-weapon-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
+.enemy-inspector-weapon-heading strong { color: #edf3f7; font-size: .76rem; overflow-wrap: anywhere; }
+.enemy-inspector-weapon-heading span { color: #f0b8ad; font-size: .65rem; font-weight: 800; }
+.enemy-inspector-weapon > p { margin: 0; color: var(--text-muted); font-size: .67rem; }
+.enemy-inspector-weapon-stats {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin: 0;
+}
+.enemy-inspector-weapon-stats > div { display: grid; gap: 2px; min-width: 0; }
+.enemy-inspector-weapon-stats dt { color: var(--text-muted); font-size: .6rem; }
+.enemy-inspector-weapon-stats dd { margin: 0; color: #edf3f7; font-size: .72rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.enemy-inspector-note { margin: 11px 0 0; color: var(--text-muted); font-size: .66rem; line-height: 1.5; }
+@media (max-width: 380px) {
+  .enemy-inspector-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .enemy-inspector-weapon-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+  .enemy-inspector-weapon-stats dt { font-size: .56rem; }
+  .enemy-inspector-weapon-stats dd { font-size: .68rem; }
+}
+
