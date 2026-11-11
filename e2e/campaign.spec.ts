@@ -71,6 +71,56 @@ async function writeAutoSave(page: Page, data: unknown): Promise<void> {
 }
 
 test.describe("browser campaign flow", () => {
+  test("provides a responsive step-by-step operation guide without changing the save", async ({ page }) => {
+    await startBattle(page);
+    const savedBeforeGuide = await readAutoSave(page);
+    await page.setViewportSize({ width: 320, height: 720 });
+
+    const toggle = page.getByRole("button", { name: "操作ガイド" });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+
+    const guide = page.getByRole("region", { name: "操作ガイド" });
+    await expect(guide).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const stepHeading = guide.getByRole("heading", { level: 3 });
+    await expect(stepHeading).toHaveText("出撃準備を整える");
+
+    const steps = [
+      "味方を選んで移動する",
+      "攻撃予測を見てから戦う",
+      "アイテムとユニット行動",
+      "地形と敵の攻撃範囲を読む",
+      "ターンを進めてセーブを管理する"
+    ];
+    for (const title of steps) {
+      await guide.getByRole("button", { name: "次へ" }).click();
+      await expect(stepHeading).toHaveText(title);
+    }
+
+    await expect(guide).toContainText("自軍フェイズ終了");
+    await expect(guide).toContainText("セーブを書き出す");
+    await expect(guide.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "6");
+    const guideBounds = await guide.boundingBox();
+    expect(guideBounds?.width).toBeLessThanOrEqual(320);
+    const pageWidths = await page.evaluate(() => ({
+      viewport: window.innerWidth,
+      document: document.documentElement.scrollWidth
+    }));
+    expect(pageWidths.document).toBeLessThanOrEqual(pageWidths.viewport);
+
+    await guide.getByRole("button", { name: "最初から" }).click();
+    await expect(stepHeading).toHaveText("出撃準備を整える");
+    await guide.getByRole("button", { name: "閉じる" }).click();
+    await expect(guide).toHaveCount(0);
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    expect(await readAutoSave(page)).toEqual(savedBeforeGuide);
+    await toggle.click();
+    await expect(page.getByRole("region", { name: "操作ガイド" })
+      .getByRole("heading", { level: 3 })).toHaveText("出撃準備を整える");
+  });
+
   test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
