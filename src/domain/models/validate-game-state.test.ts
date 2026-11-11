@@ -126,7 +126,10 @@ describe("isValidGameStateSnapshot", () => {
     expect(isValidGameStateSnapshot(invalidHp, CHAPTER_01_MAP)).toBe(false);
     const invalidInventory = {
       ...INITIAL_GAME_STATE,
-      units: [{ ...first, inventory: ["a", "b", "c", "d", "e", "f"] }, ...INITIAL_GAME_STATE.units.slice(1)]
+      units: [{
+        ...first,
+        inventory: ["iron_sword", "iron_sword", "iron_sword", "healing_potion", "promotion_seal", "iron_sword"]
+      }, ...INITIAL_GAME_STATE.units.slice(1)]
     };
     expect(isValidGameStateSnapshot(invalidInventory, CHAPTER_01_MAP)).toBe(false);
   });

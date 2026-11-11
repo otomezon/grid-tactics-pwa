@@ -1,4 +1,7 @@
+import { INVENTORY_ITEMS_BY_ID } from "../../content/items";
+import { PROTOTYPE_CLASS_STAT_CAPS } from "../../content/classes";
 import { TERRAIN_DEFINITIONS } from "../../content/terrain";
+import { WEAPONS_BY_ID } from "../../content/weapons";
 import { isValidGameMapDefinition } from "./validate-game-map";
 import {
   SAVE_VERSION,
@@ -38,24 +41,40 @@ function isGrowthRates(value: unknown): value is UnitGrowthRates {
 function isWeaponType(value: unknown): value is WeaponType {
   return WEAPON_TYPES.includes(value as WeaponType);
 }
+
+function isRegisteredInventoryItemId(value: unknown): value is string {
+  return isNonEmptyString(value) &&
+    (Object.hasOwn(WEAPONS_BY_ID, value) || Object.hasOwn(INVENTORY_ITEMS_BY_ID, value));
+}
+
 function hasValidCampaignUnitData(value: unknown): value is CampaignUnit {
   if (!isRecord(value)) return false;
   const stats = value.stats;
   const inventory = value.inventory;
+  const usableWeaponTypes = value.usableWeaponTypes;
   const equippedWeaponId = value.equippedWeaponId;
+  const equippedWeapon = typeof equippedWeaponId === "string" && Object.hasOwn(WEAPONS_BY_ID, equippedWeaponId)
+    ? WEAPONS_BY_ID[equippedWeaponId]
+    : undefined;
   return (
     isNonEmptyString(value.id) && isNonEmptyString(value.name) &&
-    isNonEmptyString(value.classId) &&
+    isNonEmptyString(value.classId) && Object.hasOwn(PROTOTYPE_CLASS_STAT_CAPS, value.classId) &&
     isNonNegativeInteger(value.level) && (value.level as number) >= 1 &&
     isNonNegativeInteger(value.experience) && (value.experience as number) < 100 &&
     isUnitStats(stats) && isGrowthRates(value.growthRates) &&
-    isNonNegativeInteger(value.currentHp) && (value.currentHp as number) <= stats.hp &&
+    isNonNegativeInteger(value.currentHp) && (value.currentHp as number) > 0 &&
+    (value.currentHp as number) <= stats.hp &&
     (value.movementType === "infantry" || value.movementType === "cavalry") &&
     isNonNegativeInteger(value.move) &&
-    Array.isArray(value.usableWeaponTypes) && value.usableWeaponTypes.every(isWeaponType) &&
-    Array.isArray(inventory) && inventory.length <= 5 && inventory.every(isNonEmptyString) &&
-    (equippedWeaponId === null ||
-      (isNonEmptyString(equippedWeaponId) && inventory.includes(equippedWeaponId)))
+    Array.isArray(usableWeaponTypes) && usableWeaponTypes.every(isWeaponType) &&
+    Array.isArray(inventory) && inventory.length <= 5 && inventory.every(isRegisteredInventoryItemId) &&
+    (equippedWeaponId === null || (
+      isNonEmptyString(equippedWeaponId) &&
+      Array.isArray(inventory) && inventory.includes(equippedWeaponId) &&
+      equippedWeapon !== undefined &&
+      Array.isArray(usableWeaponTypes) &&
+      usableWeaponTypes.includes(equippedWeapon.weaponType)
+    ))
   );
 }
 function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
