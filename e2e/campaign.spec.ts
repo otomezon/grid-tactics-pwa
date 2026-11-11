@@ -1024,7 +1024,7 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
-  test("previews the deterministic enemy phase without changing the auto save", async ({ page }) => {
+  test("forecasts each ally's surviving HP and matches the resolved enemy phase without saving the preview", async ({ page }) => {
     await startBattle(page);
     const savedBeforePreview = await readAutoSave(page);
     const forecast = page.getByTestId("enemy-phase-forecast");
@@ -1032,9 +1032,22 @@ test.describe("browser campaign flow", () => {
     const details = forecast.locator("details");
     await expect(details.locator("summary")).toHaveText("行動順と予測結果を表示");
     await details.locator("summary").click();
+
     const projected = forecast.getByTestId("enemy-phase-forecast-action");
     await expect(projected).toHaveCount(5);
     const messages = await projected.locator("p").allTextContents();
+    const projectedUnits = forecast.getByTestId("enemy-phase-forecast-unit");
+    const deployedPlayerCount = (savedBeforePreview as {
+      units: Array<{ faction: string }>;
+    }).units.filter((unit) => unit.faction === "player").length;
+    await expect(projectedUnits).toHaveCount(deployedPlayerCount);
+    const unitOutcomes = await projectedUnits.evaluateAll((nodes) => nodes.map((node) => ({
+      unitId: node.getAttribute("data-unit-id"),
+      predictedHp: Number(node.getAttribute("data-predicted-hp")),
+      defeated: node.getAttribute("data-defeated") === "true"
+    })));
+    await expect(forecast).toContainText("予測被ダメージ");
+    await expect(forecast).toContainText("砦回復");
     await expect(forecast).toContainText("予測結果：");
     await expect(forecast).toContainText("AIの評価値と距離方式は暫定です");
     expect(await readAutoSave(page)).toEqual(savedBeforePreview);
@@ -1044,8 +1057,16 @@ test.describe("browser campaign flow", () => {
     const actual = page.getByTestId("battle-history").getByTestId("enemy-phase-action");
     await expect(actual).toHaveCount(5);
     expect(await actual.locator("p").allTextContents()).toEqual(messages);
+
+    const savedAfterEnemyPhase = await readAutoSave(page) as {
+      units: Array<{ id: string; faction: string; currentHp: number }>;
+    };
+    for (const outcome of unitOutcomes) {
+      const actualUnit = savedAfterEnemyPhase.units.find((unit) => unit.id === outcome.unitId);
+      if (outcome.defeated) expect(actualUnit).toBeUndefined();
+      else expect(actualUnit?.currentHp).toBe(outcome.predictedHp);
+    }
     await expect(forecast).toBeVisible();
-    await expect(forecast).toContainText("敵軍フェイズの行動予測");
   });
 
   test("records enemy actions in the chronological battle history and clears it on reload", async ({ page }) => {

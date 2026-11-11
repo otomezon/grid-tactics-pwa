@@ -1052,3 +1052,22 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .enemy-phase-forecast-outcome strong { color: var(--text-main); }
 .enemy-phase-forecast-note { margin-top: 8px; }
 @media (max-width: 380px) { .enemy-phase-forecast-summary { padding: 8px; font-size: .74rem; } }
+
+/* Per-ally survival projection within the enemy-phase forecast. */
+.enemy-phase-forecast-units { margin-top: 14px; }
+.enemy-phase-forecast-units h3 { margin: 0 0 8px; font-size: .82rem; }
+.enemy-phase-forecast-unit-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.enemy-phase-forecast-unit {
+  min-width: 0; padding: 9px 10px; border: 1px solid var(--line);
+  border-radius: 9px; background: rgba(12,24,34,.42);
+}
+.enemy-phase-forecast-unit.is-defeated { border-color: rgba(202,104,95,.7); }
+.enemy-phase-forecast-unit-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.enemy-phase-forecast-unit-heading strong { min-width: 0; overflow-wrap: anywhere; color: #edf3f7; font-size: .78rem; }
+.enemy-phase-forecast-defeated { flex: 0 0 auto; color: #f0a19a; font-size: .68rem; font-weight: 800; }
+.enemy-phase-forecast-unit > p { margin: 6px 0 0; color: #dce6ec; font-size: .72rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.enemy-phase-forecast-unit > .enemy-phase-forecast-unit-detail { color: var(--text-muted); }
+@media (max-width: 380px) {
+  .enemy-phase-forecast-unit { padding: 8px; }
+  .enemy-phase-forecast-unit > p { font-size: .69rem; }
+}
