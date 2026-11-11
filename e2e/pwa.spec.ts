@@ -259,7 +259,7 @@ test.describe("production PWA shell", () => {
       await importPage.locator('[data-testid="save-import-input"]').setInputFiles(filePath!);
       await expect(importPage.getByRole("status")).toContainText("セーブファイルからゲーム状態を復元しました。");
       await expect(importPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-      await importPage.getByRole("button", { name: /味方01/ }).click();
+      await importPage.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
       await expect(importPage.locator(".unit-details")).toContainText("行動済み");
 
       const importedState = await readAutoSave(importPage) as {
