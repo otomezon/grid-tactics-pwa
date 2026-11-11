@@ -717,6 +717,51 @@ test.describe("browser campaign flow", () => {
     await expect(page.getByRole("button", { name: "敵の攻撃範囲を表示" })).toHaveAttribute("aria-pressed", "false");
   });
 
+  test("shows enemy threat sources on a 320px viewport without page overflow", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await startBattle(page);
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        position: { x: number; y: number };
+        move: number;
+        hasMoved: boolean;
+        hasActed: boolean;
+      }>;
+    };
+    const player = preparedState.units.find((unit) => unit.id === "unit_001");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
+    if (!player || !enemy) throw new Error("Threat detail test units are missing from the auto save.");
+
+    player.position = { x: 4, y: 1 };
+    enemy.position = { x: 1, y: 1 };
+    enemy.move = 2;
+    enemy.hasMoved = false;
+    enemy.hasActed = false;
+    preparedState.units = [player, enemy];
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const savedBeforeInspection = await readAutoSave(page);
+    await page.getByRole("button", { name: "敵の攻撃範囲を表示" }).click();
+    await page.locator('.map-grid [data-map-position="3,0"]').click();
+
+    const inspector = page.getByTestId("enemy-threat-inspector");
+    await expect(inspector).toBeVisible();
+    await expect(inspector).toContainText("敵01");
+    await expect(inspector).toContainText("試作の鉄の斧");
+    await expect(inspector).toContainText("攻撃可能な起点 2箇所");
+
+    const bounds = await inspector.boundingBox();
+    if (!bounds) throw new Error("Enemy threat details are not laid out on the narrow viewport.");
+    expect(bounds.width).toBeLessThanOrEqual(320);
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(documentWidth).toBeLessThanOrEqual(320);
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+  });
+
   test("shows the defeated enemy roster and surviving allies in battle results", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 390, height: 844 });
