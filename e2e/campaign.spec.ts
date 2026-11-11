@@ -165,26 +165,38 @@ test.describe("browser campaign flow", () => {
     await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
     await page.getByRole("button", { name: "攻撃を確定" }).click();
 
-    const report = page.getByTestId("player-attack-report");
+    const report = page.getByTestId("battle-history");
     await expect(report).toBeVisible();
-    await expect(report).toContainText("味方01 vs 敵01");
-    await expect(report.getByTestId("player-attack-strike")).toHaveCount(2);
-    await expect(report).toContainText("先制攻撃");
-    await expect(report).toContainText("反撃");
-    await expect(report).toContainText("試作の鉄の剣");
-    await expect(report).toContainText("獲得EXP：+10");
-    await expect(report).toContainText(/HP 20 → \d+/);
+    await expect(report.getByTestId("battle-history-entry")).toHaveCount(1);
+    const playerAttack = report.getByTestId("battle-history-entry").first();
+    await expect(playerAttack).toContainText("第1ターン");
+    await expect(playerAttack).toContainText("味方01 vs 敵01");
+    await expect(playerAttack.getByTestId("player-attack-strike")).toHaveCount(2);
+    await expect(playerAttack).toContainText("先制攻撃");
+    await expect(playerAttack).toContainText("反撃");
+    await expect(playerAttack).toContainText("試作の鉄の剣");
+    await expect(playerAttack).toContainText("獲得EXP：+10");
+    await expect(playerAttack).toContainText(/HP 20 → \d+/);
     const dimensions = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,
-      reportWidth: document.querySelector("[data-testid=player-attack-report]")?.getBoundingClientRect().width ?? 0
+      historyWidth: document.querySelector("[data-testid=battle-history]")?.getBoundingClientRect().width ?? 0
     }));
-    expect(dimensions.reportWidth).toBeGreaterThan(0);
+    expect(dimensions.historyWidth).toBeGreaterThan(0);
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+    await expect(report.getByTestId("battle-history-entry")).toHaveCount(2);
+    const enemyPhase = report.getByTestId("battle-history-entry").nth(1);
+    await expect(enemyPhase).toContainText("第1ターン");
+    await expect(enemyPhase).toContainText("敵軍フェイズ");
+    await expect(enemyPhase.getByTestId("enemy-phase-action")).toHaveCount(1);
     const savedState = await readAutoSave(page);
+    expect(savedState).not.toHaveProperty("battleHistory");
     expect(savedState).not.toHaveProperty("lastPlayerAttackReport");
     await page.reload();
-    await expect(page.getByTestId("player-attack-report")).toHaveCount(0);
+    await expect(page.getByTestId("battle-history")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(savedState);
   });
 
@@ -218,7 +230,6 @@ test.describe("browser campaign flow", () => {
     const showButton = page.getByRole("button", { name: "敵の攻撃範囲を表示" });
     await expect(showButton).toBeVisible();
     await expect(showButton).toHaveAttribute("aria-pressed", "false");
-
     const threatenedTile = page.locator(".map-tile").nth(14);
     const safeTile = page.locator(".map-tile").nth(15);
     await expect(threatenedTile).not.toHaveAttribute("aria-label", /敵攻撃範囲/);
@@ -395,22 +406,29 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
-  test("resolves the enemy phase and shows its action report", async ({ page }) => {
+  test("records enemy actions in the chronological battle history and clears it on reload", async ({ page }) => {
     await startBattle(page);
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
-    const report = page.getByTestId("enemy-phase-report");
+    const report = page.getByTestId("battle-history");
     await expect(report).toBeVisible();
-    await expect(report.getByTestId("enemy-phase-action")).toHaveCount(5);
-    for (const enemyName of ["敵01", "敵02", "敵03", "敵04", "敵05"]) await expect(report).toContainText(enemyName);
-    await expect(report).toContainText(/攻撃|移動|待機/);
-    await expect(report).toContainText("セーブデータには含まれません");
+    await expect(report.getByTestId("battle-history-entry")).toHaveCount(1);
+    const enemyPhase = report.getByTestId("battle-history-entry").first();
+    await expect(enemyPhase).toContainText("第1ターン");
+    await expect(enemyPhase).toContainText("敵軍フェイズ");
+    await expect(enemyPhase.getByTestId("enemy-phase-action")).toHaveCount(5);
+    for (const enemyName of ["敵01", "敵02", "敵03", "敵04", "敵05"]) await expect(enemyPhase).toContainText(enemyName);
+    await expect(enemyPhase).toContainText(/攻撃|移動|待機/);
+    await expect(report).toContainText("セーブデータには保存しません");
+    const savedState = await readAutoSave(page);
+    expect(savedState).not.toHaveProperty("battleHistory");
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
-    await expect(page.getByTestId("enemy-phase-report")).toHaveCount(0);
+    await expect(page.getByTestId("battle-history")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(savedState);
   });
 
-  test("resumes a saved enemy phase once and rebuilds its action report", async ({ page }) => {
+  test("rebuilds one chronological enemy-phase entry when resuming a saved enemy phase", async ({ page }) => {
     await startBattle(page);
     const checkpoint = await readAutoSave(page) as {
       phase: "player" | "enemy"; turn: number;
@@ -420,15 +438,20 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, checkpoint);
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
-    const report = page.getByTestId("enemy-phase-report");
+    const report = page.getByTestId("battle-history");
     await expect(report).toBeVisible();
-    await expect(report.getByTestId("enemy-phase-action")).toHaveCount(5);
+    await expect(report.getByTestId("battle-history-entry")).toHaveCount(1);
+    const enemyPhase = report.getByTestId("battle-history-entry").first();
+    await expect(enemyPhase).toContainText("第1ターン");
+    await expect(enemyPhase).toContainText("敵軍フェイズ");
+    await expect(enemyPhase.getByTestId("enemy-phase-action")).toHaveCount(5);
     const resolvedState = await readAutoSave(page) as { phase: string; turn: number; [key: string]: unknown };
     expect(resolvedState.phase).toBe("player");
     expect(resolvedState.turn).toBe(2);
+    expect(resolvedState).not.toHaveProperty("battleHistory");
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
-    await expect(page.getByTestId("enemy-phase-report")).toHaveCount(0);
+    await expect(page.getByTestId("battle-history")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(resolvedState);
   });
 
@@ -437,8 +460,7 @@ test.describe("browser campaign flow", () => {
     await startBattle(page);
     const viewport = page.getByRole("region", {
       name: "戦闘マップ。狭い画面では左右にスクロールできます"
-    });
-    await expect(viewport).toBeVisible();
+    });    await expect(viewport).toBeVisible();
     const dimensions = await page.evaluate(() => {
       const viewport = document.querySelector(".map-viewport");
       const grid = document.querySelector(".map-grid");
@@ -657,8 +679,7 @@ test.describe("browser campaign flow", () => {
     });
   }
 
-  test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
 
