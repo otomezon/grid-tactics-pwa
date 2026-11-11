@@ -48,6 +48,7 @@
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
 | 敵軍ユニットの結果一覧 | 実装済み（章マップの敵配置と現在状態を照合し、生存／撃破を表示） | `src/application/get-battle-result-details.ts` | 単体テスト・E2Eで検証 |
 | 選択ユニットの経験値表示 | 実装済み（EXP x/100） | `src/App.tsx` | CI build。実機操作未確認 |
+| 戦闘中の消費型回復アイテム | 実装済み（移動後の味方が回復薬を自身に使い、確認後に最大10HPを回復。HP上限で制限し、アイテム1個と行動を消費。回復量は試作値。saveVersion 3の既存inventory配列を利用） | `src/content/items.ts`, `src/application/perform-item-use.ts`, `src/App.tsx` | application単体テストとChromium E2Eで移動後使用・キャンセル・HP上限・保存後状態を検証 |
 | progression／attack／class-change／content tests | mainのPR #6〜#7と今回のPR #8で実装済み | `src/domain/progression/`, `src/application/`, `src/content/class-promotion.test.ts` | GitHub Actions run #168: 13 test files／78 tests成功 |
 | 昇格先パス | 実装済み（設計書§5.5の7系統） | `src/content/classes.ts` | mapping tests |
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み。採択済みCP-12により移動・行動前のみ実行可、成功時に行動済みとなる。CP-09／10の移動・武器適性・装備維持、7経路すべての一段階昇格を回帰テスト化。PR #32でCP-07／08のEXP 0／99保持、現在HP 1／満タン維持、HP上限でのボーナス制限を追加 | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts`, `src/domain/progression/class-change.test.ts`, `src/content/class-promotion.test.ts` | PR #32 CI run #503: 22 test files／146 tests、Chromium E2E 11件成功 |

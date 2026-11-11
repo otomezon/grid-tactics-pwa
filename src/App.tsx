@@ -5,6 +5,7 @@ import { WEAPONS_BY_ID } from "./content/weapons";
 import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
 import { getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
 import { performClassChange } from "./application/perform-class-change";
+import { performItemUse } from "./application/perform-item-use";
 import { getClassPromotionStatPreview } from "./domain/progression/class-change";
 import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
@@ -832,6 +833,45 @@ export default function App() {
     await persist(nextState, selectedUnit.name + "は" + weapon.name + "を装備しました。");
   }
 
+  async function handleUseInventoryItem(itemId: string): Promise<void> {
+    if (!selectedUnit || !interactive || selectedUnit.faction !== "player") return;
+
+    const item = INVENTORY_ITEMS_BY_ID[itemId];
+    if (!item || item.effect?.type !== "heal") {
+      setMessage("このアイテムは現在使用できません。");
+      return;
+    }
+
+    const missingHp = selectedUnit.stats.hp - selectedUnit.currentHp;
+    if (missingHp <= 0) {
+      setMessage("HPが満タンのため、回復薬を使用できません。");
+      return;
+    }
+
+    const healingAmount = Math.min(item.effect.amount, missingHp);
+    const confirmed = window.confirm(
+      selectedUnit.name + "が" + item.name + "を使います。HPを" + healingAmount +
+        "回復します（回復量は試作値）。このフェイズの行動を消費します。続行しますか？"
+    );
+    if (!confirmed) return;
+
+    try {
+      const execution = performItemUse(gameState, selectedUnit.id, item);
+      setGameState(execution.nextState);
+      setCombatTargetId(null);
+      setPromotionConfirmUnitId(null);
+      setLastPlayerAttackReport(null);
+      setLastEnemyPhaseActions(null);
+      await persist(
+        execution.nextState,
+        selectedUnit.name + "は" + item.name + "を使い、HPが" + execution.healedHp +
+          "回復しました。このフェイズの行動を消費しました。"
+      );
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    }
+  }
+
   async function handleClassChange(): Promise<void> {
     if (!selectedUnit || !interactive || selectedUnit.faction !== "player") return;
     if (selectedUnit.hasMoved || selectedUnit.hasActed) {
@@ -1616,10 +1656,36 @@ export default function App() {
                       <h3>所持アイテム</h3>
                       {selectedInventoryItems.length > 0 ? (
                         <ul>
-                          {selectedInventoryItems.map((item) => (
-                            <li key={item.id}>
-                              <strong>{item.definition?.name ?? item.id}</strong>
-                              {item.definition && <span>{item.definition.description}</span>}
+                          {selectedInventoryItems.map((item, index) => (
+                            <li
+                              key={item.id + "-" + String(index)}
+                              className={item.definition?.effect?.type === "heal" ? "inventory-item-usable" : undefined}
+                            >
+                              <div className="inventory-item-copy">
+                                <strong>{item.definition?.name ?? item.id}</strong>
+                                {item.definition && <span>{item.definition.description}</span>}
+                              </div>
+                              {item.definition?.effect?.type === "heal" && (
+                                <div className="inventory-item-action">
+                                  <span className="helper-text">最大{item.definition.effect.amount}HP（試作値）</span>
+                                  <button
+                                    className="secondary-button inventory-use-button"
+                                    type="button"
+                                    aria-label={item.definition.name + "を使用"}
+                                    disabled={
+                                      !interactive ||
+                                      selectedUnit.hasActed ||
+                                      selectedUnit.currentHp >= selectedUnit.stats.hp
+                                    }
+                                    onClick={() => void handleUseInventoryItem(item.id)}
+                                  >
+                                    使用
+                                  </button>
+                                  {selectedUnit.currentHp >= selectedUnit.stats.hp && (
+                                    <span className="helper-text">HP満タン</span>
+                                  )}
+                                </div>
+                              )}
                             </li>
                           ))}
                         </ul>
