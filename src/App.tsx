@@ -597,8 +597,7 @@ export default function App() {
         return;
       }
 
-      const savedChapterId = typeof stored === "object" && stored !== null &&
-        "chapterId" in stored && typeof stored.chapterId === "string"
+      const savedChapterId = typeof stored === "object" && stored !== null &&        "chapterId" in stored && typeof stored.chapterId === "string"
         ? stored.chapterId
         : null;      const chapter = savedChapterId ? getChapterById(savedChapterId) : undefined;
       const migration = chapter ? migrateGameStateSnapshot(stored, chapter.map) : null;
@@ -1197,7 +1196,6 @@ export default function App() {
         // Inter-chapter HP handling is not defined in the game design yet.
         currentHpPolicy: "preserve"
       });
-
       setActiveChapter(targetChapter);
       setGameState(nextState);
       setBattleHistory([]);
@@ -1721,7 +1719,12 @@ export default function App() {
                     aria-label={ariaLabel}
                     aria-pressed={Boolean(isSelected || isTargeted)}
                     disabled={!interactive}
-                    onFocus={() => setInspectedPosition(position)}
+                    onFocus={(event) => {
+                      // Expanding the inspector above the map on pointer focus shifts the tile
+                      // before the click is dispatched. Keep inspector updates keyboard-only here;
+                      // pointer clicks inspect in handleTileClick after the tile action is received.
+                      if (event.currentTarget.matches(":focus-visible")) setInspectedPosition(position);
+                    }}
                     onClick={() => void handleTileClick(position)}
                   >
                     <span className="terrain-mark" aria-hidden="true">
@@ -1797,8 +1800,7 @@ export default function App() {
                   </div>
                 )}
                 {selectedUnit.faction === "player" && (
-                  <>
-                    <div className="inventory-items">
+                  <>                    <div className="inventory-items">
                       <h3>所持アイテム</h3>
                       {selectedInventoryItems.length > 0 ? (
                         <ul>
