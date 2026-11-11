@@ -155,12 +155,13 @@ export function calculateEnemyThreatSourcesAtPosition(
     return [];
   }
 
+  const profiles = getEnemyAttackProfiles(state, map, weaponsById);
   const activeEnemyTiles = new Set(
     profiles.map((profile) => `${profile.enemyPosition.x},${profile.enemyPosition.y}`)
   );
   if (activeEnemyTiles.has(`${target.x},${target.y}`)) return [];
 
-  return getEnemyAttackProfiles(state, map, weaponsById)
+  return profiles
     .map((profile): EnemyThreatSource | null => {
       const attackOrigins = profile.attackOrigins.flatMap((origin) => {
         const distance = calculateManhattanDistance(origin, target);
