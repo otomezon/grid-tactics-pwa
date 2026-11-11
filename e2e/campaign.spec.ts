@@ -447,6 +447,35 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedState);
   });
 
+  test("highlights enemies attackable from a movement preview without saving", async ({ page }) => {
+    await startBattle(page);
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number } }>;
+    };
+    const attacker = preparedState.units.find((unit) => unit.id === "unit_001");
+    if (!attacker) throw new Error("The attack-preview unit is missing from the auto save.");
+    attacker.position = { x: 0, y: 4 };
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const savedBeforePreview = await readAutoSave(page);
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    const destination = page.locator(".map-grid").getByRole("button", { name: /2列・5行/ });
+    const target = page.locator(".map-grid").getByRole("button", { name: /敵04/ });
+
+    await destination.hover();
+
+    await expect(destination).toHaveClass(/is-movement-path/);
+    await expect(target).toHaveClass(/is-attackable-after-move/);
+    await expect(target).toHaveAttribute("aria-label", /移動プレビュー先から攻撃可能/);
+    await expect(page.locator(".legend-swatch.attack-after-move")).toBeVisible();
+    await expect(page.getByTestId("movement-attack-preview-help"))
+      .toContainText("橙色の枠はこの移動先から攻撃可能な敵です");
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+  });
+
   test("previews a movement route on touch before confirming the destination", async ({ page }) => {
     const browser = page.context().browser();
     if (!browser) throw new Error("The Chromium browser is unavailable for the touch test.");
