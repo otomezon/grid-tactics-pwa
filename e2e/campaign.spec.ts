@@ -152,16 +152,84 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".deployment-panel")).toHaveCount(0);
   });
 
+  test("shows ally action status and selects the unit on the map without saving UI state", async ({ page }) => {
+    await startBattle(page);
+    const savedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        hasMoved: boolean;
+        hasActed: boolean;
+        position: { x: number; y: number };
+      }>;
+    };
+    const movedUnit = savedState.units.find((unit) => unit.id === "unit_001");
+    const actedUnit = savedState.units.find((unit) => unit.id === "unit_002");
+    const selectedUnit = savedState.units.find((unit) => unit.id === "unit_003");
+    if (!movedUnit || !actedUnit || !selectedUnit) {
+      throw new Error("The ally roster fixture is missing a deployed unit.");
+    }
+    movedUnit.hasMoved = true;
+    movedUnit.hasActed = false;
+    actedUnit.hasMoved = true;
+    actedUnit.hasActed = true;
+    await writeAutoSave(page, savedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const roster = page.getByTestId("unit-roster");
+    await expect(roster.getByRole("heading", { name: "味方ユニット一覧" })).toBeVisible();
+    await expect(page.getByTestId("unit-roster-summary")).toHaveText("未行動 3 / 4人");
+    const movedButton = page.getByRole("button", { name: /味方01を選択/ });
+    const actedButton = page.getByRole("button", { name: /味方02を選択/ });
+    const readyButton = page.getByRole("button", { name: /味方03を選択/ });
+    await expect(movedButton).toContainText("移動済・未行動");
+    await expect(actedButton).toContainText("行動済");
+    await expect(readyButton).toContainText("未移動・未行動");
+    await expect(roster.getByRole("progressbar", { name: "味方03のHP" })).toHaveAttribute("value", "20");
+
+    await readyButton.click();
+    await expect(page.locator(".unit-heading h3")).toHaveText("味方03");
+    await expect(readyButton).toHaveAttribute("aria-pressed", "true");
+    const selectedTile = page.locator(
+      '.map-grid [data-map-position="' + selectedUnit.position.x + "," + selectedUnit.position.y + '"]'
+    );
+    await expect(selectedTile).toHaveClass(/is-selected/);
+    expect(await readAutoSave(page)).toEqual(savedState);
+  });
+
+  test("scrolls the narrow battle map to an ally chosen from the roster", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await startBattle(page);
+
+    const rosterButton = page.getByRole("button", { name: /味方04を選択/ });
+    await rosterButton.click();
+    await expect(page.locator(".unit-heading h3")).toHaveText("味方04");
+
+    const viewport = page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    });
+    const tile = page.locator('.map-grid [data-map-position="8,8"]');
+    await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    const bounds = await tile.boundingBox();
+    const viewportBounds = await viewport.boundingBox();
+    if (!bounds || !viewportBounds) throw new Error("The selected ally tile or map viewport is not visible.");
+    expect(bounds.x).toBeGreaterThanOrEqual(viewportBounds.x - 1);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width + 1);
+    await expect(tile).toHaveClass(/is-selected/);
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(documentWidth).toBeLessThanOrEqual(320);
+  });
+
   test("persists a player action across reload", async ({ page }) => {
     await startBattle(page);
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
 
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
@@ -512,7 +580,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, preparedState);
     await page.reload();
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     const promotionPanel = page.locator(".promotion-panel");
     await expect(promotionPanel).toContainText("移動・行動前のみ可能");
     await expect(promotionPanel.getByRole("button", { name: "クラスチェンジを確認" })).toBeDisabled();
@@ -521,7 +589,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, preparedState);
     await page.reload();
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmation).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
@@ -593,7 +661,7 @@ test.describe("browser campaign flow", () => {
     expect(promotedState.units.find((unit) => unit.id === "unit_001")?.inventory).not.toContain("promotion_seal");
 
     await page.reload();
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
@@ -690,7 +758,7 @@ test.describe("browser campaign flow", () => {
       const page = await context.newPage();
       await startBattle(page);
 
-      const unitTile = page.getByRole("button", { name: /味方01/ });
+      const unitTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
       await expect(unitTile).toBeVisible();
       await unitTile.scrollIntoViewIfNeeded();
 
@@ -731,7 +799,7 @@ test.describe("browser campaign flow", () => {
     await writeAutoSave(page, preparedState);
     await page.reload();
 
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     const useButtons = page.getByRole("button", { name: "回復薬を使用" });
     const healingPotionRow = page.locator(".inventory-items li").filter({ hasText: "回復薬" });
     await expect(useButtons).toHaveCount(1);
@@ -776,7 +844,7 @@ test.describe("browser campaign flow", () => {
     await expect(healingPotionRow).toContainText("所持数：1個");
 
     await page.reload();
-    await page.getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details div").first()).toContainText(
       preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
     );

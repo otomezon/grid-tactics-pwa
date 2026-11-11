@@ -178,6 +178,39 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .legend-swatch.selected { border: 3px solid #f6d071; background: transparent; }
 .side-panel { display: grid; gap: 14px; }
 .info-card { padding: 16px; }
+.unit-roster-heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px;
+}
+.unit-roster-heading h2 { margin: 0; }
+.unit-roster-summary {
+  flex: 0 0 auto; padding: 4px 8px; border: 1px solid rgba(104, 189, 186, .45);
+  border-radius: 999px; color: #bde4dc; font-size: .7rem; font-weight: 800;
+}
+.unit-roster-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.unit-roster-list li { min-width: 0; }
+.unit-roster-button {
+  display: grid; width: 100%; min-width: 0; grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid var(--line);
+  border-radius: 10px; color: #e8f0f4; background: rgba(18, 31, 43, .58);
+  text-align: left; cursor: pointer;
+}
+.unit-roster-button:hover:not(:disabled) { background: rgba(47, 73, 91, .72); }
+.unit-roster-button.is-selected { border-color: #e6c775; background: rgba(99, 78, 35, .28); }
+.unit-roster-button:focus-visible { outline: 3px solid #f1c879; outline-offset: 2px; }
+.unit-roster-button:disabled { cursor: not-allowed; opacity: .55; }
+.unit-roster-token {
+  display: grid; width: 34px; height: 34px; place-items: center; border: 2px solid #fff;
+  border-radius: 9px; color: #fff; background: #286fae; font-weight: 900;
+}
+.unit-roster-copy { display: grid; min-width: 0; gap: 4px; }
+.unit-roster-name { display: flex; min-width: 0; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.unit-roster-name strong { font-size: .82rem; }
+.unit-roster-name > span { color: var(--text-muted); font-size: .7rem; }
+.unit-roster-status { color: #d6e3ea; font-size: .72rem; font-weight: 800; }
+.unit-roster-health { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.unit-roster-health progress { width: 100%; min-width: 30px; height: 7px; accent-color: #6bbdb3; }
+.unit-roster-health > span { flex: 0 0 auto; color: var(--text-muted); font-size: .68rem; font-variant-numeric: tabular-nums; }
+
 .info-card h2 { margin-bottom: 15px; }
 .save-backup-list { display: grid; gap: 10px; margin-top: 12px; }
 .save-backup-item { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(53,73,90,.7); }
