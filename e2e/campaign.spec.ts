@@ -697,9 +697,7 @@ test.describe("browser campaign flow", () => {
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
 
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
-    const phaseEndReview = page.getByTestId("phase-end-review");
-    await expect(phaseEndReview).toBeVisible();
-    await phaseEndReview.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
+    await expect(page.getByTestId("phase-end-review")).toHaveCount(0);
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
     await expect(report.getByTestId("battle-history-entry")).toHaveCount(2);
     const enemyPhase = report.getByTestId("battle-history-entry").nth(1);
