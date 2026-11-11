@@ -79,7 +79,7 @@ export function DeploymentPreview({
         <div>
           <p className="eyebrow">FORMATION</p>
           <h3 id="deployment-preview-heading">出撃配置プレビュー</h3>
-          <p>出撃予定の味方をマップ上に表示します。味方のマスを選ぶと詳細を確認できます。</p>
+          <p>出撃予定の味方をマップ上に表示します。味方のマスでは詳細を、空き出撃マスでは地形を確認できます。</p>
         </div>
         <span data-testid="deployment-preview-count" aria-live="polite">{occupiedCount} / {map.playerDeployment.length}か所</span>
       </div>
@@ -104,7 +104,7 @@ export function DeploymentPreview({
             >
               {slot && assigned ? (
                 <button
-                  className={"deployment-preview-unit" + (detailUnitId === assigned.id ? " is-inspected" : "")}
+                  className={"deployment-preview-unit" + (detailUnitId === assigned.id || activeInspectedPositionKey === key ? " is-inspected" : "")}
                   type="button"
                   aria-label={assigned.name + "、" + label + "に配置済み。詳細を表示"}
                   aria-pressed={activeInspectedPositionKey === key}
