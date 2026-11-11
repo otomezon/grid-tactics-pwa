@@ -4,6 +4,7 @@ import { EnemyRoster } from "./components/enemy-roster";
 import { EnemyInspector } from "./components/enemy-inspector";
 import { EnemyThreatInspector } from "./components/enemy-threat-inspector";
 import { EnemyPhaseForecastPanel } from "./components/enemy-phase-forecast";
+import { PlayerPhaseEndReview } from "./components/player-phase-end-review";
 import { CombatForecastPanel } from "./components/combat-forecast";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
@@ -324,6 +325,7 @@ export default function App() {
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
   const [isOperationGuideOpen, setIsOperationGuideOpen] = useState(false);
+  const [isPhaseEndReviewOpen, setIsPhaseEndReviewOpen] = useState(false);
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
   const [mapFocusPosition, setMapFocusPosition] = useState<Position>({ x: 0, y: 0 });
   const [movementPreviewPosition, setMovementPreviewPosition] = useState<Position | null>(null);
@@ -347,6 +349,7 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalledApp, setIsInstalledApp] = useState(isStandaloneDisplayMode);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
+  const phaseEndButtonRef = useRef<HTMLButtonElement>(null);
   const lastMapInputWasTouchRef = useRef(false);
   const touchMoveConfirmationPositionRef = useRef<Position | null>(null);
 
@@ -580,6 +583,10 @@ export default function App() {
   const enemyPhaseForecast = useMemo(
     () => deploymentPending ? null : getEnemyPhaseForecast(gameState, currentMap),
     [currentMap, deploymentPending, gameState]
+  );
+  const pendingPlayerUnits = useMemo(
+    () => gameState.units.filter((unit) => unit.faction === "player" && !unit.hasActed),
+    [gameState.units]
   );
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
     !deploymentPending && gameState.phase === "player" && battleOutcome === "playing";
@@ -912,6 +919,36 @@ export default function App() {
     setMessage(unit.name + "を選択しました。青は移動可能、赤は攻撃可能な敵です。");
 
     scrollMapTileIntoView(unit.position);
+  }
+
+  function handleRequestEndPlayerPhase(): void {
+    if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
+    if (pendingPlayerUnits.length > 0) {
+      setIsPhaseEndReviewOpen(true);
+      return;
+    }
+    void handleEndPlayerPhase();
+  }
+
+  function handleClosePhaseEndReview(): void {
+    setIsPhaseEndReviewOpen(false);
+    window.requestAnimationFrame(() => phaseEndButtonRef.current?.focus());
+  }
+
+  function handleSelectUnitFromPhaseReview(unit: GameUnit): void {
+    setIsPhaseEndReviewOpen(false);
+    handleRosterUnitSelect(unit);
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLButtonElement>(
+        `.map-grid [data-map-position="${unit.position.x},${unit.position.y}"]`
+      )?.focus();
+    });
+  }
+
+  function handleConfirmPhaseEndReview(): void {
+    if (!interactive) return;
+    setIsPhaseEndReviewOpen(false);
+    void handleEndPlayerPhase();
   }
 
   function handleEnemyRosterSelect(unit: GameUnit): void {
@@ -1282,6 +1319,7 @@ export default function App() {
 
   async function handleEndPlayerPhase(): Promise<void> {
     if (!interactive || gameState.phase !== "player" || battleOutcome !== "playing") return;
+    setIsPhaseEndReviewOpen(false);
 
     try {
       const phaseStart = beginEnemyPhase(gameState, currentMap);
@@ -1485,7 +1523,15 @@ export default function App() {
             onChange={(event) => void handleImportSaveFile(event)}
           />
           {battleOutcome === "playing" && gameState.phase === "player" && (
-            <button className="secondary-button phase-end-button" type="button" disabled={!interactive} onClick={() => void handleEndPlayerPhase()}>
+            <button
+              ref={phaseEndButtonRef}
+              className="secondary-button phase-end-button"
+              type="button"
+              disabled={!interactive}
+              aria-expanded={isPhaseEndReviewOpen}
+              aria-controls={isPhaseEndReviewOpen ? "phase-end-review" : undefined}
+              onClick={handleRequestEndPlayerPhase}
+            >
               自軍フェイズ終了
             </button>
           )}
@@ -1496,6 +1542,17 @@ export default function App() {
         <strong>開発プロトタイプ</strong>
         <span>仮マップ・仮ユニット・仮武器を使用しています。基本的な敵AI・フェイズ進行・勝敗判定を実装した開発版です。</span>
       </div>
+
+      {isPhaseEndReviewOpen && (
+        <PlayerPhaseEndReview
+          pendingUnits={pendingPlayerUnits}
+          forecast={enemyPhaseForecast}
+          disabled={!interactive}
+          onSelectUnit={handleSelectUnitFromPhaseReview}
+          onReturnToBattle={handleClosePhaseEndReview}
+          onEndPhase={handleConfirmPhaseEndReview}
+        />
+      )}
 
       {isOperationGuideOpen && (
         <OperationGuide onClose={() => setIsOperationGuideOpen(false)} />
