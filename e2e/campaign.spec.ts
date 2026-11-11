@@ -172,6 +172,46 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedState);
   });
 
+  test("previews a movement route on touch before confirming the destination", async ({ page }) => {
+    const browser = page.context().browser();
+    if (!browser) throw new Error("The Chromium browser is unavailable for the touch test.");
+    const touchContext = await browser.newContext({
+      baseURL: "http://127.0.0.1:4173",
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true
+    });
+    const touchPage = await touchContext.newPage();
+
+    try {
+      await startBattle(touchPage);
+      const savedBeforePreview = await readAutoSave(touchPage);
+      const playerTile = touchPage.locator(".map-grid").getByRole("button", { name: /味方01/ });
+      await playerTile.tap();
+      const destination = touchPage.locator(".map-grid").getByRole("button", { name: /2列・8行/ });
+      await destination.tap();
+
+      await expect(destination).toHaveClass(/is-movement-path/);
+      await expect(destination).toHaveAttribute("aria-label", /移動経路 2番/);
+      await expect(touchPage.getByRole("status")).toContainText("同じマスをもう一度タップすると移動します。");
+      expect(await readAutoSave(touchPage)).toEqual(savedBeforePreview);
+
+      await destination.tap();
+      await expect(touchPage.getByRole("status")).toContainText("味方01が2列・8行へ移動しました。");
+      await expect(touchPage.locator(".map-grid .movement-path-step")).toHaveCount(0);
+      const movedState = await readAutoSave(touchPage) as {
+        units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean }>;
+      };
+      expect(movedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+        position: { x: 1, y: 7 },
+        hasMoved: true
+      });
+    } finally {
+      await touchContext.close();
+    }
+  });
+
   test("shows objective progress and inspects terrain without changing the autosave", async ({ page }) => {
     await startBattle(page);
     const objective = page.getByTestId("battle-objective");
