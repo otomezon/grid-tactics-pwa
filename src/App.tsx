@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { UnitRoster } from "./components/unit-roster";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
@@ -25,7 +26,7 @@ import { calculateMovementPath, calculateReachableTiles } from "./domain/movemen
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
 import { calculateEnemyThreatenedTiles } from "./domain/combat/calculate-enemy-threatened-tiles";
-import type { CampaignUnit, GameMapDefinition, GameStateSnapshot, Position, UnitStats, WeaponType } from "./domain/models/game";
+import type { CampaignUnit, GameMapDefinition, GameStateSnapshot, GameUnit, Position, UnitStats, WeaponType } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
 import type { LevelUpRecord } from "./domain/progression/level-up";
 import { createRandomSeed } from "./domain/random/xorshift32";
@@ -863,6 +864,22 @@ export default function App() {
       setSaveStatus("failed");
       setMessage("セーブファイルの保存に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
     }
+  }
+
+  function handleRosterUnitSelect(unit: GameUnit): void {
+    if (!interactive) return;
+    touchMoveConfirmationPositionRef.current = null;
+    setSelectedUnitId(unit.id);
+    setCombatTargetId(null);
+    setInspectedPosition(unit.position);
+    setMovementPreviewPosition(null);
+    setPromotionConfirmUnitId(null);
+    setMessage(unit.name + "を選択しました。青は移動可能、赤は攻撃可能な敵です。");
+
+    const mapTile = document.querySelector<HTMLButtonElement>(
+      `.map-grid [data-map-position="${unit.position.x},${unit.position.y}"]`
+    );
+    mapTile?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 
   function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
@@ -1907,6 +1924,12 @@ export default function App() {
         </section>
 
         <aside className="side-panel">
+          <UnitRoster
+            units={gameState.units.filter((unit) => unit.faction === "player")}
+            selectedUnitId={selectedUnitId}
+            disabled={!interactive}
+            onSelect={handleRosterUnitSelect}
+          />
           <section className="info-card">
             <p className="eyebrow">COMMAND</p>
             <h2>ユニット情報</h2>
