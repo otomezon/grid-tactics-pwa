@@ -80,7 +80,7 @@ describe("DeploymentPreview", () => {
   it("marks vacated slots when a candidate is kept in reserve", () => {
     const html = renderPreview(["unit_001", "unit_002", "unit_003"]);
     expect(html).toContain("3 / 4か所");
-    expect(html).toContain('aria-label="空き出撃位置 4、9列・9行"');
+    expect(html).toContain('aria-label="空き出撃位置 4、9列・9行の地形を確認"');
     expect(html).not.toContain("味方04、9列・9行に配置済み");
   });
 });
