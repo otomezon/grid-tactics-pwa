@@ -1780,6 +1780,8 @@ export default function App() {
                     }}
                     onPointerCancel={() => {
                       lastMapInputWasTouchRef.current = false;
+                      touchMoveConfirmationPositionRef.current = null;
+                      setMovementPreviewPosition(null);
                     }}
                     onPointerEnter={(event) => {
                       if (event.pointerType === "mouse") {
