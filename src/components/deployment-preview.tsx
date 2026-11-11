@@ -45,7 +45,7 @@ export function DeploymentPreview({
   const deploymentSlots = new Map(map.playerDeployment.map((slot, index) => [
     positionKey(slot.x, slot.y),
     { ordinal: index + 1, unitId: slot.unitId }
-  ]));
+  ] as const));
   const occupiedCount = assignedByPosition.size;
 
   return (
