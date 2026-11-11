@@ -34,7 +34,7 @@ export function EnemyThreatInspector({ details }: EnemyThreatInspectorProps) {
                 <span>現在位置 {source.enemyPositionLabel}</span>
               </p>
               <ul className="enemy-threat-origin-list">
-                {source.attackOrigins.map((origin, index) => (
+                {source.attackOrigins.map((origin) => (
                   <li
                     className={origin.isCurrentPosition ? "is-current" : "is-after-move"}
                     key={origin.label}
