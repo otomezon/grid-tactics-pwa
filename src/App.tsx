@@ -13,6 +13,7 @@ import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
+import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
 import type { PlayerAttackReport } from "./application/get-player-attack-report";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
@@ -280,6 +281,7 @@ export default function App() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
+  const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
   const [lastEnemyPhaseActions, setLastEnemyPhaseActions] = useState<EnemyActionLog[] | null>(null);
   const [lastPlayerAttackReport, setLastPlayerAttackReport] = useState<PlayerAttackReport | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
@@ -506,6 +508,8 @@ export default function App() {
   }, [gameState.units, selectedUnit, currentMap]);
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
+  const battleObjectiveDetails = getBattleObjectiveDetails(gameState, currentMap, activeChapter.initialState);
+  const terrainInspectionDetails = getTerrainInspectionDetails(gameState, currentMap, inspectedPosition);
   const battleResultDetails = useMemo(
     () => battleOutcome === "playing"
       ? null
@@ -803,6 +807,7 @@ export default function App() {
 
   async function handleTileClick(position: Position): Promise<void> {
     if (!interactive) return;
+    setInspectedPosition(position);
     setPromotionConfirmUnitId(null);
 
     const unitOnTile = gameState.units.find((unit) => samePosition(unit.position, position));
@@ -1590,6 +1595,45 @@ export default function App() {
             <span className="map-size">{currentMap.width} × {currentMap.height}</span>
           </div>
 
+          <div className="map-info-grid">
+            <section className="map-info-card" aria-labelledby="map-objective-heading" data-testid="battle-objective">
+              <p className="eyebrow">OBJECTIVE</p>
+              <h3 id="map-objective-heading">勝利条件</h3>
+              <strong>{battleObjectiveDetails.victoryLabel}</strong>
+              <p aria-live="polite">{battleObjectiveDetails.victoryStatus}</p>
+              <div className="map-info-defeat">
+                <span>敗北条件</span>
+                <strong>{battleObjectiveDetails.defeatLabel}</strong>
+                <p aria-live="polite">{battleObjectiveDetails.defeatStatus}</p>
+              </div>
+            </section>
+            <section className="map-info-card" aria-labelledby="terrain-inspector-heading" data-testid="terrain-inspector" aria-live="polite">
+              <p className="eyebrow">TERRAIN</p>
+              <h3 id="terrain-inspector-heading">マス情報</h3>
+              {terrainInspectionDetails ? (
+                <>
+                  <strong>{terrainInspectionDetails.coordinate} · {terrainInspectionDetails.terrainName}</strong>
+                  <dl className="terrain-inspection-list">
+                    <div>
+                      <dt>歩兵の移動コスト</dt>
+                      <dd>{terrainInspectionDetails.infantryMovementCost === null ? "進入不可" : terrainInspectionDetails.infantryMovementCost}</dd>
+                    </div>
+                    <div>
+                      <dt>騎馬の移動コスト</dt>
+                      <dd>{terrainInspectionDetails.cavalryMovementCost === null ? "進入不可" : terrainInspectionDetails.cavalryMovementCost}</dd>
+                    </div>
+                    <div><dt>守備補正</dt><dd>{terrainInspectionDetails.defenseBonus >= 0 ? "+" : ""}{terrainInspectionDetails.defenseBonus}</dd></div>
+                    <div><dt>回避補正</dt><dd>{terrainInspectionDetails.avoidanceBonus >= 0 ? "+" : ""}{terrainInspectionDetails.avoidanceBonus}</dd></div>
+                  </dl>
+                  {terrainInspectionDetails.occupantLabel && <p>配置ユニット：{terrainInspectionDetails.occupantLabel}</p>}
+                  {terrainInspectionDetails.specialEffect && <p>{terrainInspectionDetails.specialEffect}</p>}
+                </>
+              ) : (
+                <p>マップのマスをタップ、またはキーボードでフォーカスすると地形効果を確認できます。</p>
+              )}
+            </section>
+          </div>
+
           {gameState.phase === "player" && battleOutcome === "playing" && (
             <div className="map-controls">
               <button
@@ -1629,6 +1673,7 @@ export default function App() {
                 const terrain = currentMap.terrain[y]?.[x] ?? "plain";
                 const unit = gameState.units.find((candidate) => samePosition(candidate.position, position));
                 const isSelected = unit?.id === selectedUnitId;
+                const isInspected = inspectedPosition?.x === x && inspectedPosition.y === y;
                 const isReachable = reachableKeys.has(String(x) + "," + String(y));
                 const isAttackable = attackableKeys.has(String(x) + "," + String(y));
                 const isEnemyThreatened = enemyThreatenedKeys.has(String(x) + "," + String(y));
@@ -1638,6 +1683,7 @@ export default function App() {
                   "terrain-" + terrain,
                   unit ? "has-unit" : "",
                   isSelected ? "is-selected" : "",
+                  isInspected ? "is-inspected" : "",
                   isReachable ? "is-reachable" : "",
                   isAttackable ? "is-attackable" : "",
                   isEnemyThreatened ? "is-enemy-threatened" : "",
@@ -1646,6 +1692,7 @@ export default function App() {
                 const ariaLabel = positionLabel(position) + "、" + TERRAIN_DEFINITIONS[terrain].label +
                   (unit ? "、" + unit.name : "") +
                   (isSelected ? "、選択中" : "") +
+                  (isInspected ? "、情報表示中" : "") +
                   (isReachable ? "、移動可能" : "") +
                   (isAttackable ? "、攻撃可能" : "") +
                   (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "");
@@ -1658,6 +1705,7 @@ export default function App() {
                     aria-label={ariaLabel}
                     aria-pressed={Boolean(isSelected || isTargeted)}
                     disabled={!interactive}
+                    onFocus={() => setInspectedPosition(position)}
                     onClick={() => void handleTileClick(position)}
                   >
                     <span className="terrain-mark" aria-hidden="true">
