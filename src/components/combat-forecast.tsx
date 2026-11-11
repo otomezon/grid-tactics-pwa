@@ -4,6 +4,7 @@ import { getCombatForecastDetails } from "../application/get-combat-forecast-det
 interface CombatForecastPanelProps {
   plan: AttackPlan;
   disabled: boolean;
+  closeDisabled: boolean;
   onAttack: () => void;
   onClose: () => void;
 }
@@ -15,6 +16,7 @@ function signed(value: number): string {
 export function CombatForecastPanel({
   plan,
   disabled,
+  closeDisabled,
   onAttack,
   onClose
 }: CombatForecastPanelProps) {
@@ -103,7 +105,7 @@ export function CombatForecastPanel({
       <button
         className="secondary-button block-button"
         type="button"
-        disabled={disabled}
+        disabled={closeDisabled}
         onClick={onClose}
       >
         戦闘予測を閉じる
