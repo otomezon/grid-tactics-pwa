@@ -79,7 +79,7 @@ function getEnemyAttackProfiles(
     const uniqueOrigins = new Map<string, Position>();
     uniqueOrigins.set(`${enemy.position.x},${enemy.position.y}`, enemy.position);
     for (const position of reachablePositions) {
-      uniqueOrigins.set(`${position.x},${position.y}`, position);
+      uniqueOrigins.set(`${position.x},${position.y}`, { x: position.x, y: position.y });
     }
 
     return [{
