@@ -57,7 +57,7 @@
 
 ## 6. 敵攻撃範囲の事前表示
 
-PR #40で自軍フェイズ中の表示切替を追加した。`src/domain/combat/calculate-enemy-threatened-tiles.ts` は生存・未行動の敵ごとに、現在位置と地形／占有を考慮した全到達可能位置を攻撃起点として、装備中で使用可能な武器のinclusive射程を合成する。UIは破線ハッチと凡例、アクセシブルなマス説明で表示する。敵AIの対象スコア／移動先選択を実行するものではなく、次フェイズの選択先を確定予告しない。攻撃距離は既存の暫定Manhattan方式。表示ON／OFFはセーブしない。
+PR #40で自軍フェイズ中の表示切替を追加した。`src/domain/combat/calculate-enemy-threatened-tiles.ts` は生存・未行動の敵ごとに、現在位置と地形／占有を考慮した全到達可能位置を攻撃起点として、装備中で使用可能な武器のinclusive射程を合成する。UIは破線ハッチと凡例、アクセシブルなマス説明で表示する。敵AIの対象スコア／移動先選択を実行するものではなく、次フェイズの選択先を確定予告しない。攻撃距離は既存の暫定Manhattan方式。表示ON／OFFはセーブしない。敵攻撃範囲を表示中にマップ上のマスを確認すると、`calculateEnemyThreatSourcesAtPosition` がそのマスを攻撃可能な敵ごとに、現在位置と移動後の候補起点、装備武器、各起点からの距離を返す。集約範囲表示と同じ攻撃プロファイル計算を共有するため、占有・地形・移動力・武器射程の条件は同一。UIは敵名・クラス／Lv・武器・候補起点を読み取り専用で表示する。候補はAIが実際に選ぶ移動先／攻撃対象の予告ではない。敵フェイズでは表示せず、GameState／saveVersion／オートセーブも変更しない。
 
 ## 7. 敵軍フェイズの行動記録
 
@@ -76,4 +76,4 @@ PR #40で自軍フェイズ中の表示切替を追加した。`src/domain/comba
 
 ## 9. テスト
 
-`src/application/resolve-enemy-phase.test.ts` はフェイズ遷移、砦回復、現在位置からの攻撃、移動後の攻撃、敵ID順、味方全滅での停止、フェイズ検証、決定論的再現を確認する。`src/domain/rules/apply-fort-recovery.test.ts` は回復率、端数、上限、陣営、生存状態、地形を確認する。`src/domain/rules/evaluate-battle-outcome.test.ts` は敵全滅、味方全滅、ボス撃破、マップ指定ユニット撃破、敗北の優先順位を確認する。Playwright E2Eは敵軍フェイズの完了後表示、`phase: enemy` checkpointからの再解決、再読み込みによる二重実行がないことを確認する。ブラウザ／スマートフォン実機での操作確認は未実施。
+`src/domain/combat/calculate-enemy-threatened-tiles.test.ts` は集約した脅威範囲に加え、敵別の武器・合法な起点、現在位置と移動後の区別、複数敵の決定的な順序、敵フェイズ／敵占有／安全マスの除外、および集約overlayとの一致を確認する。`src/application/get-enemy-threat-inspection-details.test.ts` は表示用projectionを確認する。`src/application/resolve-enemy-phase.test.ts` はフェイズ遷移、砦回復、現在位置からの攻撃、移動後の攻撃、敵ID順、味方全滅での停止、フェイズ検証、決定論的再現を確認する。`src/domain/rules/apply-fort-recovery.test.ts` は回復率、端数、上限、陣営、生存状態、地形を確認する。`src/domain/rules/evaluate-battle-outcome.test.ts` は敵全滅、味方全滅、ボス撃破、マップ指定ユニット撃破、敗北の優先順位を確認する。Playwright E2Eは敵軍フェイズの完了後表示、`phase: enemy` checkpointからの再解決、再読み込みによる二重実行がないことを確認する。ブラウザ／スマートフォン実機での操作確認は未実施。
