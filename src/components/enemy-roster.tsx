@@ -22,7 +22,7 @@ export function EnemyRoster({
   onSelect
 }: EnemyRosterProps) {
   return (
-    <section className="info-card enemy-roster" aria-labelledby="enemy-roster-heading" data-testid="enemy-roster">
+    <section id="enemy-roster" tabIndex={-1} className="info-card enemy-roster" aria-labelledby="enemy-roster-heading" data-testid="enemy-roster">
       <div className="unit-roster-heading">
         <div>
           <p className="eyebrow">ENEMIES</p>
