@@ -492,8 +492,10 @@ test.describe("browser campaign flow", () => {
 
     await page.getByRole("button", { name: /味方01/ }).click();
     const useButtons = page.getByRole("button", { name: "回復薬を使用" });
-    await expect(useButtons).toHaveCount(2);
-    const useButton = useButtons.first();
+    const healingPotionRow = page.locator(".inventory-items li").filter({ hasText: "回復薬" });
+    await expect(useButtons).toHaveCount(1);
+    await expect(healingPotionRow).toContainText("所持数：2個");
+    const useButton = useButtons;
     await expect(useButton).toBeEnabled();
 
     const beforeCancel = await readAutoSave(page);
@@ -530,6 +532,7 @@ test.describe("browser campaign flow", () => {
       hasActed: true
     });
     expect(healedUnit?.inventory.filter((itemId) => itemId === "healing_potion")).toHaveLength(1);
+    await expect(healingPotionRow).toContainText("所持数：1個");
 
     await page.reload();
     await page.getByRole("button", { name: /味方01/ }).click();
@@ -537,6 +540,7 @@ test.describe("browser campaign flow", () => {
       preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
     );
     await expect(page.getByRole("button", { name: "回復薬を使用" })).toBeDisabled();
+    await expect(page.locator(".inventory-items li").filter({ hasText: "回復薬" })).toContainText("所持数：1個");
   });
 
   for (const viewportHeight of [568, 720]) {

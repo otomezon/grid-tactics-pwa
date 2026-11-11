@@ -240,6 +240,7 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   font-size: .8rem;
 }
 .inventory-items li strong { color: #f0f5f7; }
+.inventory-item-quantity { color: var(--text-muted); font-size: .68rem; font-variant-numeric: tabular-nums; }
 .inventory-items li span { color: var(--text-muted); font-size: .72rem; line-height: 1.45; }
 .inventory-items li.inventory-item-usable {
   grid-template-columns: minmax(0, 1fr) auto;

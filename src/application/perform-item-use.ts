@@ -1,5 +1,5 @@
 import type { GameUnit, GameStateSnapshot } from "../domain/models/game";
-import type { InventoryItemDefinition } from "../content/items";
+import { INVENTORY_ITEMS_BY_ID } from "../content/items";
 
 export interface ItemUseExecution {
   nextState: GameStateSnapshot;
@@ -9,20 +9,21 @@ export interface ItemUseExecution {
 }
 
 /**
- * Uses one configured consumable on its owner. Healing amount is content data;
- * the application command enforces phase/action/inventory rules immutably.
+ * Uses one registered consumable on its owner. The item definition is resolved
+ * from its ID so callers cannot supply an unregistered or altered effect.
  * An already-moved unit may still use an item, but this consumes its action.
  */
 export function performItemUse(
   state: GameStateSnapshot,
   unitId: string,
-  item: InventoryItemDefinition
+  itemId: string
 ): ItemUseExecution {
   if (state.phase !== "player") {
     throw new Error("Items can only be used during the player phase.");
   }
-  if (item.category !== "consumable" || item.effect?.type !== "heal") {
-    throw new Error("The requested inventory item is not a usable consumable.");
+  const item = INVENTORY_ITEMS_BY_ID[itemId];
+  if (!item || item.category !== "consumable" || item.effect?.type !== "heal") {
+    throw new Error("The requested inventory item is not a configured usable consumable.");
   }
   if (!Number.isInteger(item.effect.amount) || item.effect.amount <= 0) {
     throw new Error("The item effect amount must be a positive integer.");
@@ -39,7 +40,7 @@ export function performItemUse(
     throw new Error("The selected unit has already acted.");
   }
 
-  const itemIndex = unit.inventory.indexOf(item.id);
+  const itemIndex = unit.inventory.indexOf(itemId);
   if (itemIndex < 0) {
     throw new Error("The selected unit does not have this item.");
   }
@@ -68,7 +69,7 @@ export function performItemUse(
   return {
     nextState,
     updatedUnit,
-    usedItemId: item.id,
+    usedItemId: itemId,
     healedHp
   };
 }

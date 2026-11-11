@@ -6,6 +6,7 @@ import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
 import { getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
 import { performClassChange } from "./application/perform-class-change";
 import { performItemUse } from "./application/perform-item-use";
+import { getInventoryItemStacks } from "./application/get-inventory-item-stacks";
 import { getClassPromotionStatPreview } from "./domain/progression/class-change";
 import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
@@ -856,7 +857,7 @@ export default function App() {
     if (!confirmed) return;
 
     try {
-      const execution = performItemUse(gameState, selectedUnit.id, item);
+      const execution = performItemUse(gameState, selectedUnit.id, itemId);
       setGameState(execution.nextState);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
@@ -1153,12 +1154,7 @@ export default function App() {
         .filter((weapon): weapon is NonNullable<typeof weapon> => Boolean(weapon))
     : [];
   const selectedInventoryItems = selectedUnit
-    ? selectedUnit.inventory
-        .filter((itemId) => !WEAPONS_BY_ID[itemId])
-        .map((itemId) => ({
-          id: itemId,
-          definition: INVENTORY_ITEMS_BY_ID[itemId]
-        }))
+    ? getInventoryItemStacks(selectedUnit.inventory.filter((itemId) => !WEAPONS_BY_ID[itemId]))
     : [];
   const promotionDefinition = selectedUnit?.faction === "player"
     ? getClassPromotionDefinition(selectedUnit.classId)
@@ -1656,13 +1652,14 @@ export default function App() {
                       <h3>所持アイテム</h3>
                       {selectedInventoryItems.length > 0 ? (
                         <ul>
-                          {selectedInventoryItems.map((item, index) => (
+                          {selectedInventoryItems.map((item) => (
                             <li
-                              key={item.id + "-" + String(index)}
+                              key={item.id}
                               className={item.definition?.effect?.type === "heal" ? "inventory-item-usable" : undefined}
                             >
                               <div className="inventory-item-copy">
                                 <strong>{item.definition?.name ?? item.id}</strong>
+                                <span className="inventory-item-quantity">所持数：{item.quantity}個</span>
                                 {item.definition && <span>{item.definition.description}</span>}
                               </div>
                               {item.definition?.effect?.type === "heal" && (
