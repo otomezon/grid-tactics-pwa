@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
+import { EnemyRoster } from "./components/enemy-roster";
 import { CombatForecastPanel } from "./components/combat-forecast";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
@@ -299,6 +300,15 @@ function formatPromotionBonuses(bonuses: Partial<UnitStats>): string {
     : "能力上昇なし（昇格先上限に到達）";
 }
 
+function scrollMapTileIntoView(position: Position): void {
+  window.requestAnimationFrame(() => {
+    const mapTile = document.querySelector<HTMLButtonElement>(
+      `.map-grid [data-map-position="${position.x},${position.y}"]`
+    );
+    mapTile?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+}
+
 export default function App() {
   const [activeChapter, setActiveChapter] = useState(INITIAL_CHAPTER);
   const [gameState, setGameState] = useState<GameStateSnapshot>(INITIAL_CHAPTER.initialState);
@@ -545,6 +555,9 @@ export default function App() {
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
   const battleObjectiveDetails = getBattleObjectiveDetails(gameState, currentMap, activeChapter.initialState);
   const terrainInspectionDetails = getTerrainInspectionDetails(gameState, currentMap, inspectedPosition);
+  const inspectedEnemy = inspectedPosition
+    ? gameState.units.find((unit) => unit.faction === "enemy" && samePosition(unit.position, inspectedPosition))
+    : undefined;
   const battleResultDetails = useMemo(
     () => battleOutcome === "playing"
       ? null
@@ -877,12 +890,17 @@ export default function App() {
     setPromotionConfirmUnitId(null);
     setMessage(unit.name + "を選択しました。青は移動可能、赤は攻撃可能な敵です。");
 
-    window.requestAnimationFrame(() => {
-      const mapTile = document.querySelector<HTMLButtonElement>(
-        `.map-grid [data-map-position="${unit.position.x},${unit.position.y}"]`
-      );
-      mapTile?.scrollIntoView({ block: "nearest", inline: "nearest" });
-    });
+    scrollMapTileIntoView(unit.position);
+  }
+
+  function handleEnemyRosterSelect(unit: GameUnit): void {
+    if (!interactive) return;
+    touchMoveConfirmationPositionRef.current = null;
+    setCombatTargetId(null);
+    setInspectedPosition(unit.position);
+    setMovementPreviewPosition(null);
+    setMessage(unit.name + "（" + positionLabel(unit.position) + "）を確認しています。攻撃や行動は実行していません。");
+    scrollMapTileIntoView(unit.position);
   }
 
   function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
@@ -1932,6 +1950,13 @@ export default function App() {
             selectedUnitId={selectedUnitId}
             disabled={!interactive}
             onSelect={handleRosterUnitSelect}
+          />
+          <EnemyRoster
+            units={gameState.units.filter((unit) => unit.faction === "enemy")}
+            totalEnemyCount={currentMap.enemyDeployment.length}
+            selectedEnemyId={inspectedEnemy?.id ?? null}
+            disabled={!interactive}
+            onSelect={handleEnemyRosterSelect}
           />
           <section className="info-card">
             <p className="eyebrow">COMMAND</p>

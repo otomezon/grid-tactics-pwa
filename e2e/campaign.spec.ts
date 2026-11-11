@@ -197,6 +197,78 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedState);
   });
 
+  test("shows living enemies and inspects their map tiles without changing the autosave", async ({ page }) => {
+    await startBattle(page);
+    const savedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        faction: string;
+        position: { x: number; y: number };
+      }>;
+    };
+    const enemy = savedState.units.find((unit) => unit.id === "enemy_003");
+    if (!enemy) throw new Error("The enemy roster fixture is missing enemy_003.");
+
+    const roster = page.getByTestId("enemy-roster");
+    await expect(roster.getByRole("heading", { name: "敵ユニット一覧" })).toBeVisible();
+    await expect(page.getByTestId("enemy-roster-summary")).toHaveText("生存 5 / 配置 5体");
+    const enemyButton = page.getByRole("button", { name: /敵03を確認/ });
+    await expect(enemyButton).toContainText("Lv.1");
+    await expect(enemyButton).toContainText("8列・3行");
+    await expect(enemyButton).toContainText("試作の鉄の槍");
+    await expect(roster.getByRole("progressbar", { name: "敵03のHP" })).toHaveAttribute("value", "20");
+
+    await enemyButton.click();
+    await expect(enemyButton).toHaveAttribute("aria-pressed", "true");
+    const selectedTile = page.locator(
+      '.map-grid [data-map-position="' + enemy.position.x + "," + enemy.position.y + '"]'
+    );
+    await expect(selectedTile).toHaveClass(/is-inspected/);
+    await expect(page.getByTestId("terrain-inspector")).toContainText("敵：敵03");
+    await expect(page.getByTestId("combat-forecast")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(savedState);
+
+    await page.locator('.map-grid [data-map-position="4,2"]').click();
+    await expect(page.getByRole("button", { name: /敵02を確認/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(enemyButton).toHaveAttribute("aria-pressed", "false");
+    expect(await readAutoSave(page)).toEqual(savedState);
+
+    const afterDefeat = {
+      ...savedState,
+      units: savedState.units.filter((unit) => unit.id !== "enemy_001")
+    };
+    await writeAutoSave(page, afterDefeat);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await expect(page.getByTestId("enemy-roster-summary")).toHaveText("生存 4 / 配置 5体");
+    await expect(page.getByRole("button", { name: /敵01を確認/ })).toHaveCount(0);
+  });
+
+  test("scrolls the narrow battle map to an enemy chosen from the roster", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await startBattle(page);
+
+    const savedBeforeInspection = await readAutoSave(page);
+    const rosterButton = page.getByRole("button", { name: /敵05を確認/ });
+    await rosterButton.click();
+    await expect(rosterButton).toHaveAttribute("aria-pressed", "true");
+
+    const viewport = page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    });
+    const tile = page.locator('.map-grid [data-map-position="8,4"]');
+    await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    const bounds = await tile.boundingBox();
+    const viewportBounds = await viewport.boundingBox();
+    if (!bounds || !viewportBounds) throw new Error("The selected enemy tile or map viewport is not visible.");
+    expect(bounds.x).toBeGreaterThanOrEqual(viewportBounds.x - 1);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width + 1);
+    await expect(tile).toHaveClass(/is-inspected/);
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(documentWidth).toBeLessThanOrEqual(320);
+  });
+
   test("scrolls the narrow battle map to an ally chosen from the roster", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await startBattle(page);
