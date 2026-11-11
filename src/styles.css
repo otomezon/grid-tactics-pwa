@@ -980,3 +980,45 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .enemy-inspector-weapon-stats dd { font-size: .68rem; }
 }
 
+/* Per-tile attribution for the aggregate enemy threat-range preview */
+.enemy-threat-inspector { min-width: 0; }
+.enemy-threat-inspector > h3 { margin-bottom: 8px; }
+.enemy-threat-target { display: block; color: #f0d7bd; font-size: .76rem; }
+.enemy-threat-source-list { display: grid; gap: 9px; margin: 10px 0 0; padding: 0; list-style: none; }
+.enemy-threat-source {
+  display: grid; gap: 6px; min-width: 0; padding: 9px;
+  border: 1px solid rgba(215, 150, 117, .42); border-radius: 8px;
+  background: rgba(102, 55, 47, .16);
+}
+.enemy-threat-source-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+.enemy-threat-source-heading strong { color: #f2e5d9; font-size: .79rem; }
+.enemy-threat-source-heading span { color: var(--text-muted); font-size: .68rem; }
+.enemy-threat-weapon { margin: 0; color: #e8d0bc; font-size: .71rem; overflow-wrap: anywhere; }
+.enemy-threat-origin-heading {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap;
+  gap: 4px 8px; margin: 0; color: #f0d7bd; font-size: .7rem; font-weight: 800;
+}
+.enemy-threat-origin-heading span { color: var(--text-muted); font-size: .65rem; font-weight: 500; }
+.enemy-threat-origin-list {
+  display: flex; flex-wrap: wrap; gap: 5px; margin: 0; padding: 0; list-style: none;
+}
+.enemy-threat-origin-list li {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 3px 5px;
+  max-width: 100%; padding: 4px 6px; border: 1px solid rgba(215, 150, 117, .3);
+  border-radius: 6px; color: #eeded0; background: rgba(32, 39, 47, .66);
+  font-size: .64rem;
+}
+.enemy-threat-origin-list li.is-current {
+  border-color: rgba(230, 199, 117, .65); background: rgba(99, 78, 35, .25);
+}
+.enemy-threat-origin-list li > span { color: #e9b9a0; font-weight: 800; }
+.enemy-threat-origin-list li > strong { overflow-wrap: anywhere; }
+.enemy-threat-origin-list li > small { color: var(--text-muted); font-size: .6rem; }
+.enemy-threat-empty { margin: 10px 0 0; color: var(--text-muted); font-size: .73rem; }
+.enemy-threat-note { margin: 10px 0 0; color: var(--text-muted); font-size: .65rem; line-height: 1.5; }
+@media (max-width: 380px) {
+  .enemy-threat-source { padding: 8px; }
+  .enemy-threat-origin-list { gap: 4px; }
+  .enemy-threat-origin-list li { padding: 4px 5px; }
+}
+

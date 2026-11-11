@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEv
 import { UnitRoster } from "./components/unit-roster";
 import { EnemyRoster } from "./components/enemy-roster";
 import { EnemyInspector } from "./components/enemy-inspector";
+import { EnemyThreatInspector } from "./components/enemy-threat-inspector";
 import { CombatForecastPanel } from "./components/combat-forecast";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
@@ -17,6 +18,7 @@ import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
 import { getEnemyInspectionDetails } from "./application/get-enemy-inspection-details";
+import { getEnemyThreatInspectionDetails } from "./application/get-enemy-threat-inspection-details";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
@@ -561,6 +563,12 @@ export default function App() {
     ? gameState.units.find((unit) => unit.faction === "enemy" && samePosition(unit.position, inspectedPosition))
     : undefined;
   const inspectedEnemyDetails = inspectedEnemy ? getEnemyInspectionDetails(inspectedEnemy) : null;
+  const enemyThreatInspectionDetails = useMemo(
+    () => showEnemyThreatRange
+      ? getEnemyThreatInspectionDetails(gameState, currentMap, inspectedPosition)
+      : null,
+    [currentMap, gameState, inspectedPosition, showEnemyThreatRange]
+  );
   const battleResultDetails = useMemo(
     () => battleOutcome === "playing"
       ? null
@@ -1784,6 +1792,7 @@ export default function App() {
                 <p>マップのマスをタップ、またはキーボードでフォーカスすると地形効果を確認できます。</p>
               )}
             </section>
+            {enemyThreatInspectionDetails && <EnemyThreatInspector details={enemyThreatInspectionDetails} />}
           </div>
 
           {gameState.phase === "player" && battleOutcome === "playing" && (
