@@ -81,6 +81,32 @@ describe("isValidGameStateSnapshot", () => {
     expect(isValidGameStateSnapshot(defeatedAllyRemoved, CHAPTER_01_MAP)).toBe(true);
   });
 
+  it("rejects units placed on terrain their movement type cannot enter", () => {
+    const cavalryOnMountain = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) =>
+        unit.id === "unit_004" ? { ...unit, position: { x: 8, y: 6 } } : unit
+      )
+    };
+    const infantryOnWater = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, position: { x: 6, y: 4 } } : unit
+      )
+    };
+    const infantryOnMountain = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, position: { x: 2, y: 3 } } : unit
+      )
+    };
+
+    expect(isValidGameStateSnapshot(cavalryOnMountain, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot(infantryOnWater, CHAPTER_01_MAP)).toBe(false);
+    // A non-null movement cost is traversable; no movement-range requirement is imposed here.
+    expect(isValidGameStateSnapshot(infantryOnMountain, CHAPTER_01_MAP)).toBe(true);
+  });
+
   it("rejects unsupported save versions and invalid coordinates", () => {
     expect(isValidGameStateSnapshot({ ...INITIAL_GAME_STATE, saveVersion: 99 }, CHAPTER_01_MAP)).toBe(false);
     const first = INITIAL_GAME_STATE.units[0]!;
