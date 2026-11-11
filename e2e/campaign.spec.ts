@@ -293,6 +293,13 @@ test.describe("browser campaign flow", () => {
     const rosterButton = page.getByRole("button", { name: /敵05を確認/ });
     await rosterButton.click();
     await expect(rosterButton).toHaveAttribute("aria-pressed", "true");
+    const inspector = page.getByTestId("enemy-inspector");
+    await expect(inspector).toBeVisible();
+    await expect(inspector).toContainText("能力値");
+    await expect(inspector).toContainText("所持武器");
+    const inspectorBounds = await inspector.boundingBox();
+    if (!inspectorBounds) throw new Error("The enemy inspector is not laid out on the narrow viewport.");
+    expect(inspectorBounds.width).toBeLessThanOrEqual(320);
 
     const viewport = page.getByRole("region", {
       name: "戦闘マップ。狭い画面では左右にスクロールできます"
