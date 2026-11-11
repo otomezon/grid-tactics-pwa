@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { HEALING_POTION_AMOUNT, HEALING_POTION_ID, INVENTORY_ITEMS_BY_ID } from "../content/items";
 import { INITIAL_GAME_STATE } from "../content/maps/chapter-01";
-import type { GameStateSnapshot } from "../domain/models/game";
+import type { GameStateSnapshot, GameUnit } from "../domain/models/game";
 import { performItemUse } from "./perform-item-use";
 
-function stateWithUnit(overrides: Record<string, unknown> = {}): GameStateSnapshot {
+function stateWithUnit(overrides: Partial<GameUnit> = {}): GameStateSnapshot {
   return {
     ...INITIAL_GAME_STATE,
     units: INITIAL_GAME_STATE.units.map((unit) =>
