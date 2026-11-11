@@ -35,6 +35,14 @@ interface EnemyAttackProfile {
   attackOrigins: Position[];
 }
 
+function getActiveEnemyTileKeys(state: GameStateSnapshot): Set<string> {
+  return new Set(
+    state.units
+      .filter((unit) => unit.faction === "enemy" && unit.currentHp > 0 && !unit.hasActed)
+      .map((enemy) => `${enemy.position.x},${enemy.position.y}`)
+  );
+}
+
 function hasValidThreatMap(map: GameMapDefinition): boolean {
   return Number.isInteger(map.width) &&
     map.width >= 1 &&
@@ -107,9 +115,7 @@ export function calculateEnemyThreatenedTiles(
   const profiles = getEnemyAttackProfiles(state, map, weaponsById);
   if (profiles.length === 0) return [];
 
-  const activeEnemyTiles = new Set(
-    profiles.map((profile) => `${profile.enemyPosition.x},${profile.enemyPosition.y}`)
-  );
+  const activeEnemyTiles = getActiveEnemyTileKeys(state);
   const threatenedTiles = new Map<string, Position>();
 
   for (let y = 0; y < map.height; y += 1) {
@@ -156,9 +162,7 @@ export function calculateEnemyThreatSourcesAtPosition(
   }
 
   const profiles = getEnemyAttackProfiles(state, map, weaponsById);
-  const activeEnemyTiles = new Set(
-    profiles.map((profile) => `${profile.enemyPosition.x},${profile.enemyPosition.y}`)
-  );
+  const activeEnemyTiles = getActiveEnemyTileKeys(state);
   if (activeEnemyTiles.has(`${target.x},${target.y}`)) return [];
 
   return profiles
