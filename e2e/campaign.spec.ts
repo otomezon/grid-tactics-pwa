@@ -178,11 +178,11 @@ test.describe("browser campaign flow", () => {
 
     const roster = page.getByTestId("unit-roster");
     await expect(roster.getByRole("heading", { name: "味方ユニット一覧" })).toBeVisible();
-    await expect(page.getByTestId("unit-roster-summary")).toHaveText("行動可能 3 / 4人");
+    await expect(page.getByTestId("unit-roster-summary")).toHaveText("未行動 3 / 4人");
     const movedButton = page.getByRole("button", { name: /味方01を選択/ });
     const actedButton = page.getByRole("button", { name: /味方02を選択/ });
     const readyButton = page.getByRole("button", { name: /味方03を選択/ });
-    await expect(movedButton).toContainText("移動済・行動可能");
+    await expect(movedButton).toContainText("移動済・未行動");
     await expect(actedButton).toContainText("行動済");
     await expect(readyButton).toContainText("未移動・未行動");
     await expect(roster.getByRole("progressbar", { name: "味方03のHP" })).toHaveAttribute("value", "20");
