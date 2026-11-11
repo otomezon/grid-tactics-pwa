@@ -104,6 +104,15 @@ describe("calculateAttackableEnemyPositions", () => {
     expect(calculateAttackableEnemyPositions(attacker, [enemy], null)).toEqual([]);
   });
 
+  it("does not use a weapon that is owned but not currently equipped", () => {
+    const attacker = createUnit("ally", "player", { x: 0, y: 0 }, {
+      equippedWeaponId: null
+    });
+    const enemy = createUnit("enemy", "enemy", { x: 1, y: 0 });
+
+    expect(calculateAttackableEnemyPositions(attacker, [enemy], sword)).toEqual([]);
+  });
+
   it("does not include targets outside the equipped weapon's range", () => {
     const attacker = createUnit("ally", "player", { x: 0, y: 0 });
     const enemy = createUnit("enemy", "enemy", { x: 2, y: 0 });
