@@ -4,8 +4,8 @@
 
 - 更新日: 2026-11-11
 - 基準: `docs/game-design.md` v1.0（2026-11-09、初期実装向け設計案）
-- PR #1〜#49はmainにマージ済み。現在の機能・実装・テスト状況の詳細は [current-state.md](current-state.md) と [architecture.md](architecture.md) を参照する。この文書では初期設計案との適合、未実装項目、暫定判断を整理する。
-- PR #45はPR #44後の文書同期、PR #46は320px幅のタッチ横スワイプE2E、PR #47はスワイプ後の右端ユニット選択E2Eを追加した。PR #48で関連するREADME・開発ルール・アーキテクチャ・実装状況を同期した。PR #46／#47はテストと文書のみで、ゲームルールやセーブ形式は変更していない。CI run #607（PR #48）はtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功。PR #49ではこの照合文書自体の更新をmainへ反映した（merge commit `d73d8419dc085ef535da7fe73c5609e05f33b40d`、CI run #609: typecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功）。
+- PR #1〜#54はmainにマージ済み。現在の機能・実装・テスト状況の詳細は [current-state.md](current-state.md) と [architecture.md](architecture.md) を参照する。この文書では初期設計案との適合、未実装項目、暫定判断を整理する。
+- PR #45はPR #44後の文書同期、PR #46は320px幅のタッチ横スワイプE2E、PR #47はスワイプ後の右端ユニット選択E2Eを追加した。PR #48で関連するREADME・開発ルール・アーキテクチャ・実装状況を同期した。PR #46／#47はテストと文書のみで、ゲームルールやセーブ形式は変更していない。CI run #607（PR #48）はtypecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功。PR #49ではこの照合文書自体の更新をmainへ反映した（merge commit `d73d8419dc085ef535da7fe73c5609e05f33b40d`、CI run #609: typecheck、25 test files／161 unit tests、production build、Chromium E2E 18件成功）。PR #50〜#54ではREADME等の文書同期、回復薬、採択済み昇格方針の表記同期、アイテム数量スタックと安全なID検証、PWAインストール案内をmainへ反映した。PR #54のマージコミット `146c5952713f1cae3916fcde3e0f8a2407f995e1` のCI run #643も成功。
 - A: 初期設計案と実装が一致
 - B: 設計済み・未実装
 - C: 実装済み・未文書化
@@ -24,6 +24,8 @@
 | 敵攻撃範囲表示 | §4.4／§9.2 | 自軍フェイズ中に切替。敵の現在位置・合法な移動先と装備武器の射程から脅威マスを予測 | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/App.tsx` |
 | 攻撃できない場合に接近／待機 | §7.1 | 最近接味方との距離を基準に移動、不可なら待機 | 同上 |
 | 勝利条件 | §3.2 | defeat_all／defeat_boss | `evaluate-battle-outcome.ts` |
+| 勝利／敗北目標の進行表示 | §3.1／§3.2 | 現在の敵残数／ボスHPと、設定された敗北対象または味方全滅条件の状態をマップ上に表示 | `src/application/get-battle-map-details.ts`, `src/App.tsx` |
+| マス選択時の地形効果説明 | §4.4 | 選択／フォーカスしたマスの歩兵／騎馬移動コスト、守備／回避補正、占有ユニット、砦の既存フェイズ開始効果を表示。閲覧専用でルール変更なし | `src/application/get-battle-map-details.ts`, `src/App.tsx` |
 | 味方全滅時の敗北 | §3.2 | player rosterが0なら敗北 | 同上 |
 | 自動保存 | §10.3 | enemy phase開始状態と終了状態を保存 | App、IndexedDB |
 | 砦のフェイズ開始回復 | §4.2 | フェイズ開始時に該当陣営の生存ユニットを最大HPの10%回復 | `apply-fort-recovery.ts`、`resolve-enemy-phase.ts` |
