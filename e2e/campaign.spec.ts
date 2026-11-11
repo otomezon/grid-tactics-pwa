@@ -194,6 +194,42 @@ test.describe("browser campaign flow", () => {
     });
   });
 
+  test("exposes a navigable ARIA grid with a single tab stop and directional keys", async ({ page }) => {
+    await startBattle(page);
+    const savedBeforeNavigation = await readAutoSave(page);
+    const grid = page.getByRole("grid", { name: "10列10行の戦闘マップ" });
+    await expect(grid).toHaveAttribute("aria-rowcount", "10");
+    await expect(grid).toHaveAttribute("aria-colcount", "10");
+    await expect(grid.getByRole("row")).toHaveCount(10);
+    await expect(grid.getByRole("row").first().getByRole("gridcell")).toHaveCount(10);
+    await expect(grid.locator(".map-tile[tabindex='0']")).toHaveCount(1);
+    await expect(page.locator("#map-keyboard-help")).toContainText("矢印キー");
+    await expect(grid).toHaveAttribute("aria-describedby", "map-keyboard-help");
+
+    const firstTile = grid.getByRole("button").first();
+    await firstTile.focus();
+    await page.keyboard.press("ArrowRight");
+    const secondColumn = grid.getByRole("button", { name: /2列・1行/ });
+    await expect(secondColumn).toBeFocused();
+    await expect(grid.locator(".map-tile[tabindex='0']")).toHaveCount(1);
+
+    await page.keyboard.press("ArrowDown");
+    const secondRow = grid.getByRole("button", { name: /2列・2行/ });
+    await expect(secondRow).toBeFocused();
+    await page.keyboard.press("Home");
+    const rowStart = grid.getByRole("button", { name: /1列・2行/ });
+    await expect(rowStart).toBeFocused();
+    await page.keyboard.press("End");
+    const rowEnd = grid.getByRole("button", { name: /10列・2行/ });
+    await expect(rowEnd).toBeFocused();
+
+    await page.keyboard.press("ArrowRight");
+    await expect(rowEnd).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    await expect(grid.getByRole("button", { name: /10列・1行/ })).toBeFocused();
+    expect(await readAutoSave(page)).toEqual(savedBeforeNavigation);
+  });
+
   test("previews a movement route when a reachable tile receives keyboard focus", async ({ page }) => {
     await startBattle(page);
     const savedState = await readAutoSave(page) as {
@@ -213,7 +249,8 @@ test.describe("browser campaign flow", () => {
     });
     await viewport.focus();
     await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
+    await expect(playerTile).toBeFocused();
+    await page.keyboard.press("ArrowRight");
 
     const destination = page.locator(".map-grid").getByRole("button", { name: /2列・1行/ });
     await expect(destination).toBeFocused();
@@ -277,8 +314,9 @@ test.describe("browser campaign flow", () => {
       name: "戦闘マップ。狭い画面では左右にスクロールできます"
     });
     await mapViewport.focus();
-    for (let index = 0; index < 4; index += 1) {
-      await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    for (let index = 0; index < 3; index += 1) {
+      await page.keyboard.press("ArrowRight");
     }
     await expect(forestTile).toBeFocused();
     await expect(terrain).toContainText("森");
