@@ -414,8 +414,8 @@ test.describe("browser campaign flow", () => {
     const player = preparedState.units.find((unit) => unit.id === "unit_001");
     const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
     if (!player || !enemy) throw new Error("Combat report test units are missing from the auto save.");
-    player.position = { x: 1, y: 1 }; player.hasMoved = false; player.hasActed = false;
-    enemy.position = { x: 1, y: 2 }; enemy.hasMoved = false; enemy.hasActed = false;
+    player.position = { x: 3, y: 1 }; player.hasMoved = false; player.hasActed = false;
+    enemy.position = { x: 4, y: 1 }; enemy.hasMoved = false; enemy.hasActed = false;
     preparedState.units = [player, enemy];
     preparedState.rngState = 0x6d2b79f5;
     await writeAutoSave(page, preparedState);
@@ -423,6 +423,28 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
+
+    const forecast = page.getByTestId("combat-forecast");
+    await expect(forecast).toBeVisible();
+    await expect(forecast).toContainText("味方01");
+    await expect(forecast).toContainText("敵01");
+    await expect(forecast).toContainText("HP 20/20");
+    await expect(forecast).toContainText("反撃あり");
+    await expect(forecast.getByTestId("combat-forecast-strike")).toHaveCount(2);
+    const initialForecast = forecast.getByTestId("combat-forecast-strike").first();
+    await expect(initialForecast).toContainText("攻撃力");
+    await expect(initialForecast).toContainText("必殺時ダメージ");
+    await expect(initialForecast).toContainText("武器相性");
+    await expect(initialForecast).toContainText("有利（命中 +20）");
+    await expect(initialForecast).toContainText("対象地形：森");
+    await expect(initialForecast).toContainText("守備補正 +1／回避補正 +20");
+    const counterForecast = forecast.getByTestId("combat-forecast-strike").nth(1);
+    await expect(counterForecast).toContainText("不利（命中 -20）");
+    const saveBeforeForecast = await readAutoSave(page);
+    expect(saveBeforeForecast).toMatchObject({ phase: "player", turn: 1 });
+    await expect(forecast).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(saveBeforeForecast);
+
     await page.getByRole("button", { name: "攻撃を確定" }).click();
 
     const report = page.getByTestId("battle-history");
@@ -458,6 +480,46 @@ test.describe("browser campaign flow", () => {
     await page.reload();
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(savedState);
+  });
+
+  test("explains when the defender cannot counter and keeps the forecast view-only", async ({ page }) => {
+    await startBattle(page);
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        position: { x: number; y: number };
+        inventory: string[];
+        equippedWeaponId: string | null;
+        hasMoved: boolean;
+        hasActed: boolean;
+      }>;
+    };
+    const player = preparedState.units.find((unit) => unit.id === "unit_001");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
+    if (!player || !enemy) throw new Error("Combat forecast test units are missing from the auto save.");
+    player.position = { x: 1, y: 1 };
+    player.hasMoved = false;
+    player.hasActed = false;
+    enemy.position = { x: 2, y: 1 };
+    enemy.inventory = [];
+    enemy.equippedWeaponId = null;
+    enemy.hasMoved = false;
+    enemy.hasActed = false;
+    preparedState.units = [player, enemy];
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
+
+    const saveBeforeForecast = await readAutoSave(page);
+    const forecast = page.getByTestId("combat-forecast");
+    await expect(forecast).toBeVisible();
+    await expect(forecast).toContainText("反撃なし（有効な装備武器なし）");
+    await expect(forecast.getByTestId("combat-forecast-strike")).toHaveCount(1);
+    await expect(forecast.getByTestId("combat-forecast-strike").first()).toContainText("先制攻撃");
+    expect(await readAutoSave(page)).toEqual(saveBeforeForecast);
   });
 
   test("toggles the enemy threat range before the enemy phase", async ({ page }) => {
