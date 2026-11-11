@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { WEAPONS_BY_ID } from "../../content/weapons";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
 import type { GameMapDefinition, GameStateSnapshot, GameUnit, Position } from "../models/game";
-import { calculateEnemyThreatenedTiles } from "./calculate-enemy-threatened-tiles";
+import { calculateEnemyThreatSourcesAtPosition, calculateEnemyThreatenedTiles } from "./calculate-enemy-threatened-tiles";
 
 function openMap(width = 6, height = 4): GameMapDefinition {
   return {
@@ -150,4 +150,116 @@ describe("calculateEnemyThreatenedTiles", () => {
 
     expect(calculateEnemyThreatenedTiles(state, openMap(), WEAPONS_BY_ID)).toEqual([]);
   });
+
+  it("attributes a threatened tile to the enemy weapon and every legal post-move attack origin", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 4, y: 1 }
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 1, y: 1 },
+      move: 2
+    };
+    const state = playerPhase([player, enemy]);
+
+    const sources = calculateEnemyThreatSourcesAtPosition(
+      state,
+      openMap(),
+      WEAPONS_BY_ID,
+      { x: 3, y: 0 }
+    );
+
+    expect(sources).toHaveLength(1);
+    expect(sources[0]).toMatchObject({
+      enemyId: "enemy_001",
+      enemyName: "敵01",
+      weaponId: "iron_axe",
+      weaponName: "試作の鉄の斧",
+      weaponType: "axe",
+      damageType: "physical",
+      minRange: 1,
+      maxRange: 1
+    });
+    expect(sources[0]?.attackOrigins).toEqual([
+      { position: { x: 2, y: 0 }, distance: 1, isCurrentPosition: false },
+      { position: { x: 3, y: 1 }, distance: 1, isCurrentPosition: false }
+    ]);
+    expect(containsPosition(
+      calculateEnemyThreatenedTiles(state, openMap(), WEAPONS_BY_ID),
+      { x: 3, y: 0 }
+    )).toBe(true);
+  });
+
+  it("marks an in-range current position separately from possible move positions", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 2, y: 1 }
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 1, y: 1 },
+      move: 0
+    };
+
+    const sources = calculateEnemyThreatSourcesAtPosition(
+      playerPhase([player, enemy]),
+      openMap(),
+      WEAPONS_BY_ID,
+      player.position
+    );
+
+    expect(sources[0]?.attackOrigins).toEqual([
+      { position: { x: 1, y: 1 }, distance: 1, isCurrentPosition: true }
+    ]);
+  });
+
+  it("lists multiple threat sources in stable enemy ID order with their own weapons", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 4, y: 1 }
+    };
+    const firstEnemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 3, y: 1 },
+      move: 0
+    };
+    const secondEnemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_002")!,
+      position: { x: 2, y: 1 },
+      move: 0
+    };
+
+    const sources = calculateEnemyThreatSourcesAtPosition(
+      playerPhase([player, secondEnemy, firstEnemy]),
+      openMap(),
+      WEAPONS_BY_ID,
+      player.position
+    );
+
+    expect(sources.map((source) => ({
+      enemyId: source.enemyId,
+      weaponId: source.weaponId
+    }))).toEqual([
+      { enemyId: "enemy_001", weaponId: "iron_axe" },
+      { enemyId: "enemy_002", weaponId: "short_bow" }
+    ]);
+  });
+
+  it("returns no sources for an enemy-occupied, out-of-map, or unthreatened tile", () => {
+    const player = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const enemy = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const state = playerPhase([player, enemy]);
+
+    expect(calculateEnemyThreatSourcesAtPosition(
+      state, openMap(), WEAPONS_BY_ID, enemy.position
+    )).toEqual([]);
+    expect(calculateEnemyThreatSourcesAtPosition(
+      state, openMap(), WEAPONS_BY_ID, { x: 6, y: 1 }
+    )).toEqual([]);
+    expect(calculateEnemyThreatSourcesAtPosition(
+      { ...state, phase: "enemy" }, openMap(), WEAPONS_BY_ID, player.position
+    )).toEqual([]);
+  });
+
 });
