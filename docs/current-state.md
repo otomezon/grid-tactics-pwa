@@ -45,7 +45,8 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | 出撃準備・配置確定 | 実装済み（生存中の候補／控えから出撃メンバーを選択、位置設定、非選択者の控え保存。saveVersion 3で永続化）。正式な章ごとの人数条件は未決定。上限はマップ候補数 | `src/application/prepare-player-deployment.ts`, `src/App.tsx` |
 | 出撃候補のキャラクター詳細・所持武器確認 | 実装済み（PR #17。クラス・能力・移動・武器適性・武器性能・所持アイテムの閲覧）。閲覧専用。インベントリ整形は専用単体テストで検証。ブラウザ／スマートフォンでの表示確認は未実施 | `src/App.tsx`, `src/styles.css`, `src/application/get-deployment-unit-details.ts` |
 | ステージ結果詳細表示 | 実装済み（敵配置全体の生存／撃破一覧、生存味方のクラス・Lv・EXP・HP。撃破済みユニットの最終HP／撃破者別記録は保持していないため非表示。saveVersion 変更なし） | `src/application/get-battle-result-details.ts`, `src/App.tsx`, `src/styles.css` | PR #41最終head CIで単体テスト／390px Chromium E2Eを検証。merge commit `30ebbfcc155a0d8a533ff8d5ef7a2debc9c85c5c` |
-| 永続的な戦闘履歴・撃破者別統計・会話／加入イベント・キャンペーン選択／分岐 | 未実装（セッション内履歴とは別の永続ログ・撃破者情報・イベント基盤が必要） | — |（味方攻撃の実解決結果と敵軍フェイズ行動を発生順に表示。リロード・セーブ読込・バックアップ復元・章切替でリセットし、セーブ形式には保存しない） | `src/App.tsx`, `src/application/get-player-attack-report.ts`, `src/application/resolve-enemy-phase.ts` | Chromium E2Eで連続した攻撃／敵軍行動の順序、リロード後の消去、保存データ不変を検証 |
+| 戦闘行動のセッション内時系列履歴 | 実装中（味方攻撃の実解決結果と敵軍フェイズ行動を発生順に表示。リロード・セーブ読込・バックアップ復元・章切替でリセットし、セーブ形式には保存しない） | `src/App.tsx`, `src/application/get-player-attack-report.ts`, `src/application/resolve-enemy-phase.ts` | Chromium E2Eで連続した攻撃／敵軍行動の順序、リロード後の消去、保存データ不変を検証 |
+| 永続的な戦闘履歴・撃破者別統計・会話／加入イベント・キャンペーン選択／分岐 | 未実装（セッション内履歴とは別の永続ログ・撃破者情報・イベント基盤が必要） | — |
 | 経験値・レベルアップ | 実装済み（PR #6） | `src/domain/progression/level-up.ts`, `src/application/perform-attack.ts` |
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
