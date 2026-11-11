@@ -266,4 +266,29 @@ describe("calculateEnemyThreatenedTiles", () => {
     )).toEqual([]);
   });
 
+
+  it("keeps per-tile source attribution consistent with the aggregate threatened-tile overlay", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 4, y: 1 }
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 1, y: 1 },
+      move: 2
+    };
+    const state = playerPhase([player, enemy]);
+    const map = openMap();
+    const threatened = calculateEnemyThreatenedTiles(state, map, WEAPONS_BY_ID);
+
+    for (let y = 0; y < map.height; y += 1) {
+      for (let x = 0; x < map.width; x += 1) {
+        const sources = calculateEnemyThreatSourcesAtPosition(
+          state, map, WEAPONS_BY_ID, { x, y }
+        );
+        expect(sources.length > 0).toBe(containsPosition(threatened, { x, y }));
+      }
+    }
+  });
+
 });
