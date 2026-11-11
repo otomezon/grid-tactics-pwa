@@ -1071,3 +1071,139 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .enemy-phase-forecast-unit { padding: 8px; }
   .enemy-phase-forecast-unit > p { font-size: .69rem; }
 }
+
+
+/* Optional review before ending a player phase with unused allies. */
+.phase-end-review {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid rgba(131, 189, 187, .65);
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(31, 49, 64, .98), rgba(20, 34, 47, .98));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .16);
+}
+.phase-end-review:focus { outline: 3px solid #f1c879; outline-offset: 3px; }
+.phase-end-review-header,
+.phase-end-review-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.phase-end-review-header .eyebrow { margin-bottom: 4px; }
+.phase-end-review-header h2 { margin: 0; }
+.phase-end-review-count {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid rgba(104, 189, 186, .45);
+  border-radius: 999px;
+  color: #bde4dc;
+  font-size: .74rem;
+  font-weight: 800;
+}
+.phase-end-review-intro,
+.phase-end-review-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .78rem;
+  line-height: 1.6;
+}
+.phase-end-review-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  gap: 14px;
+}
+.phase-end-review-content > section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(12, 24, 34, .42);
+}
+.phase-end-review-content h3 { margin: 0 0 9px; font-size: .85rem; }
+.phase-end-review-unit-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.phase-end-review-unit {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: #e8f0f4;
+  background: rgba(18, 31, 43, .58);
+  text-align: left;
+  cursor: pointer;
+}
+.phase-end-review-unit:hover:not(:disabled) { background: rgba(47, 73, 91, .72); }
+.phase-end-review-unit:focus-visible { outline: 3px solid #f1c879; outline-offset: 2px; }
+.phase-end-review-unit:disabled { cursor: not-allowed; opacity: .55; }
+.phase-end-review-unit-token {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  color: #fff;
+  background: #286fae;
+  font-weight: 900;
+}
+.phase-end-review-unit-copy { display: grid; min-width: 0; gap: 2px; }
+.phase-end-review-unit-copy strong { font-size: .79rem; overflow-wrap: anywhere; }
+.phase-end-review-unit-copy > span { color: var(--text-muted); font-size: .69rem; overflow-wrap: anywhere; }
+.phase-end-review-unit-action {
+  color: #bde4dc;
+  font-size: .72rem;
+  font-weight: 800;
+}
+.phase-end-review-forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+.phase-end-review-forecast-grid > div {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(53, 73, 90, .8);
+  border-radius: 8px;
+  background: rgba(18, 31, 43, .58);
+}
+.phase-end-review-forecast-grid dt { color: var(--text-muted); font-size: .68rem; }
+.phase-end-review-forecast-grid dd { margin: 4px 0 0; color: #edf3f7; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.phase-end-review-danger,
+.phase-end-review-safe {
+  margin: 10px 0 0;
+  font-size: .75rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+.phase-end-review-danger { color: #f0a19a; }
+.phase-end-review-safe { color: #a9dfd0; }
+.phase-end-review-forecast .phase-end-review-note { margin-top: 9px; }
+.phase-end-review-actions { justify-content: flex-end; flex-wrap: wrap; }
+.phase-end-review-actions button { min-height: 40px; }
+@media (max-width: 680px) {
+  .phase-end-review-content { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .phase-end-review { padding: 12px; }
+  .phase-end-review-header { align-items: flex-start; }
+  .phase-end-review-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .phase-end-review-actions button { width: 100%; }
+  .phase-end-review-forecast-grid { gap: 5px; }
+  .phase-end-review-forecast-grid > div { padding: 7px 5px; }
+  .phase-end-review-forecast-grid dt { font-size: .62rem; }
+  .phase-end-review-forecast-grid dd { font-size: .82rem; }
+}
