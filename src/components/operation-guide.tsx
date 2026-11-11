@@ -77,7 +77,7 @@ interface OperationGuideProps {
 
 export function OperationGuide({ onClose }: OperationGuideProps) {
   const [stepIndex, setStepIndex] = useState(0);
-  const step = GUIDE_STEPS[stepIndex];
+  const step = GUIDE_STEPS[stepIndex] ?? GUIDE_STEPS[0]!;
   const isLastStep = stepIndex === GUIDE_STEPS.length - 1;
 
   return (
