@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
+import { DeploymentPreview } from "./components/deployment-preview";
 import { BattleObjectivePanel } from "./components/battle-objective-panel";
 import { EnemyRoster } from "./components/enemy-roster";
 import { EnemyInspector } from "./components/enemy-inspector";
@@ -1253,6 +1254,13 @@ export default function App() {
     await persist(nextState, selectedUnit.name + "は待機しました。");
   }
 
+  function handleDeploymentPreviewSelect(unitId: string): void {
+    setDeploymentDetailUnitId(unitId);
+    window.requestAnimationFrame(() => {
+      document.getElementById("deployment-detail-toggle-" + unitId)?.focus();
+    });
+  }
+
   function handleDeploymentPositionChange(unitId: string, nextPosition: string): void {
     setDeploymentAssignments((current) => {
       const currentPosition = current[unitId];
@@ -1489,6 +1497,9 @@ export default function App() {
     value: x + "," + y,
     label: positionLabel({ x, y })
   }));
+  const deploymentDetailPosition = deploymentDetailCandidate && deploymentSelectedSet.has(deploymentDetailCandidate.id)
+    ? deploymentSlots.find((slot) => slot.value === deploymentAssignments[deploymentDetailCandidate.id])?.label ?? "未割当"
+    : "控え（配置なし）";
 
   return (
     <main className="app-shell">
@@ -1606,6 +1617,15 @@ export default function App() {
             出撃する味方を選択し、出撃位置を設定します。選ばなかった生存者は控えとして保持され、次章以降に出撃できます。
             配置は章マップに登録された候補と出撃マスの範囲内で変更できます。
           </p>
+          <DeploymentPreview
+            map={currentMap}
+            candidates={deploymentCandidates}
+            selectedUnitIds={deploymentSelectedUnitIds}
+            assignments={deploymentAssignments}
+            detailUnitId={deploymentDetailUnitId}
+            disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
+            onSelectUnit={handleDeploymentPreviewSelect}
+          />
           <div className="deployment-list">
             {deploymentCandidates.map((unit) => {
               const selected = deploymentSelectedSet.has(unit.id);
@@ -1639,6 +1659,7 @@ export default function App() {
                       <span className="deployment-reserve-label">控え</span>
                     )}
                     <button
+                      id={"deployment-detail-toggle-" + unit.id}
                       className="deployment-detail-toggle"
                       type="button"
                       aria-expanded={deploymentDetailUnitId === unit.id}
@@ -1674,6 +1695,7 @@ export default function App() {
                 <div><span>移動</span><strong>{deploymentDetailCandidate.movementType === "infantry" ? "歩兵" : "騎馬"} · {deploymentDetailCandidate.move}</strong></div>
                 <div><span>装備中</span><strong>{deploymentDetail?.equippedWeapon?.name ?? "未装備"}</strong></div>
                 <div><span>武器適性</span><strong>{deploymentDetailCandidate.usableWeaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join("・") || "なし"}</strong></div>
+                <div><span>配置予定</span><strong>{deploymentDetailPosition}</strong></div>
               </div>
               <div className="deployment-detail-stats" aria-label="能力値">
                 {DEPLOYMENT_STAT_LABELS.map(({ key, label }) => (
