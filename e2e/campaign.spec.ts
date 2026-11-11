@@ -1044,7 +1044,8 @@ test.describe("browser campaign flow", () => {
     const actual = page.getByTestId("battle-history").getByTestId("enemy-phase-action");
     await expect(actual).toHaveCount(5);
     expect(await actual.locator("p").allTextContents()).toEqual(messages);
-    await expect(forecast).toHaveCount(0);
+    await expect(forecast).toBeVisible();
+    await expect(forecast).toContainText("敵軍フェイズの行動予測");
   });
 
   test("records enemy actions in the chronological battle history and clears it on reload", async ({ page }) => {
