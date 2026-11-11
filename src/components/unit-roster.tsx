@@ -10,7 +10,7 @@ interface UnitRosterProps {
 
 function getUnitActionStatus(unit: GameUnit): string {
   if (unit.hasActed) return "行動済";
-  if (unit.hasMoved) return "移動済・行動可能";
+  if (unit.hasMoved) return "移動済・未行動";
   return "未移動・未行動";
 }
 
@@ -30,7 +30,7 @@ export function UnitRoster({
           <h2 id="unit-roster-heading">味方ユニット一覧</h2>
         </div>
         <span className="unit-roster-summary" data-testid="unit-roster-summary">
-          行動可能 {actionableCount} / {units.length}人
+          未行動 {actionableCount} / {units.length}人
         </span>
       </div>
       {units.length > 0 ? (
