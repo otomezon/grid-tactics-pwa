@@ -40,6 +40,7 @@ import {
   type SaveBackupRecord
 } from "./persistence/save-repository";
 import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
+import { OperationGuide } from "./components/operation-guide";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -285,6 +286,7 @@ export default function App() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
+  const [isOperationGuideOpen, setIsOperationGuideOpen] = useState(false);
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
   const [movementPreviewPosition, setMovementPreviewPosition] = useState<Position | null>(null);
   const [battleHistory, setBattleHistory] = useState<BattleHistoryEntry[]>([]);
@@ -1343,6 +1345,15 @@ export default function App() {
         <div className="header-status">
           <span className="phase-badge">{deploymentPending ? "出撃準備" : battleOutcome === "victory" ? "勝利" : battleOutcome === "defeat" ? "敗北" : "第" + gameState.turn + "ターン · " + (gameState.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ")}</span>
           <span className={"save-badge save-" + saveStatus}>{SAVE_STATUS_LABELS[saveStatus]}</span>
+          <button
+            className="secondary-button save-file-button operation-guide-toggle"
+            type="button"
+            aria-expanded={isOperationGuideOpen}
+            aria-controls={isOperationGuideOpen ? "operation-guide-panel" : undefined}
+            onClick={() => setIsOperationGuideOpen((open) => !open)}
+          >
+            操作ガイド
+          </button>
           {isInstalledApp ? (
             <span className="save-badge save-saved" data-testid="pwa-installed-status">インストール済み</span>
           ) : installPrompt ? (
@@ -1392,6 +1403,10 @@ export default function App() {
         <strong>開発プロトタイプ</strong>
         <span>仮マップ・仮ユニット・仮武器を使用しています。基本的な敵AI・フェイズ進行・勝敗判定を実装した開発版です。</span>
       </div>
+
+      {isOperationGuideOpen && (
+        <OperationGuide onClose={() => setIsOperationGuideOpen(false)} />
+      )}
 
       {!isInstalledApp && (
         <details className="pwa-install-help" data-testid="pwa-install-help">
