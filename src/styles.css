@@ -268,8 +268,21 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 }
 
 .map-tile.is-attackable { box-shadow: inset 0 0 0 3px rgba(235, 104, 91, .96); }
+.map-tile.is-attackable-after-move:not(.is-attackable) {
+  box-shadow: inset 0 0 0 3px rgba(255, 190, 99, .98);
+}
 .map-tile.is-targeted { z-index: 3; outline: 3px solid #ffd28a; outline-offset: -4px; }
 .legend-swatch.attack { background: #c95a50; }
+.legend-swatch.attack-after-move {
+  border: 2px dashed #ffbe63;
+  background: transparent;
+}
+.map-attack-preview-help {
+  margin: 8px 0 0;
+  color: #e7c99c;
+  font-size: .74rem;
+  line-height: 1.5;
+}
 .weapon-select { display: grid; gap: 7px; margin: 0 0 14px; }
 .weapon-select label { color: var(--text-muted); font-size: .78rem; font-weight: 700; }
 .weapon-select select {
