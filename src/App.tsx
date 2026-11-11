@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
+import { BattleObjectivePanel } from "./components/battle-objective-panel";
 import { EnemyRoster } from "./components/enemy-roster";
 import { EnemyInspector } from "./components/enemy-inspector";
 import { EnemyThreatInspector } from "./components/enemy-threat-inspector";
@@ -24,6 +25,7 @@ import { getEnemyThreatInspectionDetails } from "./application/get-enemy-threat-
 import { getEnemyPhaseForecast } from "./application/get-enemy-phase-forecast";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
+import { getBattleObjectiveNavigationTargets } from "./application/get-battle-objective-navigation-targets";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
 import type { PlayerAttackReport } from "./application/get-player-attack-report";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
@@ -563,6 +565,10 @@ export default function App() {
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
   const battleObjectiveDetails = getBattleObjectiveDetails(gameState, currentMap, activeChapter.initialState);
+  const battleObjectiveNavigationTargets = useMemo(
+    () => getBattleObjectiveNavigationTargets(gameState, currentMap),
+    [currentMap, gameState]
+  );
   const terrainInspectionDetails = getTerrainInspectionDetails(gameState, currentMap, inspectedPosition);
   const inspectedEnemy = inspectedPosition
     ? gameState.units.find((unit) => unit.faction === "enemy" && samePosition(unit.position, inspectedPosition))
@@ -960,6 +966,24 @@ export default function App() {
     setMovementPreviewPosition(null);
     setMessage(unit.name + "（" + positionLabel(unit.position) + "）を確認しています。攻撃や行動は実行していません。");
     scrollMapTileIntoView(unit.position);
+  }
+
+  function handleInspectBattleObjectiveUnit(unit: GameUnit): void {
+    if (!interactive) return;
+    if (unit.faction === "player") handleRosterUnitSelect(unit);
+    else handleEnemyRosterSelect(unit);
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLButtonElement>(
+        `.map-grid [data-map-position="${unit.position.x},${unit.position.y}"]`
+      )?.focus();
+    });
+  }
+
+  function handleInspectObjectiveEnemyRoster(): void {
+    if (!interactive) return;
+    const roster = document.querySelector<HTMLElement>("#enemy-roster");
+    roster?.focus();
+    roster?.scrollIntoView({ block: "nearest" });
   }
 
   function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
@@ -1824,17 +1848,13 @@ export default function App() {
           </div>
 
           <div className="map-info-grid">
-            <section className="map-info-card" aria-labelledby="map-objective-heading" data-testid="battle-objective">
-              <p className="eyebrow">OBJECTIVE</p>
-              <h3 id="map-objective-heading">勝利条件</h3>
-              <strong>{battleObjectiveDetails.victoryLabel}</strong>
-              <p aria-live="polite">{battleObjectiveDetails.victoryStatus}</p>
-              <div className="map-info-defeat">
-                <span>敗北条件</span>
-                <strong>{battleObjectiveDetails.defeatLabel}</strong>
-                <p aria-live="polite">{battleObjectiveDetails.defeatStatus}</p>
-              </div>
-            </section>
+            <BattleObjectivePanel
+              details={battleObjectiveDetails}
+              navigationTargets={battleObjectiveNavigationTargets}
+              disabled={!interactive}
+              onInspectUnit={handleInspectBattleObjectiveUnit}
+              onInspectEnemyRoster={handleInspectObjectiveEnemyRoster}
+            />
             <section className="map-info-card" aria-labelledby="terrain-inspector-heading" data-testid="terrain-inspector" aria-live="polite">
               <p className="eyebrow">TERRAIN</p>
               <h3 id="terrain-inspector-heading">マス情報</h3>
