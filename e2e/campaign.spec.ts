@@ -533,8 +533,8 @@ test.describe("browser campaign flow", () => {
 
     await page.reload();
     await page.getByRole("button", { name: /味方01/ }).click();
-    await expect(page.locator(".unit-details")).toContainText(
-      "HP " + preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
+    await expect(page.locator(".unit-details div").first()).toContainText(
+      preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
     );
     await expect(page.getByRole("button", { name: "回復薬を使用" })).toBeDisabled();
   });
