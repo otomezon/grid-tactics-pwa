@@ -1037,7 +1037,10 @@ test.describe("browser campaign flow", () => {
     await expect(projected).toHaveCount(5);
     const messages = await projected.locator("p").allTextContents();
     const projectedUnits = forecast.getByTestId("enemy-phase-forecast-unit");
-    await expect(projectedUnits).toHaveCount(5);
+    const deployedPlayerCount = (savedBeforePreview as {
+      units: Array<{ faction: string }>;
+    }).units.filter((unit) => unit.faction === "player").length;
+    await expect(projectedUnits).toHaveCount(deployedPlayerCount);
     const unitOutcomes = await projectedUnits.evaluateAll((nodes) => nodes.map((node) => ({
       unitId: node.getAttribute("data-unit-id"),
       predictedHp: Number(node.getAttribute("data-predicted-hp")),
