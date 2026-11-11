@@ -121,6 +121,60 @@ test.describe("browser campaign flow", () => {
       .getByRole("heading", { level: 3 })).toHaveText("出撃準備を整える");
   });
 
+  test("previews deployment positions, swaps assignments, and keeps the setup unsaved until confirmation", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+
+    const savedBeforePreview = await readAutoSave(page);
+    const preview = page.getByTestId("deployment-preview");
+    await expect(preview).toBeVisible();
+    await expect(preview.getByTestId("deployment-preview-tile")).toHaveCount(100);
+    await expect(preview.getByTestId("deployment-preview-count")).toHaveText("4 / 4か所");
+    await expect(preview.getByRole("button", {
+      name: "味方01、2列・9行に配置済み。詳細を表示"
+    })).toBeVisible();
+
+    await preview.getByRole("button", {
+      name: "味方01、2列・9行に配置済み。詳細を表示"
+    }).click();
+    const detailPanel = page.locator("#deployment-detail-panel");
+    await expect(detailPanel.getByRole("heading", { name: "味方01" })).toBeVisible();
+    await expect(page.locator("#deployment-detail-toggle-unit_001")).toBeFocused();
+
+    const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
+    await firstCandidate.getByRole("combobox", { name: "味方01の出撃位置" }).selectOption("5,8");
+    await expect(preview.getByRole("button", {
+      name: "味方01、6列・9行に配置済み。詳細を表示"
+    })).toBeVisible();
+    await expect(preview.getByRole("button", {
+      name: "味方03、2列・9行に配置済み。詳細を表示"
+    })).toBeVisible();
+    await expect(detailPanel).toContainText("6列・9行");
+
+    const fourthCandidate = page.locator(".deployment-unit").filter({ hasText: "味方04" });
+    await fourthCandidate.getByRole("checkbox").uncheck();
+    await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
+    await expect(preview.getByTestId("deployment-preview-count")).toHaveText("3 / 4か所");
+    await expect(preview.getByTestId("deployment-preview-empty-slot")).toHaveCount(1);
+    await expect(preview.getByTestId("deployment-preview-empty-slot")).toHaveAttribute(
+      "aria-label",
+      "空き出撃位置 4、9列・9行"
+    );
+
+    const dimensions = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      previewWidth: document.querySelector("[data-testid=deployment-preview]")?.getBoundingClientRect().width ?? 0,
+      gridWidth: document.querySelector(".deployment-preview-grid")?.getBoundingClientRect().width ?? 0
+    }));
+    expect(dimensions.previewWidth).toBeGreaterThan(0);
+    expect(dimensions.gridWidth).toBeGreaterThan(0);
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.gridWidth).toBeLessThanOrEqual(dimensions.previewWidth);
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+  });
+
   test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
