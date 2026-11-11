@@ -153,9 +153,9 @@ export function DeploymentPreview({
             <>
               <p className="deployment-preview-terrain-unit">{inspectedUnit.name} · {inspectedUnit.movementType === "infantry" ? "歩兵" : "騎馬"} · 移動力 {inspectedUnit.move}</p>
               {inspectedTerrain.unitMovementCost === null ? (
-                <p className="deployment-preview-terrain-warning" role="status">このユニットの移動タイプでは進入できません。別の出撃位置を選んでください。</p>
+                <p className="deployment-preview-terrain-warning">このユニットの移動タイプでは進入できません。別の出撃位置を選んでください。</p>
               ) : (
-                <p className="deployment-preview-terrain-passable" role="status">このユニットの移動タイプで進入できます · 移動コスト {inspectedTerrain.unitMovementCost}</p>
+                <p className="deployment-preview-terrain-passable">このユニットの移動タイプで進入できます · 移動コスト {inspectedTerrain.unitMovementCost}</p>
               )}
             </>
           ) : (
