@@ -241,6 +241,14 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 }
 .inventory-items li strong { color: #f0f5f7; }
 .inventory-items li span { color: var(--text-muted); font-size: .72rem; line-height: 1.45; }
+.inventory-items li.inventory-item-usable {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.inventory-item-copy { display: grid; gap: 3px; min-width: 0; }
+.inventory-item-action { display: grid; justify-items: end; gap: 5px; }
+.inventory-item-action .helper-text { margin: 0; font-size: .64rem; text-align: right; }
+.inventory-use-button { min-width: 72px; min-height: 40px; }
 .promotion-panel {
   display: grid;
   gap: 8px;

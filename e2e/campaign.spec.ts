@@ -466,6 +466,77 @@ test.describe("browser campaign flow", () => {
     }
   });
 
+  test("uses a healing item after moving, cancels safely, and consumes one item and the action", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await startBattle(page);
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{
+        id: string;
+        currentHp: number;
+        stats: { hp: number };
+        inventory: string[];
+        hasMoved: boolean;
+        hasActed: boolean;
+      }>;
+    };
+    const preparedUnit = preparedState.units.find((unit) => unit.id === "unit_001");
+    if (!preparedUnit) throw new Error("The healing-item test unit is missing from the auto save.");
+
+    preparedUnit.currentHp = preparedUnit.stats.hp - 7;
+    preparedUnit.inventory = [...preparedUnit.inventory, "healing_potion", "healing_potion"];
+    preparedUnit.hasMoved = true;
+    preparedUnit.hasActed = false;
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+
+    await page.getByRole("button", { name: /味方01/ }).click();
+    const useButton = page.getByRole("button", { name: "回復薬を使用" });
+    await expect(useButton).toBeEnabled();
+
+    const beforeCancel = await readAutoSave(page);
+    page.once("dialog", async (dialog) => {
+      expect(dialog.message()).toContain("回復量は試作値");
+      await dialog.dismiss();
+    });
+    await useButton.click();
+    expect(await readAutoSave(page)).toEqual(beforeCancel);
+    await expect(useButton).toBeEnabled();
+
+    page.once("dialog", async (dialog) => {
+      expect(dialog.message()).toContain("行動を消費");
+      await dialog.accept();
+    });
+    await useButton.click();
+    await expect(useButton).toBeDisabled();
+    await expect(page.locator(".unit-details")).toContainText("行動済み");
+
+    await expect.poll(async () => {
+      const saved = await readAutoSave(page) as {
+        units: Array<{ id: string; currentHp: number }>;
+      };
+      return saved.units.find((candidate) => candidate.id === "unit_001")?.currentHp;
+    }).toBe(preparedUnit.stats.hp);
+
+    const healedState = await readAutoSave(page) as {
+      units: Array<{ id: string; currentHp: number; inventory: string[]; hasMoved: boolean; hasActed: boolean }>;
+    };
+    const healedUnit = healedState.units.find((unit) => unit.id === "unit_001");
+    expect(healedUnit).toMatchObject({
+      currentHp: preparedUnit.stats.hp,
+      hasMoved: true,
+      hasActed: true
+    });
+    expect(healedUnit?.inventory.filter((itemId) => itemId === "healing_potion")).toHaveLength(1);
+
+    await page.reload();
+    await page.getByRole("button", { name: /味方01/ }).click();
+    await expect(page.locator(".unit-details")).toContainText(
+      "HP " + preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
+    );
+    await expect(page.getByRole("button", { name: "回復薬を使用" })).toBeDisabled();
+  });
+
   for (const viewportHeight of [568, 720]) {
     test(`scrolls the narrow map viewport and selects the right-side unit at 320x${viewportHeight}px`, async ({ browser }) => {
       const context = await browser.newContext({
