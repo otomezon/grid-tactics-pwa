@@ -860,6 +860,7 @@ export default function App() {
     );
     if (!confirmed) return;
 
+    setIsPhaseEndReviewOpen(false);
     setSaveStatus("saving");
     try {
       let importedState = migration.snapshot;
