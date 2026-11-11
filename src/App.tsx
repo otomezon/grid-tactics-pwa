@@ -21,7 +21,7 @@ import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phas
 import type { EnemyActionLog } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
-import { calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
+import { calculateMovementPath, calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateManhattanDistance } from "./domain/combat/grid-distance";
 import { calculateEnemyThreatenedTiles } from "./domain/combat/calculate-enemy-threatened-tiles";
@@ -286,6 +286,7 @@ export default function App() {
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
+  const [movementPreviewPosition, setMovementPreviewPosition] = useState<Position | null>(null);
   const [battleHistory, setBattleHistory] = useState<BattleHistoryEntry[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [message, setMessage] = useState("味方ユニットを選択してください。");
@@ -494,12 +495,12 @@ export default function App() {
     ? WEAPONS_BY_ID[selectedUnit.equippedWeaponId] ?? null
     : null;
 
-  const reachableTiles = useMemo(() => {
+  const movementReachabilityInput = useMemo(() => {
     if (!selectedUnit || selectedUnit.faction !== "player" || selectedUnit.hasMoved || selectedUnit.hasActed) {
-      return [];
+      return null;
     }
 
-    return calculateReachableTiles({
+    return {
       terrain: currentMap.terrain,
       start: selectedUnit.position,
       movementPoints: selectedUnit.move,
@@ -507,8 +508,13 @@ export default function App() {
       occupiedPositions: gameState.units
         .filter((unit) => unit.id !== selectedUnit.id)
         .map((unit) => unit.position)
-    });
+    };
   }, [gameState.units, selectedUnit, currentMap]);
+
+  const reachableTiles = useMemo(
+    () => movementReachabilityInput ? calculateReachableTiles(movementReachabilityInput) : [],
+    [movementReachabilityInput]
+  );
 
   const battleOutcome = evaluateBattleOutcome(gameState, currentMap);
   const battleObjectiveDetails = getBattleObjectiveDetails(gameState, currentMap, activeChapter.initialState);
@@ -525,6 +531,23 @@ export default function App() {
     () => new Set(reachableTiles.map((tile) => String(tile.x) + "," + String(tile.y))),
     [reachableTiles]
   );
+  const reachableCostByKey = useMemo(
+    () => new Map(reachableTiles.map((tile) => [String(tile.x) + "," + String(tile.y), tile.cost] as const)),
+    [reachableTiles]
+  );
+  const movementPreviewPath = useMemo(() => {
+    if (!movementReachabilityInput || !movementPreviewPosition) return null;
+    const destinationKey = String(movementPreviewPosition.x) + "," + String(movementPreviewPosition.y);
+    if (!reachableKeys.has(destinationKey)) return null;
+    return calculateMovementPath(movementReachabilityInput, movementPreviewPosition);
+  }, [movementReachabilityInput, movementPreviewPosition, reachableKeys]);
+  const movementPathStepByKey = useMemo(() => {
+    const entries: Array<[string, number]> = (movementPreviewPath?.positions ?? []).map((position, index): [string, number] => [
+      String(position.x) + "," + String(position.y),
+      index + 1
+    ]);
+    return new Map(entries);
+  }, [movementPreviewPath]);
 
   const attackableKeys = useMemo(() => {
     if (
@@ -818,6 +841,7 @@ export default function App() {
 
   async function handleTileClick(position: Position): Promise<void> {
     if (!interactive) return;
+    setMovementPreviewPosition(null);
     setInspectedPosition(position);
     setPromotionConfirmUnitId(null);
 
@@ -1686,11 +1710,15 @@ export default function App() {
                 const position = { x, y };
                 const terrain = currentMap.terrain[y]?.[x] ?? "plain";
                 const unit = gameState.units.find((candidate) => samePosition(candidate.position, position));
+                const tileKey = String(x) + "," + String(y);
                 const isSelected = unit?.id === selectedUnitId;
                 const isInspected = inspectedPosition?.x === x && inspectedPosition.y === y;
-                const isReachable = reachableKeys.has(String(x) + "," + String(y));
-                const isAttackable = attackableKeys.has(String(x) + "," + String(y));
-                const isEnemyThreatened = enemyThreatenedKeys.has(String(x) + "," + String(y));
+                const isReachable = reachableKeys.has(tileKey);
+                const reachableCost = reachableCostByKey.get(tileKey);
+                const pathStep = movementPathStepByKey.get(tileKey);
+                const isMovementPath = pathStep !== undefined;
+                const isAttackable = attackableKeys.has(tileKey);
+                const isEnemyThreatened = enemyThreatenedKeys.has(tileKey);
                 const isTargeted = unit?.id === combatTargetId;
                 const classes = [
                   "map-tile",
@@ -1699,6 +1727,7 @@ export default function App() {
                   isSelected ? "is-selected" : "",
                   isInspected ? "is-inspected" : "",
                   isReachable ? "is-reachable" : "",
+                  isMovementPath ? "is-movement-path" : "",
                   isAttackable ? "is-attackable" : "",
                   isEnemyThreatened ? "is-enemy-threatened" : "",
                   isTargeted ? "is-targeted" : ""
@@ -1707,7 +1736,10 @@ export default function App() {
                   (unit ? "、" + unit.name : "") +
                   (isSelected ? "、選択中" : "") +
                   (isInspected ? "、情報表示中" : "") +
-                  (isReachable ? "、移動可能" : "") +
+                  (isReachable
+                    ? "、移動可能、累計移動コスト " + String(reachableCost) + " / 移動力 " + String(selectedUnit?.move ?? 0)
+                    : "") +
+                  (isMovementPath ? "、移動経路 " + String(pathStep) + "番" : "") +
                   (isAttackable ? "、攻撃可能" : "") +
                   (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "");
 
@@ -1719,11 +1751,22 @@ export default function App() {
                     aria-label={ariaLabel}
                     aria-pressed={Boolean(isSelected || isTargeted)}
                     disabled={!interactive}
+                    onPointerEnter={(event) => {
+                      if (event.pointerType === "mouse") {
+                        setMovementPreviewPosition(isReachable ? position : null);
+                      }
+                    }}
+                    onPointerLeave={(event) => {
+                      if (event.pointerType === "mouse") setMovementPreviewPosition(null);
+                    }}
                     onFocus={(event) => {
                       // Expanding the inspector above the map on pointer focus shifts the tile
                       // before the click is dispatched. Keep inspector updates keyboard-only here;
                       // pointer clicks inspect in handleTileClick after the tile action is received.
-                      if (event.currentTarget.matches(":focus-visible")) setInspectedPosition(position);
+                      if (event.currentTarget.matches(":focus-visible")) {
+                        setInspectedPosition(position);
+                        setMovementPreviewPosition(isReachable ? position : null);
+                      }
                     }}
                     onClick={() => void handleTileClick(position)}
                   >
@@ -1736,6 +1779,12 @@ export default function App() {
                       </span>
                     )}
                     {isReachable && <span className="move-marker" aria-hidden="true" />}
+                    {isReachable && reachableCost !== undefined && (
+                      <span className="move-cost-marker" aria-hidden="true">{reachableCost}</span>
+                    )}
+                    {pathStep !== undefined && (
+                      <span className="movement-path-step" aria-hidden="true">{pathStep}</span>
+                    )}
                     <span className="tile-coordinate" aria-hidden="true">
                       {x + 1},{y + 1}
                     </span>
@@ -1750,7 +1799,8 @@ export default function App() {
           <div className="map-legend" aria-label="マップ凡例">
             <span><i className="legend-swatch ally" />味方</span>
             <span><i className="legend-swatch enemy" />敵</span>
-            <span><i className="legend-swatch move" />移動可能</span>
+            <span><i className="legend-swatch move" />移動可能（数字は累計コスト）</span>
+            <span><i className="legend-swatch movement-path" />移動経路（数字は順番）</span>
             <span><i className="legend-swatch attack" />攻撃可能</span>
             {showEnemyThreatRange && <span><i className="legend-swatch enemy-threat" />敵攻撃範囲（予測）</span>}
             <span><i className="legend-swatch selected" />選択中</span>
