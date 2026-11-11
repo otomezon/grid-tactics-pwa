@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
@@ -103,6 +103,25 @@ function samePosition(left: Position, right: Position): boolean {
 
 function positionLabel(position: Position): string {
   return String(position.x + 1) + "列・" + String(position.y + 1) + "行";
+}
+
+function getNextMapKeyboardPosition(
+  position: Position,
+  key: string,
+  width: number,
+  height: number
+): Position | null {
+  const next = { ...position };
+  switch (key) {
+    case "ArrowLeft": next.x -= 1; break;
+    case "ArrowRight": next.x += 1; break;
+    case "ArrowUp": next.y -= 1; break;
+    case "ArrowDown": next.y += 1; break;
+    case "Home": next.x = 0; break;
+    case "End": next.x = width - 1; break;
+    default: return null;
+  }
+  return next.x >= 0 && next.x < width && next.y >= 0 && next.y < height ? next : null;
 }
 
 function deploymentPositionKey(position: Position): string {
@@ -288,6 +307,7 @@ export default function App() {
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
   const [isOperationGuideOpen, setIsOperationGuideOpen] = useState(false);
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
+  const [mapFocusPosition, setMapFocusPosition] = useState<Position>({ x: 0, y: 0 });
   const [movementPreviewPosition, setMovementPreviewPosition] = useState<Position | null>(null);
   const [battleHistory, setBattleHistory] = useState<BattleHistoryEntry[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
@@ -843,6 +863,20 @@ export default function App() {
       setSaveStatus("failed");
       setMessage("セーブファイルの保存に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
     }
+  }
+
+  function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
+    const navigationKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
+    if (!navigationKeys.includes(event.key)) return;
+    event.preventDefault();
+
+    const nextPosition = getNextMapKeyboardPosition(position, event.key, currentMap.width, currentMap.height);
+    if (!nextPosition) return;
+
+    const nextTile = event.currentTarget.closest(".map-grid")?.querySelector<HTMLButtonElement>(
+      `[data-map-position="${nextPosition.x},${nextPosition.y}"]`
+    );
+    if (nextTile && !nextTile.disabled) nextTile.focus();
   }
 
   async function handleTileClick(position: Position): Promise<void> {
@@ -1736,16 +1770,25 @@ export default function App() {
             aria-label="戦闘マップ。狭い画面では左右にスクロールできます"
             tabIndex={0}
           >
+            <p className="map-keyboard-help" id="map-keyboard-help">
+              マスにフォーカスし、矢印キーで隣のマスへ移動できます。Home／Endで同じ行の端へ移動し、Enter／Spaceでマスを選択します。
+            </p>
             <div
               className="map-grid"
+              role="grid"
+              aria-label={currentMap.width + "列" + currentMap.height + "行の戦闘マップ"}
+              aria-rowcount={currentMap.height}
+              aria-colcount={currentMap.width}
+              aria-describedby="map-keyboard-help"
               style={{
-                gridTemplateColumns: "repeat(" + currentMap.width + ", minmax(0, 1fr))",
+                gridTemplateRows: "repeat(" + currentMap.height + ", auto)",
                 minWidth: "max(100%, " + (currentMap.width * 40 + 4) + "px)"
               }}
-              aria-label={currentMap.width + "列" + currentMap.height + "行の戦闘マップ"}
             >
-            {Array.from({ length: currentMap.height }, (_, y) =>
-              Array.from({ length: currentMap.width }, (_, x) => {
+            {Array.from({ length: currentMap.height }, (_, y) => (
+              <div className="map-row" role="row" aria-rowindex={y + 1} key={"row-" + y}
+                style={{ gridTemplateColumns: "repeat(" + currentMap.width + ", minmax(0, 1fr))" }}>
+              {Array.from({ length: currentMap.width }, (_, x) => {
                 const position = { x, y };
                 const terrain = currentMap.terrain[y]?.[x] ?? "plain";
                 const unit = gameState.units.find((candidate) => samePosition(candidate.position, position));
@@ -1783,62 +1826,71 @@ export default function App() {
                   (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "");
 
                 return (
-                  <button
-                    className={classes}
-                    key={String(x) + "-" + String(y)}
-                    type="button"
-                    aria-label={ariaLabel}
-                    aria-pressed={Boolean(isSelected || isTargeted)}
-                    disabled={!interactive}
-                    onPointerDown={(event) => {
-                      lastMapInputWasTouchRef.current = event.pointerType === "touch";
-                    }}
-                    onPointerCancel={() => {
-                      lastMapInputWasTouchRef.current = false;
-                      touchMoveConfirmationPositionRef.current = null;
-                      setMovementPreviewPosition(null);
-                    }}
-                    onPointerEnter={(event) => {
-                      if (event.pointerType === "mouse") {
-                        setMovementPreviewPosition(isReachable ? position : null);
-                      }
-                    }}
-                    onPointerLeave={(event) => {
-                      if (event.pointerType === "mouse") setMovementPreviewPosition(null);
-                    }}
-                    onFocus={(event) => {
-                      // Expanding the inspector above the map on pointer focus shifts the tile
-                      // before the click is dispatched. Keep inspector updates keyboard-only here;
-                      // pointer clicks inspect in handleTileClick after the tile action is received.
-                      if (event.currentTarget.matches(":focus-visible")) {
-                        setInspectedPosition(position);
-                        setMovementPreviewPosition(isReachable ? position : null);
-                      }
-                    }}
-                    onClick={() => void handleTileClick(position)}
-                  >
-                    <span className="terrain-mark" aria-hidden="true">
-                      {TERRAIN_DEFINITIONS[terrain].symbol}
-                    </span>
-                    {unit && (
-                      <span className={"unit-token unit-" + unit.faction} aria-hidden="true">
-                        {unit.faction === "player" ? "味" : "敵"}
+                  <div className="map-grid-cell" role="gridcell" aria-colindex={x + 1}
+                    aria-selected={Boolean(isSelected || isTargeted)} key={tileKey}>
+                    <button
+                      className={classes}
+                      data-map-position={tileKey}
+                      key={String(x) + "-" + String(y)}
+                      type="button"
+                      tabIndex={mapFocusPosition.x === x && mapFocusPosition.y === y ? 0 : -1}
+                      aria-label={ariaLabel}
+                      aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home End"
+                      aria-pressed={Boolean(isSelected || isTargeted)}
+                      disabled={!interactive}
+                      onKeyDown={(event) => handleMapTileKeyDown(event, position)}
+                      onPointerDown={(event) => {
+                        lastMapInputWasTouchRef.current = event.pointerType === "touch";
+                      }}
+                      onPointerCancel={() => {
+                        lastMapInputWasTouchRef.current = false;
+                        touchMoveConfirmationPositionRef.current = null;
+                        setMovementPreviewPosition(null);
+                      }}
+                      onPointerEnter={(event) => {
+                        if (event.pointerType === "mouse") {
+                          setMovementPreviewPosition(isReachable ? position : null);
+                        }
+                      }}
+                      onPointerLeave={(event) => {
+                        if (event.pointerType === "mouse") setMovementPreviewPosition(null);
+                      }}
+                      onFocus={(event) => {
+                        setMapFocusPosition(position);
+                        // Expanding the inspector above the map on pointer focus shifts the tile
+                        // before the click is dispatched. Keep inspector updates keyboard-only here;
+                        // pointer clicks inspect in handleTileClick after the tile action is received.
+                        if (event.currentTarget.matches(":focus-visible")) {
+                          setInspectedPosition(position);
+                          setMovementPreviewPosition(isReachable ? position : null);
+                        }
+                      }}
+                      onClick={() => void handleTileClick(position)}
+                    >
+                      <span className="terrain-mark" aria-hidden="true">
+                        {TERRAIN_DEFINITIONS[terrain].symbol}
                       </span>
-                    )}
-                    {isReachable && <span className="move-marker" aria-hidden="true" />}
-                    {isReachable && reachableCost !== undefined && (
-                      <span className="move-cost-marker" aria-hidden="true">{reachableCost}</span>
-                    )}
-                    {pathStep !== undefined && (
-                      <span className="movement-path-step" aria-hidden="true">{pathStep}</span>
-                    )}
-                    <span className="tile-coordinate" aria-hidden="true">
-                      {x + 1},{y + 1}
-                    </span>
-                  </button>
+                      {unit && (
+                        <span className={"unit-token unit-" + unit.faction} aria-hidden="true">
+                          {unit.faction === "player" ? "味" : "敵"}
+                        </span>
+                      )}
+                      {isReachable && <span className="move-marker" aria-hidden="true" />}
+                      {isReachable && reachableCost !== undefined && (
+                        <span className="move-cost-marker" aria-hidden="true">{reachableCost}</span>
+                      )}
+                      {pathStep !== undefined && (
+                        <span className="movement-path-step" aria-hidden="true">{pathStep}</span>
+                      )}
+                      <span className="tile-coordinate" aria-hidden="true">
+                        {x + 1},{y + 1}
+                      </span>
+                    </button>
+                  </div>
                 );
-              })
-            )}
+              })}
+              </div>
+            ))}
             </div>
           </div>
           <p className="map-scroll-hint" aria-hidden="true">マップは左右にスクロールして全てのマスを表示できます。</p>
