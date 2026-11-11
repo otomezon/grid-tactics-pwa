@@ -307,6 +307,8 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalledApp, setIsInstalledApp] = useState(isStandaloneDisplayMode);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
+  const lastMapInputWasTouchRef = useRef(false);
+  const touchMoveConfirmationPositionRef = useRef<Position | null>(null);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
@@ -600,6 +602,8 @@ export default function App() {
     nextState: GameStateSnapshot,
     successMessage = "行動をIndexedDBに自動保存しました。"
   ): Promise<void> {
+    touchMoveConfirmationPositionRef.current = null;
+    setMovementPreviewPosition(null);
     setSaveStatus("saving");
 
     try {
@@ -840,13 +844,16 @@ export default function App() {
   }
 
   async function handleTileClick(position: Position): Promise<void> {
+    const isTouchTap = lastMapInputWasTouchRef.current;
+    lastMapInputWasTouchRef.current = false;
     if (!interactive) return;
-    setMovementPreviewPosition(null);
     setInspectedPosition(position);
     setPromotionConfirmUnitId(null);
 
     const unitOnTile = gameState.units.find((unit) => samePosition(unit.position, position));
     if (unitOnTile) {
+      touchMoveConfirmationPositionRef.current = null;
+      setMovementPreviewPosition(null);
       if (unitOnTile.faction === "player") {
         if (unitOnTile.hasActed) {
           setSelectedUnitId(unitOnTile.id);
@@ -877,14 +884,31 @@ export default function App() {
     }
 
     if (!selectedUnit || selectedUnit.faction !== "player" || selectedUnit.hasMoved || selectedUnit.hasActed) {
+      touchMoveConfirmationPositionRef.current = null;
+      setMovementPreviewPosition(null);
       setMessage("先に移動可能な味方ユニットを選択してください。");
       return;
     }
 
     if (!reachableKeys.has(String(position.x) + "," + String(position.y))) {
+      touchMoveConfirmationPositionRef.current = null;
+      setMovementPreviewPosition(null);
       setMessage("そのマスには移動できません。移動力・地形・他ユニットの位置を確認してください。");
       return;
     }
+
+    if (isTouchTap) {
+      const pendingPosition = touchMoveConfirmationPositionRef.current;
+      if (!pendingPosition || !samePosition(pendingPosition, position)) {
+        touchMoveConfirmationPositionRef.current = position;
+        setMovementPreviewPosition(position);
+        setMessage(selectedUnit.name + "の移動経路を表示しています。同じマスをもう一度タップすると移動します。");
+        return;
+      }
+    }
+
+    touchMoveConfirmationPositionRef.current = null;
+    setMovementPreviewPosition(null);
 
     const nextState: GameStateSnapshot = {
       ...gameState,
@@ -1751,6 +1775,14 @@ export default function App() {
                     aria-label={ariaLabel}
                     aria-pressed={Boolean(isSelected || isTargeted)}
                     disabled={!interactive}
+                    onPointerDown={(event) => {
+                      lastMapInputWasTouchRef.current = event.pointerType === "touch";
+                    }}
+                    onPointerCancel={() => {
+                      lastMapInputWasTouchRef.current = false;
+                      touchMoveConfirmationPositionRef.current = null;
+                      setMovementPreviewPosition(null);
+                    }}
                     onPointerEnter={(event) => {
                       if (event.pointerType === "mouse") {
                         setMovementPreviewPosition(isReachable ? position : null);
