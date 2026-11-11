@@ -255,7 +255,7 @@ test.describe("browser campaign flow", () => {
     await expect(inspector.getByRole("heading", { name: "敵01" })).toBeVisible();
     await expect(inspector).toContainText("Lv.1 · 戦士");
     await expect(inspector).toContainText("HP 20 / 20");
-    await expect(inspector).toContainText("1列・3行");
+    await expect(inspector).toContainText("2列・3行");
     await expect(inspector).toContainText("移動力");
     await expect(inspector).toContainText("歩兵");
     await expect(inspector.locator(".enemy-inspector-stat")).toHaveCount(7);
