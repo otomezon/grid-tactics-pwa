@@ -115,6 +115,35 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
+  test("shows objective progress and inspects terrain without changing the autosave", async ({ page }) => {
+    await startBattle(page);
+    const objective = page.getByTestId("battle-objective");
+    await expect(objective).toContainText("敵を全滅させる");
+    await expect(objective).toContainText("残り 5 / 5体");
+    await expect(objective).toContainText("味方全滅");
+    await expect(objective).toContainText("生存味方 4体");
+
+    const savedBeforeInspection = await readAutoSave(page);
+    const terrain = page.getByTestId("terrain-inspector");
+    const forestTile = page.locator(".map-grid").getByRole("button", { name: /4列・1行/ });
+    await forestTile.focus();
+    await expect(terrain).toContainText("森");
+    await expect(terrain).toContainText("歩兵の移動コスト");
+    await expect(terrain).toContainText("2");
+    await expect(terrain).toContainText("騎馬の移動コスト");
+    await expect(terrain).toContainText("3");
+    await expect(terrain).toContainText("守備補正");
+    await expect(terrain).toContainText("+1");
+    await expect(terrain).toContainText("+20");
+
+    const mountainTile = page.locator(".map-grid").getByRole("button", { name: /3列・4行/ });
+    await mountainTile.click();
+    await expect(terrain).toContainText("山");
+    await expect(terrain).toContainText("騎馬の移動コスト");
+    await expect(terrain).toContainText("進入不可");
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+  });
+
   test("shows the resolved player attack strikes and keeps the report transient", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 390, height: 844 });
