@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
 import { EnemyRoster } from "./components/enemy-roster";
+import { EnemyInspector } from "./components/enemy-inspector";
 import { CombatForecastPanel } from "./components/combat-forecast";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
@@ -15,6 +16,7 @@ import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
+import { getEnemyInspectionDetails } from "./application/get-enemy-inspection-details";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
@@ -558,6 +560,7 @@ export default function App() {
   const inspectedEnemy = inspectedPosition
     ? gameState.units.find((unit) => unit.faction === "enemy" && samePosition(unit.position, inspectedPosition))
     : undefined;
+  const inspectedEnemyDetails = inspectedEnemy ? getEnemyInspectionDetails(inspectedEnemy) : null;
   const battleResultDetails = useMemo(
     () => battleOutcome === "playing"
       ? null
@@ -1958,6 +1961,7 @@ export default function App() {
             disabled={!interactive}
             onSelect={handleEnemyRosterSelect}
           />
+          {inspectedEnemyDetails && <EnemyInspector details={inspectedEnemyDetails} />}
           <section className="info-card">
             <p className="eyebrow">COMMAND</p>
             <h2>ユニット情報</h2>

@@ -244,6 +244,47 @@ test.describe("browser campaign flow", () => {
     await expect(page.getByRole("button", { name: /敵01を確認/ })).toHaveCount(0);
   });
 
+  test("shows read-only enemy stats and owned weapon performance from list and map inspection", async ({ page }) => {
+    await startBattle(page);
+
+    const savedBeforeInspection = await readAutoSave(page);
+    await page.getByRole("button", { name: /敵01を確認/ }).click();
+
+    const inspector = page.getByTestId("enemy-inspector");
+    await expect(inspector).toBeVisible();
+    await expect(inspector.getByRole("heading", { name: "敵01" })).toBeVisible();
+    await expect(inspector).toContainText("Lv.1 · 戦士");
+    await expect(inspector).toContainText("HP 20 / 20");
+    await expect(inspector).toContainText("2列・3行");
+    await expect(inspector).toContainText("移動力");
+    await expect(inspector).toContainText("歩兵");
+    await expect(inspector.locator(".enemy-inspector-stat")).toHaveCount(7);
+    await expect(inspector).toContainText("力");
+    await expect(inspector).toContainText("魔力");
+    await expect(inspector).toContainText("守備");
+    await expect(inspector.locator('[data-testid="enemy-inspector-weapon"]')).toHaveCount(1);
+    const axe = inspector.locator('[data-testid="enemy-inspector-weapon"]').first();
+    await expect(axe).toContainText("試作の鉄の斧");
+    await expect(axe).toContainText("装備中");
+    await expect(axe).toContainText("攻撃力");
+    await expect(axe).toContainText("11");
+    await expect(axe).toContainText("命中");
+    await expect(axe).toContainText("90%");
+    await expect(axe).toContainText("射程");
+    await expect(axe).toContainText("1–1");
+    await expect(page.getByTestId("combat-forecast")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+
+    await page.locator('.map-grid [data-map-position="4,2"]').click();
+    await expect(page.getByRole("button", { name: /敵02を確認/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(inspector.getByRole("heading", { name: "敵02" })).toBeVisible();
+    await expect(inspector).toContainText("アーチャー");
+    await expect(inspector).toContainText("試作の弓");
+    await expect(inspector).toContainText("2–2");
+    await expect(inspector).toContainText("攻撃力");
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+  });
+
   test("scrolls the narrow battle map to an enemy chosen from the roster", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await startBattle(page);
@@ -252,6 +293,13 @@ test.describe("browser campaign flow", () => {
     const rosterButton = page.getByRole("button", { name: /敵05を確認/ });
     await rosterButton.click();
     await expect(rosterButton).toHaveAttribute("aria-pressed", "true");
+    const inspector = page.getByTestId("enemy-inspector");
+    await expect(inspector).toBeVisible();
+    await expect(inspector).toContainText("能力値");
+    await expect(inspector).toContainText("所持武器");
+    const inspectorBounds = await inspector.boundingBox();
+    if (!inspectorBounds) throw new Error("The enemy inspector is not laid out on the narrow viewport.");
+    expect(inspectorBounds.width).toBeLessThanOrEqual(320);
 
     const viewport = page.getByRole("region", {
       name: "戦闘マップ。狭い画面では左右にスクロールできます"
