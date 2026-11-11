@@ -472,7 +472,7 @@ test.describe("browser campaign flow", () => {
     await expect(target).toHaveAttribute("aria-label", /移動プレビュー先から攻撃可能/);
     await expect(page.locator(".legend-swatch.attack-after-move")).toBeVisible();
     await expect(page.getByTestId("movement-attack-preview-help"))
-      .toContainText("橙色の枠はこの移動先から攻撃可能な敵です");
+      .toContainText("橙色の枠は、この移動先から新たに攻撃可能になる敵です");
     expect(await readAutoSave(page)).toEqual(savedBeforePreview);
   });
 
