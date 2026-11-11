@@ -228,6 +228,11 @@ test.describe("browser campaign flow", () => {
     await expect(page.getByTestId("combat-forecast")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(savedState);
 
+    await page.locator('.map-grid [data-map-position="4,2"]').click();
+    await expect(page.getByRole("button", { name: /敵02を確認/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(enemyButton).toHaveAttribute("aria-pressed", "false");
+    expect(await readAutoSave(page)).toEqual(savedState);
+
     const afterDefeat = {
       ...savedState,
       units: savedState.units.filter((unit) => unit.id !== "enemy_001")
@@ -243,6 +248,7 @@ test.describe("browser campaign flow", () => {
     await page.setViewportSize({ width: 320, height: 720 });
     await startBattle(page);
 
+    const savedBeforeInspection = await readAutoSave(page);
     const rosterButton = page.getByRole("button", { name: /敵05を確認/ });
     await rosterButton.click();
     await expect(rosterButton).toHaveAttribute("aria-pressed", "true");
@@ -258,7 +264,7 @@ test.describe("browser campaign flow", () => {
     expect(bounds.x).toBeGreaterThanOrEqual(viewportBounds.x - 1);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width + 1);
     await expect(tile).toHaveClass(/is-inspected/);
-    expect(await readAutoSave(page)).not.toBeNull();
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
     const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(documentWidth).toBeLessThanOrEqual(320);
   });
