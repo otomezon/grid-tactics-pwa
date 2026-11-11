@@ -29,9 +29,8 @@ import type { EnemyActionLog } from "./application/resolve-enemy-phase";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateMovementPath, calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
-import { isWithinWeaponRange, canUnitUseWeapon } from "./domain/combat/combat";
-import { calculateManhattanDistance } from "./domain/combat/grid-distance";
 import { calculateEnemyThreatenedTiles } from "./domain/combat/calculate-enemy-threatened-tiles";
+import { calculateAttackableEnemyPositions } from "./domain/combat/calculate-attackable-enemy-positions";
 import type { CampaignUnit, GameMapDefinition, GameStateSnapshot, GameUnit, Position, UnitStats, WeaponType } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
 import type { LevelUpRecord } from "./domain/progression/level-up";
@@ -599,27 +598,26 @@ export default function App() {
     return new Map(entries);
   }, [movementPreviewPath]);
 
-  const attackableKeys = useMemo(() => {
-    if (
-      !selectedUnit ||
-      selectedUnit.faction !== "player" ||
-      selectedUnit.hasActed ||
-      !selectedWeapon ||
-      !canUnitUseWeapon(selectedUnit, selectedWeapon)
-    ) {
-      return new Set<string>();
-    }
+  const attackableKeys = useMemo(
+    () => new Set(
+      calculateAttackableEnemyPositions(selectedUnit, gameState.units, selectedWeapon)
+        .map((position) => String(position.x) + "," + String(position.y))
+    ),
+    [gameState.units, selectedUnit, selectedWeapon]
+  );
+
+  const previewAttackableKeys = useMemo(() => {
+    if (!movementPreviewPath || !movementPreviewPosition) return new Set<string>();
 
     return new Set(
-      gameState.units
-        .filter((unit) => unit.faction === "enemy" && unit.currentHp > 0)
-        .filter((unit) => {
-          const distance = calculateManhattanDistance(selectedUnit.position, unit.position);
-          return isWithinWeaponRange(distance, selectedWeapon);
-        })
-        .map((unit) => String(unit.position.x) + "," + String(unit.position.y))
+      calculateAttackableEnemyPositions(
+        selectedUnit,
+        gameState.units,
+        selectedWeapon,
+        movementPreviewPosition
+      ).map((position) => String(position.x) + "," + String(position.y))
     );
-  }, [gameState.units, selectedUnit, selectedWeapon]);
+  }, [gameState.units, movementPreviewPath, movementPreviewPosition, selectedUnit, selectedWeapon]);
 
   const enemyThreatenedKeys = useMemo(() => {
     if (!showEnemyThreatRange || gameState.phase !== "player") return new Set<string>();
@@ -1850,6 +1848,7 @@ export default function App() {
                 const pathStep = movementPathStepByKey.get(tileKey);
                 const isMovementPath = pathStep !== undefined;
                 const isAttackable = attackableKeys.has(tileKey);
+                const isAttackableAfterMove = previewAttackableKeys.has(tileKey) && !isAttackable;
                 const isEnemyThreatened = enemyThreatenedKeys.has(tileKey);
                 const isTargeted = unit?.id === combatTargetId;
                 const classes = [
@@ -1861,6 +1860,7 @@ export default function App() {
                   isReachable ? "is-reachable" : "",
                   isMovementPath ? "is-movement-path" : "",
                   isAttackable ? "is-attackable" : "",
+                  isAttackableAfterMove ? "is-attackable-after-move" : "",
                   isEnemyThreatened ? "is-enemy-threatened" : "",
                   isTargeted ? "is-targeted" : ""
                 ].filter(Boolean).join(" ");
@@ -1873,6 +1873,7 @@ export default function App() {
                     : "") +
                   (isMovementPath ? "、移動経路 " + String(pathStep) + "番" : "") +
                   (isAttackable ? "、攻撃可能" : "") +
+                  (isAttackableAfterMove ? "、移動プレビュー先から攻撃可能" : "") +
                   (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "");
 
                 return (
@@ -1950,10 +1951,21 @@ export default function App() {
             <span><i className="legend-swatch enemy" />敵</span>
             <span><i className="legend-swatch move" />移動可能（数字は累計コスト）</span>
             <span><i className="legend-swatch movement-path" />移動経路（数字は順番）</span>
-            <span><i className="legend-swatch attack" />攻撃可能</span>
+            <span><i className="legend-swatch attack" />現在位置から攻撃可能</span>
+            {movementPreviewPath && previewAttackableKeys.size > 0 && (
+              <span><i className="legend-swatch attack-after-move" />移動プレビュー先から攻撃可能</span>
+            )}
             {showEnemyThreatRange && <span><i className="legend-swatch enemy-threat" />敵攻撃範囲（予測）</span>}
             <span><i className="legend-swatch selected" />選択中</span>
           </div>
+          {movementPreviewPath && (
+            <p className="map-attack-preview-help" data-testid="movement-attack-preview-help">
+              {previewAttackableKeys.size > 0
+                ? "橙色の枠はこの移動先から攻撃可能な敵です。"
+                : "この移動先から攻撃可能な敵はいません。"}
+              距離計算は暫定Manhattan方式です。ここで攻撃や移動は確定しません。
+            </p>
+          )}
         </section>
 
         <aside className="side-panel">
