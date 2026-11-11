@@ -447,6 +447,64 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedState);
   });
 
+  test("highlights enemies attackable from a movement preview without saving", async ({ page }) => {
+    await startBattle(page);
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number } }>;
+    };
+    const attacker = preparedState.units.find((unit) => unit.id === "unit_001");
+    if (!attacker) throw new Error("The attack-preview unit is missing from the auto save.");
+    attacker.position = { x: 0, y: 4 };
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const savedBeforePreview = await readAutoSave(page);
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    const destination = page.locator(".map-grid").getByRole("button", { name: /2列・5行/ });
+    const target = page.locator(".map-grid").getByRole("button", { name: /敵04/ });
+
+    await destination.hover();
+
+    await expect(destination).toHaveClass(/is-movement-path/);
+    await expect(target).toHaveClass(/is-attackable-after-move/);
+    await expect(target).toHaveAttribute("aria-label", /移動プレビュー先から攻撃可能/);
+    await expect(page.locator(".legend-swatch.attack-after-move")).toBeVisible();
+    await expect(page.getByTestId("movement-attack-preview-help"))
+      .toContainText("橙色の枠は、この移動先から新たに攻撃可能になる敵です");
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+  });
+
+  test("does not show a new attack cue for enemies already in range", async ({ page }) => {
+    await startBattle(page);
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number } }>;
+    };
+    const attacker = preparedState.units.find((unit) => unit.id === "unit_001");
+    if (!attacker) throw new Error("The attack-preview unit is missing from the auto save.");
+    attacker.position = { x: 1, y: 4 };
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const savedBeforePreview = await readAutoSave(page);
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    const destination = page.locator(".map-grid").getByRole("button", { name: /3列・6行/ });
+    const target = page.locator(".map-grid").getByRole("button", { name: /敵04/ });
+
+    await destination.hover();
+
+    await expect(destination).toHaveClass(/is-movement-path/);
+    await expect(target).toHaveClass(/is-attackable/);
+    await expect(target).not.toHaveClass(/is-attackable-after-move/);
+    await expect(page.locator(".legend-swatch.attack-after-move")).toHaveCount(0);
+    await expect(page.getByTestId("movement-attack-preview-help"))
+      .toContainText("この移動先から新たに攻撃可能になる敵はいません");
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+  });
+
   test("previews a movement route on touch before confirming the destination", async ({ page }) => {
     const browser = page.context().browser();
     if (!browser) throw new Error("The Chromium browser is unavailable for the touch test.");
@@ -461,27 +519,42 @@ test.describe("browser campaign flow", () => {
 
     try {
       await startBattle(touchPage);
+      const preparedState = await readAutoSave(touchPage) as {
+        units: Array<{ id: string; position: { x: number; y: number } }>;
+      };
+      const attacker = preparedState.units.find((unit) => unit.id === "unit_001");
+      if (!attacker) throw new Error("The attack-preview unit is missing from the touch auto save.");
+      attacker.position = { x: 0, y: 4 };
+      await writeAutoSave(touchPage, preparedState);
+      await touchPage.reload();
+      await expect(touchPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
       const savedBeforePreview = await readAutoSave(touchPage);
       const playerTile = touchPage.locator(".map-grid").getByRole("button", { name: /味方01/ });
       await playerTile.tap();
-      const destination = touchPage.locator(".map-grid").getByRole("button", { name: /2列・8行/ });
+      const destination = touchPage.locator(".map-grid").getByRole("button", { name: /2列・5行/ });
+      const target = touchPage.locator(".map-grid").getByRole("button", { name: /敵04/ });
       await destination.tap();
 
       await expect(destination).toHaveClass(/is-movement-path/);
       await expect(destination).toHaveAttribute("aria-label", /移動経路 2番/);
+      await expect(target).toHaveClass(/is-attackable-after-move/);
+      await expect(target).toHaveAttribute("aria-label", /移動プレビュー先から攻撃可能/);
+      await expect(touchPage.locator(".legend-swatch.attack-after-move")).toBeVisible();
       await expect(touchPage.getByRole("status")).toContainText("同じマスをもう一度タップすると移動します。");
       expect(await readAutoSave(touchPage)).toEqual(savedBeforePreview);
 
       await destination.tap();
-      await expect(touchPage.getByRole("status")).toContainText("味方01が2列・8行へ移動しました。");
+      await expect(touchPage.getByRole("status")).toContainText("味方01が2列・5行へ移動しました。");
       await expect(touchPage.locator(".map-grid .movement-path-step")).toHaveCount(0);
       const movedState = await readAutoSave(touchPage) as {
         units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean }>;
       };
       expect(movedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
-        position: { x: 1, y: 7 },
+        position: { x: 1, y: 4 },
         hasMoved: true
       });
+      await expect(target).not.toHaveClass(/is-attackable-after-move/);
     } finally {
       await touchContext.close();
     }
