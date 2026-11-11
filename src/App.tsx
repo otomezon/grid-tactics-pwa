@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
+import { CombatForecastPanel } from "./components/combat-forecast";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
@@ -2145,50 +2146,29 @@ export default function App() {
           </section>
 
           {combatTargetId && (
-            <section className="info-card combat-forecast-card" aria-labelledby="forecast-heading">
-              <p className="eyebrow">COMBAT FORECAST</p>
-              <h2 id="forecast-heading">戦闘予測</h2>
-              {combatPlan?.plan ? (
-                <>
-                  <div className="forecast-header">
-                    <strong>{gameState.units.find((unit) => unit.id === selectedUnitId)?.name} vs {gameState.units.find((unit) => unit.id === combatTargetId)?.name}</strong>
-                    <span>距離 {combatPlan.plan.forecast.distance}</span>
-                  </div>
-                  <div className="forecast-strikes">
-                    {combatPlan.plan.forecast.strikes.map((strike, index) => {
-                      const actor = gameState.units.find((unit) => unit.id === strike.attackerId);
-                      return (
-                        <div className="forecast-strike" key={String(index) + "-" + strike.kind}>
-                          <div className="forecast-strike-title">
-                            <strong>{strikeKindLabel(strike.kind)}</strong>
-                            <span>{actor?.name ?? "ユニット"}</span>
-                          </div>
-                          <div className="forecast-values">
-                            <span>ダメージ <strong>{strike.normalDamage}</strong></span>
-                            <span>命中 <strong>{strike.hitRate}%</strong></span>
-                            <span>必殺 <strong>{strike.criticalRate}%</strong></span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="helper-text">予測は各攻撃候補の理論値です。先行攻撃で撃破された場合、後続攻撃は実行されません。</p>
-                  <button className="primary-button block-button" type="button" disabled={!interactive} onClick={() => void handleAttack()}>
-                    攻撃を確定
-                  </button>
-                </>
-              ) : (
+            combatPlan?.plan ? (
+              <CombatForecastPanel
+                plan={combatPlan.plan}
+                disabled={!interactive}
+                closeDisabled={saveStatus === "saving"}
+                onAttack={() => void handleAttack()}
+                onClose={() => setCombatTargetId(null)}
+              />
+            ) : (
+              <section className="info-card combat-forecast-card" aria-labelledby="forecast-heading">
+                <p className="eyebrow">COMBAT FORECAST</p>
+                <h2 id="forecast-heading">戦闘予測</h2>
                 <p className="message-text">{combatPlan?.error ?? "戦闘対象を確認できません。"}</p>
-              )}
-              <button
-                className="secondary-button block-button"
-                type="button"
-                disabled={saveStatus === "saving"}
-                onClick={() => setCombatTargetId(null)}
-              >
-                戦闘予測を閉じる
-              </button>
-            </section>
+                <button
+                  className="secondary-button block-button"
+                  type="button"
+                  disabled={saveStatus === "saving"}
+                  onClick={() => setCombatTargetId(null)}
+                >
+                  戦闘予測を閉じる
+                </button>
+              </section>
+            )
           )}
 
           <section className="info-card">

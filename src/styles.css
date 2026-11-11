@@ -276,14 +276,39 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 }
 .weapon-select select:disabled { opacity: .55; }
 .combat-forecast-card { border-color: #84544f; }
+.forecast-participants { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.forecast-participants > div {
+  display: grid; min-width: 0; gap: 3px; padding: 9px 10px;
+  border: 1px solid var(--line); border-radius: 9px; background: rgba(12,24,34,.42);
+}
+.forecast-participants span { color: var(--text-muted); font-size: .7rem; }
+.forecast-participants strong { min-width: 0; color: #edf3f7; font-size: .82rem; overflow-wrap: anywhere; }
+.forecast-overview {
+  display: flex; flex-wrap: wrap; gap: 6px 8px; margin-top: 9px;
+}
+.forecast-overview span {
+  padding: 5px 8px; border: 1px solid rgba(132,151,166,.45);
+  border-radius: 7px; color: #dce8ed; background: rgba(12,24,34,.3); font-size: .7rem;
+}
+.forecast-strikes { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.forecast-strike { min-width: 0; padding: 10px; border: 1px solid rgba(132,84,79,.75); border-radius: 10px; background: rgba(115,61,57,.14); }
+.forecast-strike-title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin-bottom: 6px; font-size: .8rem; }
+.forecast-strike-title span { color: var(--text-muted); overflow-wrap: anywhere; }
+.forecast-weapon { margin: 0 0 8px; color: #e3c8be; font-size: .72rem; overflow-wrap: anywhere; }
+.forecast-details-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px; margin: 0;
+}
+.forecast-details-grid > div {
+  display: flex; min-width: 0; justify-content: space-between; align-items: baseline;
+  gap: 6px; padding-bottom: 3px; border-bottom: 1px solid rgba(132,84,79,.35);
+  font-size: .7rem;
+}
+.forecast-details-grid dt { color: var(--text-muted); overflow-wrap: anywhere; }
+.forecast-details-grid dd { margin: 0; color: #f2f5f7; font-weight: 800; text-align: right; overflow-wrap: anywhere; }
+.forecast-terrain { margin: 8px 0 0; color: var(--text-muted); font-size: .7rem; line-height: 1.5; overflow-wrap: anywhere; }
 .forecast-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; font-size: .82rem; }
 .forecast-header span { color: var(--text-muted); white-space: nowrap; }
-.forecast-strikes { display: grid; gap: 8px; }
-.forecast-strike { padding: 10px; border: 1px solid rgba(132,84,79,.75); border-radius: 10px; background: rgba(115,61,57,.14); }
-.forecast-strike-title { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: .8rem; }
-.forecast-strike-title span { color: var(--text-muted); }
-.forecast-values { display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: .72rem; color: var(--text-muted); }
-.forecast-values strong { color: #f2f5f7; font-size: .82rem; }
 .block-button { width: 100%; margin-top: 10px; }
 
 .phase-end-button { white-space: nowrap; }
