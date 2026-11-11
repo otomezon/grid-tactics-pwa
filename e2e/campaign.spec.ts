@@ -447,6 +447,42 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedState);
   });
 
+  test("shows post-move attack targets when navigating the movement preview by keyboard", async ({ page }) => {
+    await startBattle(page);
+
+    const preparedState = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number } }>;
+    };
+    const attacker = preparedState.units.find((unit) => unit.id === "unit_001");
+    if (!attacker) throw new Error("The keyboard attack-preview unit is missing from the auto save.");
+    attacker.position = { x: 0, y: 4 };
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const savedBeforePreview = await readAutoSave(page);
+    const playerTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
+    await playerTile.click();
+    const viewport = page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    });
+    await viewport.focus();
+    await page.keyboard.press("Tab");
+    await expect(playerTile).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+
+    const destination = page.locator(".map-grid").getByRole("button", { name: /2列・5行/ });
+    const target = page.locator(".map-grid").getByRole("button", { name: /敵04/ });
+    await expect(destination).toBeFocused();
+    await expect(destination).toHaveAttribute("aria-label", /移動経路 2番/);
+    await expect(target).toHaveClass(/is-attackable-after-move/);
+    await expect(target).toHaveAttribute("aria-label", /移動プレビュー先から攻撃可能/);
+    await expect(page.locator(".legend-swatch.attack-after-move")).toBeVisible();
+    await expect(page.getByTestId("movement-attack-preview-help"))
+      .toContainText("橙色の枠は、この移動先から新たに攻撃可能になる敵です");
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+  });
+
   test("highlights enemies attackable from a movement preview without saving", async ({ page }) => {
     await startBattle(page);
 
