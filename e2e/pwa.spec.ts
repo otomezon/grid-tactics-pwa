@@ -296,6 +296,27 @@ test.describe("production PWA shell", () => {
     await page.locator('[data-testid="save-import-input"]').setInputFiles(invalidFile);
     await expect(page.getByRole("status")).toContainText("現在の章マップまたは保存形式と一致しません。");
     expect(await readAutoSave(page)).toEqual(originalSave);
+
+    const invalidTerrainSnapshot = JSON.parse(JSON.stringify(originalSave)) as {
+      units: Array<{ id: string; position: { x: number; y: number } }>;
+    };
+    const cavalry = invalidTerrainSnapshot.units.find((unit) => unit.id === "unit_004");
+    if (!cavalry) throw new Error("Expected cavalry unit is missing from the autosave.");
+    cavalry.position = { x: 8, y: 6 };
+
+    const invalidTerrainFile = {
+      name: "invalid-terrain-grid-tactics-save.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({
+        format: "grid-tactics-pwa-save",
+        formatVersion: 1,
+        exportedAt: "2026-11-10T12:00:00.000Z",
+        data: invalidTerrainSnapshot
+      }))
+    };
+    await page.locator('[data-testid="save-import-input"]').setInputFiles(invalidTerrainFile);
+    await expect(page.getByRole("status")).toContainText("現在の章マップまたは保存形式と一致しません。");
+    expect(await readAutoSave(page)).toEqual(originalSave);
   });
 
   test("reloads for a service-worker update without losing the autosaved battle state", async ({ page, context }) => {
@@ -515,6 +536,55 @@ test.describe("production PWA shell", () => {
     await page.getByTestId("restore-backup-2").click();
     await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");
     expect(await readAutoSave(page)).toEqual(autoSaveBeforeInvalidRestore);
+
+    await page.getByTestId("restore-backup-3").click();
+    await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");
+    expect(await readAutoSave(page)).toEqual(autoSaveBeforeInvalidRestore);
+
+    await page.evaluate(async () => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("grid-tactics-pwa", 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error("Could not open save database."));
+      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const transaction = database.transaction("game-saves", "readwrite");
+          const store = transaction.objectStore("game-saves");
+          const request = store.get("backup-3");
+          request.onsuccess = () => {
+            const record = request.result as {
+              slotId: string;
+              savedAt: number;
+              data: Record<string, unknown>;
+            } | undefined;
+            const units = record?.data.units;
+            if (!record || !Array.isArray(units)) {
+              transaction.abort();
+              reject(new Error("Expected backup-3 units are missing."));
+              return;
+            }
+            const invalidUnits = units.map((candidate) => {
+              if (!candidate || typeof candidate !== "object") return candidate;
+              const unit = candidate as { id?: string };
+              return unit.id === "unit_004"
+                ? { ...candidate, position: { x: 8, y: 6 } }
+                : candidate;
+            });
+            store.put({
+              ...record,
+              data: { ...record.data, chapterId: "chapter_01_map", units: invalidUnits }
+            });
+          };
+          request.onerror = () => reject(request.error ?? new Error("Could not read backup for terrain validation."));
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error ?? new Error("Could not prepare impassable backup."));
+          transaction.onabort = () => reject(transaction.error ?? new Error("Impassable backup update was aborted."));
+        });
+      } finally {
+        database.close();
+      }
+    });
 
     await page.getByTestId("restore-backup-3").click();
     await expect(page.getByRole("status")).toContainText("バックアップを復元できません。");

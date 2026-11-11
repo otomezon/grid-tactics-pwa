@@ -1,3 +1,4 @@
+import { TERRAIN_DEFINITIONS } from "../../content/terrain";
 import { isValidGameMapDefinition } from "./validate-game-map";
 import {
   SAVE_VERSION,
@@ -62,12 +63,18 @@ function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
   const fields = value;
   if (!hasValidCampaignUnitData(value) || !isRecord(fields.position)) return false;
   const position = fields.position;
-  return (
-    (fields.faction === "player" || fields.faction === "enemy") &&
-    isNonNegativeInteger(position.x) && isNonNegativeInteger(position.y) &&
-    position.x < map.width && position.y < map.height &&
-    typeof fields.hasMoved === "boolean" && typeof fields.hasActed === "boolean"
-  );
+  if (
+    (fields.faction !== "player" && fields.faction !== "enemy") ||
+    !isNonNegativeInteger(position.x) || !isNonNegativeInteger(position.y) ||
+    position.x >= map.width || position.y >= map.height ||
+    typeof fields.hasMoved !== "boolean" || typeof fields.hasActed !== "boolean"
+  ) {
+    return false;
+  }
+
+  const terrainType = map.terrain[position.y]?.[position.x];
+  return terrainType !== undefined &&
+    TERRAIN_DEFINITIONS[terrainType].movementCost[value.movementType] !== null;
 }
 
 export function isValidGameStateSnapshot(
