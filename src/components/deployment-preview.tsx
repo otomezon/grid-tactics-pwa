@@ -56,7 +56,7 @@ export function DeploymentPreview({
           <h3 id="deployment-preview-heading">出撃配置プレビュー</h3>
           <p>出撃予定の味方をマップ上に表示します。味方のマスを選ぶと詳細を確認できます。</p>
         </div>
-        <span data-testid="deployment-preview-count">{occupiedCount} / {map.playerDeployment.length}か所</span>
+        <span data-testid="deployment-preview-count" aria-live="polite">{occupiedCount} / {map.playerDeployment.length}か所</span>
       </div>
       <div
         className="deployment-preview-grid"
@@ -94,6 +94,7 @@ export function DeploymentPreview({
               ) : slot ? (
                 <span
                   className="deployment-preview-empty-slot"
+                  role="img"
                   aria-label={"空き出撃位置 " + slot.ordinal + "、" + label}
                   data-testid="deployment-preview-empty-slot"
                 >
