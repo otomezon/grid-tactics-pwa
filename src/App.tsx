@@ -42,6 +42,17 @@ import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+}
+
+function isStandaloneDisplayMode(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const standaloneNavigator = navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia("(display-mode: standalone)").matches || standaloneNavigator.standalone === true;
+}
+
 const MAX_SAVE_FILE_BYTES = 1024 * 1024;
 
 const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
@@ -287,7 +298,41 @@ export default function App() {
   const [saveBackups, setSaveBackups] = useState<SaveBackupRecord[]>([]);
   const [backupListLoaded, setBackupListLoaded] = useState(false);
   const [backupActionPending, setBackupActionPending] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalledApp, setIsInstalledApp] = useState(isStandaloneDisplayMode);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(display-mode: standalone)");
+    const updateInstalledDisplayMode = () => {
+      const standaloneNavigator = navigator as Navigator & { standalone?: boolean };
+      const installed = mediaQuery.matches || standaloneNavigator.standalone === true;
+      setIsInstalledApp(installed);
+      if (installed) setInstallPrompt(null);
+    };
+    const handleBeforeInstallPrompt = (event: Event) => {
+      const installEvent = event as BeforeInstallPromptEvent;
+      if (typeof installEvent.prompt !== "function" || !installEvent.userChoice) return;
+      event.preventDefault();
+      setInstallPrompt(installEvent);
+    };
+    const handleAppInstalled = () => {
+      setIsInstalledApp(true);
+      setInstallPrompt(null);
+      setMessage("Grid Tacticsをホーム画面に追加しました。次回からアプリとして起動できます。");
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    mediaQuery.addEventListener("change", updateInstalledDisplayMode);
+    updateInstalledDisplayMode();
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+      mediaQuery.removeEventListener("change", updateInstalledDisplayMode);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -834,6 +879,25 @@ export default function App() {
     await persist(nextState, selectedUnit.name + "は" + weapon.name + "を装備しました。");
   }
 
+  async function handleInstallApp(): Promise<void> {
+    const promptEvent = installPrompt;
+    if (!promptEvent) return;
+
+    try {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      setInstallPrompt(null);
+      setMessage(
+        choice.outcome === "accepted"
+          ? "インストールを開始しました。完了後はホーム画面から起動できます。"
+          : "インストールはキャンセルされました。あとからブラウザのメニューから追加できます。"
+      );
+    } catch {
+      setInstallPrompt(null);
+      setMessage("インストールを開始できませんでした。ブラウザのメニューからホーム画面への追加をお試しください。");
+    }
+  }
+
   async function handleUseInventoryItem(itemId: string): Promise<void> {
     if (!selectedUnit || !interactive || selectedUnit.faction !== "player") return;
 
@@ -1212,6 +1276,18 @@ export default function App() {
         <div className="header-status">
           <span className="phase-badge">{deploymentPending ? "出撃準備" : battleOutcome === "victory" ? "勝利" : battleOutcome === "defeat" ? "敗北" : "第" + gameState.turn + "ターン · " + (gameState.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ")}</span>
           <span className={"save-badge save-" + saveStatus}>{SAVE_STATUS_LABELS[saveStatus]}</span>
+          {isInstalledApp ? (
+            <span className="save-badge save-saved" data-testid="pwa-installed-status">インストール済み</span>
+          ) : installPrompt ? (
+            <button
+              className="secondary-button save-file-button pwa-install-button"
+              type="button"
+              data-testid="pwa-install-button"
+              onClick={() => void handleInstallApp()}
+            >
+              アプリをインストール
+            </button>
+          ) : null}
           <button
             className="secondary-button save-file-button"
             type="button"
@@ -1249,6 +1325,16 @@ export default function App() {
         <strong>開発プロトタイプ</strong>
         <span>仮マップ・仮ユニット・仮武器を使用しています。基本的な敵AI・フェイズ進行・勝敗判定を実装した開発版です。</span>
       </div>
+
+      {!isInstalledApp && (
+        <details className="pwa-install-help" data-testid="pwa-install-help">
+          <summary>アプリとしてホーム画面に追加する方法</summary>
+          <p>
+            インストールに対応したブラウザでは、上部に表示される「アプリをインストール」から追加できます。
+            iPhone／iPadではSafariの共有メニューから「ホーム画面に追加」を選択してください。
+          </p>
+        </details>
+      )}
 
       {deploymentPending && battleOutcome === "playing" && (
         <section className="deployment-panel" aria-labelledby="deployment-heading">
