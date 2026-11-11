@@ -61,7 +61,7 @@ describe("DeploymentPreview", () => {
       playerDeployment: [{ unitId: "unit_004", x: 2, y: 3 }]
     };
     const html = renderPreview(["unit_004"], { unit_004: "2,3" }, mountainMap);
-    expect(html).toContain("6列・4行 · 山");
+    expect(html).toContain("3列・4行 · 山");
     expect(html).toContain("味方04 · 騎馬 · 移動力 5");
     expect(html).toContain("このユニットの移動タイプでは進入できません");
     expect(html).toContain("進入不可");
