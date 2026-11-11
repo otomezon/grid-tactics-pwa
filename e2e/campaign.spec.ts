@@ -1425,6 +1425,13 @@ test.describe("browser campaign flow", () => {
     expect(reviewDimensions.reviewWidth).toBeLessThanOrEqual(reviewDimensions.viewportWidth);
     expect(await readAutoSave(page)).toEqual(savedBeforeReview);
 
+    await review.getByRole("button", { name: "戦闘に戻る" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(phaseEndButton).toBeFocused();
+    expect(await readAutoSave(page)).toEqual(savedBeforeReview);
+
+    await phaseEndButton.click();
+    await expect(review).toBeVisible();
     const selectedAlly = pendingAllies[0]!;
     const pendingRow = review.locator('[data-unit-id="' + selectedAlly.id + '"]');
     await pendingRow.getByRole("button", { name: selectedAlly.name + "を確認" }).click();
