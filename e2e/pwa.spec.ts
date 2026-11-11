@@ -140,6 +140,61 @@ test.describe("production PWA shell", () => {
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
   });
 
+  test("offers the browser install prompt and reflects successful installation", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("pwa-install-help")).toBeVisible();
+    await expect(page.getByTestId("pwa-install-button")).toHaveCount(0);
+
+    const promptWasCaptured = await page.evaluate(() => {
+      const testWindow = window as Window & { __pwaInstallPromptCalls?: number };
+      testWindow.__pwaInstallPromptCalls = 0;
+      const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+      };
+      event.prompt = async () => {
+        testWindow.__pwaInstallPromptCalls = (testWindow.__pwaInstallPromptCalls ?? 0) + 1;
+      };
+      event.userChoice = Promise.resolve({ outcome: "accepted", platform: "web" });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(promptWasCaptured).toBe(true);
+
+    const installButton = page.getByTestId("pwa-install-button");
+    await expect(installButton).toBeVisible();
+    await installButton.click();
+    await expect.poll(() => page.evaluate(
+      () => (window as Window & { __pwaInstallPromptCalls?: number }).__pwaInstallPromptCalls ?? 0
+    )).toBe(1);
+    await expect(page.getByRole("status")).toContainText("インストールを開始しました。");
+    await expect(installButton).toHaveCount(0);
+
+    await page.evaluate(() => window.dispatchEvent(new Event("appinstalled")));
+    await expect(page.getByTestId("pwa-installed-status")).toBeVisible();
+    await expect(page.getByTestId("pwa-install-help")).toHaveCount(0);
+  });
+
+  test("keeps manual install guidance when the browser prompt is dismissed", async ({ page }) => {
+    await page.goto("/");
+    const promptWasCaptured = await page.evaluate(() => {
+      const event = new Event("beforeinstallprompt", { cancelable: true }) as Event & {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+      };
+      event.prompt = async () => undefined;
+      event.userChoice = Promise.resolve({ outcome: "dismissed", platform: "web" });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(promptWasCaptured).toBe(true);
+
+    await page.getByTestId("pwa-install-button").click();
+    await expect(page.getByRole("status")).toContainText("インストールはキャンセルされました。");
+    await expect(page.getByTestId("pwa-install-button")).toHaveCount(0);
+    await expect(page.getByTestId("pwa-install-help")).toBeVisible();
+  });
+
   test("reopens the cached application shell after going offline", async ({ page, context }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();

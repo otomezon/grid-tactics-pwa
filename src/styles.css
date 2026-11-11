@@ -27,6 +27,19 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .subtitle { margin-bottom: 0; color: var(--text-muted); font-size: .9rem; }
 .header-status { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .save-file-button { min-height: 32px; padding: 6px 10px; font-size: .74rem; }
+.pwa-install-button { border-color: rgba(131, 189, 187, .75); color: #c7eeea; }
+.pwa-install-help { margin: 0 0 14px; color: var(--text-muted); font-size: .76rem; }
+.pwa-install-help summary {
+  display: inline-flex; min-height: 32px; align-items: center;
+  color: #c0d4df; font-weight: 700; cursor: pointer;
+}
+.pwa-install-help summary:focus-visible { outline: 3px solid #f1c879; outline-offset: 3px; border-radius: 4px; }
+.pwa-install-help p {
+  max-width: 760px; margin: 5px 0 0; padding: 9px 11px;
+  border-left: 3px solid rgba(131, 189, 187, .6);
+  border-radius: 0 7px 7px 0; background: rgba(25, 38, 51, .55);
+  line-height: 1.55;
+}
 .save-file-input { display: none; }
 .phase-badge, .save-badge, .map-size {
   display: inline-flex; align-items: center; min-height: 32px; padding: 6px 11px;

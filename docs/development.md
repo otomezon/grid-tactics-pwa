@@ -43,7 +43,7 @@ npm run preview
 - `test`: Vitest単体テスト。
 - `build`: 型チェック後にVite本番ビルド。PWA manifest／Service Workerも生成対象。
 - `preview`: build後の成果物をローカルで確認。
-- `test:e2e`: Playwrightで `e2e/pwa-preview-server.mjs` を起動し、Vite Previewが事前に生成した本番ビルドを配信する。Chromiumで出撃準備・控え名簿保存・行動状態復元・敵軍フェイズ・幅320px・高さ568／720pxでの40pxマップタイル／キーボード横スクロール／タップ選択／指での横スワイプ後に右側ユニットを選択・移動後の回復薬の数量スタック表示／使用／確認キャンセル／HP上限・スタックからアイテム1個と行動の消費・幅390pxのレイアウト・PWA manifest／Service Worker／オフライン起動・Service Worker更新時の自動再読み込みとセーブ復元、セーブファイルの書き出し／読み込みと不正ファイル拒否、ローカルバックアップ3世代の保持・ローテーション・復元・キャンセル・migration・不正データ拒否を確認する。`playwright.config.ts` と `e2e/` が定義元。テストサーバーにある `/__test/force-sw-update` はテスト中だけ `dist/sw.js` にコメントを追記し、Service Workerの更新検知を発生させる専用エンドポイントである。
+- `test:e2e`: Playwrightで `e2e/pwa-preview-server.mjs` を起動し、Vite Previewが事前に生成した本番ビルドを配信する。Chromiumで出撃準備・控え名簿保存・行動状態復元・敵軍フェイズ・幅320px・高さ568／720pxでの40pxマップタイル／キーボード横スクロール／タップ選択／指での横スワイプ後に右側ユニットを選択・移動後の回復薬の数量スタック表示／使用／確認キャンセル／HP上限・スタックからアイテム1個と行動の消費・幅390pxのレイアウト・PWA manifest／Service Worker／オフライン起動／インストールプロンプト表示・確定・キャンセル・インストール完了イベント・Service Worker更新時の自動再読み込みとセーブ復元、セーブファイルの書き出し／読み込みと不正ファイル拒否、ローカルバックアップ3世代の保持・ローテーション・復元・キャンセル・migration・不正データ拒否を確認する。`playwright.config.ts` と `e2e/` が定義元。テストサーバーにある `/__test/force-sw-update` はテスト中だけ `dist/sw.js` にコメントを追記し、Service Workerの更新検知を発生させる専用エンドポイントである。
 
 ## 4. CI
 
@@ -51,7 +51,7 @@ npm run preview
 
 ## 5. PWA
 
-`vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。CIのブラウザE2Eでは、本番Preview上でmanifest・制御状態・precache・オフライン起動に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。
+`vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。アプリはブラウザの `beforeinstallprompt` イベントを受け取った場合だけインストールボタンを表示し、ユーザー操作からブラウザ標準のインストールプロンプトを呼び出す。`appinstalled` またはstandalone display modeを検知するとインストール済み表示へ切り替える。イベントに対応しないブラウザ向けには手動追加方法を案内し、iPhone／iPadではSafariの共有メニューを利用する。インストール可否はブラウザ・OS・利用条件に依存するため、イベントが届かない場合に独自のインストール成功表示は行わない。CIのブラウザE2Eでは、本番Preview上でmanifest・Service Worker・オフライン起動・インストールイベントの表示／確定／キャンセル／完了状態に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。
 
 ## 6. 環境変数・外部サービス・デプロイ
 
