@@ -126,7 +126,14 @@ test.describe("browser campaign flow", () => {
     const savedBeforeInspection = await readAutoSave(page);
     const terrain = page.getByTestId("terrain-inspector");
     const forestTile = page.locator(".map-grid").getByRole("button", { name: /4列・1行/ });
-    await forestTile.focus();
+    const mapViewport = page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    });
+    await mapViewport.focus();
+    for (let index = 0; index < 4; index += 1) {
+      await page.keyboard.press("Tab");
+    }
+    await expect(forestTile).toBeFocused();
     await expect(terrain).toContainText("森");
     await expect(terrain).toContainText("歩兵の移動コスト");
     await expect(terrain).toContainText("2");
@@ -217,8 +224,7 @@ test.describe("browser campaign flow", () => {
     const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
     if (!player || !enemy) throw new Error("Threat-range test units are missing from the auto save.");
 
-    player.position = { x: 4, y: 1 };
-    enemy.position = { x: 1, y: 1 };
+    player.position = { x: 4, y: 1 };    enemy.position = { x: 1, y: 1 };
     enemy.move = 2;
     enemy.hasMoved = false;
     enemy.hasActed = false;
@@ -437,8 +443,7 @@ test.describe("browser campaign flow", () => {
     checkpoint.phase = "enemy";
     await writeAutoSave(page, checkpoint);
     await page.reload();
-    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
-    const report = page.getByTestId("battle-history");
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });    const report = page.getByTestId("battle-history");
     await expect(report).toBeVisible();
     await expect(report.getByTestId("battle-history-entry")).toHaveCount(1);
     const enemyPhase = report.getByTestId("battle-history-entry").first();
