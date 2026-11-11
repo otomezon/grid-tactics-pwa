@@ -1,11 +1,15 @@
+import { useState } from "react";
+import { getDeploymentTerrainDetails } from "../application/get-deployment-terrain-details";
 import { TERRAIN_DEFINITIONS } from "../content/terrain";
-import type { GameMapDefinition, TerrainType } from "../domain/models/game";
+import type { GameMapDefinition, MovementType, TerrainType } from "../domain/models/game";
 
 export interface DeploymentPreviewCandidate {
   id: string;
   name: string;
   classId: string;
   level: number;
+  movementType: MovementType;
+  move: number;
 }
 
 interface DeploymentPreviewProps {
@@ -47,6 +51,27 @@ export function DeploymentPreview({
     { ordinal: index + 1, unitId: slot.unitId }
   ] as const));
   const occupiedCount = assignedByPosition.size;
+  const firstSlot = map.playerDeployment[0];
+  const defaultInspectedPosition = firstSlot ? positionKey(firstSlot.x, firstSlot.y) : null;
+  const [inspectedPositionKey, setInspectedPositionKey] = useState<string | null>(defaultInspectedPosition);
+  const activeInspectedPositionKey = inspectedPositionKey && deploymentSlots.has(inspectedPositionKey)
+    ? inspectedPositionKey
+    : defaultInspectedPosition;
+  const inspectedCoordinates = activeInspectedPositionKey?.split(",").map(Number);
+  const inspectedPosition = inspectedCoordinates && inspectedCoordinates.length === 2 &&
+    Number.isInteger(inspectedCoordinates[0]) && Number.isInteger(inspectedCoordinates[1])
+    ? { x: inspectedCoordinates[0]!, y: inspectedCoordinates[1]! }
+    : null;
+  const inspectedTerrain = inspectedPosition
+    ? getDeploymentTerrainDetails(
+        map,
+        inspectedPosition,
+        assignedByPosition.get(activeInspectedPositionKey ?? "")?.movementType
+      )
+    : null;
+  const inspectedUnit = inspectedPosition
+    ? assignedByPosition.get(positionKey(inspectedPosition.x, inspectedPosition.y)) ?? null
+    : null;
 
   return (
     <section className="deployment-preview" aria-labelledby="deployment-preview-heading" data-testid="deployment-preview">
@@ -54,7 +79,7 @@ export function DeploymentPreview({
         <div>
           <p className="eyebrow">FORMATION</p>
           <h3 id="deployment-preview-heading">出撃配置プレビュー</h3>
-          <p>出撃予定の味方をマップ上に表示します。味方のマスを選ぶと詳細を確認できます。</p>
+          <p>出撃予定の味方をマップ上に表示します。味方のマスでは詳細を、空き出撃マスでは地形を確認できます。</p>
         </div>
         <span data-testid="deployment-preview-count" aria-live="polite">{occupiedCount} / {map.playerDeployment.length}か所</span>
       </div>
@@ -79,12 +104,15 @@ export function DeploymentPreview({
             >
               {slot && assigned ? (
                 <button
-                  className={"deployment-preview-unit" + (detailUnitId === assigned.id ? " is-inspected" : "")}
+                  className={"deployment-preview-unit" + (detailUnitId === assigned.id || activeInspectedPositionKey === key ? " is-inspected" : "")}
                   type="button"
                   aria-label={assigned.name + "、" + label + "に配置済み。詳細を表示"}
-                  aria-pressed={detailUnitId === assigned.id}
+                  aria-pressed={activeInspectedPositionKey === key}
                   disabled={disabled}
-                  onClick={() => onSelectUnit(assigned.id)}
+                  onClick={() => {
+                    setInspectedPositionKey(key);
+                    onSelectUnit(assigned.id);
+                  }}
                   title={assigned.name + " · Lv." + assigned.level}
                   data-unit-id={assigned.id}
                 >
@@ -92,14 +120,17 @@ export function DeploymentPreview({
                   <span className="deployment-preview-unit-name" aria-hidden="true">{assigned.name}</span>
                 </button>
               ) : slot ? (
-                <span
-                  className="deployment-preview-empty-slot"
-                  role="img"
-                  aria-label={"空き出撃位置 " + slot.ordinal + "、" + label}
+                <button
+                  className={"deployment-preview-empty-slot" + (activeInspectedPositionKey === key ? " is-inspected" : "")}
+                  type="button"
+                  aria-label={"空き出撃位置 " + slot.ordinal + "、" + label + "の地形を確認"}
+                  aria-pressed={activeInspectedPositionKey === key}
+                  disabled={disabled}
+                  onClick={() => setInspectedPositionKey(key)}
                   data-testid="deployment-preview-empty-slot"
                 >
                   <span aria-hidden="true">＋</span>
-                </span>
+                </button>
               ) : (
                 <span className="deployment-preview-terrain-symbol" aria-hidden="true">
                   {TERRAIN_DEFINITIONS[terrainType].symbol}
@@ -109,6 +140,36 @@ export function DeploymentPreview({
           );
         }))}
       </div>
+      {inspectedTerrain && inspectedPosition && (
+        <section className="deployment-preview-terrain" aria-labelledby="deployment-preview-terrain-heading" data-testid="deployment-preview-terrain" aria-live="polite">
+          <div className="deployment-preview-terrain-heading">
+            <div>
+              <p className="eyebrow">TERRAIN</p>
+              <h4 id="deployment-preview-terrain-heading">{inspectedTerrain.coordinate} · {inspectedTerrain.terrainName}</h4>
+            </div>
+            <span>{inspectedUnit ? "配置中の味方" : "空き出撃マス"}</span>
+          </div>
+          {inspectedUnit ? (
+            <>
+              <p className="deployment-preview-terrain-unit">{inspectedUnit.name} · {inspectedUnit.movementType === "infantry" ? "歩兵" : "騎馬"} · 移動力 {inspectedUnit.move}</p>
+              {inspectedTerrain.unitMovementCost === null ? (
+                <p className="deployment-preview-terrain-warning">このユニットの移動タイプでは進入できません。別の出撃位置を選んでください。</p>
+              ) : (
+                <p className="deployment-preview-terrain-passable">このユニットの移動タイプで進入できます · 移動コスト {inspectedTerrain.unitMovementCost}</p>
+              )}
+            </>
+          ) : (
+            <p className="deployment-preview-terrain-unit">この出撃マスは現在空いています。</p>
+          )}
+          <dl className="deployment-preview-terrain-grid">
+            <div><dt>歩兵コスト</dt><dd>{inspectedTerrain.infantryMovementCost === null ? "進入不可" : inspectedTerrain.infantryMovementCost}</dd></div>
+            <div><dt>騎馬コスト</dt><dd>{inspectedTerrain.cavalryMovementCost === null ? "進入不可" : inspectedTerrain.cavalryMovementCost}</dd></div>
+            <div><dt>守備補正</dt><dd>{inspectedTerrain.defenseBonus >= 0 ? "+" : ""}{inspectedTerrain.defenseBonus}</dd></div>
+            <div><dt>回避補正</dt><dd>{inspectedTerrain.avoidanceBonus >= 0 ? "+" : ""}{inspectedTerrain.avoidanceBonus}</dd></div>
+          </dl>
+          {inspectedTerrain.specialEffect && <p className="deployment-preview-terrain-effect">{inspectedTerrain.specialEffect}</p>}
+        </section>
+      )}
       <div className="deployment-preview-legend" aria-label="配置プレビューの凡例">
         <span><i className="deployment-preview-legend-ally" />出撃予定</span>
         <span><i className="deployment-preview-legend-empty" />空き出撃位置</span>

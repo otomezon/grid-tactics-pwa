@@ -131,6 +131,11 @@ test.describe("browser campaign flow", () => {
     await expect(preview).toBeVisible();
     await expect(preview.getByTestId("deployment-preview-tile")).toHaveCount(100);
     await expect(preview.getByTestId("deployment-preview-count")).toHaveText("4 / 4か所");
+    const terrainPanel = preview.getByTestId("deployment-preview-terrain");
+    await expect(terrainPanel).toContainText("2列・9行 · 平地");
+    await expect(terrainPanel).toContainText("味方01 · 歩兵 · 移動力");
+    await expect(terrainPanel).toContainText("このユニットの移動タイプで進入できます");
+    await expect(terrainPanel).toContainText("移動コスト 1");
     await expect(preview.getByRole("button", {
       name: "味方01、2列・9行に配置済み。詳細を表示"
     })).toBeVisible();
@@ -156,11 +161,20 @@ test.describe("browser campaign flow", () => {
     await fourthCandidate.getByRole("checkbox").uncheck();
     await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
     await expect(preview.getByTestId("deployment-preview-count")).toHaveText("3 / 4か所");
-    await expect(preview.getByTestId("deployment-preview-empty-slot")).toHaveCount(1);
-    await expect(preview.getByTestId("deployment-preview-empty-slot")).toHaveAttribute(
+    const emptySlot = preview.getByTestId("deployment-preview-empty-slot");
+    await expect(emptySlot).toHaveCount(1);
+    await expect(emptySlot).toHaveAttribute(
       "aria-label",
-      "空き出撃位置 4、9列・9行"
+      "空き出撃位置 4、9列・9行の地形を確認"
     );
+    await emptySlot.click();
+    await expect(terrainPanel).toContainText("9列・9行 · 道");
+    await expect(terrainPanel).toContainText("空き出撃マス");
+    await expect(terrainPanel).toContainText("歩兵コスト");
+    await expect(terrainPanel).toContainText("騎馬コスト");
+    await expect(terrainPanel).toContainText("守備補正");
+    await expect(terrainPanel).toContainText("回避補正");
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
 
     const dimensions = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
