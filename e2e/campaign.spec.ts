@@ -115,6 +115,63 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
+  test("previews movement cost and a lowest-cost route without saving until the tile is chosen", async ({ page }) => {
+    await startBattle(page);
+    const savedBeforePreview = await readAutoSave(page);
+
+    const playerTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
+    await playerTile.click();
+    const destination = page.locator(".map-grid").getByRole("button", { name: /2列・8行/ });
+    await destination.hover();
+
+    await expect(destination).toHaveClass(/is-movement-path/);
+    await expect(destination).toHaveAttribute("aria-label", /累計移動コスト 1 \/ 移動力 5/);
+    await expect(destination.locator(".move-cost-marker")).toHaveText("1");
+    const origin = page.locator(".map-grid").getByRole("button", { name: /2列・9行/ });
+    await expect(origin.locator(".movement-path-step")).toHaveText("1");
+    await expect(destination.locator(".movement-path-step")).toHaveText("2");
+    expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+
+    await destination.click();
+    await expect(page.getByRole("status")).toContainText("味方01が2列・8行へ移動しました。");
+    await expect(page.locator(".map-grid .movement-path-step")).toHaveCount(0);
+    const movedState = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean }>;
+    };
+    expect(movedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+      position: { x: 1, y: 7 },
+      hasMoved: true
+    });
+  });
+
+  test("previews a movement route when a reachable tile receives keyboard focus", async ({ page }) => {
+    await startBattle(page);
+    const savedState = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number } }>;
+    };
+    const player = savedState.units.find((unit) => unit.id === "unit_001");
+    if (!player) throw new Error("The keyboard route-preview unit is missing from the auto save.");
+    player.position = { x: 0, y: 0 };
+    await writeAutoSave(page, savedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const playerTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
+    await playerTile.click();
+    const viewport = page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    });
+    await viewport.focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+
+    const destination = page.locator(".map-grid").getByRole("button", { name: /2列・1行/ });
+    await expect(destination).toBeFocused();
+    await expect(destination).toHaveAttribute("aria-label", /移動経路 2番/);
+    await expect(page.locator(".map-grid .movement-path-step")).toHaveCount(2);
+    expect(await readAutoSave(page)).toEqual(savedState);
+  });
+
   test("shows objective progress and inspects terrain without changing the autosave", async ({ page }) => {
     await startBattle(page);
     const objective = page.getByTestId("battle-objective");
