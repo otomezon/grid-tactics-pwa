@@ -96,14 +96,11 @@ describe("synthetic class-promotion balance scenarios", () => {
   it("does not mutate the synthetic starting profiles when calculating promotion previews", () => {
     const before = PROTOTYPE_GROWTH_PROFILES.map((profile) => ({ ...profile.stats }));
 
-    for (const scenario of PROTOTYPE_PROMOTION_SCENARIOS) {
-      expect(scenario.startingStats).toEqual(
-        before.find((stats) =>
-          Object.entries(stats).every(([key, value]) =>
-            scenario.startingStats[key as keyof typeof stats] === value
-          )
-        ) ?? scenario.startingStats
+    for (const profile of PROTOTYPE_GROWTH_PROFILES) {
+      const firstScenario = PROTOTYPE_PROMOTION_SCENARIOS.find(
+        (scenario) => scenario.profileId === profile.id
       );
+      expect(firstScenario?.startingStats).toEqual(profile.stats);
     }
 
     expect(PROTOTYPE_GROWTH_PROFILES.map((profile) => profile.stats)).toEqual(before);
