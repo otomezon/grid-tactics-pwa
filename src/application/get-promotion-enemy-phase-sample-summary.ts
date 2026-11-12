@@ -176,6 +176,8 @@ function addEnemyPhaseToMetrics(
     metrics.selectedUnitTargetedPhases += 1;
   }
 
+  // runEnemyPhase returns recovery applied when the next player phase starts.
+  // Subtracting it isolates HP immediately after enemy actions, before that recovery.
   const recoveries = new Map(
     resolved.phaseStartRecoveries.map((entry) => [entry.unitId, entry.recoveredHp])
   );
