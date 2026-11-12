@@ -73,7 +73,7 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 ## 9. セーブファイル
 
 - 自動セーブslotのスナップショットを、形式識別子 `grid-tactics-pwa-save` とファイル形式version 1を持つJSONファイルとして書き出す。
-- 読み込み時はJSON envelope、形式version、exportedAt、章ID、既存のsaveVersion 1／2／3 migration、章マップに対するsnapshot validatorを順に検証する。
+- 読み込み時はJSON envelope、形式version、exportedAt、章ID、既存のsaveVersion 1／2／3から4へのmigrationと、現行saveVersion 4の章マップに対するsnapshot validatorを順に検証する。
 - 未対応形式・不正JSON・不正snapshot・未知の章IDは拒否し、確認ダイアログおよび検証が完了するまで既存auto slotを変更しない。
 - 読み込み確定後にだけauto slotを置き換える。IndexedDBのschemaとGameStateSnapshot saveVersionは変更しない。
 - JSONファイルは平文であり暗号化されない。共有・保管先に注意する。
