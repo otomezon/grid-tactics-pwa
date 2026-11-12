@@ -1127,14 +1127,14 @@ test.describe("browser campaign flow", () => {
     const statPreview = confirmation.getByRole("table", { name: "昇格後の能力値プレビュー" });
     await expect(statPreview.locator("tbody tr")).toHaveCount(8);
     const expectedStatPreview = [
-      { key: "hp", current: "20", next: "22", change: "+2 / 60" },
-      { key: "strength", current: "32", next: "32", change: "+0 / 30" },
-      { key: "magic", current: "0", next: "0", change: "+0 / 30" },
-      { key: "skill", current: "7", next: "8", change: "+1 / 30" },
-      { key: "speed", current: "8", next: "9", change: "+1 / 30" },
-      { key: "luck", current: "4", next: "4", change: "+0 / 30" },
-      { key: "defense", current: "5", next: "5", change: "+0 / 30" },
-      { key: "resistance", current: "1", next: "1", change: "+0 / 30" }
+      { key: "hp", current: "20", next: "22", change: "要求 +2 / 実 +2 / 上限 60" },
+      { key: "strength", current: "32", next: "32", change: "要求 +0 / 実 +0 / 上限 30" },
+      { key: "magic", current: "0", next: "0", change: "要求 +0 / 実 +0 / 上限 30" },
+      { key: "skill", current: "7", next: "8", change: "要求 +1 / 実 +1 / 上限 30" },
+      { key: "speed", current: "8", next: "9", change: "要求 +1 / 実 +1 / 上限 30" },
+      { key: "luck", current: "4", next: "4", change: "要求 +0 / 実 +0 / 上限 30" },
+      { key: "defense", current: "5", next: "5", change: "要求 +0 / 実 +0 / 上限 30" },
+      { key: "resistance", current: "1", next: "1", change: "要求 +0 / 実 +0 / 上限 30" }
     ] as const;
     for (const expected of expectedStatPreview) {
       const cells = page.getByTestId(`promotion-stat-${expected.key}`).locator("td");
@@ -1684,4 +1684,9 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedBeforeNavigation);
   });
 
+});
+
+test("does not expose the development-only promotion lab in the production preview", async ({ page }) => {
+  await page.goto("/?promotion-lab=1");
+  await expect(page.getByTestId("promotion-lab")).toHaveCount(0);
 });

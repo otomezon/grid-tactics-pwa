@@ -48,3 +48,6 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 
 - `api.md`: 現行の設計資料にアプリケーションHTTP APIの仕様がなく、サーバーAPIも実装していないため未作成。
 - `docs/decisions/ADR-*.md`: 確定済みの技術判断を捏造しないため、正式な意思決定を行った時点で作成する。
+
+
+2026-11-12更新: PR #79をmainへマージし、固定seed合成fixtureを追加。CP-01／02／03／06／15もIssue #26で採択。開発専用の昇格試験室は `npm run dev` 起動後に `/?promotion-lab=1` で開く。stat preview用の合成fixtureであり、実プレイバランス試験を代替しない。Playwright E2Eは本番Previewに加え、開発サーバー上の試験室も検証する。
