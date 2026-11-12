@@ -1197,6 +1197,79 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
+
+  test("uses and explains the class-based ranged-attacker target priority without changing the save during forecast", async ({ page }) => {
+    await startBattle(page);
+    const saved = await readAutoSave(page) as {
+      units: Array<Record<string, unknown> & {
+        id: string;
+        faction: string;
+        classId: string;
+        currentHp: number;
+        stats: Record<string, number>;
+      }>;
+      [key: string]: unknown;
+    };
+    const units = saved.units.map((unit) => {
+      if (unit.id === "unit_001") {
+        return {
+          ...unit,
+          classId: "swordsman",
+          position: { x: 4, y: 4 },
+          currentHp: 20,
+          stats: { ...unit.stats, hp: 20, strength: 6, skill: 7, speed: 8, luck: 4, defense: 5, resistance: 1 },
+          usableWeaponTypes: ["sword"],
+          inventory: ["iron_sword"],
+          equippedWeaponId: "iron_sword",
+          hasMoved: false,
+          hasActed: false
+        };
+      }
+      if (unit.id === "unit_002") {
+        return {
+          ...unit,
+          classId: "archer",
+          position: { x: 5, y: 5 },
+          currentHp: 20,
+          stats: { ...unit.stats, hp: 20, strength: 6, skill: 7, speed: 8, luck: 4, defense: 5, resistance: 1 },
+          usableWeaponTypes: ["sword"],
+          inventory: ["iron_sword"],
+          equippedWeaponId: "iron_sword",
+          hasMoved: false,
+          hasActed: false
+        };
+      }
+      if (unit.id === "enemy_001") {
+        return { ...unit, position: { x: 4, y: 5 }, hasMoved: false, hasActed: false };
+      }
+      if (unit.faction === "enemy") {
+        return { ...unit, hasMoved: true, hasActed: true };
+      }
+      return unit;
+    });
+    const configuredSave = { ...saved, units };
+    await writeAutoSave(page, configuredSave);
+    await page.reload();
+
+    const savedBeforeForecast = await readAutoSave(page);
+    const forecast = page.getByTestId("enemy-phase-forecast");
+    await expect(forecast).toBeVisible();
+    await forecast.locator("details > summary").click();
+
+    const actions = forecast.getByTestId("enemy-phase-forecast-action");
+    await expect(actions).toHaveCount(1);
+    await expect(actions.first()).toContainText("遠距離攻撃役を優先 +35点");
+    await expect(actions.first()).toContainText("味方02");
+    expect(await readAutoSave(page)).toEqual(savedBeforeForecast);
+
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    const review = page.getByTestId("phase-end-review");
+    await expect(review).toBeVisible();
+    await review.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+    await expect(page.getByTestId("battle-history")).toContainText("遠距離攻撃役を優先 +35点");
+  });
+
   test("forecasts each ally's surviving HP and matches the resolved enemy phase without saving the preview", async ({ page }) => {
     await startBattle(page);
     const savedBeforePreview = await readAutoSave(page);
