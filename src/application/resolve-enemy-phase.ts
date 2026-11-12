@@ -6,6 +6,8 @@ import { calculateReachableTiles } from "../domain/movement/calculate-reachable-
 import type { GameMapDefinition, GameStateSnapshot, GameUnit, Position } from "../domain/models/game";
 import { evaluateBattleOutcome, type BattleOutcome } from "../domain/rules/evaluate-battle-outcome";
 import { applyFortRecovery } from "../domain/rules/apply-fort-recovery";
+import { getClassTacticalRoles, getTacticalRoleLabel, getTacticalRolePriorityBonus } from "../content/tactical-roles";
+import type { TacticalRole } from "../content/tactical-roles";
 import type { FortRecoveryRecord } from "../domain/rules/apply-fort-recovery";
 
 export type EnemyActionKind = "attacked" | "moved-and-attacked" | "moved" | "waited";
@@ -17,6 +19,8 @@ export interface EnemyActionLog {
   targetId?: string;
   targetName?: string;
   destination?: Position;
+  targetRoles?: readonly TacticalRole[];
+  targetRolePriorityBonus?: number;
   message: string;
 }
 
@@ -36,6 +40,8 @@ interface AttackCandidate {
   target: GameUnit;
   plan: AttackPlan;
   score: number;
+  targetRoles: readonly TacticalRole[];
+  targetRolePriorityBonus: number;
 }
 
 interface TileCandidate {
@@ -86,7 +92,15 @@ function getAttackCandidates(
       candidates.push({
         target,
         plan,
-        score: scoreAttack(enemy, target, plan)
+        score: scoreAttack(enemy, target, plan) + getClassTacticalRoles(target.classId).reduce(
+          (bonus, role) => bonus + getTacticalRolePriorityBonus(role),
+          0
+        ),
+        targetRoles: getClassTacticalRoles(target.classId),
+        targetRolePriorityBonus: getClassTacticalRoles(target.classId).reduce(
+          (bonus, role) => bonus + getTacticalRolePriorityBonus(role),
+          0
+        )
       });
     } catch {
       // Out-of-range or otherwise invalid targets are not attack candidates.
@@ -123,6 +137,12 @@ function scoreAttack(enemy: GameUnit, target: GameUnit, plan: AttackPlan): numbe
     counterExpectedDamage * COUNTER_DAMAGE_PENALTY_WEIGHT -
     counterLethalPenalty
   );
+}
+
+function formatTargetPriorityReason(candidate: AttackCandidate): string {
+  if (candidate.targetRoles.length === 0 || candidate.targetRolePriorityBonus <= 0) return "";
+  const labels = candidate.targetRoles.map(getTacticalRoleLabel).join("・");
+  return `（${labels}を優先 +${candidate.targetRolePriorityBonus}点）`;
 }
 
 function compareAttackCandidates(left: AttackCandidate, right: AttackCandidate): number {
@@ -224,7 +244,11 @@ function executeEnemyAction(
         kind: "attacked",
         targetId: currentAttack.target.id,
         targetName: currentAttack.target.name,
-        message: `${currentEnemy.name}は${currentAttack.target.name}に攻撃（${logs}）`
+        ...(currentAttack.targetRoles.length > 0 ? {
+          targetRoles: currentAttack.targetRoles,
+          targetRolePriorityBonus: currentAttack.targetRolePriorityBonus
+        } : {}),
+        message: `${currentEnemy.name}は${currentAttack.target.name}に攻撃（${logs}）${formatTargetPriorityReason(currentAttack)}`
       }
     };
   }
@@ -257,7 +281,11 @@ function executeEnemyAction(
             targetId: postMoveAttack.target.id,
             targetName: postMoveAttack.target.name,
             destination: destination.position,
-            message: `${currentEnemy.name}は${positionText(destination.position)}へ移動し、${postMoveAttack.target.name}に攻撃（${logs}）`
+            ...(postMoveAttack.targetRoles.length > 0 ? {
+              targetRoles: postMoveAttack.targetRoles,
+              targetRolePriorityBonus: postMoveAttack.targetRolePriorityBonus
+            } : {}),
+            message: `${currentEnemy.name}は${positionText(destination.position)}へ移動し、${postMoveAttack.target.name}に攻撃（${logs}）${formatTargetPriorityReason(postMoveAttack)}`
           }
         };
       }

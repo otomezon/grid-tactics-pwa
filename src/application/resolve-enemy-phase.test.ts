@@ -211,4 +211,78 @@ describe("enemy phase controller", () => {
     );
     expect(runEnemyPhase(state, CHAPTER_01_MAP)).toEqual(runEnemyPhase(state, CHAPTER_01_MAP));
   });
+
+  it("prioritizes a ranged-attacker role when otherwise equivalent targets are both in range", () => {
+    const basePlayer = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const secondPlayer = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_002")!;
+    const baseEnemy = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const sharedPlayerStats = { ...basePlayer.stats, hp: 20, strength: 6, skill: 7, speed: 8, luck: 4, defense: 5, resistance: 1 };
+    const sharedPlayerWeapon = {
+      ...basePlayer,
+      stats: sharedPlayerStats,
+      currentHp: 20,
+      usableWeaponTypes: ["sword" as const],
+      inventory: ["iron_sword"],
+      equippedWeaponId: "iron_sword",
+      hasMoved: false,
+      hasActed: false
+    };
+    const frontline = {
+      ...sharedPlayerWeapon,
+      id: "unit_001",
+      name: "Frontline",
+      classId: "swordsman",
+      position: { x: 4, y: 4 }
+    };
+    const ranged = {
+      ...sharedPlayerWeapon,
+      id: secondPlayer.id,
+      name: "Ranged",
+      classId: "archer",
+      position: { x: 5, y: 5 }
+    };
+    const enemy = {
+      ...baseEnemy,
+      position: { x: 4, y: 5 },
+      hasMoved: false,
+      hasActed: false
+    };
+
+    const result = runEnemyPhase(battleState([frontline, ranged, enemy]), openMap());
+    const action = result.actions[0];
+
+    expect(action?.targetId).toBe("unit_002");
+    expect(action?.targetRoles).toEqual(["ranged-attacker"]);
+    expect(action?.targetRolePriorityBonus).toBe(35);
+    expect(action?.message).toContain("遠距離攻撃役を優先 +35点");
+  });
+
+  it("keeps lexical target tie-breaking for classes without a tactical role", () => {
+    const basePlayer = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const secondPlayer = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_002")!;
+    const enemy = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const player = {
+      ...basePlayer,
+      position: { x: 4, y: 4 },
+      currentHp: 20,
+      usableWeaponTypes: ["sword" as const],
+      inventory: ["iron_sword"],
+      equippedWeaponId: "iron_sword"
+    };
+    const second = {
+      ...player,
+      id: secondPlayer.id,
+      name: "Second",
+      classId: "mercenary",
+      position: { x: 5, y: 5 }
+    };
+    const attacker = { ...enemy, position: { x: 4, y: 5 } };
+
+    const result = runEnemyPhase(battleState([player, second, attacker]), openMap());
+
+    expect(result.actions[0]?.targetId).toBe("unit_001");
+    expect(result.actions[0]?.targetRoles).toBeUndefined();
+    expect(result.actions[0]?.targetRolePriorityBonus).toBeUndefined();
+  });
+
 });

@@ -73,7 +73,7 @@ export function EnemyPhaseForecastPanel({ forecast }: { forecast: EnemyPhaseFore
         <p className="enemy-phase-forecast-outcome">予測結果：<strong>{OUTCOME_LABELS[forecast.outcome]}</strong></p>
         <p className="helper-text enemy-phase-forecast-note">
           現在の配置・HP・装備・乱数状態と実際の敵AIを使った予測です。味方の行動で状態が変わると内容も更新されます。
-          味方HPは敵行動後と砦回復処理後を分けて表示します。AIの評価値と距離方式は暫定です。
+          味方HPは敵行動後と砦回復処理後を分けて表示します。クラスの役割タグによる標的優先も表示します。AIの評価値と距離方式は暫定です。役割加点も試作値です。
           この表示だけでGameState・乱数・オートセーブは変更されません。
         </p>
       </details>

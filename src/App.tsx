@@ -14,6 +14,7 @@ import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
 import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
 import { getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
+import { getTacticalRoleLabel } from "./content/tactical-roles";
 import { performClassChange } from "./application/perform-class-change";
 import { performItemUse } from "./application/perform-item-use";
 import { getInventoryItemStacks } from "./application/get-inventory-item-stacks";
@@ -272,7 +273,12 @@ function formatEnemyPhaseSummary(
   execution: ReturnType<typeof runEnemyPhase>,
   map: GameMapDefinition
 ): string {
-  const actions = execution.actions.map((action) => action.message).join("。");
+  const actions = execution.actions.map((action) => {
+    if (!action.targetRoles?.length || !action.targetRolePriorityBonus) return action.message;
+    const labels = action.targetRoles.map(getTacticalRoleLabel).join("・");
+    const suffix = `（${labels}を優先 +${action.targetRolePriorityBonus}点）`;
+    return action.message.includes(suffix) ? action.message : action.message + suffix;
+  }).join("。");
   const details = [actions, formatFortRecoverySummary(execution.phaseStartRecoveries)]
     .filter(Boolean)
     .join("。");
