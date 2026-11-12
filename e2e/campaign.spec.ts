@@ -1867,6 +1867,159 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedBeforeNavigation);
   });
 
+
+  test("carries active and reserve units through chapter clear, deployment confirmation, and reload", async ({ page }) => {
+    await startBattle(page);
+    const startedState = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      rngState: number;
+      units: Array<{
+        id: string;
+        name: string;
+        faction: "player" | "enemy";
+        classId: string;
+        level: number;
+        experience: number;
+        stats: Record<string, number>;
+        growthRates: Record<string, number>;
+        currentHp: number;
+        movementType: string;
+        move: number;
+        usableWeaponTypes: string[];
+        inventory: string[];
+        equippedWeaponId: string | null;
+        position: { x: number; y: number };
+        hasMoved: boolean;
+        hasActed: boolean;
+      }>;
+      reserveUnits: Array<{
+        id: string;
+        level: number;
+        experience: number;
+        stats: Record<string, number>;
+        currentHp: number;
+        inventory: string[];
+      }>;
+    };
+    const carriedCandidate = startedState.units.find((unit) => unit.id === "unit_001");
+    const reserveCandidate = startedState.units.find((unit) => unit.id === "unit_004");
+    if (!carriedCandidate || !reserveCandidate) {
+      throw new Error("The chapter carry-over fixture is missing an ally.");
+    }
+
+    const carriedUnit = {
+      ...carriedCandidate,
+      level: 7,
+      experience: 42,
+      stats: { ...carriedCandidate.stats, strength: 11 },
+      currentHp: 13,
+      inventory: [...carriedCandidate.inventory, "healing_potion"]
+    };
+    const reserveUnit = {
+      id: reserveCandidate.id,
+      name: reserveCandidate.name,
+      classId: reserveCandidate.classId,
+      level: 4,
+      experience: 28,
+      stats: { ...reserveCandidate.stats, strength: 9 },
+      growthRates: { ...reserveCandidate.growthRates },
+      currentHp: 14,
+      movementType: reserveCandidate.movementType,
+      move: reserveCandidate.move,
+      usableWeaponTypes: [...reserveCandidate.usableWeaponTypes],
+      inventory: [...reserveCandidate.inventory],
+      equippedWeaponId: reserveCandidate.equippedWeaponId
+    };
+    const clearedChapterState = {
+      ...startedState,
+      rngState: 0x12345678,
+      units: startedState.units
+        .filter((unit) => unit.faction === "player" && unit.id !== reserveCandidate.id)
+        .map((unit) => unit.id === carriedUnit.id ? carriedUnit : unit),
+      reserveUnits: [...startedState.reserveUnits, reserveUnit]
+    };
+
+    // Model a validated, already-cleared chapter snapshot; the app still runs the real
+    // victory presentation, reward gate, next-chapter preparation, and save flow.
+    await writeAutoSave(page, clearedChapterState);
+    await page.reload();
+    await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+    await expect(page.locator(".chapter-rewards")).toContainText(
+      "この章には追加アイテム報酬が設定されていません"
+    );
+    const nextChapterButton = page.getByRole("button", { name: "第2章・試作マップを開始" });
+    await expect(nextChapterButton).toBeVisible();
+
+    await nextChapterButton.click();
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
+
+    // The next chapter is only a preview until its deployment is confirmed.
+    expect(await readAutoSave(page)).toEqual(clearedChapterState);
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await expect(page.locator(".deployment-panel")).toHaveCount(0);
+
+    const nextChapterState = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      phase: string;
+      turn: number;
+      rngState: number;
+      units: Array<{
+        id: string;
+        faction: string;
+        level: number;
+        experience: number;
+        stats: Record<string, number>;
+        currentHp: number;
+        inventory: string[];
+        hasMoved: boolean;
+        hasActed: boolean;
+      }>;
+      reserveUnits: Array<{
+        id: string;
+        level: number;
+        experience: number;
+        stats: Record<string, number>;
+        currentHp: number;
+        inventory: string[];
+      }>;
+    };
+    expect(nextChapterState).toMatchObject({
+      saveVersion: 3,
+      chapterId: "chapter_02_map",
+      phase: "player",
+      turn: 1,
+      rngState: 0x12345678
+    });
+    expect(nextChapterState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+      faction: "player",
+      level: 7,
+      experience: 42,
+      stats: { strength: 11 },
+      currentHp: 13,
+      inventory: [...carriedUnit.inventory],
+      hasMoved: false,
+      hasActed: false
+    });
+    expect(nextChapterState.units.some((unit) => unit.id === "unit_004")).toBe(false);
+    expect(nextChapterState.reserveUnits.find((unit) => unit.id === "unit_004")).toMatchObject({
+      level: 4,
+      experience: 28,
+      stats: { strength: 9 },
+      currentHp: 14,
+      inventory: [...reserveUnit.inventory]
+    });
+    expect(nextChapterState.units.filter((unit) => unit.faction === "enemy").map((unit) => unit.id))
+      .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
+
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    expect(await readAutoSave(page)).toEqual(nextChapterState);
+  });
+
 });
 
 test("does not expose the development-only promotion lab in the production preview", async ({ page }) => {
