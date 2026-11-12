@@ -118,4 +118,50 @@ describe("promotion enemy-phase sample summary", () => {
       5
     )).toThrow("preserve all other units");
   });
+
+  it("rejects a promotion branch that changes the approved EXP remainder", () => {
+    const control = battleReadySnapshot();
+    const definition = getClassPromotionDefinition("swordsman");
+    if (!definition) throw new Error("Missing prototype promotion definition.");
+    const promotion = performClassChange(control, "unit_001", definition);
+    const changedExperience = {
+      ...promotion.nextState,
+      units: promotion.nextState.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, experience: unit.experience - 1 } : unit
+      )
+    };
+
+    expect(() => getPromotionEnemyPhaseSampleSummary(
+      control,
+      changedExperience,
+      CHAPTER_01_MAP,
+      "unit_001",
+      5
+    )).toThrow("HP/EXP");
+  });
+
+  it("rejects mismatched RNG and invalid sample counts before simulating", () => {
+    const control = battleReadySnapshot();
+    const definition = getClassPromotionDefinition("swordsman");
+    if (!definition) throw new Error("Missing prototype promotion definition.");
+    const promotion = performClassChange(control, "unit_001", definition);
+    const mismatchedRng = { ...promotion.nextState, rngState: promotion.nextState.rngState + 1 };
+
+    expect(() => getPromotionEnemyPhaseSampleSummary(
+      control,
+      mismatchedRng,
+      CHAPTER_01_MAP,
+      "unit_001",
+      5
+    )).toThrow("same chapter, player phase, turn, and starting RNG");
+
+    expect(() => getPromotionEnemyPhaseSampleSummary(
+      control,
+      promotion.nextState,
+      CHAPTER_01_MAP,
+      "unit_001",
+      0
+    )).toThrow("Sample count must be an integer");
+  });
+
 });
