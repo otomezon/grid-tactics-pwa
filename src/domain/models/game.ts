@@ -78,6 +78,24 @@ export interface MapDefeatCondition {
   targetUnitId: string;
 }
 
+export type MapEventTrigger =
+  | { type: "stage-start" }
+  | { type: "turn-start"; turn: number; phase: BattlePhase }
+  | { type: "unit-defeated"; unitId: string }
+  | { type: "boss-defeated" }
+  | { type: "victory" }
+  | { type: "defeat" };
+
+export interface MapEventDefinition {
+  id: string;
+  trigger: MapEventTrigger;
+  action: {
+    type: "show-message";
+    speaker?: string;
+    text: string;
+  };
+}
+
 export interface GameMapDefinition {
   id: string;
   width: number;
@@ -86,6 +104,8 @@ export interface GameMapDefinition {
   playerDeployment: readonly MapDeployment[];
   enemyDeployment: readonly MapDeployment[];
   objective: MapObjective;
+  /** Optional map-local events. Event execution progress is persisted in the snapshot. */
+  events?: readonly MapEventDefinition[];
   /** Optional critical-unit defeat rule. Omit to use the party-wipe rule only. */
   defeatCondition?: MapDefeatCondition;
 }
@@ -105,7 +125,7 @@ export interface CampaignUnitBattleRecord {
   statGains: UnitStats;
 }
 
-export const SAVE_VERSION = 4 as const;
+export const SAVE_VERSION = 5 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
@@ -119,4 +139,6 @@ export interface GameStateSnapshot {
   reserveUnits: CampaignUnit[];
   /** Persistent per-ally combat totals for this campaign. */
   campaignUnitBattleRecords: CampaignUnitBattleRecord[];
+  /** IDs of one-shot map events that have already fired in this chapter. */
+  firedMapEventIds: string[];
 }
