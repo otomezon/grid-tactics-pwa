@@ -68,6 +68,37 @@ describe("applyExperience", () => {
     expect(result.levelUps[0]?.gains).not.toHaveProperty("hp");
   });
 
+  it("preserves every existing stat above its class cap and suppresses further growth", () => {
+    const unit = testUnit({
+      experience: 99,
+      stats: {
+        hp: 21,
+        strength: 6,
+        magic: 1,
+        skill: 8,
+        speed: 9,
+        luck: 5,
+        defense: 6,
+        resistance: 2
+      }
+    });
+    const caps = {
+      hp: 20,
+      strength: 5,
+      magic: 0,
+      skill: 7,
+      speed: 8,
+      luck: 4,
+      defense: 5,
+      resistance: 1
+    };
+    const result = applyExperience(unit, 1, 0x12345678, caps);
+
+    expect(result.unit.stats).toEqual(unit.stats);
+    expect(result.levelUps[0]?.gains).toEqual({});
+    expect(result.rngState).not.toBe(0x12345678);
+  });
+
   it("supports multiple level-ups from a single award", () => {
     const unit = testUnit({ experience: 90 });
     const result = applyExperience(unit, 210, 0x12345678, getPrototypeStatCaps(unit.classId));
