@@ -440,10 +440,40 @@ test("shows candidate details and persists the selected deployment roster", asyn
   test("shows read-only ally stats, weapon suitability, and grouped items without changing the autosave", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await startBattle(page);
-    const savedState = await readAutoSave(page) as { units: Array<{ id: string; inventory: string[] }> };
+    const savedState = await readAutoSave(page) as {
+      units: Array<{ id: string; inventory: string[] }>;
+      campaignUnitBattleRecords: Array<{
+        unitId: string;
+        unitName: string;
+        attacks: number;
+        strikes: number;
+        hits: number;
+        misses: number;
+        criticalHits: number;
+        damageDealt: number;
+        enemiesDefeated: number;
+        experienceAwarded: number;
+        levelUps: number;
+        statGains: { hp: number; strength: number; magic: number; skill: number; speed: number; luck: number; defense: number; resistance: number };
+      }>;
+    };
     const ally = savedState.units.find((unit) => unit.id === "unit_001");
     if (!ally) throw new Error("The player inspector fixture is missing unit_001.");
     ally.inventory.push("short_bow", "healing_potion", "healing_potion");
+    savedState.campaignUnitBattleRecords = [{
+      unitId: "unit_001",
+      unitName: "味方01",
+      attacks: 2,
+      strikes: 3,
+      hits: 2,
+      misses: 1,
+      criticalHits: 1,
+      damageDealt: 14,
+      enemiesDefeated: 1,
+      experienceAwarded: 30,
+      levelUps: 1,
+      statGains: { hp: 1, strength: 1, magic: 0, skill: 0, speed: 0, luck: 0, defense: 0, resistance: 0 }
+    }];
     await writeAutoSave(page, savedState);
     await page.reload();
     await continueSavedCampaign(page);
@@ -475,6 +505,11 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(inspector).toContainText("回復薬");
     await expect(inspector).toContainText("所持数：2個");
     await expect(inspector).toContainText("表示専用");
+    const campaignRecord = inspector.getByTestId("campaign-unit-battle-record");
+    await expect(campaignRecord).toContainText("キャンペーン累計戦績");
+    await expect(campaignRecord).toContainText("与ダメージ");
+    await expect(campaignRecord).toContainText("14");
+    await expect(campaignRecord).toContainText("累計能力上昇：HP +1 · 力 +1");
     const inspectorBounds = await inspector.boundingBox();
     if (!inspectorBounds) throw new Error("The player inspector is not laid out on the narrow viewport.");
     expect(inspectorBounds.width).toBeLessThanOrEqual(320);

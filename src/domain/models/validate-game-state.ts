@@ -165,5 +165,11 @@ export function isValidGameStateSnapshot(
     ) return false;
     ids.add(candidate.id);
   }
+
+  const battleRecordIds = new Set<string>();
+  for (const record of value.campaignUnitBattleRecords) {
+    if (!isCampaignUnitBattleRecord(record) || battleRecordIds.has(record.unitId)) return false;
+    battleRecordIds.add(record.unitId);
+  }
   return true;
 }
