@@ -185,3 +185,11 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - 味方詳細には基本職／昇格職、基本職の昇格先と現在の条件（Lv.10以上・証1個）を表示する。敵詳細には職階のみ表示する。閲覧専用で、クラス変更や行動は実行しない。
 - 能力上限・昇格ボーナスは従来の試作値のまま。移動力・移動種別・武器適性は承認済みCP-09／10に従ってユニットの現行値を維持し、14職ごとの未承認テーブルは追加しない。
 - 確認対象: `src/content/class-definitions.test.ts`、味方／敵インスペクターprojection tests、既存クラス昇格／セーブ検証tests。型チェック・全単体テスト・build・Chromium E2Eで確認する。
+
+
+## クラス定義互換projectionの不変性
+
+- `PROTOTYPE_CLASS_STAT_CAPS` はクラスごとの能力上限オブジェクトまで読み取り専用として公開する。返却値を変更する場合は `getPrototypeStatCaps` の防御的コピーを使う。
+- `CLASS_PROMOTION_DEFINITIONS` は定義レコードに加えて能力ボーナス・能力上限も凍結し、実行時の誤変更を防ぐ。TypeScript上もネストした値を読み取り専用として扱う。
+- `getClassPromotionDefinition` は従来どおり独立した防御的コピーを返すため、昇格処理側の計算・呼び出し規約は変えない。
+- ゲームルール、暫定バランス値、 `GameStateSnapshot`、 `saveVersion: 4`、IndexedDB形式は変更しない。
