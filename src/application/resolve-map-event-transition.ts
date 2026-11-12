@@ -49,10 +49,10 @@ export function resolveMapEventTransition(
     triggers.push({ type: "unit-defeated", unitId });
   }
 
-  if (
-    map.objective.type === "defeat_boss" &&
-    defeatedUnitIds.includes(map.objective.targetUnitId)
-  ) {
+  const bossUnitId = map.objective.type === "defeat_boss"
+    ? map.objective.targetUnitId
+    : undefined;
+  if (bossUnitId && defeatedUnitIds.includes(bossUnitId)) {
     triggers.push({ type: "boss-defeated" });
   }
 
