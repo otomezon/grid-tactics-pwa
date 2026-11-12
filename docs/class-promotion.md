@@ -3,7 +3,7 @@
 - 更新日: 2026-11-12
 - 状態: CP-01〜03／06／07〜14／15／16の非数値方針は採択済み（2026-11-12）。CP-04／05の数値表と初回の証の具体的な配布内容は未決定
 - 根拠: `docs/game-design.md` §5.4–§5.5、`docs/progression.md` §7、現行ソース／テスト
-- 関連実装: `src/content/classes.ts`、`src/content/items.ts`、`src/domain/progression/class-change.ts`、`src/application/perform-class-change.ts`、`src/App.tsx`
+- 関連実装: `src/content/class-definitions.ts`、`src/content/classes.ts`（互換projection）、`src/content/items.ts`、`src/domain/progression/class-change.ts`、`src/application/perform-class-change.ts`、`src/App.tsx`
 
 この文書は、設計書が明示する条件と現在動いている仮実装を区別し、正式仕様を決めるための台帳と実装順序を定める。ここに「未決定」と記した項目は、現行の仮値や一般的なSRPGの慣例だけを理由に正式決定扱いしない。元の `docs/game-design.md` は初期設計案の原文として変更しない。
 
@@ -180,10 +180,14 @@ CP-01〜03／06／15は2026-11-12に採択済み。CP-04／05は記入表の21�
 
 ### Stage 1 — クラス定義のデータ化
 
-- クラスID・表示名・能力上限・移動力・移動種別・使用可能武器種を、昇格経路とは分離したcontent定義に整理する。
-- 昇格定義は元／先クラス、必要アイテム、能力ボーナス、EXP／HP／装備／行動ポリシーを型で明示する。
-- 未定義クラスや不正な数値を暗黙の既定値で補わず、content testで拒否する。
-- 現在の仮データを正式値へ昇格させるのは、Stage 0の承認と区別して行う。
+**実装済みの基礎スライス:** `src/content/class-definitions.ts` に基本職7・昇格職7の型付きレジストリを作り、クラスID・表示名・職階・既存の試作能力上限、7本の昇格先・必要アイテム・試作ボーナス・EXP方針を1か所に集約した。
+
+- `src/content/classes.ts` はレジストリから既存API向けの表示名／上限／昇格テーブルを導出する。セーブvalidatorも同じ登録ID判定を利用する。
+- 味方詳細には基本職／昇格職と昇格先・現行条件を表示し、敵詳細には職階を表示する。いずれも閲覧専用。
+- CP-09／10の承認済み移動力・移動種別・武器適性表は未作成のため、現時点ではGameUnitに保存された既存値を維持する。クラスごとの推測値は追加しない。
+- 現行上限・ボーナスはレジストリへ移しただけで、正式値として承認していない。CP-04／05の決定後に更新する。
+- 未定義クラスIDはセーブ検証で拒否する。登録漏れ・7経路のずれ・可変オブジェクトの共有はcontent testで検知する。
+- Stage 1の移動／武器データ表と正式数値への移行は、CP-04／05／09／10の承認を待つ。
 
 ### Stage 2 — domain／application
 

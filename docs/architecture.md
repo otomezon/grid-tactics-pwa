@@ -57,8 +57,8 @@ src/
 
 | レイヤー | 現在の責務 | 状態 |
 |---|---|---|
-| content | 地形、章レジストリ／章別マップ／初期状態、仮武器、昇格先・仮能力ボーナス、クラスチェンジアイテム | 実装あり。第2章・昇格ボーナス／上限は試作データ |
-| domain/models | GameUnit、CampaignUnit、GameStateSnapshot、saveVersion 3検証、戦闘／控え名簿・配置地形・クラス／所持品／装備参照の整合性検証 | 実装あり |
+| content | 地形、章レジストリ／章別マップ／初期状態、仮武器、14職の型付きクラスレジストリ、昇格先・仮能力ボーナス、クラスチェンジアイテム | 実装あり。第2章・昇格ボーナス／上限は試作データ。移動／武器クラス別表はCP-09／10の承認待ち |
+| domain/models | GameUnit、CampaignUnit、GameStateSnapshot、saveVersion 4検証、戦闘／控え名簿・配置地形・クラス／所持品／装備参照の整合性検証 | 実装あり |
 | domain/movement | 地形・占有を考慮した到達可能範囲と、同じDijkstra探索から再構成する決定的な最小コスト経路 | 実装あり。経路表示はUI専用でGameState／saveVersionへ追加しない |
 | domain/combat | 武器適合、式、射程、予測、決定論的解決、敵脅威範囲、移動プレビュー起点の攻撃可能対象、暫定Manhattan距離 | 実装あり |
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
@@ -66,7 +66,7 @@ src/
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、出撃前の装備変更、敵AI／フェイズ進行、目標進行・地形情報の読み取り専用projection | 出撃前装備変更は既存のweapon ownership／class／type compatibilityを再利用し、active／reserveを不変更新。保存は既存の配置確定時のみ。報酬は章データで明示したアイテムのみ適用 |
 | ui | 出撃準備から戦闘・地形判断・ターン進行・保存を6段階で説明する任意表示の操作ガイド（`src/components/operation-guide.tsx`）を含む。ガイドはセーブ非変更。章別マップ（狭幅画面では各40pxタイルの横スクロール領域）、目標進行・マス情報パネル、移動可能マスの累計コスト／経路プレビュー、戦闘予測／セッション内時系列戦闘履歴、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルはPR #17でmainに実装済み。狭幅マップ操作はPR #44でmainに実装済み。PR #46／#47で320px幅の横スワイプとスワイプ後の右端ユニット選択をChromium E2Eで検証済み（実機未確認）。第2章は遷移検証用 |
-| persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2→3 migration、JSON export/import | 3世代backup／復元、export/importともmain実装済み。PR #23で最大3世代の保持、最古世代ローテーション、auto不変、確認付き復元をCI検証。DB version／saveVersionは据え置き |
+| persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2／3→4 migration、JSON export/import | 3世代backup／復元、export/importともmain実装済み。PR #23で最大3世代の保持、最古世代ローテーション、auto不変、確認付き復元をCI検証。DB version／saveVersionは据え置き |
 | pwa | manifest、Service Worker、静的アセットキャッシュ、ブラウザ標準のインストールプロンプトとstandalone状態表示 | Vite pluginとAppのイベント連携あり |
 
 ## 3. 現在のデータフロー
@@ -154,3 +154,12 @@ src/content/maps/chapter-03.ts は既存の第1章ユニット定義を再利用
 `CampaignUnitBattleRecordPanel` は候補詳細と戦闘インスペクターの個別戦績を表示し、`CampaignUnitBattleRecordsSummary` はリザルトの累計一覧を表示する。PR #97の現在ステージ内 `BattleContributionPanel` は引き続きセッション限定であり、両者の表示は用途が異なる。
 
 saveVersionを4へ更新し、v1／v2／v3は既存データを保持したまま空の累計配列を追加して移行する。新しい累計値はJSON save envelope、IndexedDB auto slot、ローカルバックアップに含まれる。IndexedDB database versionは1のまま。戦闘式、乱数、経験値配分、敵AIは変更しない。
+
+
+## 型付きクラス定義レジストリ
+
+`src/content/class-definitions.ts` は初期版14職の正規レジストリで、7基本職・7昇格職のID、表示名、職階、現行プロトタイプの能力上限を持つ。基本職の定義には昇格先、専用アイテムID、試作ボーナス、EXP方針も含む。定義はreadonly／freezeし、content testで全職と7経路の対応を照合する。
+
+`src/content/classes.ts` は既存呼び出し元向けの互換projectionで、表示名・能力上限・昇格先・昇格定義をレジストリから導出する。レジストリを二重に保持しない。セーブ検証（`validate-game-state.ts`）も `isRegisteredClassId` を共有し、content登録外のクラスIDを拒否する。
+
+味方／敵インスペクターは登録された職階ラベルを表示し、基本職の味方には昇格先と現行条件を示す。いずれも読み取り専用。CP-04／05の数値は仮データと明示し、CP-09／10が未承認の移動・武器適性を推測しない。クラスIDやGameStateSnapshotの形は変更せず、saveVersion 4／IndexedDB schema 1を維持する。
