@@ -135,6 +135,15 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   await expect(controlCombat).toContainText("実行結果（このseedの1試行）");
   await expect(promotionCombat).toContainText("実行結果（このseedの1試行）");
 
+  const samples = combat.getByTestId("promotion-snapshot-combat-samples");
+  await expect(samples).toContainText("100試行");
+  await expect(samples).toContainText("攻撃命中率");
+  await expect(samples).toContainText("この敵の撃破率");
+  await samples.getByLabel("乱数試行回数").selectOption("20");
+  await expect(samples).toContainText("20試行");
+  await samples.getByLabel("乱数試行回数").selectOption("250");
+  await expect(samples).toContainText("250試行");
+
   const databases = await page.evaluate(async () => {
     if (typeof indexedDB.databases !== "function") return [];
     return (await indexedDB.databases())
