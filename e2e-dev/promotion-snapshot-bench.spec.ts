@@ -176,6 +176,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(results).toContainText("試行結果（21/21件）");
   await expect(results.locator('tr[data-testid^="promotion-playtest-result-"]')).toHaveCount(21);
   await expect(results).toContainText("未確認");
+  await expect(results).toContainText("敵軍行動数");
+  await expect(results).toContainText("本人が狙われた割合");
+  await expect(results).toContainText("敵軍phase本人生存率");
 
   const downloadPromise = page.waitForEvent("download");
   await matrix.getByRole("button", { name: "21ケース結果CSVを書き出す" }).click();
@@ -189,6 +192,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("promotion_strength");
   expect(csv).toContain("requested_hp_bonus");
   expect(csv).toContain("applied_hp_bonus");
+  expect(csv).toContain("control_enemy_phase_actions");
+  expect(csv).toContain("promotion_selected_unit_survival_rate");
+  expect(csv).toContain("control_party_defeat_rate");
   expect(csv).toContain("未確認");
 });
  

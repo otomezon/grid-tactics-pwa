@@ -166,6 +166,14 @@ CP-12により昇格はその自軍フェイズの行動を消費する。した
 
 データ区分の「実プレイ由来」は利用者申告であり、アプリによる真正性検証ではない。未確認または合成fixtureを実プレイ記録へ転記しない。CSVは明示的なdownload操作でのみ出力され、snapshot／結果はメモリ上でのみ処理する。従来どおりGameState・IndexedDB・自動保存・network送信は変更しない。
 
+### 3.6 昇格直後の敵軍phase比較（PR #85）
+
+21ケースmatrixの各caseについて、既存の `beginEnemyPhase`／`runEnemyPhase` を用いた敵軍phaseを同じseedでcontrol／promotionの双方に実行する。control枝は昇格せず選択ユニットの行動を見送り、比較用copyで `hasActed=true` にしてphaseを進める。promotion枝は既存 `performClassChange` が返す `hasActed=true` のstateを用いる。両枝の敵軍phase開始時点で、選択ユニット以外のユニット／reserve、選択ユニットの位置・現在HP・移動・武器アクセスは同一でなければならない。seedは既存のdeterministic paired streamを共有する。
+
+現行の敵軍AIの標的スコア、移動探索、敵攻撃、砦回復をそのまま使い、次を集計する: 敵行動／攻撃数、選択ユニットが標的になったphase割合、選択ユニット被ダメージ／生存率、味方全体の被ダメージ・撃破数、全滅率、次の自軍phaseへの進行率。これは昇格直後に発生する敵軍phase 1回の感度比較であり、control側は別の行動（攻撃等）をしていない。したがって「昇格せず攻撃を選ぶ」戦術との比較にはならず、次の自軍phaseのプレイヤー選択、複数turn、敵AIの複数turn適応、章攻略・勝率を推定しない。敵AIのスコア・移動判断も現行prototypeであり、最終仕様とは限らない。
+
+すべての試行はseed別のsnapshot copy上で実行し、import元save／GameState／IndexedDB／RNG永続値を変更しない。CI fixtureは合成データであり実プレイ証拠ではない。現行仮能力値・上限・AIロジックの数値を正式バランスとして承認しない。
+
 ## 4. 保存データ互換性の方針
 
 現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存 `SAVE_VERSION: 3` を維持できる見込み。

@@ -1693,6 +1693,7 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   gap: 10px;
 }
 .promotion-snapshot-matrix-table { min-width: 1120px; }
+.promotion-playtest-matrix-results table { min-width: 1560px; }
 .promotion-snapshot-matrix-table td { vertical-align: top; }
 .promotion-snapshot-matrix-table td select {
   width: 100%;

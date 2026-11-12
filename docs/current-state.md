@@ -71,7 +71,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み。採択済みCP-12により移動・行動前のみ実行可、成功時に行動済みとなる。CP-09／10の移動・武器適性・装備維持、7経路すべての一段階昇格を回帰テスト化。PR #32でCP-07／08のEXP 0／99保持、現在HP 1／満タン維持、HP上限でのボーナス制限を追加 | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts`, `src/domain/progression/class-change.test.ts`, `src/content/class-promotion.test.ts` | PR #32 CI run #503: 22 test files／146 tests、Chromium E2E 11件成功 |
 | クラスチェンジアイテム定義・所持品表示 | アイテム定義と表示は実装済み。採択済みCP-13により初期付与を廃止し、章報酬／イベント定義による配布のみ許可。具体的な報酬は未登録。PR #29で明示報酬は勝利後のみ付与、所持枠満杯時は状態を変更せず拒否することを検証 | `src/content/items.ts`, `src/content/maps/chapter-01.ts`, `src/application/apply-chapter-rewards.ts`, `src/App.tsx` | PR #29 CI run #497: chapter-reward tests passed |
 | クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ／未移動・未行動条件。確定でユニットの行動を消費）。確認画面に8能力の現在値・昇格後予測・実増加量・仮上限、最大HP／現在HP、Lv.1化・EXP保持、証消費、移動／武器適性／装備の維持、行動消費を表示する（CP-15の必須表示は採択済み。能力数値／上限は引き続き試作値） | `src/App.tsx`, `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts` | PR #38で8能力の現在値・昇格後値・実増加量・仮上限、HP／EXP等の影響を表示。PR #39で8能力すべての画面表示、暫定上限超過値の維持、キャンセル時のセーブ不変、確定後の状態保持をE2E検証。PR #39最終head CI run #532: typecheck、22 test files／148 tests、production build、Chromium E2E 11件すべて成功（オーナーがマージ済み） |
-| 開発専用の昇格・戦闘比較ベンチ | PR #81〜#83をmainへマージ済み。/?promotion-lab=1 の合成stat previewと、/?promotion-snapshots=1 のv3セーブJSONローカル読込を提供。後者はLv.10+の7基本職候補、昇格command copy、既存performAttackによる単一seed戦闘、20／100／250 seedのペア反復集計を表示。PR #84対象の21ケースmatrixは、各基本職3件以上の候補から8能力順位平均に基づく低位25%／中央値50%／上位90%の参考候補を提示し、人が候補・敵・条件を確認してから一括実行・CSV出力する。データ区分は利用者申告であり真正性を自動検証しない。単発戦闘反復は敵軍フェイズ・移動・複数ターンの実プレイを再現せず、統制21ケースの実プレイ完了やCP-04／05承認とは別。IndexedDB／GameState／自動保存／外部送信なし | `src/components/class-promotion-snapshot-bench.tsx`, `src/application/build-promotion-playtest-matrix.ts`, `src/application/get-promotion-combat-comparison.ts`, `src/application/get-promotion-combat-sample-summary.ts` | PR #84 CIでtypecheck／unit tests／build／production-preview E2E／dev E2Eを検証予定 |
+| 開発専用の昇格・戦闘比較ベンチ | PR #81〜#84をmainへマージ済み。/?promotion-lab=1 の合成stat previewと、/?promotion-snapshots=1 のv3セーブJSONローカル読込、7基本職×3profileの21ケース候補matrix、手動CSV出力を提供。20／100／250 seedの単発攻撃比較に加え、PR #85で既存beginEnemyPhase／runEnemyPhaseを使う1敵軍phase比較を追加予定。controlは昇格せず行動を見送り、promotionは昇格で行動済みとし、両枝を同じseedで比較する。敵AI・移動・戦闘・砦回復は現行prototype処理を再利用し、複数turn・章攻略はシミュレートしない。データ区分は利用者申告で真正性を自動検証しない。実セーブ／実プレイデータ未投入の間は合成fixtureと区別し、21ケース実プレイ完了・CP-04／05承認とは扱わない。IndexedDB／GameState／自動保存／外部送信なし | `src/components/class-promotion-snapshot-bench.tsx`, `src/application/build-promotion-playtest-matrix.ts`, `src/application/get-promotion-combat-sample-summary.ts`, `src/application/get-promotion-enemy-phase-sample-summary.ts`, `src/application/resolve-enemy-phase.ts` | PR #85 CI検証予定 |
 | 正式な昇格ボーナス・上限・昇格後移動／武器データ | 未決定（現行は仮値） | `src/content/classes.ts` | playtest／仕様決定待ち |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
 | 砦のフェイズ開始回復 | 実装済み（該当陣営の生存ユニット／最大HPの10%／端数切り捨ては暫定） | `src/domain/rules/apply-fort-recovery.ts`, `src/application/resolve-enemy-phase.ts` |
@@ -142,6 +142,14 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - 表示指標は攻撃命中率、命中時必殺率、平均与ダメージ／戦闘、対象敵撃破率、平均反撃被ダメージ／戦闘、反撃後の生存率、平均戦闘後HP。これは単一戦闘条件における固定seed集計で、完全な敵軍フェイズ・移動・複数ターン・地図攻略の勝率ではない。
 - E2Eでは合成snapshotを使う。実プレイヤーのセーブ／プレイ結果を取り込んだものではなく、CP-04／05や初回証報酬の承認根拠にしない。
 
+
+### 昇格後の敵軍phase影響比較（PR #85対象）
+
+- 21ケースmatrixの各ケースで既存の `beginEnemyPhase`／`runEnemyPhase` を再利用した敵軍phaseを、20／100／250 paired seedで反復する。
+- controlは昇格せず選択ユニットの行動を見送り、promotionは既存昇格commandで行動を消費する。両枝とも同じ敵軍phaseから始め、敵AIの行動順・標的選択・移動・攻撃・砦回復を現行ルールで解決する。
+- 指標は敵行動数／攻撃数、選択ユニットが標的になった割合・被ダメージ・生存率、味方全体の被ダメージ／撃破数、全滅率、次の自軍phaseへの進行率。昇格の有無以外の敵・味方snapshotは一致させる。
+- これは昇格ターン直後の敵軍phase 1回だけの比較。controlも行動を見送るため、「昇格せず別の攻撃をした場合」との比較ではない。次の自軍phaseにおける実際のプレイヤー操作、複数turn、章攻略は再現しない。現行の敵AIはprototype logicであり、正式バランスの根拠として自動確定しない。
+- 既存snapshot／GameStateは変更せず、試行はすべてコピー上で実行する。
 
 ### 21ケース統制評価の候補整理（PR #84対象）
 

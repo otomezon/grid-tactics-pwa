@@ -245,9 +245,9 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 
 - 起動は既存 `/?promotion-snapshots=1` のまま。各基本職についてLv.10+候補snapshotが3件以上読み込まれると、低位25%／中央値50%／上位90%に近い候補を仮提案する。能力8項目の同クラス内mid-rank平均を使い、3件未満は候補不足と表示して候補を提案しない。
 - 21行それぞれでcandidateと射程内enemyを選び直し、条件を確認してチェックを入れる。候補の重複や昇格不可、攻撃対象なし、候補不足の行は実行可能扱いにしない。profilesは相対分布上の選定目安で、growth rate／正式cap近傍の判定ではない。
-- 一括実行は各caseのcontrol／promotionを同一seedペアで20／100／250回反復する単発combat sampleであり、各試行を元snapshotから再開する。敵phase／移動／複数turn／map clearは再現しない。
+- 一括実行は各caseのcontrol／promotionを同一seedペアで20／100／250回反復する単発combat sampleに加え、PR #85では既存 `beginEnemyPhase`／`runEnemyPhase` による敵軍phaseを1回ずつ解決する。後者はcontrolが昇格せず行動を見送り、promotionが昇格で行動を消費した両snapshotから同じ敵軍phaseを実行し、敵行動・標的・被ダメージ・生存・全滅・次phase進行率を集計する。各試行を元snapshotから再開し、敵AIの移動・攻撃・砦回復を含むが、次の自軍操作・複数turn／map clearは再現しない。controlで別行動は選択しないため、昇格せず攻撃した場合との比較ではない。
 - 各caseのデータ区分は「未確認」「実プレイ由来（利用者申告）」「合成fixture」。実プレイ由来はユーザーの申告をCSVに残すもので、アプリはファイルの真正性・出所を検証しない。合成fixtureまたは未確認データを実プレイ結果としてWorksheetへ転記しない。
-- 21件完了後に手動CSV downloadが可能。CSVにはprofile／候補fingerprint／unit／control・promotionの8能力／現在HP／EXP／装備／要求・実適用ボーナス／map／enemy／seed range／sample count／combat metrics／data classificationを含める。昇格後能力・ボーナスは現在の仮prototype dataに基づく。CSV以外の永続記録や自動送信は行わない。
+- 21件完了後に手動CSV downloadが可能。CSVにはprofile／候補fingerprint／unit／control・promotionの8能力／現在HP／EXP／装備／要求・実適用ボーナス／map／enemy／seed range／sample count／単発攻撃metrics／敵軍phase metrics（敵行動・標的率・本人／味方被ダメージ・生存・全滅等）／data classificationを含める。昇格後能力・ボーナス・敵AI結果は現在の仮prototype data／AIに基づく。CSV以外の永続記録や自動送信は行わない。
 
 ## 実セーブsnapshotの取り込み・比較（開発専用）
 
