@@ -87,9 +87,9 @@ export function CampaignTitleScreen({
           <div className="campaign-title-meta">
             <span>スマートフォン・PC対応</span>
             <span>ローカル保存</span>
-            {isInstalledApp && <span data-testid="title-installed-status">インストール済み</span>}
+            {isInstalledApp && <span data-testid="pwa-installed-status">インストール済み</span>}
             {canInstall && (
-              <button className="campaign-title-install" type="button" onClick={onInstallApp}>
+              <button className="campaign-title-install" type="button" data-testid="pwa-install-button" onClick={onInstallApp}>
                 アプリをインストール
               </button>
             )}
@@ -149,7 +149,7 @@ export function CampaignTitleScreen({
                 </div>
               </div>
             )}
-            {message && <p className="campaign-title-message" aria-live="polite">{message}</p>}
+            {message && <p className="campaign-title-message" role="status" aria-live="polite">{message}</p>}
           </section>
 
           <section className="campaign-title-card campaign-title-data-card" aria-labelledby="campaign-data-heading">
@@ -219,7 +219,12 @@ export function CampaignTitleScreen({
         <aside className="campaign-title-notice">
           <strong>現在の収録内容について</strong>
           <p>マップ・ユニット・武器・能力値は開発用の試作データを含みます。正式なキャンペーン内容とバランスは調整中です。</p>
-          {!isInstalledApp && <p>ホーム画面へ追加すると、対応ブラウザではアプリとして起動できます。iPhone／iPadではSafariの共有メニューから「ホーム画面に追加」を選択してください。</p>}
+          {!isInstalledApp && (
+            <details className="pwa-install-help" data-testid="pwa-install-help">
+              <summary>アプリとしてホーム画面に追加する方法</summary>
+              <p>インストールに対応したブラウザでは「アプリをインストール」から追加できます。iPhone／iPadではSafariの共有メニューから「ホーム画面に追加」を選択してください。</p>
+            </details>
+          )}
         </aside>
 
         <footer className="campaign-title-footer">
