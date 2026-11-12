@@ -27,6 +27,23 @@ function copyStatCaps(caps: Readonly<UnitStats>): UnitStats {
   return { ...caps };
 }
 
+type ImmutableClassPromotionDefinition = Readonly<
+  Omit<ClassPromotionDefinition, "statBonuses" | "statCaps">
+> & {
+  readonly statBonuses: Readonly<Partial<UnitStats>>;
+  readonly statCaps: Readonly<UnitStats>;
+};
+
+function freezePromotionDefinition(
+  definition: ClassPromotionDefinition
+): ImmutableClassPromotionDefinition {
+  return Object.freeze({
+    ...definition,
+    statBonuses: Object.freeze({ ...definition.statBonuses }),
+    statCaps: Object.freeze({ ...definition.statCaps })
+  });
+}
+
 export const CLASS_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(
     Object.values(CLASS_DEFINITIONS).map((definition) => [
@@ -46,13 +63,13 @@ export function getClassTierLabel(classId: string): "基本職" | "昇格職" | 
   return definition.tier === "basic" ? "基本職" : "昇格職";
 }
 
-export const PROTOTYPE_CLASS_STAT_CAPS: Readonly<Record<string, UnitStats>> = Object.freeze(
+export const PROTOTYPE_CLASS_STAT_CAPS: Readonly<Record<string, Readonly<UnitStats>>> = Object.freeze(
   Object.fromEntries(
     Object.values(CLASS_DEFINITIONS).map((definition) => [
       definition.id,
       Object.freeze(copyStatCaps(definition.prototypeStatCaps))
     ])
-  ) as Record<string, UnitStats>
+  ) as Record<string, Readonly<UnitStats>>
 );
 
 export function getPrototypeStatCaps(classId: string): UnitStats {
@@ -103,14 +120,14 @@ export function getPromotionTargetClassId(
 }
 
 export const CLASS_PROMOTION_DEFINITIONS: Readonly<
-  Record<string, ClassPromotionDefinition>
+  Record<string, ImmutableClassPromotionDefinition>
 > = Object.freeze(
   Object.fromEntries(
     basicClassDefinitions.map((definition) => [
       definition.id,
-      Object.freeze(toPromotionDefinition(definition))
+      freezePromotionDefinition(toPromotionDefinition(definition))
     ])
-  ) as Record<string, ClassPromotionDefinition>
+  ) as Record<string, ImmutableClassPromotionDefinition>
 );
 
 export function getClassPromotionDefinition(
