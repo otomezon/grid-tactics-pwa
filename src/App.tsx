@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
 import { DeploymentPreview } from "./components/deployment-preview";
 import { BattleObjectivePanel } from "./components/battle-objective-panel";
@@ -56,7 +56,6 @@ import {
 } from "./persistence/save-repository";
 import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 import { OperationGuide } from "./components/operation-guide";
-import { ClassPromotionLab } from "./components/class-promotion-lab";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -2543,10 +2542,21 @@ function CampaignApp() {
   );
 }
 
+/** Load synthetic fixtures only when the development lab route is explicitly opened. */
+const LazyClassPromotionLab = lazy(() =>
+  import("./components/class-promotion-lab").then((module) => ({
+    default: module.ClassPromotionLab
+  }))
+);
+
 /** Development-only isolated promotion preview; never mount campaign persistence on this route. */
 export default function App() {
   const isPromotionLabRoute = import.meta.env.DEV &&
     new URLSearchParams(window.location.search).get("promotion-lab") === "1";
 
-  return isPromotionLabRoute ? <ClassPromotionLab /> : <CampaignApp />;
+  return isPromotionLabRoute ? (
+    <Suspense fallback={<main className="promotion-lab"><p>試験室を読み込んでいます…</p></main>}>
+      <LazyClassPromotionLab />
+    </Suspense>
+  ) : <CampaignApp />;
 }
