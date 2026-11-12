@@ -65,6 +65,7 @@ import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-
 import { OperationGuide } from "./components/operation-guide";
 import { CampaignTitleScreen } from "./components/campaign-title-screen";
 import { BattleContributionPanel } from "./components/battle-contribution-panel";
+import { DeploymentUnitComparison } from "./components/deployment-unit-comparison";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -1613,6 +1614,22 @@ function CampaignApp() {
   });
   const deploymentSelectedSet = new Set(deploymentSelectedUnitIds);
   const deploymentUnits = deploymentCandidates.filter((candidate) => deploymentSelectedSet.has(candidate.id));
+  const deploymentComparisonCandidates = deploymentCandidates.map((candidate) => ({
+    id: candidate.id,
+    name: candidate.name,
+    classLabel: getClassDisplayName(candidate.classId),
+    rosterStatusLabel: deploymentSelectedSet.has(candidate.id) ? "出撃予定" : "控え予定",
+    level: candidate.level,
+    experience: candidate.experience,
+    currentHp: candidate.currentHp,
+    stats: candidate.stats,
+    growthRates: candidate.growthRates,
+    movementLabel: (candidate.movementType === "infantry" ? "歩兵" : "騎馬") + " · " + candidate.move,
+    weaponAptitudeLabel: candidate.usableWeaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join("・") || "なし",
+    equippedWeaponLabel: candidate.equippedWeaponId
+      ? WEAPONS_BY_ID[candidate.equippedWeaponId]?.name ?? "不明な武器"
+      : "未装備"
+  }));
   const deploymentDetailCandidate = deploymentCandidates.find(
     (candidate) => candidate.id === deploymentDetailUnitId
   );
@@ -1835,6 +1852,7 @@ function CampaignApp() {
               );
             })}
           </div>
+          <DeploymentUnitComparison candidates={deploymentComparisonCandidates} />
           {deploymentDetailCandidate && (
             <section
               className="deployment-detail-card"
