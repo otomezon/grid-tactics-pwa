@@ -1454,3 +1454,27 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .deployment-preview-terrain { padding: 8px; }
   .deployment-preview-terrain-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Read-only player intelligence shares the enemy inspector layout. */
+.player-inspector .enemy-inspector-health progress { accent-color: #6bbdb3; }
+.player-inspector .enemy-inspector-health strong { color: #d7eee7; }
+.player-inspector .enemy-inspector-weapon.is-equipped {
+  border-color: rgba(104, 189, 186, .72);
+  background: rgba(46, 112, 100, .13);
+}
+.player-inspector .enemy-inspector-weapon-heading span { color: #9de4d8; }
+.player-inspector-weapon-suitability { margin: 0; color: #9de4d8; font-size: .65rem; font-weight: 800; }
+.player-inspector-weapon-suitability.is-unusable { color: #f0c18d; }
+.player-inspector-item-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.player-inspector-item {
+  display: grid; gap: 5px; min-width: 0; padding: 9px;
+  border: 1px solid var(--line); border-radius: 8px; background: rgba(18, 31, 43, .45);
+}
+.player-inspector-item > div {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px;
+}
+.player-inspector-item strong { color: #edf3f7; font-size: .76rem; overflow-wrap: anywhere; }
+.player-inspector-item span { color: #bde4dc; font-size: .68rem; font-weight: 800; }
+.player-inspector-item p { margin: 0; color: var(--text-muted); font-size: .68rem; line-height: 1.5; overflow-wrap: anywhere; }
+
+.player-inspector-heading { display: flex; align-items: center; gap: 12px; }

@@ -282,6 +282,48 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedState);
   });
 
+  test("shows read-only ally stats, weapon suitability, and grouped items without changing the autosave", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await startBattle(page);
+    const savedState = await readAutoSave(page) as { units: Array<{ id: string; inventory: string[] }> };
+    const ally = savedState.units.find((unit) => unit.id === "unit_001");
+    if (!ally) throw new Error("The player inspector fixture is missing unit_001.");
+    ally.inventory.push("short_bow", "healing_potion", "healing_potion");
+    await writeAutoSave(page, savedState);
+    await page.reload();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    const savedBeforeInspection = await readAutoSave(page);
+    await page.getByRole("button", { name: /味方01を選択/ }).click();
+    const inspector = page.getByTestId("player-inspector");
+    await expect(inspector).toBeVisible();
+    await expect(inspector.getByRole("heading", { name: "味方01" })).toBeVisible();
+    await expect(inspector).toContainText("Lv.1 · 剣士");
+    await expect(inspector).toContainText("HP 20 / 20");
+    await expect(inspector).toContainText("2列・9行");
+    await expect(inspector).toContainText("EXP");
+    await expect(inspector).toContainText("未移動・未行動");
+    await expect(inspector.locator(".enemy-inspector-stat")).toHaveCount(7);
+    await expect(inspector.locator('[data-testid="player-inspector-weapon"]')).toHaveCount(2);
+    const sword = inspector.locator('[data-testid="player-inspector-weapon"]').filter({ hasText: "試作の鉄の剣" });
+    const bow = inspector.locator('[data-testid="player-inspector-weapon"]').filter({ hasText: "試作の弓" });
+    await expect(sword).toContainText("使用適性あり");
+    await expect(sword).toContainText("装備中");
+    await expect(sword).toContainText("攻撃力");
+    await expect(bow).toContainText("適性なし");
+    await expect(inspector).toContainText("回復薬");
+    await expect(inspector).toContainText("所持数：2個");
+    await expect(inspector).toContainText("表示専用");
+    const inspectorBounds = await inspector.boundingBox();
+    if (!inspectorBounds) throw new Error("The player inspector is not laid out on the narrow viewport.");
+    expect(inspectorBounds.width).toBeLessThanOrEqual(320);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+    await page.getByRole("button", { name: /敵01を確認/ }).click();
+    await expect(inspector).toHaveCount(0);
+    await expect(page.getByTestId("enemy-inspector")).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
+  });
+
   test("shows living enemies and inspects their map tiles without changing the autosave", async ({ page }) => {
     await startBattle(page);
     const savedState = await readAutoSave(page) as {

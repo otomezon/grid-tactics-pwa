@@ -4,6 +4,7 @@ import { DeploymentPreview } from "./components/deployment-preview";
 import { BattleObjectivePanel } from "./components/battle-objective-panel";
 import { EnemyRoster } from "./components/enemy-roster";
 import { EnemyInspector } from "./components/enemy-inspector";
+import { PlayerInspector } from "./components/player-inspector";
 import { EnemyThreatInspector } from "./components/enemy-threat-inspector";
 import { EnemyPhaseForecastPanel } from "./components/enemy-phase-forecast";
 import { PlayerPhaseEndReview } from "./components/player-phase-end-review";
@@ -22,6 +23,7 @@ import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
 import { getEnemyInspectionDetails } from "./application/get-enemy-inspection-details";
+import { getPlayerInspectionDetails } from "./application/get-player-inspection-details";
 import { getEnemyThreatInspectionDetails } from "./application/get-enemy-threat-inspection-details";
 import { getEnemyPhaseForecast } from "./application/get-enemy-phase-forecast";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
@@ -575,6 +577,10 @@ export default function App() {
     ? gameState.units.find((unit) => unit.faction === "enemy" && samePosition(unit.position, inspectedPosition))
     : undefined;
   const inspectedEnemyDetails = inspectedEnemy ? getEnemyInspectionDetails(inspectedEnemy) : null;
+  const inspectedPlayer = inspectedPosition
+    ? gameState.units.find((unit) => unit.faction === "player" && samePosition(unit.position, inspectedPosition))
+    : undefined;
+  const inspectedPlayerDetails = inspectedPlayer ? getPlayerInspectionDetails(inspectedPlayer) : null;
   const enemyThreatInspectionDetails = useMemo(
     () => showEnemyThreatRange
       ? getEnemyThreatInspectionDetails(gameState, currentMap, inspectedPosition)
@@ -2087,6 +2093,7 @@ export default function App() {
             disabled={!interactive}
             onSelect={handleRosterUnitSelect}
           />
+          {inspectedPlayerDetails && <PlayerInspector details={inspectedPlayerDetails} />}
           <EnemyRoster
             units={gameState.units.filter((unit) => unit.faction === "enemy")}
             totalEnemyCount={currentMap.enemyDeployment.length}
