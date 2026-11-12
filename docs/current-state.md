@@ -58,7 +58,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | 出撃準備の地形インスペクター | 実装追加（登録済み出撃マスを選ぶと地形名・歩兵／騎馬の移動コスト・守備／回避補正を表示。配置中ユニットに対する通行可否も表示し、通行不可なら警告。砦効果は既存の試作値をそのまま説明。地形値／出撃ルール／GameState／セーブは変更しない） | `src/application/get-deployment-terrain-details.ts`, `src/application/get-deployment-terrain-details.test.ts`, `src/components/deployment-preview.tsx`, `src/styles.css` | application／component単体テストで平地・山・砦・範囲外・非出撃マス、歩兵／騎馬の通行差を検証。Chromium E2Eで空きマス閲覧・補正表示・320px幅・セーブ不変を確認 |
 | 出撃候補のキャラクター詳細・所持武器確認 | 実装済み（PR #17。クラス・能力・移動・武器適性・武器性能・所持アイテムの閲覧）。閲覧専用。インベントリ整形は専用単体テストで検証。ブラウザ／スマートフォンでの表示確認は未実施 | `src/App.tsx`, `src/styles.css`, `src/application/get-deployment-unit-details.ts` |
 | ステージ結果詳細表示 | 実装済み（敵配置全体の生存／撃破一覧、生存味方のクラス・Lv・EXP・HP。撃破済みユニットの最終HP／撃破者別記録は保持していないため非表示。saveVersion 変更なし） | `src/application/get-battle-result-details.ts`, `src/App.tsx`, `src/styles.css` | PR #41最終head CIで単体テスト／390px Chromium E2Eを検証。merge commit `30ebbfcc155a0d8a533ff8d5ef7a2debc9c85c5c` |
-| 戦闘行動のセッション内時系列履歴 | 実装済み（PR #56でマージ。味方攻撃の実解決結果と敵軍フェイズ行動を発生順に表示。リロード・セーブ読込・バックアップ復元・章切替でリセットし、セーブ形式には保存しない） | `src/App.tsx`, `src/application/get-player-attack-report.ts`, `src/application/resolve-enemy-phase.ts` | CI run #675で連続した攻撃／敵軍行動の順序、リロード後の消去、保存データ不変をChromium E2Eで検証 |
+| 戦闘行動のセッション内時系列履歴 | 実装済み（PR #56で味方攻撃・敵軍フェイズを追加、PR #77で味方の移動・武器変更・アイテム使用・クラスチェンジ・待機を追加。確定済み行動だけを発生順に表示し、閲覧／プレビュー／キャンセルは記録しない。リロード・セーブ読込・バックアップ復元・章切替でリセットし、saveVersion 3のセーブ形式には保存しない） | `src/App.tsx`, `src/application/get-player-attack-report.ts`, `src/application/resolve-enemy-phase.ts` | PR #77 CI run #984: typecheck・unit tests・production build・Chromium E2E 46件成功。main CI run #985も成功 |
 | 永続的な戦闘履歴・撃破者別統計・会話／加入イベント・キャンペーン選択／分岐 | 未実装（セッション内履歴とは別の永続ログ・撃破者情報・イベント基盤が必要） | — |
 | 経験値・レベルアップ | 実装済み（PR #6） | `src/domain/progression/level-up.ts`, `src/application/perform-attack.ts` |
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
@@ -113,6 +113,6 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 4. 出撃準備から1ステージの開始・クリアまでをブラウザ／スマートフォンで検証し、加入／離脱と章別編成候補の正式仕様を設計。
 
 
-## 次期変更（PR #77 レビュー対象）
+## 直近の反映（PR #77）
 
-既存の一時戦闘履歴へ、確定した味方の移動・武器変更・アイテム使用・クラスチェンジ・待機を順番どおり追加する。味方攻撃と敵軍フェイズの既存レポートも維持する。移動プレビュー、予測、フォーカス、選択、閲覧、確認キャンセルは記録しない。記録は画面セッション限定であり、リロード／セーブ読込／バックアップ復元／章切替で消去し、GameState／RNG／IndexedDB／saveVersion 3を変更しない。
+PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘履歴へ味方の移動・武器変更・アイテム使用・クラスチェンジ・待機を追加した。履歴は確定済みコマンドだけを発生順に表示し、移動プレビュー・予測・フォーカス・選択・閲覧・確認キャンセルは記録しない。履歴はセッション内のみで、リロード／セーブ読込／バックアップ復元／章切替で消去する。GameState／RNG／IndexedDB／saveVersion 3は変更していない。PR CI run #984はtypecheck・unit tests・production build・Chromium E2E 46件が成功し、main CI run #985も成功した。
