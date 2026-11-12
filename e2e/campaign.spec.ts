@@ -1171,6 +1171,80 @@ test("shows candidate details and persists the selected deployment roster", asyn
     expect(await readAutoSave(page)).toEqual(savedBeforeInspection);
   });
 
+  test("shows per-ally combat contributions after an actual player victory", async ({ page }) => {
+    await startBattle(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const preparedState = await readAutoSave(page) as {
+      rngState: number;
+      units: Array<{
+        id: string;
+        faction: "player" | "enemy";
+        position: { x: number; y: number };
+        currentHp: number;
+        level: number;
+        experience: number;
+        hasMoved: boolean;
+        hasActed: boolean;
+        stats: {
+          hp: number; strength: number; magic: number; skill: number;
+          speed: number; luck: number; defense: number; resistance: number;
+        };
+        growthRates: {
+          hp: number; strength: number; magic: number; skill: number;
+          speed: number; luck: number; defense: number; resistance: number;
+        };
+      }>;
+    };
+    const player = preparedState.units.find((unit) => unit.id === "unit_001");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
+    if (!player || !enemy) throw new Error("Battle contribution fixture units are missing.");
+
+    player.position = { x: 3, y: 1 };
+    player.currentHp = 20;
+    player.level = 1;
+    player.experience = 90;
+    player.hasMoved = false;
+    player.hasActed = false;
+    player.stats = {
+      hp: 25, strength: 20, magic: 0, skill: 20,
+      speed: 8, luck: 4, defense: 5, resistance: 1
+    };
+    player.growthRates = {
+      hp: 100, strength: 100, magic: 100, skill: 100,
+      speed: 100, luck: 100, defense: 100, resistance: 100
+    };
+
+    enemy.position = { x: 4, y: 1 };
+    enemy.currentHp = 1;
+    enemy.hasMoved = false;
+    enemy.hasActed = false;
+    enemy.stats = { ...enemy.stats, defense: 0, speed: 0, luck: 0 };
+
+    preparedState.units = [player, enemy];
+    preparedState.rngState = 0x6d2b79f5;
+    await writeAutoSave(page, preparedState);
+    await page.reload();
+    await continueSavedCampaign(page);
+
+    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
+    await page.getByRole("button", { name: "攻撃を確定" }).click();
+
+    await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
+    const contribution = page.getByTestId("battle-contribution-unit_001");
+    await expect(contribution).toBeVisible();
+    await expect(contribution).toContainText("味方01");
+    await expect(contribution).toContainText("攻撃行動 1回");
+    await expect(contribution).toContainText("命中（必殺含む）");
+    await expect(contribution).toContainText("与ダメージ");
+    await expect(contribution).toContainText("撃破");
+    await expect(contribution).toContainText("+30");
+    await expect(contribution).toContainText("レベルアップ");
+    await expect(contribution).toContainText("能力上昇：HP +1");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+
   test("shows the defeated enemy roster and surviving allies in battle results", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 390, height: 844 });
