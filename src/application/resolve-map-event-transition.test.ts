@@ -51,8 +51,8 @@ describe("resolveMapEventTransition", () => {
       )
     };
     const result = resolveMapEventTransition(INITIAL_GAME_STATE, next, EVENT_MAP);
-    expect(result.nextState.firedMapEventIds).toEqual(["boss", "unit"]);
-    expect(result.messages.map((message) => message.text)).toEqual(["敵将を撃破。", "敵01撃破。"]);
+    expect(result.nextState.firedMapEventIds).toEqual(["boss", "unit", "win"]);
+    expect(result.messages.map((message) => message.text)).toEqual(["敵将を撃破。", "敵01撃破。", "勝利。"]);
   });
 
   it("fires victory when the boss is defeated and all remaining enemies have already been removed", () => {
