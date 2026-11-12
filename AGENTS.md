@@ -5,11 +5,11 @@
 - Repository: `otomezon/grid-tactics-pwa`
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
-- Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal. PR #1–#99 are merged; latest merge commit `d978ee42a13426ce50f13e97d80cf52d9cbf20bf` (main CI run #1182 passed). PR #99 adds campaign-persistent per-ally battle records and saveVersion 4 migration. The current feature branch centralizes the fourteen adopted class IDs, display names, prototype caps, and seven promotion paths in a typed content registry. Preserve the distinction between approved non-numeric promotion policy and unapproved numeric values; do not invent class caps, bonuses, movement, or weapon-access data.
+- Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal. PR #1–#101 are merged; PR #99 added campaign-persistent per-ally battle records and PR #100 centralized the fourteen adopted class IDs, display names, prototype caps, and seven promotion paths in a typed content registry. PR #101 hardened the deep immutability of the compatibility projections. Preserve the distinction between approved non-numeric promotion policy and unapproved numeric values; do not invent class caps, bonuses, movement, or weapon-access data.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 - Deployment-slot terrain inspection is limited to existing configured playerDeployment coordinates and existing TERRAIN_DEFINITIONS. Show movement-type passability using the same terrain movementCost values already used by validation; if an assigned unit cannot enter the tile, warn but do not invent a new placement rule or auto-correct the assignment.
 - The deployment formation preview is a view of the current selected roster and slot assignments. The existing position dropdown remains the sole editing path; occupied preview tiles may open candidate details, but the preview must not invent slots or alter party/deployment rules.
-- The player-phase end review is optional UI only: keep the existing ability to end a phase with unacted allies, reuse the existing enemy forecast and unit-selection handlers, and do not persist review state or alter saveVersion.
+- The player-phase end review is optional UI only: keep the existing ability to end a phase with unacted allies, reuse the existing enemy forecast and unit-selection handlers, and do not persist review state or change the save schema.
 
 ## 2. Critical instructions
 
@@ -34,7 +34,7 @@
 - `src/components/enemy-target-evaluations.tsx` and `src/components/enemy-movement-evaluations.tsx`: collapsible, read-only explanations of the actual enemy resolver candidate scores. Reuse returned score breakdowns; do not calculate alternate AI decisions in UI.
 - `src/components/campaign-title-screen.tsx`: startup hub for new/continued campaigns, JSON save import/export, and local backup creation/restoration. New campaign setup must not replace the previous auto-save until deployment is explicitly confirmed.
 - `App.tsx`: chapter-aware prototype map UI with live victory/defeat objective progress and focused-tile terrain details (existing costs/modifiers only; view-only), chronological in-session battle history from resolved attacks and enemy-phase actions (not persisted), deployment preparation and read-only candidate details, battle forecast, results/rewards summary with enemy roster and surviving-player details, next-chapter launch, inventory display, class-promotion confirmation with an eight-stat preview, HP/EXP outcomes, item/action cost, and preserved movement/weapon/equipment details, plus a player-phase enemy threat-range toggle with accessible map overlays, transient movement-cost and route previews on reachable tiles, a transient enemy-phase action report derived from `EnemyPhaseResult.actions`, and a transient player-attack strike report derived from `AttackExecution`. Neither report is saved; the enemy-phase report is regenerated when an enemy-phase checkpoint is resumed. The preview shares the domain calculation with the promotion command; all numeric values remain provisional and do not settle CP-15.
-- `persistence`: IndexedDB, saveVersion 1／2／3→4 migration, versioned JSON save export/import, and three-generation local backup/restore.
+- `persistence`: IndexedDB, saveVersion 1／2／3／4→5 migration, versioned JSON save export/import, and three-generation local backup/restore.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 
@@ -51,7 +51,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - Game state is serializable plain data.
 - UI actions go through validated application/domain commands.
 - Xorshift32 state is persisted as non-zero 32-bit `rngState`; do not change without migration/tests.
-- saveVersion is 4; preserve version 1 and version 2 migration tests.
+- saveVersion is 5; preserve migration tests for versions 1 through 4.
 - Enemy IDs are processed in stable lexical order. Current AI score and Manhattan distance are provisional, not approved final rules.
 
 ## 5. Coding and design rules
@@ -137,3 +137,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - App/UIイベントハンドラー内で `GameStateSnapshot` のユニット配列を直接更新しない。移動・武器変更・待機を含む確定操作は `src/application/` のcommandへ委譲する。
 - commandは入力snapshotを不変に保ち、合法性検証と次状態の生成を担う。UI側はプレビュー・確認・履歴・保存・表示を担当する。
 - 移動のUIプレビューは最終確定の根拠にせず、commandでも地形・占有・移動力を再検証する。
+
+- Map events are map-local content (`GameMapDefinition.events`). Supported one-shot triggers are stage start, exact turn/phase start, deployed-unit defeat, boss defeat, victory, and defeat. Resolve matching events in content order and persist their IDs in `GameStateSnapshot.firedMapEventIds`; do not re-fire them after reload, JSON import, backup restore, or within the same chapter. New chapter templates start with an empty event ID list.
+- Run stage-start and initial player turn-start only after deployment confirmation succeeds. Resolve later turn/phase, defeat, boss, and outcome triggers only from committed state transitions. Do not fire events for previews, selection, inspection, forecasts, cancellation, invalid commands, or uncommitted UI state.
+- Event messages are presentation output; the only implemented event action is `show-message`. Do not treat unimplemented villages, chests, doors, reinforcements, recruitment, dialogue choices, or item grants as supported. Never invent campaign rewards or retroactively mark historical events as fired during save migration.
