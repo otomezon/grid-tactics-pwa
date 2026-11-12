@@ -105,6 +105,10 @@ src/
 - UIコンポーネント分割。現状は `App.tsx` に集約。
 - 基本リザルト、章定義されたアイテム報酬、次章開始UIは実装済み。詳細戦闘統計／会話イベント／キャンペーン選択・章解放管理は未実装。
 
+## 能力成長率の読み取り専用表示
+
+`src/application/get-player-inspection-details.ts` は既存の `GameUnit.growthRates` を表示projectionへ渡す。`src/components/unit-growth-panel.tsx` は同じprojectionを出撃候補詳細と味方インスペクターで共有し、8能力の確率とEXP進捗だけを描画する。成長率の再計算、レベルアップ抽選、乱数消費、GameState／IndexedDB／saveVersionの変更は行わない。実際の成長判定とクラス上限適用は既存の `applyExperience` に委譲する。
+
 ## 7. 外部サービス
 
 サーバー、アカウント、オンライン同期、HTTP APIはない。PWAとブラウザ内IndexedDBを基本とする。新規ゲームの乱数seed生成にはWeb Cryptoを使うが、外部サービス接続は行わない。

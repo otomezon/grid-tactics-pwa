@@ -22,7 +22,8 @@ describe("getPlayerInspectionDetails", () => {
     expect(details).toMatchObject({
       id: "unit_test", name: "味方テスト", className: "剣士", level: 4, experience: 37,
       currentHp: 19, maxHp: 28, positionLabel: "4列・3行", move: 5,
-      movementTypeLabel: "歩兵", actionStatus: "移動済・未行動"
+      movementTypeLabel: "歩兵", actionStatus: "移動済・未行動",
+      growthRates: { hp: 80, strength: 35, magic: 5, skill: 55, speed: 60, luck: 35, defense: 25, resistance: 15 }
     });
     expect(details?.stats).toEqual([
       { key: "strength", label: "力", value: 9 },

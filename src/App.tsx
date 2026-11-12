@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEven
 import { UnitRoster } from "./components/unit-roster";
 import { DeploymentPreview } from "./components/deployment-preview";
 import { DeploymentLoadoutEditor } from "./components/deployment-loadout-editor";
+import { UnitGrowthPanel } from "./components/unit-growth-panel";
 import { BattleObjectivePanel } from "./components/battle-objective-panel";
 import { EnemyRoster } from "./components/enemy-roster";
 import { EnemyInspector } from "./components/enemy-inspector";
@@ -167,6 +168,7 @@ type DeploymentCandidate = Pick<
   | "classId"
   | "level"
   | "experience"
+  | "growthRates"
   | "stats"
   | "currentHp"
   | "movementType"
@@ -186,6 +188,7 @@ function toDeploymentCandidate(
     classId: unit.classId,
     level: unit.level,
     experience: unit.experience,
+    growthRates: unit.growthRates,
     stats: unit.stats,
     currentHp: unit.currentHp,
     movementType: unit.movementType,
@@ -1854,6 +1857,10 @@ function CampaignApp() {
                   </div>
                 ))}
               </div>
+              <UnitGrowthPanel
+                growthRates={deploymentDetailCandidate.growthRates}
+                experience={deploymentDetailCandidate.experience}
+              />
               {deploymentDetail && (
                 <DeploymentLoadoutEditor
                   unitId={deploymentDetailCandidate.id}

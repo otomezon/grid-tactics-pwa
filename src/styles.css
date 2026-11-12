@@ -1868,3 +1868,63 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .deployment-loadout-note { overflow-wrap: anywhere; }
 .deployment-weapon-suitable { color: #9ed7c8 !important; }
 .deployment-weapon-unsuitable { color: #e9b5a9 !important; }
+
+
+/* Read-only unit growth rates and remaining EXP, shared by deployment and battle inspectors. */
+.unit-growth-panel {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 12px 0;
+  border-top: 1px solid rgba(120, 151, 170, .22);
+  border-bottom: 1px solid rgba(120, 151, 170, .22);
+}
+.unit-growth-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+}
+.unit-growth-heading h3 { margin: 0; color: #edf3f7; font-size: .82rem; }
+.unit-growth-heading > span { color: #bde4dc; font-size: .7rem; font-weight: 750; }
+.unit-growth-experience {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.unit-growth-experience progress,
+.unit-growth-row progress {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 8px;
+  accent-color: #83bdbb;
+}
+.unit-growth-experience > span { color: var(--text-muted); font-size: .68rem; font-variant-numeric: tabular-nums; }
+.unit-growth-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.unit-growth-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(53, 73, 90, .62);
+  border-radius: 7px;
+  background: rgba(28, 44, 58, .38);
+}
+.unit-growth-row dt { color: var(--text-muted); font-size: .68rem; }
+.unit-growth-row dd { margin: 0; color: #d8eee6; font-size: .74rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.unit-growth-row progress { grid-column: 1 / -1; height: 6px; }
+.unit-growth-note { margin: 0; color: var(--text-muted); font-size: .66rem; line-height: 1.5; }
+@media (max-width: 360px) {
+  .unit-growth-grid { gap: 6px; }
+  .unit-growth-row { padding: 6px; }
+}

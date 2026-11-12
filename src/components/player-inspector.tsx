@@ -1,4 +1,5 @@
 import type { PlayerInspectionDetails } from "../application/get-player-inspection-details";
+import { UnitGrowthPanel } from "./unit-growth-panel";
 
 interface PlayerInspectorProps {
   details: PlayerInspectionDetails;
@@ -29,6 +30,7 @@ export function PlayerInspector({ details }: PlayerInspectorProps) {
           {details.stats.map((stat) => <div className="enemy-inspector-stat" key={stat.key}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}
         </dl>
       </section>
+      <UnitGrowthPanel growthRates={details.growthRates} experience={details.experience} />
       <section className="enemy-inspector-section" aria-labelledby="player-inspector-weapons-heading">
         <h3 id="player-inspector-weapons-heading">所持武器</h3>
         {details.weapons.length > 0 ? (
@@ -59,7 +61,7 @@ export function PlayerInspector({ details }: PlayerInspectorProps) {
           </ul>
         ) : <p className="helper-text">所持アイテムはありません。</p>}
       </section>
-      <p className="enemy-inspector-note">表示専用です。装備変更・アイテム使用・移動／攻撃・セーブ内容は変更しません。能力値と武器性能は試作データです。</p>
+      <p className="enemy-inspector-note">表示専用です。装備変更・アイテム使用・移動／攻撃・セーブ内容は変更しません。能力値・成長率・武器性能は試作データです。</p>
     </section>
   );
 }

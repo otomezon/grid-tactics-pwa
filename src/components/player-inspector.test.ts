@@ -18,6 +18,9 @@ describe("PlayerInspector", () => {
     expect(html).toContain('data-testid="player-inspector"');
     expect(html).toContain("味方01");
     expect(html).toContain("能力値");
+    expect(html).toContain("成長率");
+    expect(html).toContain("次のレベルまで");
+    expect((html.match(/data-testid="unit-growth-rate"/g) ?? [])).toHaveLength(8);
     expect(html).toContain("所持武器");
     expect(html).toContain("使用適性あり");
     expect(html).toContain("適性なし");

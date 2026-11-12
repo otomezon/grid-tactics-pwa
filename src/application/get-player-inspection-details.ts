@@ -54,6 +54,7 @@ export function getPlayerInspectionDetails(unit: GameUnit) {
     move: unit.move,
     movementTypeLabel: unit.movementType === "infantry" ? "歩兵" : "騎馬",
     actionStatus: unit.hasActed ? "行動済" : unit.hasMoved ? "移動済・未行動" : "未移動・未行動",
+    growthRates: { ...unit.growthRates },
     stats: (Object.keys(STAT_LABELS) as NonHpStatKey[]).map((key) => ({
       key, label: STAT_LABELS[key], value: unit.stats[key]
     })),
