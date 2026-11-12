@@ -194,7 +194,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("applied_hp_bonus");
   expect(csv).toContain("control_enemy_phase_actions");
   expect(csv).toContain("promotion_selected_unit_survival_rate");
-  expect(csv).toContain("control_party_defeat_rate");
+  expect(csv).toContain("control_battle_defeat_rate");
+  expect(csv).toContain("control_party_wipe_rate");
   expect(csv).toContain("未確認");
 });
  
