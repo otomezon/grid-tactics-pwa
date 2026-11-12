@@ -12,6 +12,10 @@ import type { FortRecoveryRecord } from "../domain/rules/apply-fort-recovery";
 
 export type EnemyActionKind = "attacked" | "moved-and-attacked" | "moved" | "waited";
 
+export type EnemyMovementReason =
+  | { kind: "attack-after-move"; targetId: string; targetName: string }
+  | { kind: "approach-player"; nearestPlayerDistanceBefore: number; nearestPlayerDistanceAfter: number };
+
 export interface EnemyActionLog {
   enemyId: string;
   enemyName: string;
@@ -21,6 +25,7 @@ export interface EnemyActionLog {
   destination?: Position;
   targetRoles?: readonly TacticalRole[];
   targetRolePriorityBonus?: number;
+  movementReason?: EnemyMovementReason;
   message: string;
 }
 
@@ -48,6 +53,7 @@ interface TileCandidate {
   position: Position;
   score: number;
   attack?: AttackCandidate;
+  movementReason: EnemyMovementReason;
 }
 
 const KILL_BONUS = 1000;
@@ -185,7 +191,9 @@ function createTileCandidates(
       .map((unit) => unit.position)
   });
 
-  return reachable.map((tile) => {
+  const nearestPlayerDistanceBefore = getNearestPlayerDistance(state, enemy.position);
+
+  const candidates: TileCandidate[] = reachable.map((tile): TileCandidate => {
     const movedState: GameStateSnapshot = {
       ...state,
       units: state.units.map((unit) =>
@@ -200,16 +208,34 @@ function createTileCandidates(
       return {
         position: { x: tile.x, y: tile.y },
         attack,
-        score: 100_000 + attack.score * 10 + terrainScore
+        score: 100_000 + attack.score * 10 + terrainScore,
+        movementReason: {
+          kind: "attack-after-move",
+          targetId: attack.target.id,
+          targetName: attack.target.name
+        }
       };
     }
 
     const nearestDistance = getNearestPlayerDistance(state, tile);
     return {
       position: { x: tile.x, y: tile.y },
-      score: -nearestDistance * 100 + terrainScore
+      score: -nearestDistance * 100 + terrainScore,
+      movementReason: {
+        kind: "approach-player",
+        nearestPlayerDistanceBefore,
+        nearestPlayerDistanceAfter: nearestDistance
+      }
     };
-  }).sort(compareTileCandidates);
+  });
+  return candidates.sort(compareTileCandidates);
+}
+
+function formatMovementReason(reason: EnemyMovementReason): string {
+  if (reason.kind === "attack-after-move") {
+    return `（移動後に攻撃可能な位置を優先：${reason.targetName}）`;
+  }
+  return `（最寄りの味方との距離 ${reason.nearestPlayerDistanceBefore}→${reason.nearestPlayerDistanceAfter}。同距離候補は地形評価で比較）`;
 }
 
 function compareTileCandidates(left: TileCandidate, right: TileCandidate): number {
@@ -281,11 +307,12 @@ function executeEnemyAction(
             targetId: postMoveAttack.target.id,
             targetName: postMoveAttack.target.name,
             destination: destination.position,
+            movementReason: destination.movementReason,
             ...(postMoveAttack.targetRoles.length > 0 ? {
               targetRoles: postMoveAttack.targetRoles,
               targetRolePriorityBonus: postMoveAttack.targetRolePriorityBonus
             } : {}),
-            message: `${currentEnemy.name}は${positionText(destination.position)}へ移動し、${postMoveAttack.target.name}に攻撃（${logs}）${formatTargetPriorityReason(postMoveAttack)}`
+            message: `${currentEnemy.name}は${positionText(destination.position)}へ移動し、${postMoveAttack.target.name}に攻撃（${logs}）${formatMovementReason(destination.movementReason)}${formatTargetPriorityReason(postMoveAttack)}`
           }
         };
       }
@@ -302,7 +329,8 @@ function executeEnemyAction(
           enemyName: currentEnemy.name,
           kind: "moved",
           destination: destination.position,
-          message: `${currentEnemy.name}は${positionText(destination.position)}へ移動`
+          movementReason: destination.movementReason,
+          message: `${currentEnemy.name}は${positionText(destination.position)}へ移動${formatMovementReason(destination.movementReason)}`
         }
       };
     }
