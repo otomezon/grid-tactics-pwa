@@ -455,7 +455,8 @@ export function ClassPromotionSnapshotBench() {
       "control_selected_unit_avg_damage", "promotion_selected_unit_avg_damage",
       "control_selected_unit_survival_rate", "promotion_selected_unit_survival_rate",
       "control_party_avg_damage", "promotion_party_avg_damage",
-      "control_party_defeat_rate", "promotion_party_defeat_rate",
+      "control_battle_defeat_rate", "promotion_battle_defeat_rate",
+      "control_party_wipe_rate", "promotion_party_wipe_rate",
       "control_player_phase_advance_rate", "promotion_player_phase_advance_rate"
     ];
     const rows = results.map((entry) => {
@@ -503,8 +504,10 @@ export function ClassPromotionSnapshotBench() {
         entry.enemyPhaseSummary.promotion.selectedUnitSurvivalRate,
         entry.enemyPhaseSummary.control.averageTotalPlayerDamagePerPhase,
         entry.enemyPhaseSummary.promotion.averageTotalPlayerDamagePerPhase,
-        entry.enemyPhaseSummary.control.partyDefeatRate,
-        entry.enemyPhaseSummary.promotion.partyDefeatRate,
+        entry.enemyPhaseSummary.control.battleDefeatRate,
+        entry.enemyPhaseSummary.promotion.battleDefeatRate,
+        entry.enemyPhaseSummary.control.partyWipeRate,
+        entry.enemyPhaseSummary.promotion.partyWipeRate,
         entry.enemyPhaseSummary.control.playerPhaseAdvanceRate,
         entry.enemyPhaseSummary.promotion.playerPhaseAdvanceRate
       ].map(escapeCsvField).join(",");
@@ -880,7 +883,8 @@ export function ClassPromotionSnapshotBench() {
                     <th>敵軍phase本人平均被ダメージ</th>
                     <th>敵軍phase本人生存率</th>
                     <th>味方全体平均被ダメージ</th>
-                    <th>全滅率</th>
+                    <th>敗北結果率</th>
+                    <th>味方全滅率</th>
                     <th>次の自軍phase進行率</th>
                     <th>データ区分</th>
                   </tr>
@@ -905,7 +909,8 @@ export function ClassPromotionSnapshotBench() {
                         <td>{result.enemyPhaseSummary.control.selectedUnitAverageDamagePerPhase.toFixed(1)} → {result.enemyPhaseSummary.promotion.selectedUnitAverageDamagePerPhase.toFixed(1)}</td>
                         <td>{result.enemyPhaseSummary.control.selectedUnitSurvivalRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.selectedUnitSurvivalRate.toFixed(1)}%</td>
                         <td>{result.enemyPhaseSummary.control.averageTotalPlayerDamagePerPhase.toFixed(1)} → {result.enemyPhaseSummary.promotion.averageTotalPlayerDamagePerPhase.toFixed(1)}</td>
-                        <td>{result.enemyPhaseSummary.control.partyDefeatRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.partyDefeatRate.toFixed(1)}%</td>
+                        <td>{result.enemyPhaseSummary.control.battleDefeatRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.battleDefeatRate.toFixed(1)}%</td>
+                        <td>{result.enemyPhaseSummary.control.partyWipeRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.partyWipeRate.toFixed(1)}%</td>
                         <td>{result.enemyPhaseSummary.control.playerPhaseAdvanceRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.playerPhaseAdvanceRate.toFixed(1)}%</td>
                         <td>{getMatrixDataClassificationLabel(result.dataClassification)}</td>
                       </tr>
@@ -917,7 +922,7 @@ export function ClassPromotionSnapshotBench() {
           </div>
         )}
         <p className="helper-text">
-          このマトリクスは実セーブの候補選定と戦闘反復の記録用です。各ケースは独立した単発攻撃比較に加え、両枝とも選択ユニットの行動を消費した状態で既存beginEnemyPhase／runEnemyPhaseを実行し、敵AIの移動・標的選択・戦闘・砦回復を比較します。controlは昇格せず行動を見送り、promotionは昇格を行います。敵軍フェイズ1回のみで、次の自軍行動や複数ターン・章攻略は再現しません。現行の敵AIは試作ロジックです。「実プレイ由来」は利用者の申告であり、ファイルの真正性を自動検証するものではありません。合成fixtureや未確認の結果を実プレイ記録として扱わないでください。
+          このマトリクスは実セーブの候補選定と戦闘反復の記録用です。各ケースは独立した単発攻撃比較に加え、両枝とも選択ユニットの行動を消費した状態で既存beginEnemyPhase／runEnemyPhaseを実行し、敵AIの移動・標的選択・戦闘・砦回復を比較します。controlは昇格せず行動を見送り、promotionは昇格を行います。敵軍フェイズ1回のみで、次の自軍行動や複数ターン・章攻略は再現しません。敗北結果率はマップ固有の敗北条件を含み、味方全滅率は生存プレイヤーユニットが全員いなくなった場合を別に数えます。現行の敵AIは試作ロジックです。「実プレイ由来」は利用者の申告であり、ファイルの真正性を自動検証するものではありません。合成fixtureや未確認の結果を実プレイ記録として扱わないでください。
         </p>
       </section>
 
