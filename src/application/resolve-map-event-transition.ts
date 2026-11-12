@@ -62,12 +62,5 @@ export function resolveMapEventTransition(
     triggers.push({ type: nextOutcome });
   }
 
-  let currentState = nextState;
-  const messages: MapEventMessage[] = [];
-  for (const trigger of triggers) {
-    const execution = resolveMapEvents(currentState, map, trigger);
-    currentState = execution.nextState;
-    messages.push(...execution.messages);
-  }
-  return { nextState: currentState, messages };
+  return resolveMapEvents(nextState, map, triggers);
 }
