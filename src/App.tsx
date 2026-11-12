@@ -59,7 +59,10 @@ import { OperationGuide } from "./components/operation-guide";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
+type PlayerActionHistoryKind = "movement" | "weapon-change" | "item-use" | "class-change" | "wait";
+
 type BattleHistoryEntry =
+  | { sequence: number; turn: number; kind: "player-action"; action: PlayerActionHistoryKind; unitName: string; detail: string }
   | { sequence: number; turn: number; kind: "player-attack"; report: PlayerAttackReport }
   | { sequence: number; turn: number; kind: "enemy-phase"; actions: EnemyActionLog[] };
 
@@ -110,6 +113,14 @@ const ENEMY_ACTION_KIND_LABELS: Record<EnemyActionLog["kind"], string> = {
   "moved-and-attacked": "移動して攻撃",
   moved: "移動",
   waited: "待機"
+};
+
+const PLAYER_ACTION_HISTORY_LABELS: Record<PlayerActionHistoryKind, string> = {
+  movement: "移動",
+  "weapon-change": "武器変更",
+  "item-use": "アイテム使用",
+  "class-change": "クラスチェンジ",
+  wait: "待機"
 };
 
 function samePosition(left: Position, right: Position): boolean {
@@ -676,6 +687,24 @@ export default function App() {
     }
   }, [gameState, selectedUnit, combatTargetId, currentMap]);
 
+  function recordPlayerAction(
+    action: PlayerActionHistoryKind,
+    unitName: string,
+    detail: string
+  ): void {
+    setBattleHistory((entries) => [
+      ...entries,
+      {
+        sequence: entries.length,
+        turn: gameState.turn,
+        kind: "player-action",
+        action,
+        unitName,
+        detail
+      }
+    ]);
+  }
+
   async function persist(
     nextState: GameStateSnapshot,
     successMessage = "行動をIndexedDBに自動保存しました。"
@@ -1083,6 +1112,11 @@ export default function App() {
 
     setGameState(nextState);
     setCombatTargetId(null);
+    recordPlayerAction(
+      "movement",
+      selectedUnit.name,
+      positionLabel(selectedUnit.position) + " → " + positionLabel(position)
+    );
     await persist(nextState, selectedUnit.name + "が" + positionLabel(position) + "へ移動しました。攻撃または待機を選択してください。");
   }
 
@@ -1104,6 +1138,7 @@ export default function App() {
 
     setGameState(nextState);
     setCombatTargetId(null);
+    recordPlayerAction("weapon-change", selectedUnit.name, weapon.name + "を装備");
     await persist(nextState, selectedUnit.name + "は" + weapon.name + "を装備しました。");
   }
 
@@ -1153,6 +1188,7 @@ export default function App() {
       setGameState(execution.nextState);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
+      recordPlayerAction("item-use", selectedUnit.name, item.name + " · HP +" + execution.healedHp);
       await persist(
         execution.nextState,
         selectedUnit.name + "は" + item.name + "を使い、HPが" + execution.healedHp +
@@ -1185,6 +1221,7 @@ export default function App() {
       setGameState(execution.nextState);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
+      recordPlayerAction("class-change", selectedUnit.name, targetName + "へクラスチェンジ · " + bonusText);
       await persist(
         execution.nextState,
         selectedUnit.name + "は" + targetName + "へクラスチェンジしました。能力ボーナス：" + bonusText +
@@ -1257,6 +1294,7 @@ export default function App() {
 
     setGameState(nextState);
     setCombatTargetId(null);
+    recordPlayerAction("wait", selectedUnit.name, "このフェイズの行動を終了");
     await persist(nextState, selectedUnit.name + "は待機しました。");
   }
 
@@ -2359,7 +2397,13 @@ export default function App() {
                   <li className="battle-history-entry" key={entry.sequence} data-testid="battle-history-entry">
                     <div className="battle-history-entry-heading">
                       <span>第{entry.turn}ターン</span>
-                      <strong>{entry.kind === "player-attack" ? "味方の攻撃" : "敵軍フェイズ"}</strong>
+                      <strong>
+                        {entry.kind === "player-attack"
+                          ? "味方の攻撃"
+                          : entry.kind === "player-action"
+                            ? "味方の行動"
+                            : "敵軍フェイズ"}
+                      </strong>
                     </div>
                     {entry.kind === "player-attack" ? (
                       <>
@@ -2392,6 +2436,16 @@ export default function App() {
                           <p className="helper-text">{formatLevelUps(entry.report.levelUps)}</p>
                         )}
                       </>
+                    ) : entry.kind === "player-action" ? (
+                      <ol className="enemy-phase-action-list">
+                        <li className="enemy-phase-action player-action-history" data-testid="player-action-history">
+                          <div className="enemy-phase-action-heading">
+                            <strong>{entry.unitName}</strong>
+                            <span className="enemy-phase-action-kind">{PLAYER_ACTION_HISTORY_LABELS[entry.action]}</span>
+                          </div>
+                          <p>{entry.detail}</p>
+                        </li>
+                      </ol>
                     ) : (
                       entry.actions.length > 0 ? (
                         <ol className="enemy-phase-action-list">
@@ -2414,7 +2468,7 @@ export default function App() {
                 ))}
               </ol>
               <p className="helper-text enemy-phase-report-note">
-                解決済みの攻撃と敵軍行動を発生順に表示します。この履歴は現在の画面セッションだけの一時情報です。リロード・セーブ読込・章切替後には引き継がれず、セーブデータには保存しません。
+                確定した味方の移動・武器変更・攻撃・アイテム使用・クラスチェンジ・待機と、敵軍行動を発生順に表示します。移動プレビューや閲覧操作は記録しません。この履歴は現在の画面セッションだけの一時情報です。リロード・セーブ読込・章切替後には引き継がれず、セーブデータには保存しません。
               </p>
             </section>
           )}
@@ -2436,7 +2490,7 @@ export default function App() {
             <p className="eyebrow">SAVE</p>
             <h2>ローカル保存</h2>
             <p className="message-text">{SAVE_STATUS_LABELS[saveStatus]}</p>
-            <p className="helper-text">移動・武器変更・攻撃・待機の確定時にIndexedDBへ自動保存します。戦闘乱数の状態も保存します。</p>
+            <p className="helper-text">移動・武器変更・攻撃・アイテム使用・クラスチェンジ・待機の確定時にIndexedDBへ自動保存します。戦闘乱数の状態も保存します。</p>
           </section>
 
           <section className="info-card save-backup-card" aria-labelledby="save-backups-heading">

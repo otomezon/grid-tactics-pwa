@@ -473,11 +473,46 @@ test.describe("browser campaign flow", () => {
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
+    const historyEntry = page.getByTestId("battle-history").getByTestId("player-action-history");
+    await expect(historyEntry).toHaveCount(1);
+    await expect(historyEntry).toContainText("味方01");
+    await expect(historyEntry).toContainText("待機");
+    await expect(historyEntry).toContainText("このフェイズの行動を終了");
+    const savedState = await readAutoSave(page) as { [key: string]: unknown };
+    expect(savedState).not.toHaveProperty("battleHistory");
 
     await page.reload();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await expect(page.getByTestId("battle-history")).toHaveCount(0);
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
+  });
+
+  test("records weapon changes without consuming the unit action", async ({ page }) => {
+    await startBattle(page);
+    await page.locator(".map-grid").getByRole("button", { name: /味方04/ }).click();
+    await page.getByLabel("装備武器").selectOption("iron_lance");
+    await expect(page.getByRole("status")).toContainText("味方04は試作の鉄の槍を装備しました。");
+
+    const historyEntry = page.getByTestId("battle-history").getByTestId("player-action-history");
+    await expect(historyEntry).toHaveCount(1);
+    await expect(historyEntry).toContainText("味方04");
+    await expect(historyEntry).toContainText("武器変更");
+    await expect(historyEntry).toContainText("試作の鉄の槍を装備");
+
+    const saved = await readAutoSave(page) as {
+      units: Array<{ id: string; equippedWeaponId: string | null; hasMoved: boolean; hasActed: boolean }>;
+      [key: string]: unknown;
+    };
+    expect(saved.units.find((unit) => unit.id === "unit_004")).toMatchObject({
+      equippedWeaponId: "iron_lance",
+      hasMoved: false,
+      hasActed: false
+    });
+    expect(saved).not.toHaveProperty("battleHistory");
+
+    await page.reload();
+    await expect(page.getByTestId("battle-history")).toHaveCount(0);
   });
 
   test("previews movement cost and a lowest-cost route without saving until the tile is chosen", async ({ page }) => {
@@ -499,6 +534,11 @@ test.describe("browser campaign flow", () => {
 
     await destination.click();
     await expect(page.getByRole("status")).toContainText("味方01が2列・8行へ移動しました。");
+    const movementHistory = page.getByTestId("battle-history").getByTestId("player-action-history");
+    await expect(movementHistory).toHaveCount(1);
+    await expect(movementHistory).toContainText("味方01");
+    await expect(movementHistory).toContainText("移動");
+    await expect(movementHistory).toContainText("2列・9行 → 2列・8行");
     await expect(page.locator(".map-grid .movement-path-step")).toHaveCount(0);
     const movedState = await readAutoSave(page) as {
       units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean }>;
@@ -1124,6 +1164,11 @@ test.describe("browser campaign flow", () => {
     await expect(confirmedAgain).toContainText("昇格後は行動済み");
     await confirmedAgain.getByRole("button", { name: "昇格を確定" }).click();
     await expect(page.getByRole("status")).toContainText("このフェイズの行動を消費しました");
+    const promotionHistory = page.getByTestId("battle-history").getByTestId("player-action-history");
+    await expect(promotionHistory).toHaveCount(1);
+    await expect(promotionHistory).toContainText("味方01");
+    await expect(promotionHistory).toContainText("クラスチェンジ");
+    await expect(promotionHistory).toContainText("ソードマスターへクラスチェンジ");
 
     const promotedState = await readAutoSave(page) as {
       units: Array<{
@@ -1361,6 +1406,10 @@ test.describe("browser campaign flow", () => {
     await useButton.click();
     await expect(useButton).toBeDisabled();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
+    const itemHistory = page.getByTestId("battle-history").getByTestId("player-action-history");
+    await expect(itemHistory).toHaveCount(1);
+    await expect(itemHistory).toContainText("回復薬");
+    await expect(itemHistory).toContainText("HP +7");
 
     await expect.poll(async () => {
       const saved = await readAutoSave(page) as {
@@ -1388,6 +1437,7 @@ test.describe("browser campaign flow", () => {
     );
     await expect(page.getByRole("button", { name: "回復薬を使用" })).toBeDisabled();
     await expect(page.locator(".inventory-items li").filter({ hasText: "回復薬" })).toContainText("所持数：1個");
+    await expect(page.getByTestId("battle-history")).toHaveCount(0);
   });
 
   for (const viewportHeight of [568, 720]) {
