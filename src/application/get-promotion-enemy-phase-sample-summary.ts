@@ -21,8 +21,10 @@ export interface PromotionEnemyPhaseMetrics {
   averagePlayerUnitDefeatsPerPhase: number;
   totalPlayerDamage: number;
   averageTotalPlayerDamagePerPhase: number;
-  partyDefeats: number;
-  partyDefeatRate: number;
+  battleDefeats: number;
+  battleDefeatRate: number;
+  partyWipes: number;
+  partyWipeRate: number;
   playerPhaseAdvances: number;
   playerPhaseAdvanceRate: number;
 }
@@ -48,7 +50,8 @@ interface MutableMetrics {
   totalSelectedUnitHpAfterResolution: number;
   playerUnitDefeats: number;
   totalPlayerDamage: number;
-  partyDefeats: number;
+  battleDefeats: number;
+  partyWipes: number;
   playerPhaseAdvances: number;
 }
 
@@ -74,7 +77,8 @@ function createMutableMetrics(): MutableMetrics {
     totalSelectedUnitHpAfterResolution: 0,
     playerUnitDefeats: 0,
     totalPlayerDamage: 0,
-    partyDefeats: 0,
+    battleDefeats: 0,
+    partyWipes: 0,
     playerPhaseAdvances: 0
   };
 }
@@ -216,7 +220,11 @@ function addEnemyPhaseToMetrics(
 
   metrics.playerUnitDefeats += defeatedPlayers;
   metrics.totalPlayerDamage += phaseDamage;
-  if (resolved.outcome === "defeat") metrics.partyDefeats += 1;
+  if (resolved.outcome === "defeat") metrics.battleDefeats += 1;
+  if (initialPlayers.length > 0 && initialPlayers.every((player) => {
+    const after = resolvedUnits.get(player.id);
+    return !after || after.currentHp <= 0;
+  })) metrics.partyWipes += 1;
   if (resolved.nextState.phase === "player" && resolved.nextState.turn === initial.turn + 1) {
     metrics.playerPhaseAdvances += 1;
   }
@@ -241,8 +249,10 @@ function finishMetrics(metrics: MutableMetrics, sampleCount: number): PromotionE
     averagePlayerUnitDefeatsPerPhase: roundOne(metrics.playerUnitDefeats / sampleCount),
     totalPlayerDamage: metrics.totalPlayerDamage,
     averageTotalPlayerDamagePerPhase: roundOne(metrics.totalPlayerDamage / sampleCount),
-    partyDefeats: metrics.partyDefeats,
-    partyDefeatRate: rate(metrics.partyDefeats, sampleCount),
+    battleDefeats: metrics.battleDefeats,
+    battleDefeatRate: rate(metrics.battleDefeats, sampleCount),
+    partyWipes: metrics.partyWipes,
+    partyWipeRate: rate(metrics.partyWipes, sampleCount),
     playerPhaseAdvances: metrics.playerPhaseAdvances,
     playerPhaseAdvanceRate: rate(metrics.playerPhaseAdvances, sampleCount)
   };
