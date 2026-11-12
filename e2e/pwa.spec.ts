@@ -1,3 +1,5 @@
+import { expect, test, type Page } from "@playwright/test";
+
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 const navigationCountKey = "__pwa_e2e_navigation_count";
 
