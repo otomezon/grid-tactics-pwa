@@ -71,7 +71,8 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   await expect(bench).toContainText("1候補");
   await expect(bench.getByTestId("promotion-snapshot-selected")).toContainText("試験ユニット01");
   await expect(bench.getByTestId("promotion-snapshot-selected")).toContainText("Lv.10 · EXP 73");
-  await expect(bench.getByTestId("promotion-snapshot-selected")).toContainText("約50 percentile（参考値）");
+  await expect(bench.getByTestId("promotion-snapshot-selected")).toContainText("平均能力percentile");
+  await expect(bench.getByTestId("promotion-snapshot-selected")).toContainText("分布データ不足");
   await expect(bench.getByTestId("promotion-snapshot-comparison")).toContainText("試験用の証をコピーにだけ追加");
   await expect(bench.getByTestId("promotion-snapshot-comparison")).toContainText("Lv.10 · EXP 73");
   await expect(bench.getByTestId("promotion-snapshot-comparison")).toContainText("Lv.1 · EXP 73");
