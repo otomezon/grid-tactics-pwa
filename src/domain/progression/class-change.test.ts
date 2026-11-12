@@ -1,0 +1,266 @@
+import { describe, expect, it } from "vitest";
+import { INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
+import type { GameUnit, UnitStats } from "../models/game";
+import {
+  applyClassPromotion,
+  getClassPromotionStatPreview,
+  type ClassPromotionDefinition
+} from "./class-change";
+
+const caps: UnitStats = {
+  hp: 60,
+  strength: 30,
+  magic: 30,
+  skill: 30,
+  speed: 30,
+  luck: 30,
+  defense: 30,
+  resistance: 30
+};
+
+function eligibleUnit(overrides: Partial<GameUnit> = {}): GameUnit {
+  const base = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+  return {
+    ...base,
+    level: 10,
+    experience: 45,
+    currentHp: 12,
+    inventory: ["iron_sword", "promotion_seal", "promotion_seal"],
+    ...overrides
+  };
+}
+
+function definition(overrides: Partial<ClassPromotionDefinition> = {}): ClassPromotionDefinition {
+  return {
+    fromClassId: "swordsman",
+    toClassId: "swordmaster",
+    requiredItemId: "promotion_seal",
+    statBonuses: { hp: 3, strength: 2, speed: 1 },
+    statCaps: caps,
+    experiencePolicy: "reset",
+    ...overrides
+  };
+}
+
+describe("applyClassPromotion", () => {
+  it("promotes a level-10 player, consumes one item, and applies configured bonuses", () => {
+    const unit = eligibleUnit();
+    const result = applyClassPromotion(unit, definition());
+
+    expect(result.unit).toMatchObject({
+      classId: "swordmaster",
+      level: 1,
+      experience: 0,
+      stats: {
+        hp: unit.stats.hp + 3,
+        strength: unit.stats.strength + 2,
+        speed: unit.stats.speed + 1
+      },
+      currentHp: 12,
+      inventory: ["iron_sword", "promotion_seal"],
+      move: unit.move,
+      movementType: unit.movementType,
+      usableWeaponTypes: unit.usableWeaponTypes,
+      equippedWeaponId: unit.equippedWeaponId,
+      hasMoved: false,
+      hasActed: true
+    });
+    expect(result.consumedItemId).toBe("promotion_seal");
+    expect(result.appliedBonuses).toEqual({ hp: 3, strength: 2, speed: 1 });
+    expect(unit.inventory).toHaveLength(3);
+  });
+
+  it("preserves partial experience when the promotion definition requests it", () => {
+    const unit = eligibleUnit({ experience: 73 });
+    const result = applyClassPromotion(
+      unit,
+      definition({ experiencePolicy: "preserve" })
+    );
+
+    expect(result.unit.level).toBe(1);
+    expect(result.unit.experience).toBe(73);
+  });
+
+  it.each([0, 99])("preserves the EXP boundary value %i when promotion resets the level", (experience) => {
+    const unit = eligibleUnit({ experience });
+    const result = applyClassPromotion(
+      unit,
+      definition({ experiencePolicy: "preserve" })
+    );
+
+    expect(result.unit.level).toBe(1);
+    expect(result.unit.experience).toBe(experience);
+  });
+
+  it("caps bonus gains without reducing an existing stat above the new cap", () => {
+    const unit = eligibleUnit({
+      stats: { ...eligibleUnit().stats, strength: 32, speed: 29 }
+    });
+    const result = applyClassPromotion(
+      unit,
+      definition({
+        statBonuses: { strength: 3, speed: 5 },
+        statCaps: { ...caps, strength: 30, speed: 30 }
+      })
+    );
+
+    expect(result.unit.stats.strength).toBe(32);
+    expect(result.unit.stats.speed).toBe(30);
+    expect(result.appliedBonuses).toEqual({ speed: 1 });
+  });
+
+  it("does not heal current HP when maximum HP receives a promotion bonus", () => {
+    const unit = eligibleUnit({ currentHp: 4 });
+    const result = applyClassPromotion(unit, definition({ statBonuses: { hp: 5 } }));
+
+    expect(result.unit.stats.hp).toBe(unit.stats.hp + 5);
+    expect(result.unit.currentHp).toBe(4);
+  });
+
+  it("preserves near-death and full current HP when maximum HP increases", () => {
+    const base = eligibleUnit();
+    const stats = { ...base.stats, hp: 20 };
+
+    for (const currentHp of [1, 20]) {
+      const unit = eligibleUnit({ stats, currentHp });
+      const result = applyClassPromotion(
+        unit,
+        definition({ statBonuses: { hp: 5 } })
+      );
+
+      expect(result.unit.stats.hp).toBe(25);
+      expect(result.unit.currentHp).toBe(currentHp);
+    }
+  });
+
+  it("limits an HP promotion bonus at the class cap without healing current HP", () => {
+    const unit = eligibleUnit({
+      stats: { ...eligibleUnit().stats, hp: 59 },
+      currentHp: 59
+    });
+    const result = applyClassPromotion(unit, definition({ statBonuses: { hp: 5 } }));
+
+    expect(result.unit.stats.hp).toBe(60);
+    expect(result.unit.currentHp).toBe(59);
+    expect(result.appliedBonuses).toEqual({ hp: 1 });
+  });
+
+  it("rejects units below level 10, enemy units, and mismatched source classes", () => {
+    expect(() => applyClassPromotion(eligibleUnit({ level: 9 }), definition())).toThrow(/level 10/);
+    expect(() => applyClassPromotion(eligibleUnit({ faction: "enemy" }), definition())).toThrow(/player units/);
+    expect(() => applyClassPromotion(eligibleUnit({ classId: "archer" }), definition())).toThrow(/current class/);
+  });
+
+  it("rejects units that have moved or acted before promotion", () => {
+    expect(() =>
+      applyClassPromotion(eligibleUnit({ hasMoved: true }), definition())
+    ).toThrow(/must not have moved or acted/);
+
+    expect(() =>
+      applyClassPromotion(eligibleUnit({ hasActed: true }), definition())
+    ).toThrow(/must not have moved or acted/);
+  });
+
+  it("requires the class-change item and does not consume an equipped weapon", () => {
+    expect(() =>
+      applyClassPromotion(
+        eligibleUnit({ inventory: ["iron_sword"] }),
+        definition()
+      )
+    ).toThrow(/required class-change item/);
+
+    expect(() =>
+      applyClassPromotion(
+        eligibleUnit({ equippedWeaponId: "promotion_seal" }),
+        definition()
+      )
+    ).toThrow(/cannot be equipped/);
+  });
+
+  it("previews all eight stat changes using the same cap rules as promotion", () => {
+    const currentStats: UnitStats = {
+      hp: 59,
+      strength: 32,
+      magic: 3,
+      skill: 29,
+      speed: 30,
+      luck: 1,
+      defense: 4,
+      resistance: 2
+    };
+    const originalStats = { ...currentStats };
+    const promotionDefinition = definition({
+      statBonuses: {
+        hp: 5,
+        strength: 2,
+        magic: 1,
+        skill: 3,
+        speed: 2,
+        luck: 1,
+        defense: 0,
+        resistance: 4
+      },
+      statCaps: {
+        ...caps,
+        hp: 60,
+        strength: 30,
+        skill: 30,
+        speed: 30
+      }
+    });
+    const preview = getClassPromotionStatPreview(currentStats, promotionDefinition);
+
+    expect(preview.changes).toHaveLength(8);
+    expect(preview.changes).toEqual([
+      { key: "hp", currentValue: 59, requestedBonus: 5, appliedBonus: 1, nextValue: 60, cap: 60, currentValueExceedsCap: false },
+      { key: "strength", currentValue: 32, requestedBonus: 2, appliedBonus: 0, nextValue: 32, cap: 30, currentValueExceedsCap: true },
+      { key: "magic", currentValue: 3, requestedBonus: 1, appliedBonus: 1, nextValue: 4, cap: 30, currentValueExceedsCap: false },
+      { key: "skill", currentValue: 29, requestedBonus: 3, appliedBonus: 1, nextValue: 30, cap: 30, currentValueExceedsCap: false },
+      { key: "speed", currentValue: 30, requestedBonus: 2, appliedBonus: 0, nextValue: 30, cap: 30, currentValueExceedsCap: false },
+      { key: "luck", currentValue: 1, requestedBonus: 1, appliedBonus: 1, nextValue: 2, cap: 30, currentValueExceedsCap: false },
+      { key: "defense", currentValue: 4, requestedBonus: 0, appliedBonus: 0, nextValue: 4, cap: 30, currentValueExceedsCap: false },
+      { key: "resistance", currentValue: 2, requestedBonus: 4, appliedBonus: 4, nextValue: 6, cap: 30, currentValueExceedsCap: false }
+    ]);
+    expect(preview.stats).toEqual({
+      hp: 60,
+      strength: 32,
+      magic: 4,
+      skill: 30,
+      speed: 30,
+      luck: 2,
+      defense: 4,
+      resistance: 6
+    });
+    expect(preview.appliedBonuses).toEqual({
+      hp: 1,
+      magic: 1,
+      skill: 1,
+      luck: 1,
+      resistance: 4
+    });
+    const promoted = applyClassPromotion(
+      eligibleUnit({ stats: currentStats }),
+      promotionDefinition
+    );
+    expect(promoted.unit.stats).toEqual(preview.stats);
+    expect(promoted.appliedBonuses).toEqual(preview.appliedBonuses);
+    expect(currentStats).toEqual(originalStats);
+  });
+
+  it("requires explicit promotion bonuses, caps, and experience policy", () => {
+    expect(() =>
+      applyClassPromotion(eligibleUnit(), definition({ statBonuses: {} }))
+    ).toThrow(/at least one positive stat bonus/);
+
+    expect(() =>
+      applyClassPromotion(eligibleUnit(), definition({ statBonuses: { hp: 0 } }))
+    ).toThrow(/at least one positive stat bonus/);
+
+    expect(() =>
+      applyClassPromotion(
+        eligibleUnit(),
+        definition({ experiencePolicy: "unknown" as "preserve" })
+      )
+    ).toThrow(/experience/);
+  });
+});
