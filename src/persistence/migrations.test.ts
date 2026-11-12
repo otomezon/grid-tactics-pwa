@@ -19,22 +19,33 @@ describe("migrateGameStateSnapshot", () => {
     const {
       reserveUnits: _reserveUnits,
       campaignUnitBattleRecords: _campaignUnitBattleRecords,
+      firedMapEventIds: _firedMapEventIds,
       saveVersion: _saveVersion,
       ...legacy
     } = INITIAL_GAME_STATE;
     return { ...legacy, saveVersion: 2 };
   }
   function createVersionThreeSnapshot() {
-    const { campaignUnitBattleRecords: _records, saveVersion: _saveVersion, ...legacy } = INITIAL_GAME_STATE;
+    const {
+      campaignUnitBattleRecords: _records,
+      firedMapEventIds: _firedMapEventIds,
+      saveVersion: _saveVersion,
+      ...legacy
+    } = INITIAL_GAME_STATE;
     return { ...legacy, saveVersion: 3 };
+  }
+  function createVersionFourSnapshot() {
+    const { firedMapEventIds: _firedMapEventIds, saveVersion: _saveVersion, ...legacy } = INITIAL_GAME_STATE;
+    return { ...legacy, saveVersion: 4 };
   }
 
   it("migrates a version 1 save through v4 and maps prototype weapons", () => {
     const result = migrateGameStateSnapshot(createLegacySnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(4);
+    expect(result?.snapshot.saveVersion).toBe(5);
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
+    expect(result?.snapshot.firedMapEventIds).toEqual([]);
     expect(result?.snapshot.rngState).toBeGreaterThan(0);
     expect(result?.snapshot.units[0]?.inventory).toEqual(["iron_sword"]);
     expect(result?.snapshot.units[0]?.equippedWeaponId).toBe("iron_sword");
@@ -46,22 +57,31 @@ describe("migrateGameStateSnapshot", () => {
   it("adds empty reserve and campaign record lists when migrating a valid version 2 save", () => {
     const result = migrateGameStateSnapshot(createVersionTwoSnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(4);
+    expect(result?.snapshot.saveVersion).toBe(5);
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
+    expect(result?.snapshot.firedMapEventIds).toEqual([]);
     expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
   });
 
   it("adds an empty campaign record list when migrating a valid version 3 save", () => {
     const result = migrateGameStateSnapshot(createVersionThreeSnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(4);
+    expect(result?.snapshot.saveVersion).toBe(5);
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
   });
 
-  it("does not rewrite a valid version 4 save", () => {
+  it("adds an empty fired-event list when migrating a valid version 4 save", () => {
+    const result = migrateGameStateSnapshot(createVersionFourSnapshot(), CHAPTER_01_MAP);
+    expect(result?.migrated).toBe(true);
+    expect(result?.snapshot.saveVersion).toBe(5);
+    expect(result?.snapshot.campaignUnitBattleRecords).toEqual(INITIAL_GAME_STATE.campaignUnitBattleRecords);
+    expect(result?.snapshot.firedMapEventIds).toEqual([]);
+  });
+
+  it("does not rewrite a valid version 5 save", () => {
     expect(migrateGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP))
       .toEqual({ snapshot: INITIAL_GAME_STATE, migrated: false });
   });
@@ -73,7 +93,7 @@ describe("migrateGameStateSnapshot", () => {
     legacy.turn = 4;
     legacy.phase = "enemy";
     const result = migrateGameStateSnapshot(legacy, CHAPTER_01_MAP);
-    expect(result?.snapshot.turn).toBe(4);
+    expect(result?.snapshot.turn).toBe(5);
     expect(result?.snapshot.phase).toBe("enemy");
     expect(result?.snapshot.units[0]).toMatchObject({ currentHp: 7, position: { x: 2, y: 7 } });
   });
