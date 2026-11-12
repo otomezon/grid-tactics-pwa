@@ -51,3 +51,6 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 
 
 2026-11-12更新: PR #79をmainへマージし、固定seed合成fixtureを追加。CP-01／02／03／06／15もIssue #26で採択。開発専用の昇格試験室は `npm run dev` 起動後に `/?promotion-lab=1` で開く。stat preview用の合成fixtureであり、実プレイバランス試験を代替しない。Playwright E2Eは本番Previewに加え、開発サーバー上の試験室も検証する。
+
+
+2026-11-12更新: PR #80をmainへマージ（merge commit `b3c58fd3e919370d65630186962b0be463474964`）。main CI run #1010はtypecheck／unit tests／production build／Chromium E2Eを含め成功。合成fixture用の `/?promotion-lab=1` に加え、実セーブJSONをローカルメモリで検証する `/?promotion-snapshots=1` をPR #81で追加予定。後者はsaveVersion 3のJSONだけを受け取り、本編保存や外部送信を行わない。
