@@ -1928,3 +1928,59 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .unit-growth-grid { gap: 6px; }
   .unit-growth-row { padding: 6px; }
 }
+
+
+/* Per-ally combat contribution cards in the transient battle result screen. */
+.battle-contribution-panel { min-width: 0; }
+.battle-contribution-heading,
+.battle-contribution-unit-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+}
+.battle-contribution-heading > span,
+.battle-contribution-unit-heading > span {
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.battle-contribution-list { display: grid; gap: 9px; }
+.battle-contribution-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(120, 151, 170, .26);
+  border-radius: 9px;
+  background: rgba(18, 31, 43, .48);
+}
+.battle-contribution-unit-heading strong { color: #edf3f7; font-size: .82rem; }
+.battle-contribution-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+.battle-contribution-stats > div {
+  min-width: 0;
+  padding: 7px;
+  border-radius: 7px;
+  background: rgba(28, 44, 58, .52);
+}
+.battle-contribution-stats dt { color: var(--text-muted); font-size: .64rem; line-height: 1.35; }
+.battle-contribution-stats dd {
+  margin: 3px 0 0;
+  color: #d8eee6;
+  font-size: .78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.battle-contribution-gains { margin: 0; color: #bde4dc; font-size: .7rem; font-weight: 750; }
+.battle-contribution-note { line-height: 1.5; }
+@media (max-width: 420px) {
+  .battle-contribution-card { padding: 9px; }
+  .battle-contribution-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+}

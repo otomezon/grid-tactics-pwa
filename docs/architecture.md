@@ -135,3 +135,8 @@ src/components/campaign-title-screen.tsx は新規開始／続きからとロー
 ## 第3章コンテンツ登録
 
 src/content/maps/chapter-03.ts は既存の第1章ユニット定義を再利用し、章3固有のterrain／deploymentと初期RNG stateを定義する。src/content/chapters.ts が第1〜第3章を順序付きで登録し、getNextChapterを通じて遷移させる。第3章も isPrototype: true であり、新規キャスト・最終シナリオ・章報酬を追加したわけではない。
+
+
+## ステージリザルトの一時戦闘貢献集計
+
+`src/application/get-battle-contribution-details.ts` は画面セッション内の `PlayerAttackReport` だけを入力にし、攻撃開始者ごとに実strikeの命中／ミス／必殺／ダメージ、撃破、EXP、レベルアップを集計する。攻撃開始者IDと各strikeのactor IDを照合して敵の反撃を除外する。リザルトUIは `BattleContributionPanel` が読み取り専用で表示する。履歴がリロード／セーブ読込／章切替で消えた場合に結果を推測せず、「記録なし」と示す。戦闘履歴と集計はGameStateSnapshot／IndexedDB／saveVersion 3へ保存しない。

@@ -25,7 +25,13 @@ describe("player attack report projection", () => {
       defenderRemainingHp: execution.result.defenderHp,
       experienceAwarded: execution.experienceAwarded
     });
+    expect(report).toMatchObject({
+      attackerId: "unit_001",
+      defenderId: "enemy_001"
+    });
     expect(report.strikes).toHaveLength(execution.result.events.length);
+    expect(report.strikes[0]).toMatchObject({ actorId: "unit_001", targetId: "enemy_001" });
+    expect(report.strikes[1]).toMatchObject({ actorId: "enemy_001", targetId: "unit_001" });
     expect(report.strikes.map((strike) => strike.kind)).toEqual(
       execution.result.events.map((event) => event.kind)
     );
