@@ -122,5 +122,6 @@ export const INITIAL_GAME_STATE: GameStateSnapshot = {
   rngState: 0x6d2b79f5,
   units: INITIAL_UNITS,
   reserveUnits: [],
-  campaignUnitBattleRecords: []
+  campaignUnitBattleRecords: [],
+  firedMapEventIds: []
 };
