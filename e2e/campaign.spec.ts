@@ -106,7 +106,7 @@ test.describe("campaign title and save hub", () => {
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     const saved = await readAutoSave(page) as { chapterId: string; turn: number; phase: string; saveVersion: number };
-    expect(saved.saveVersion).toBe(3);
+    expect(saved.saveVersion).toBe(4);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
@@ -2309,7 +2309,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 3,
+      saveVersion: 4,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2383,7 +2383,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 3,
+      saveVersion: 4,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1
