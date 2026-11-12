@@ -18,7 +18,16 @@ const STAT_KEYS = [
 ] as const;
 
 function makeCandidate(key: string, classId: string, stat: number) {
-  const stats = Object.fromEntries(STAT_KEYS.map((statKey) => [statKey, stat])) as UnitStats;
+  const stats: UnitStats = {
+    hp: stat,
+    strength: stat,
+    magic: stat,
+    skill: stat,
+    speed: stat,
+    luck: stat,
+    defense: stat,
+    resistance: stat
+  };
   return {
     key,
     unit: {

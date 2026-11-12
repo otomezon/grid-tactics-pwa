@@ -77,7 +77,11 @@ function getMatrixDataClassificationLabel(value: MatrixDataClassification): stri
 
 function escapeCsvField(value: string | number | null | undefined): string {
   const text = value === null || value === undefined ? "" : String(value);
-  const safe = /^[=+\\-@\\t\\r]/.test(text) ? "'" + text : text;
+  const first = text[0];
+  const safe = first === "=" || first === "+" || first === "-" ||
+    first === "@" || first === "\\t" || first === "\\r"
+    ? "'" + text
+    : text;
   return '"' + safe.replace(/"/g, '""') + '"';
 }
 
