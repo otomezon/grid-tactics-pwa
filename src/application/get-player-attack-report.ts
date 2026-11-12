@@ -9,6 +9,8 @@ const STRIKE_KIND_LABELS: Record<CombatStrikeKind, string> = {
 };
 
 export interface PlayerAttackStrikeReport {
+  actorId: string;
+  targetId: string;
   kind: CombatStrikeKind;
   kindLabel: string;
   actorName: string;
@@ -23,6 +25,8 @@ export interface PlayerAttackStrikeReport {
 }
 
 export interface PlayerAttackReport {
+  attackerId: string;
+  defenderId: string;
   attackerName: string;
   defenderName: string;
   defenderDefeated: boolean;
@@ -40,6 +44,8 @@ export function getPlayerAttackReport(execution: AttackExecution): PlayerAttackR
   ]);
 
   return {
+    attackerId: execution.plan.input.attacker.unit.id,
+    defenderId: execution.plan.input.defender.unit.id,
     attackerName: execution.plan.input.attacker.unit.name,
     defenderName: execution.plan.input.defender.unit.name,
     defenderDefeated: execution.result.defenderHp <= 0,
@@ -47,6 +53,8 @@ export function getPlayerAttackReport(execution: AttackExecution): PlayerAttackR
     experienceAwarded: execution.experienceAwarded,
     levelUps: execution.levelUps,
     strikes: execution.result.events.map((event) => ({
+      actorId: event.attackerId,
+      targetId: event.defenderId,
       kind: event.kind,
       kindLabel: STRIKE_KIND_LABELS[event.kind],
       actorName: namesById.get(event.attackerId) ?? event.attackerId,

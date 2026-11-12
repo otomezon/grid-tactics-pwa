@@ -36,6 +36,7 @@ import { getBattleResultDetails } from "./application/get-battle-result-details"
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
 import { getBattleObjectiveNavigationTargets } from "./application/get-battle-objective-navigation-targets";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
+import { getBattleContributionDetails } from "./application/get-battle-contribution-details";
 import type { PlayerAttackReport } from "./application/get-player-attack-report";
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
@@ -63,6 +64,7 @@ import {
 import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 import { OperationGuide } from "./components/operation-guide";
 import { CampaignTitleScreen } from "./components/campaign-title-screen";
+import { BattleContributionPanel } from "./components/battle-contribution-panel";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -620,6 +622,12 @@ function CampaignApp() {
       ? null
       : getBattleResultDetails(gameState, currentMap, activeChapter.initialState),
     [activeChapter.initialState, battleOutcome, currentMap, gameState]
+  );
+  const battleContributionDetails = useMemo(
+    () => getBattleContributionDetails(
+      battleHistory.flatMap((entry) => entry.kind === "player-attack" ? [entry.report] : [])
+    ),
+    [battleHistory]
   );
   const enemyPhaseForecast = useMemo(
     () => deploymentPending ? null : getEnemyPhaseForecast(gameState, currentMap),
@@ -2024,6 +2032,7 @@ function CampaignApp() {
             )}
             <p className="helper-text">撃破された味方の最終状態や撃破者別の戦闘記録は保存していないため、生存中の味方のみを表示しています。</p>
           </div>
+          <BattleContributionPanel contributions={battleContributionDetails} />
           <p className="helper-text">この画面は現在のステージ結果を表示します。経験値・能力値・撃破状態は自動保存済みのゲームデータに反映されています。</p>
         </section>
       )}

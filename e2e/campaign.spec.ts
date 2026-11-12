@@ -1204,13 +1204,18 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.getByTestId("result-player-unit_001")).toContainText("Lv.1");
     await expect(page.getByTestId("result-player-unit_001")).toContainText("EXP 0/100");
     await expect(page.getByTestId("result-player-unit_001")).toContainText("HP 20/20");
-    await expect(page.locator(".battle-outcome")).toContainText("撃破者別の戦闘記録は保存していない");
+    const contributionPanel = page.getByTestId("battle-contributions");
+    await expect(contributionPanel).toBeVisible();
+    await expect(contributionPanel).toContainText("集計できる味方の攻撃記録はありません");
+    await expect(contributionPanel).toContainText("リロード・セーブ読込・章切替後");
+
 
     await page.reload();
     await continueSavedCampaign(page);
     await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
     await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("撃破");
     await expect(page.locator(".result-player-row")).toHaveCount(4);
+    await expect(page.getByTestId("battle-contributions")).toContainText("集計できる味方の攻撃記録はありません");
   });
 
   test("allows promotion only before movement and consumes the unit action", async ({ page }) => {
