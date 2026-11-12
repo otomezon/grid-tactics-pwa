@@ -1337,7 +1337,26 @@ test.describe("browser campaign flow", () => {
     await expect(actions).toHaveCount(1);
     await expect(actions.first()).toContainText("最寄りの味方との距離 6→4");
     await expect(actions.first()).toContainText("同距離候補は地形評価で比較");
-    const forecastMessage = await actions.first().locator("p").textContent();
+    const movementDetails = actions.first().getByTestId("enemy-movement-evaluations");
+    await expect(movementDetails).toBeVisible();
+    await movementDetails.locator(":scope > summary").click();
+    const movementCandidates = movementDetails.getByTestId("enemy-movement-evaluation");
+    await expect(movementCandidates).not.toHaveCount(0);
+    const chosenPosition = await actions.first().getAttribute("data-destination-position");
+    expect(chosenPosition).not.toBeNull();
+    await expect(movementCandidates.first()).toHaveAttribute("data-position", chosenPosition!);
+    const forecastMovementScores = await movementCandidates.evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        position: node.getAttribute("data-position"),
+        score: Number(node.getAttribute("data-score"))
+      }))
+    );
+    for (let index = 1; index < forecastMovementScores.length; index += 1) {
+      expect(forecastMovementScores[index - 1]!.score)
+        .toBeGreaterThanOrEqual(forecastMovementScores[index]!.score);
+    }
+    await expect(movementCandidates.first()).toContainText("距離ペナルティ");
+    const forecastMessage = await actions.first().locator(":scope > p").textContent();
     expect(await readAutoSave(page)).toEqual(savedBeforeForecast);
 
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
@@ -1347,7 +1366,18 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
     const actualActions = page.getByTestId("battle-history").getByTestId("enemy-phase-action");
     await expect(actualActions).toHaveCount(1);
-    await expect(actualActions.first().locator("p")).toHaveText(forecastMessage ?? "");
+    await expect(actualActions.first().locator(":scope > p")).toHaveText(forecastMessage ?? "");
+    await expect(actualActions.first()).toHaveAttribute("data-destination-position", chosenPosition!);
+    const actualMovementDetails = actualActions.first().getByTestId("enemy-movement-evaluations");
+    await expect(actualMovementDetails).toBeVisible();
+    await actualMovementDetails.locator(":scope > summary").click();
+    const actualMovementScores = await actualMovementDetails.getByTestId("enemy-movement-evaluation").evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        position: node.getAttribute("data-position"),
+        score: Number(node.getAttribute("data-score"))
+      }))
+    );
+    expect(actualMovementScores).toEqual(forecastMovementScores);
   });
 
   test("forecasts each ally's surviving HP and matches the resolved enemy phase without saving the preview", async ({ page }) => {

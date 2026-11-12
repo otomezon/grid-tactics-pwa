@@ -8,6 +8,7 @@ import { PlayerInspector } from "./components/player-inspector";
 import { EnemyThreatInspector } from "./components/enemy-threat-inspector";
 import { EnemyPhaseForecastPanel } from "./components/enemy-phase-forecast";
 import { EnemyTargetEvaluations } from "./components/enemy-target-evaluations";
+import { EnemyMovementEvaluations } from "./components/enemy-movement-evaluations";
 import { PlayerPhaseEndReview } from "./components/player-phase-end-review";
 import { CombatForecastPanel } from "./components/combat-forecast";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
@@ -2457,7 +2458,8 @@ function CampaignApp() {
                       entry.actions.length > 0 ? (
                         <ol className="enemy-phase-action-list">
                           {entry.actions.map((action, index) => (
-                            <li className="enemy-phase-action" key={action.enemyId} data-testid="enemy-phase-action">
+                            <li className="enemy-phase-action" key={action.enemyId} data-testid="enemy-phase-action"
+                              data-destination-position={action.destination ? action.destination.x + "," + action.destination.y : undefined}>
                               <div className="enemy-phase-action-heading">
                                 <span className="enemy-phase-action-number">{index + 1}</span>
                                 <strong>{action.enemyName}</strong>
@@ -2465,6 +2467,7 @@ function CampaignApp() {
                               </div>
                               <p>{action.message}</p>
                               <EnemyTargetEvaluations evaluations={action.targetEvaluations} />
+                              <EnemyMovementEvaluations evaluations={action.movementEvaluations} />
                             </li>
                           ))}
                         </ol>

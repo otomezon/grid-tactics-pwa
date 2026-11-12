@@ -139,6 +139,19 @@ describe("enemy phase controller", () => {
       targetName: player.name
     });
     expect(result.actions[0]?.message).toContain("移動後に攻撃可能な位置を優先");
+    const movementCandidates = result.actions[0]?.movementEvaluations ?? [];
+    expect(movementCandidates.length).toBeGreaterThan(0);
+    expect(movementCandidates[0]?.position).toEqual(result.actions[0]?.destination);
+    expect(movementCandidates[0]?.scoreBreakdown.mode).toBe("attack-after-move");
+    expect(movementCandidates[0]?.scoreBreakdown.attackOpportunityBonus).toBe(100_000);
+    expect(movementCandidates[0]?.scoreBreakdown.totalScore).toBe(
+      100_000 +
+      movementCandidates[0]!.scoreBreakdown.attackTargetScore! * 10 +
+      movementCandidates[0]!.scoreBreakdown.terrainScore
+    );
+    expect(movementCandidates.every((candidate) =>
+      candidate.scoreBreakdown.totalScore <= movementCandidates[0]!.scoreBreakdown.totalScore
+    )).toBe(true);
     expect(result.nextState.phase).toBe("player");
     expect(result.nextState.turn).toBe(2);
     expect(result.nextState.units.find((unit) => unit.id === "unit_001")?.currentHp).toBeLessThan(20);
@@ -167,6 +180,50 @@ describe("enemy phase controller", () => {
     });
     expect(action?.message).toContain("最寄りの味方との距離 6→4");
     expect(action?.message).toContain("同距離候補は地形評価で比較");
+    const movementCandidates = action?.movementEvaluations ?? [];
+    expect(movementCandidates.length).toBeGreaterThan(0);
+    expect(movementCandidates[0]?.position).toEqual(action?.destination);
+    expect(movementCandidates[0]?.position).toEqual({ x: 1, y: 4 });
+    expect(movementCandidates.every(
+      (candidate) => candidate.scoreBreakdown.mode === "approach-player"
+    )).toBe(true);
+    for (const candidate of movementCandidates) {
+      const reason = candidate.movementReason;
+      expect(reason.kind).toBe("approach-player");
+      if (reason.kind !== "approach-player") continue;
+      expect(candidate.scoreBreakdown.nearestPlayerDistance).toBe(reason.nearestPlayerDistanceAfter);
+      expect(candidate.scoreBreakdown.distancePenalty).toBe(-reason.nearestPlayerDistanceAfter * 100);
+      expect(candidate.scoreBreakdown.totalScore).toBe(
+        candidate.scoreBreakdown.distancePenalty + candidate.scoreBreakdown.terrainScore
+      );
+    }
+    for (let index = 1; index < movementCandidates.length; index += 1) {
+      expect(movementCandidates[index - 1]!.scoreBreakdown.totalScore)
+        .toBeGreaterThanOrEqual(movementCandidates[index]!.scoreBreakdown.totalScore);
+    }
+  });
+
+  it("keeps Y-then-X ordering when reachable movement candidates have equal scores", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 0, y: 0 },
+      currentHp: 20
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 4, y: 4 },
+      move: 1
+    };
+
+    const result = runEnemyPhase(battleState([player, enemy]), openMap());
+    const candidates = result.actions[0]?.movementEvaluations ?? [];
+
+    expect(result.actions[0]?.kind).toBe("moved");
+    expect(candidates[0]?.scoreBreakdown.totalScore).toBe(candidates[1]?.scoreBreakdown.totalScore);
+    expect(candidates.slice(0, 2).map((candidate) => candidate.position)).toEqual([
+      { x: 4, y: 3 },
+      { x: 3, y: 4 }
+    ]);
   });
 
   it("uses lexical ID order for enemy actions", () => {
