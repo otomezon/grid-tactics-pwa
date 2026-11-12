@@ -142,6 +142,14 @@ CP-15（確定前UI）は次を必須表示する。
 
 CP-01〜03／06／15およびCP-07〜CP-14／CP-16は採択済み。CP-04／05の数値は、下記の統制プレイテストとレビューを終えるまで記入・実装しない。最初の証の章／イベント／受取人／数量も別途決定する。
 
+### 3.3 同条件の仮想戦闘比較（PR #82）
+
+開発専用の実セーブsnapshotベンチは、昇格前snapshotのcontrol枝と昇格command後のpromotion枝について、同じ登録済み章マップ・敵ユニット・位置・地形・装備武器・開始RNGを使った1回の戦闘サンプルを実行できる。実装は既存の `src/application/perform-attack.ts` を再利用し、既存forecastと `CombatResult.events`、戦闘後HP、EXP／レベルアップ、終了RNGを表示する。比較条件が一致しない枝や、武器射程内に生存敵がいないsnapshotは対象外とする。
+
+CP-12により昇格はその自軍フェイズの行動を消費する。したがって戦闘比較のpromotion枝は、昇格コマンドが返した `hasActed=true` のstateを保持したうえで、**比較専用の切り離したコピーだけ**次の自軍行動機会を模して `hasActed=false` に戻してから攻撃を実行する。これは昇格直後の同一ターンに攻撃できるという意味ではない。enemy phase、ターン経過、移動、敵AI、複数攻撃機会、複数seedの勝率／分布はシミュレートしない。
+
+この結果は現行戦闘ロジック上の単一seed比較サンプルであり、合成E2E fixtureは実プレイデータではない。全21ケースの実プレイ統制評価やCP-04／05の数値承認を代替せず、現行の昇格値・クラス上限・武器性能・戦闘距離の試作設定も正式化しない。両枝ともブラウザ内の開発用メモリコピーだけで処理し、import元snapshot、GameState、IndexedDB、RNG永続値は変更しない。
+
 ## 4. 保存データ互換性の方針
 
 現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存 `SAVE_VERSION: 3` を維持できる見込み。

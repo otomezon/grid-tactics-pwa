@@ -44,6 +44,43 @@ function makePromotionSnapshotFile() {
         position: { x: 1, y: 8 },
         hasMoved: false,
         hasActed: false
+      },
+      {
+        id: "enemy_001",
+        name: "比較用の敵01",
+        faction: "enemy",
+        classId: "fighter",
+        level: 1,
+        experience: 0,
+        stats: {
+          hp: 30,
+          strength: 6,
+          magic: 0,
+          skill: 7,
+          speed: 20,
+          luck: 20,
+          defense: 5,
+          resistance: 1
+        },
+        growthRates: {
+          hp: 80,
+          strength: 35,
+          magic: 5,
+          skill: 55,
+          speed: 60,
+          luck: 35,
+          defense: 25,
+          resistance: 15
+        },
+        currentHp: 30,
+        movementType: "infantry",
+        move: 5,
+        usableWeaponTypes: ["axe"],
+        inventory: ["iron_axe"],
+        equippedWeaponId: "iron_axe",
+        position: { x: 1, y: 7 },
+        hasMoved: false,
+        hasActed: false
       }
     ],
     reserveUnits: []
@@ -86,6 +123,17 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   await expect(hpCells.nth(2)).toHaveText("+2");
   await expect(hpCells.nth(3)).toHaveText("+2");
   await expect(hpCells.nth(4)).toHaveText("60");
+
+  const combat = bench.getByTestId("promotion-snapshot-combat");
+  await expect(combat.getByRole("heading", { name: "同条件の仮想戦闘比較" })).toBeVisible();
+  await expect(combat.getByLabel("比較対象の敵")).toHaveValue("enemy_001");
+  await expect(combat.getByTestId("promotion-snapshot-combat-rng")).toContainText("305419896");
+  const controlCombat = combat.getByTestId("promotion-snapshot-combat-control");
+  const promotionCombat = combat.getByTestId("promotion-snapshot-combat-promotion");
+  await expect(controlCombat).toContainText("命中 73%");
+  await expect(promotionCombat).toContainText("命中 75%");
+  await expect(controlCombat).toContainText("実行結果（このseedの1試行）");
+  await expect(promotionCombat).toContainText("実行結果（このseedの1試行）");
 
   const databases = await page.evaluate(async () => {
     if (typeof indexedDB.databases !== "function") return [];
