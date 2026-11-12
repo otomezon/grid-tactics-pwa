@@ -180,6 +180,7 @@ export function ClassPromotionSnapshotBench() {
   const [candidates, setCandidates] = useState<ImportedCandidate[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [selectedKey, setSelectedKey] = useState("");
+  const [selectedTargetId, setSelectedTargetId] = useState("");
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
