@@ -168,6 +168,7 @@ type DeploymentCandidate = Pick<
   | "classId"
   | "level"
   | "experience"
+  | "growthRates"
   | "stats"
   | "currentHp"
   | "movementType"
@@ -187,6 +188,7 @@ function toDeploymentCandidate(
     classId: unit.classId,
     level: unit.level,
     experience: unit.experience,
+    growthRates: unit.growthRates,
     stats: unit.stats,
     currentHp: unit.currentHp,
     movementType: unit.movementType,
