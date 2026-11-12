@@ -1286,7 +1286,24 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(contribution).toContainText("+30");
     await expect(contribution).toContainText("レベルアップ");
     await expect(contribution).toContainText("能力上昇：HP +1");
+    const career = page.getByTestId("campaign-unit-record-unit_001");
+    await expect(career).toBeVisible();
+    await expect(career).toContainText("攻撃行動");
+    await expect(career).toContainText("与ダメージ");
+    await expect(career).toContainText("撃破");
+    await expect(career).toContainText("レベルアップ");
+    await expect(career).toContainText("累計能力上昇：HP +1");
+    expect(await readAutoSave(page)).not.toBeNull();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+    await page.reload();
+    await continueSavedCampaign(page);
+    await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
+    await expect(page.getByTestId("battle-contributions")).toContainText("集計できる味方の攻撃記録はありません");
+    const restoredCareer = page.getByTestId("campaign-unit-record-unit_001");
+    await expect(restoredCareer).toBeVisible();
+    await expect(restoredCareer).toContainText("味方01");
+    await expect(restoredCareer).toContainText("累計能力上昇：HP +1");
   });
 
   test("shows the defeated enemy roster and surviving allies in battle results", async ({ page }) => {

@@ -3,6 +3,46 @@ import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../../content/maps/chapter-0
 import { isValidGameStateSnapshot } from "./validate-game-state";
 
 describe("isValidGameStateSnapshot", () => {
+  it("accepts valid campaign battle records and rejects malformed or duplicate entries", () => {
+    const record = {
+      unitId: "unit_001",
+      unitName: "味方01",
+      attacks: 2,
+      strikes: 3,
+      hits: 2,
+      misses: 1,
+      criticalHits: 1,
+      damageDealt: 14,
+      enemiesDefeated: 1,
+      experienceAwarded: 30,
+      levelUps: 1,
+      statGains: {
+        hp: 1, strength: 1, magic: 0, skill: 0,
+        speed: 0, luck: 0, defense: 0, resistance: 0
+      }
+    };
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignUnitBattleRecords: [record]
+    }, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignUnitBattleRecords: [record, record]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignUnitBattleRecords: [{ ...record, unitId: "" }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignUnitBattleRecords: [{ ...record, strikes: 4 }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignUnitBattleRecords: [{ ...record, statGains: { ...record.statGains, hp: -1 } }]
+    }, CHAPTER_01_MAP)).toBe(false);
+  });
+
   it("accepts the initial prototype state", () => {
     expect(isValidGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP)).toBe(true);
   });

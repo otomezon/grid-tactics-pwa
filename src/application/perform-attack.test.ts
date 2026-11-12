@@ -62,6 +62,16 @@ describe("combat application command", () => {
     expect(defender?.currentHp).toBe(execution.result.defenderHp);
     expect(execution.nextState.rngState).not.toBe(state.rngState);
     expect(execution.result.events.length).toBeGreaterThan(0);
+    expect(execution.nextState.campaignUnitBattleRecords).toHaveLength(1);
+    expect(execution.nextState.campaignUnitBattleRecords[0]).toMatchObject({
+      unitId: "unit_001",
+      attacks: 1,
+      strikes: 1,
+      hits: 1,
+      misses: 0,
+      damageDealt: execution.result.events[0]?.damage,
+      experienceAwarded: execution.experienceAwarded
+    });
   });
 
   it("removes defeated units from the map state", () => {
@@ -76,6 +86,10 @@ describe("combat application command", () => {
     const execution = performAttack(state, CHAPTER_01_MAP, "unit_001", "enemy_001");
     expect(execution.result.defenderHp).toBe(0);
     expect(execution.nextState.units.some((unit) => unit.id === "enemy_001")).toBe(false);
+    expect(execution.nextState.campaignUnitBattleRecords[0]).toMatchObject({
+      unitId: "unit_001",
+      enemiesDefeated: 1
+    });
   });
   it("awards 10 EXP for each damaging player strike", () => {
     const state = adjacentBattleState();
@@ -174,6 +188,7 @@ describe("combat application command", () => {
     const enemyAttack = performEnemyAttack(enemyState, CHAPTER_01_MAP, "enemy_001", "unit_001");
     expect(enemyAttack.experienceAwarded).toBe(0);
     expect(enemyAttack.nextState.units.find((unit) => unit.id === "enemy_001")?.experience).toBe(0);
+    expect(enemyAttack.nextState.campaignUnitBattleRecords).toEqual([]);
   });
 
 });

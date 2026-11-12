@@ -124,7 +124,11 @@ export function prepareNextChapter({
   const nextState: GameStateSnapshot = {
     ...nextChapterInitialState,
     units: [...playerUnits, ...enemyUnits],
-    reserveUnits
+    reserveUnits,
+    campaignUnitBattleRecords: previousState.campaignUnitBattleRecords.map((record) => ({
+      ...record,
+      statGains: { ...record.statGains }
+    }))
   };
   if (!isValidGameStateSnapshot(nextState, nextMap)) {
     throw new Error("The prepared next chapter state is invalid.");

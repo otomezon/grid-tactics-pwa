@@ -90,7 +90,22 @@ export interface GameMapDefinition {
   defeatCondition?: MapDefeatCondition;
 }
 
-export const SAVE_VERSION = 3 as const;
+export interface CampaignUnitBattleRecord {
+  unitId: string;
+  unitName: string;
+  attacks: number;
+  strikes: number;
+  hits: number;
+  misses: number;
+  criticalHits: number;
+  damageDealt: number;
+  enemiesDefeated: number;
+  experienceAwarded: number;
+  levelUps: number;
+  statGains: UnitStats;
+}
+
+export const SAVE_VERSION = 4 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
@@ -102,4 +117,6 @@ export interface GameStateSnapshot {
   units: GameUnit[];
   /** Living player units kept outside the current battle. */
   reserveUnits: CampaignUnit[];
+  /** Persistent per-ally combat totals for this campaign. */
+  campaignUnitBattleRecords: CampaignUnitBattleRecord[];
 }

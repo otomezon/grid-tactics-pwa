@@ -6,6 +6,7 @@ import { isValidGameMapDefinition } from "./validate-game-map";
 import {
   SAVE_VERSION,
   type CampaignUnit,
+  type CampaignUnitBattleRecord,
   type GameMapDefinition,
   type GameStateSnapshot,
   type GameUnit,
@@ -77,6 +78,30 @@ function hasValidCampaignUnitData(value: unknown): value is CampaignUnit {
     ))
   );
 }
+function isNonNegativeStatGains(value: unknown): value is UnitStats {
+  return isRecord(value) && STAT_KEYS.every((key) => isNonNegativeInteger(value[key]));
+}
+
+function isCampaignUnitBattleRecord(value: unknown): value is CampaignUnitBattleRecord {
+  if (!isRecord(value)) return false;
+  const numericKeys = [
+    "attacks", "strikes", "hits", "misses", "criticalHits",
+    "damageDealt", "enemiesDefeated", "experienceAwarded", "levelUps"
+  ] as const;
+  if (
+    !isNonEmptyString(value.unitId) ||
+    !isNonEmptyString(value.unitName) ||
+    !numericKeys.every((key) => isNonNegativeInteger(value[key])) ||
+    !isNonNegativeStatGains(value.statGains)
+  ) return false;
+
+  return value.attacks > 0 &&
+    value.strikes > 0 &&
+    value.strikes === value.hits + value.misses &&
+    value.criticalHits <= value.hits &&
+    value.enemiesDefeated <= value.attacks;
+}
+
 function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
   if (!isRecord(value)) return false;
   const fields = value;
@@ -108,6 +133,7 @@ export function isValidGameStateSnapshot(
     !isNonNegativeInteger(value.rngState) || value.rngState === 0 || value.rngState > 0xffffffff ||
     !Array.isArray(value.units) || value.units.length === 0 ||
     !Array.isArray(value.reserveUnits) ||
+    !Array.isArray(value.campaignUnitBattleRecords) ||
     map.terrain.length !== map.height || map.terrain.some((row) => row.length !== map.width)
   ) return false;
 

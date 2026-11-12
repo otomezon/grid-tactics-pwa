@@ -31,6 +31,20 @@ function clearedState(overrides: Partial<GameStateSnapshot> = {}): GameStateSnap
 describe("prepareNextChapter", () => {
   it("carries player progression and inventory into the next map deployment", () => {
     const previousState = clearedState({
+      campaignUnitBattleRecords: [{
+        unitId: "unit_001",
+        unitName: "味方01",
+        attacks: 3,
+        strikes: 5,
+        hits: 4,
+        misses: 1,
+        criticalHits: 1,
+        damageDealt: 31,
+        enemiesDefeated: 2,
+        experienceAwarded: 70,
+        levelUps: 1,
+        statGains: { hp: 1, strength: 1, magic: 0, skill: 0, speed: 0, luck: 0, defense: 0, resistance: 0 }
+      }],
       units: INITIAL_GAME_STATE.units
         .filter((unit) => unit.faction === "player")
         .map((unit) => unit.id === "unit_001"
@@ -66,6 +80,8 @@ describe("prepareNextChapter", () => {
     expect(carried.inventory).toContain("healing_potion");
     expect(carried.hasMoved).toBe(false);
     expect(carried.hasActed).toBe(false);
+    expect(result.campaignUnitBattleRecords).toEqual(previousState.campaignUnitBattleRecords);
+    expect(result.campaignUnitBattleRecords).not.toBe(previousState.campaignUnitBattleRecords);
     expect(isValidGameStateSnapshot(result, next.map)).toBe(true);
   });
 

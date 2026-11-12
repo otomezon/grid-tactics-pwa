@@ -28,5 +28,24 @@ describe("PlayerInspector", () => {
     expect(html).toContain("回復薬");
     expect(html).toContain("所持数：2個");
     expect(html).toContain("表示専用");
+    expect(html).toContain("キャンペーン累計戦績");
+    expect(html).toContain("まだキャンペーン内の攻撃記録はありません");
+  });
+
+  it("renders an existing campaign battle record for the selected ally", () => {
+    const ally = INITIAL_UNITS.find((unit) => unit.id === "unit_001");
+    if (!ally) throw new Error("The player inspector fixture is missing unit_001.");
+    const record = {
+      unitId: "unit_001",
+      unitName: "味方01",
+      attacks: 2, strikes: 3, hits: 2, misses: 1, criticalHits: 1,
+      damageDealt: 14, enemiesDefeated: 1, experienceAwarded: 30, levelUps: 1,
+      statGains: { hp: 1, strength: 1, magic: 0, skill: 0, speed: 0, luck: 0, defense: 0, resistance: 0 }
+    };
+    const details = getPlayerInspectionDetails(ally, record);
+    if (!details) throw new Error("The player inspector fixture was not projected.");
+    const html = renderToStaticMarkup(createElement(PlayerInspector, { details }));
+    expect(html).toContain("攻撃行動");
+    expect(html).toContain("累計能力上昇：HP +1 · 力 +1");
   });
 });

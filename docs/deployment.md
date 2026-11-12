@@ -116,3 +116,11 @@
 - 候補は既存の `getDeploymentCandidate` とマップの `playerDeployment` 登録を再利用する。新しいユニット候補や出撃人数条件は追加しない。
 - tests: `src/components/deployment-unit-comparison.test.tsx` と `e2e/campaign.spec.ts`。active／reserve候補の比較、同一候補の拒否、クリア、320pxの表内スクロール、確定前のセーブ不変を検証する。
 
+
+
+## 14. キャンペーン累計戦績の確認
+
+- 出撃候補の詳細カードは、各候補の `campaignUnitBattleRecords` を「キャンペーン累計戦績」として表示する。出撃予定／控え予定の両方から確認できる。
+- 戦闘中の味方インスペクターも、現在のGameStateSnapshotから同じ累計記録を表示する。閲覧操作は追加のGameState／保存変更を行わない。
+- 過去に攻撃していない味方は「まだキャンペーン内の攻撃記録はありません」と表示する。
+- 戦闘後のリザルトでは、現ステージの一時貢献表示に加えてキャンペーン累計一覧を表示する。前者はセッション履歴、後者はsaveVersion 4の保存記録である。
