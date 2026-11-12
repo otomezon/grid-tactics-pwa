@@ -39,22 +39,23 @@ function matchesTrigger(
   }
 }
 
-/** Resolves map-local one-shot events in their authored order without mutating the input snapshot. */
+/** Resolves one or more map-local triggers in content order without mutating the input snapshot. */
 export function resolveMapEvents(
   state: GameStateSnapshot,
   map: GameMapDefinition,
-  trigger: MapEventTrigger
+  triggerOrTriggers: MapEventTrigger | MapEventTrigger[]
 ): MapEventExecution {
   if (state.chapterId !== map.id) {
     throw new Error("Map events can only run for the snapshot's current chapter.");
   }
 
+  const triggers = Array.isArray(triggerOrTriggers) ? triggerOrTriggers : [triggerOrTriggers];
   const fired = new Set(state.firedMapEventIds);
   const newlyFiredIds: string[] = [];
   const messages: MapEventMessage[] = [];
 
   for (const event of map.events ?? []) {
-    if (fired.has(event.id) || !matchesTrigger(event, trigger)) continue;
+    if (fired.has(event.id) || !triggers.some((trigger) => matchesTrigger(event, trigger))) continue;
     newlyFiredIds.push(event.id);
     fired.add(event.id);
     if (event.action.type === "show-message") {
