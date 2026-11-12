@@ -106,7 +106,7 @@ test.describe("campaign title and save hub", () => {
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     const saved = await readAutoSave(page) as { chapterId: string; turn: number; phase: string; saveVersion: number };
-    expect(saved.saveVersion).toBe(4);
+    expect(saved.saveVersion).toBe(5);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
