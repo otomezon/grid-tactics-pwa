@@ -56,6 +56,7 @@ import {
 } from "./persistence/save-repository";
 import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 import { OperationGuide } from "./components/operation-guide";
+import { ClassPromotionLab } from "./components/class-promotion-lab";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -332,7 +333,7 @@ function scrollMapTileIntoView(position: Position): void {
   });
 }
 
-export default function App() {
+function CampaignApp() {
   const [activeChapter, setActiveChapter] = useState(INITIAL_CHAPTER);
   const [gameState, setGameState] = useState<GameStateSnapshot>(INITIAL_CHAPTER.initialState);
   const currentMap = activeChapter.map;
@@ -2260,7 +2261,7 @@ export default function App() {
                                 <h4 id="promotion-stat-preview-heading">能力値の変化（仮上限適用後）</h4>
                                 <table className="promotion-stat-table" aria-label="昇格後の能力値プレビュー">
                                   <thead>
-                                    <tr><th scope="col">能力</th><th scope="col">現在</th><th scope="col">昇格後</th><th scope="col">実増加 / 仮上限</th></tr>
+                                    <tr><th scope="col">能力</th><th scope="col">現在</th><th scope="col">昇格後</th><th scope="col">要求 / 実増加 / 仮上限</th></tr>
                                   </thead>
                                   <tbody>
                                     {promotionStatPreview.changes.map((change) => {
@@ -2271,7 +2272,7 @@ export default function App() {
                                           <td>{change.currentValue}</td>
                                           <td>{change.nextValue}</td>
                                           <td>
-                                            +{change.appliedBonus} / {change.cap}
+                                            要求 +{change.requestedBonus} / 実 +{change.appliedBonus} / 上限 {change.cap}
                                             {change.currentValueExceedsCap && <small>既存値を維持</small>}
                                           </td>
                                         </tr>
@@ -2540,4 +2541,12 @@ export default function App() {
       </footer>
     </main>
   );
+}
+
+/** Development-only isolated promotion preview; never mount campaign persistence on this route. */
+export default function App() {
+  const isPromotionLabRoute = import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).get("promotion-lab") === "1";
+
+  return isPromotionLabRoute ? <ClassPromotionLab /> : <CampaignApp />;
 }
