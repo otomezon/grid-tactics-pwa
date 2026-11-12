@@ -40,7 +40,16 @@ export const CHAPTER_01_MAP: GameMapDefinition = {
     { unitId: "enemy_004", x: 2, y: 4 },
     { unitId: "enemy_005", x: 8, y: 4 }
   ],
-  objective: { type: "defeat_all" }
+  objective: { type: "defeat_all" },
+  events: [{
+    id: "chapter-01-opening-briefing",
+    trigger: { type: "stage-start" },
+    action: {
+      type: "show-message",
+      speaker: "作戦メモ",
+      text: "敵軍を全滅させると勝利です。移動可能範囲と戦闘予測を確認しながら進みましょう。"
+    }
+  }]
 };
 
 const baseStats: UnitStats = {
