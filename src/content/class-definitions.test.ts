@@ -91,6 +91,28 @@ describe("typed class definition registry", () => {
     expect(secondPromotion.statCaps.hp).toBe(60);
   });
 
+  it("keeps exported class compatibility projections deeply immutable", () => {
+    for (const definition of Object.values(CLASS_PROMOTION_DEFINITIONS)) {
+      expect(Object.isFrozen(definition)).toBe(true);
+      expect(Object.isFrozen(definition.statBonuses)).toBe(true);
+      expect(Object.isFrozen(definition.statCaps)).toBe(true);
+    }
+
+    for (const caps of Object.values(PROTOTYPE_CLASS_STAT_CAPS)) {
+      expect(Object.isFrozen(caps)).toBe(true);
+    }
+
+    const promotion = CLASS_PROMOTION_DEFINITIONS.swordsman;
+    expect(Reflect.set(promotion.statBonuses, "hp", 99)).toBe(false);
+    expect(Reflect.set(promotion.statCaps, "hp", 1)).toBe(false);
+    expect(promotion.statBonuses.hp).toBe(2);
+    expect(promotion.statCaps.hp).toBe(60);
+
+    const caps = PROTOTYPE_CLASS_STAT_CAPS.swordsman;
+    expect(Reflect.set(caps, "hp", 1)).toBe(false);
+    expect(caps.hp).toBe(60);
+  });
+
   it("rejects unknown class IDs and labels registered class tiers", () => {
     expect(isRegisteredClassId("swordsman")).toBe(true);
     expect(isRegisteredClassId("swordmaster")).toBe(true);
