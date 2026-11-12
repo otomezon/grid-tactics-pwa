@@ -38,6 +38,23 @@ export interface EnemyTargetEvaluation {
   scoreBreakdown: EnemyTargetScoreBreakdown;
 }
 
+export interface EnemyMovementScoreBreakdown {
+  mode: "attack-after-move" | "approach-player";
+  attackOpportunityBonus: number;
+  attackTargetScore?: number;
+  attackTargetContribution: number;
+  nearestPlayerDistance?: number;
+  distancePenalty: number;
+  terrainScore: number;
+  totalScore: number;
+}
+
+export interface EnemyMovementEvaluation {
+  position: Position;
+  movementReason: EnemyMovementReason;
+  scoreBreakdown: EnemyMovementScoreBreakdown;
+}
+
 export interface EnemyActionLog {
   enemyId: string;
   enemyName: string;
@@ -49,6 +66,7 @@ export interface EnemyActionLog {
   targetRolePriorityBonus?: number;
   targetEvaluations?: readonly EnemyTargetEvaluation[];
   movementReason?: EnemyMovementReason;
+  movementEvaluations?: readonly EnemyMovementEvaluation[];
   message: string;
 }
 
@@ -78,6 +96,7 @@ interface TileCandidate {
   score: number;
   attack?: AttackCandidate;
   movementReason: EnemyMovementReason;
+  scoreBreakdown: EnemyMovementScoreBreakdown;
 }
 
 const KILL_BONUS = 1000;
@@ -131,6 +150,14 @@ function getAttackCandidates(
     }
   }
   return candidates.sort(compareAttackCandidates);
+}
+
+function toMovementEvaluations(candidates: readonly TileCandidate[]): EnemyMovementEvaluation[] {
+  return candidates.map((candidate) => ({
+    position: candidate.position,
+    movementReason: candidate.movementReason,
+    scoreBreakdown: candidate.scoreBreakdown
+  }));
 }
 
 function scoreAttack(enemy: GameUnit, target: GameUnit, plan: AttackPlan, rolePriorityBonus: number): EnemyTargetScoreBreakdown {
@@ -235,26 +262,49 @@ function createTileCandidates(
     const attack = getAttackCandidates(movedState, map, enemy.id)[0];
     const terrainScore = getTerrainScore(map, tile);
     if (attack) {
+      const attackOpportunityBonus = 100_000;
+      const attackTargetContribution = attack.score * 10;
+      const totalScore = attackOpportunityBonus + attackTargetContribution + terrainScore;
       return {
         position: { x: tile.x, y: tile.y },
         attack,
-        score: 100_000 + attack.score * 10 + terrainScore,
+        score: totalScore,
         movementReason: {
           kind: "attack-after-move",
           targetId: attack.target.id,
           targetName: attack.target.name
+        },
+        scoreBreakdown: {
+          mode: "attack-after-move",
+          attackOpportunityBonus,
+          attackTargetScore: attack.score,
+          attackTargetContribution,
+          distancePenalty: 0,
+          terrainScore,
+          totalScore
         }
       };
     }
 
     const nearestDistance = getNearestPlayerDistance(state, tile);
+    const distancePenalty = -nearestDistance * 100;
+    const totalScore = distancePenalty + terrainScore;
     return {
       position: { x: tile.x, y: tile.y },
-      score: -nearestDistance * 100 + terrainScore,
+      score: totalScore,
       movementReason: {
         kind: "approach-player",
         nearestPlayerDistanceBefore,
         nearestPlayerDistanceAfter: nearestDistance
+      },
+      scoreBreakdown: {
+        mode: "approach-player",
+        attackOpportunityBonus: 0,
+        attackTargetContribution: 0,
+        nearestPlayerDistance: nearestDistance,
+        distancePenalty,
+        terrainScore,
+        totalScore
       }
     };
   });
@@ -312,7 +362,9 @@ function executeEnemyAction(
   }
 
   if (!currentEnemy.hasMoved) {
-    const destination = createTileCandidates(state, map, currentEnemy)[0];
+    const movementCandidates = createTileCandidates(state, map, currentEnemy);
+    const movementEvaluations = toMovementEvaluations(movementCandidates);
+    const destination = movementCandidates[0];
     if (destination) {
       const movedState: GameStateSnapshot = {
         ...state,
@@ -341,6 +393,7 @@ function executeEnemyAction(
             targetName: postMoveAttack.target.name,
             destination: destination.position,
             movementReason: destination.movementReason,
+            movementEvaluations,
             ...(postMoveAttack.targetRoles.length > 0 ? {
               targetRoles: postMoveAttack.targetRoles,
               targetRolePriorityBonus: postMoveAttack.targetRolePriorityBonus
@@ -364,6 +417,7 @@ function executeEnemyAction(
           kind: "moved",
           destination: destination.position,
           movementReason: destination.movementReason,
+          movementEvaluations,
           message: `${currentEnemy.name}は${positionText(destination.position)}へ移動${formatMovementReason(destination.movementReason)}`
         }
       };

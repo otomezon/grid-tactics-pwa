@@ -835,11 +835,22 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .enemy-target-evaluation-factors { display:grid; gap:3px; margin:6px 0 0; padding-left:17px; color:var(--text-muted); font-size:.68rem; line-height:1.45; }
 .enemy-target-evaluation-factors .enemy-target-evaluation-total { color:#e3ecf0; font-weight:800; }
 .enemy-target-evaluations > .helper-text { margin:6px 0 0; font-size:.65rem; }
+.enemy-movement-evaluations { margin:8px 0 0 29px; min-width:0; }
+.enemy-movement-evaluations > summary { color:#b8d7d9; font-size:.72rem; cursor:pointer; }
+.enemy-movement-evaluation-list { display:grid; gap:7px; margin:8px 0 0; padding:0; list-style:none; }
+.enemy-movement-evaluation { min-width:0; padding:8px 9px; border:1px solid var(--line); border-radius:8px; background:rgba(8,18,27,.38); }
+.enemy-movement-evaluation-heading { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:.72rem; }
+.enemy-movement-evaluation-heading > span { color:#9ebfc2; font-size:.65rem; font-weight:800; }
+.enemy-movement-evaluation-heading > strong { min-width:0; color:#edf3f7; }
+.enemy-movement-evaluation-heading > b { margin-left:auto; color:#e7d5a5; font-variant-numeric:tabular-nums; }
+.enemy-movement-evaluation-factors { display:grid; gap:3px; margin:6px 0 0; padding-left:17px; color:var(--text-muted); font-size:.68rem; line-height:1.45; }
+.enemy-movement-evaluation-factors .enemy-movement-evaluation-total { color:#e3ecf0; font-weight:800; }
+.enemy-movement-evaluations > .helper-text { margin:6px 0 0; font-size:.65rem; }
 .enemy-phase-report-note { margin-top:12px; }
 @media (max-width:380px) {
   .enemy-phase-action { padding:9px; }
-  .enemy-phase-action > p, .enemy-target-evaluations { margin-left:0; }
-  .enemy-target-evaluation { padding:7px; }
+  .enemy-phase-action > p, .enemy-target-evaluations, .enemy-movement-evaluations { margin-left:0; }
+  .enemy-target-evaluation, .enemy-movement-evaluation { padding:7px; }
 }
 .player-attack-report .enemy-phase-action > p { font-variant-numeric:tabular-nums; }
 
