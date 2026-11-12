@@ -1270,6 +1270,65 @@ test.describe("browser campaign flow", () => {
     await expect(page.getByTestId("battle-history")).toContainText("遠距離攻撃役を優先 +35点");
   });
 
+  test("explains enemy approach movement in forecast and actual history without saving the preview", async ({ page }) => {
+    await startBattle(page);
+    const saved = await readAutoSave(page) as {
+      units: Array<Record<string, unknown> & {
+        id: string;
+        faction: string;
+        position: { x: number; y: number };
+        move: number;
+        hasMoved: boolean;
+        hasActed: boolean;
+      }>;
+      [key: string]: unknown;
+    };
+    const playerPositions: Record<string, { x: number; y: number }> = {
+      unit_001: { x: 1, y: 8 },
+      unit_002: { x: 8, y: 8 },
+      unit_003: { x: 8, y: 9 },
+      unit_004: { x: 9, y: 9 }
+    };
+    const units = saved.units.map((unit) => {
+      if (unit.faction === "player") {
+        return { ...unit, position: playerPositions[unit.id] ?? unit.position };
+      }
+      if (unit.id === "enemy_001") {
+        return {
+          ...unit,
+          position: { x: 1, y: 2 },
+          move: 2,
+          hasMoved: false,
+          hasActed: false
+        };
+      }
+      if (unit.faction === "enemy") return { ...unit, hasMoved: true, hasActed: true };
+      return unit;
+    });
+    await writeAutoSave(page, { ...saved, units });
+    await page.reload();
+
+    const savedBeforeForecast = await readAutoSave(page);
+    const forecast = page.getByTestId("enemy-phase-forecast");
+    await expect(forecast).toBeVisible();
+    await forecast.locator("details > summary").click();
+    const actions = forecast.getByTestId("enemy-phase-forecast-action");
+    await expect(actions).toHaveCount(1);
+    await expect(actions.first()).toContainText("最寄りの味方との距離 6→4");
+    await expect(actions.first()).toContainText("同距離候補は地形評価で比較");
+    const forecastMessage = await actions.first().locator("p").textContent();
+    expect(await readAutoSave(page)).toEqual(savedBeforeForecast);
+
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    const review = page.getByTestId("phase-end-review");
+    await expect(review).toBeVisible();
+    await review.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
+    const actualActions = page.getByTestId("battle-history").getByTestId("enemy-phase-action");
+    await expect(actualActions).toHaveCount(1);
+    await expect(actualActions.first().locator("p")).toHaveText(forecastMessage ?? "");
+  });
+
   test("forecasts each ally's surviving HP and matches the resolved enemy phase without saving the preview", async ({ page }) => {
     await startBattle(page);
     const savedBeforePreview = await readAutoSave(page);

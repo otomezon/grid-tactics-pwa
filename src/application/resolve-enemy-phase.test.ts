@@ -133,9 +133,40 @@ describe("enemy phase controller", () => {
 
     expect(result.actions[0]?.kind).toBe("moved-and-attacked");
     expect(result.actions[0]?.destination).toEqual({ x: 1, y: 7 });
+    expect(result.actions[0]?.movementReason).toEqual({
+      kind: "attack-after-move",
+      targetId: player.id,
+      targetName: player.name
+    });
+    expect(result.actions[0]?.message).toContain("移動後に攻撃可能な位置を優先");
     expect(result.nextState.phase).toBe("player");
     expect(result.nextState.turn).toBe(2);
     expect(result.nextState.units.find((unit) => unit.id === "unit_001")?.currentHp).toBeLessThan(20);
+  });
+
+  it("explains the nearest-player distance used for approach movement", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 1, y: 8 },
+      currentHp: 20
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 1, y: 2 },
+      move: 2
+    };
+    const result = runEnemyPhase(battleState([player, enemy]), openMap());
+    const action = result.actions[0];
+
+    expect(action?.kind).toBe("moved");
+    expect(action?.destination).toEqual({ x: 1, y: 4 });
+    expect(action?.movementReason).toEqual({
+      kind: "approach-player",
+      nearestPlayerDistanceBefore: 6,
+      nearestPlayerDistanceAfter: 4
+    });
+    expect(action?.message).toContain("最寄りの味方との距離 6→4");
+    expect(action?.message).toContain("同距離候補は地形評価で比較");
   });
 
   it("uses lexical ID order for enemy actions", () => {
