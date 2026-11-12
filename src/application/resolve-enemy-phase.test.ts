@@ -286,6 +286,17 @@ describe("enemy phase controller", () => {
     expect(action?.targetRoles).toEqual(["ranged-attacker"]);
     expect(action?.targetRolePriorityBonus).toBe(35);
     expect(action?.message).toContain("遠距離攻撃役を優先 +35点");
+    expect(action?.targetEvaluations).toHaveLength(2);
+    expect(action?.targetEvaluations?.[0]?.targetId).toBe("unit_002");
+    expect(action?.targetEvaluations?.[0]?.scoreBreakdown.rolePriorityBonus).toBe(35);
+    expect(action?.targetEvaluations?.[1]?.targetId).toBe("unit_001");
+    expect(action?.targetEvaluations?.[1]?.scoreBreakdown.rolePriorityBonus).toBe(0);
+    const selected = action?.targetEvaluations?.[0]?.scoreBreakdown;
+    const alternative = action?.targetEvaluations?.[1]?.scoreBreakdown;
+    expect(selected?.totalScore).toBe(alternative!.totalScore + 35);
+    expect(selected?.totalScore).toBe(selected!.killBonus + selected!.triangleBonus +
+      selected!.lowHpBonus + selected!.expectedDamageBonus - selected!.counterDamagePenalty -
+      selected!.counterLethalPenalty + selected!.rolePriorityBonus);
   });
 
   it("keeps lexical target tie-breaking for classes without a tactical role", () => {
@@ -314,6 +325,10 @@ describe("enemy phase controller", () => {
     expect(result.actions[0]?.targetId).toBe("unit_001");
     expect(result.actions[0]?.targetRoles).toBeUndefined();
     expect(result.actions[0]?.targetRolePriorityBonus).toBeUndefined();
+    expect(result.actions[0]?.targetEvaluations?.map((candidate) => candidate.targetId)).toEqual(["unit_001", "unit_002"]);
+    expect(result.actions[0]?.targetEvaluations?.every(
+      (candidate) => candidate.scoreBreakdown.rolePriorityBonus === 0
+    )).toBe(true);
   });
 
 });

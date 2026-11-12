@@ -1,5 +1,6 @@
 import type { EnemyPhaseForecast } from "../application/get-enemy-phase-forecast";
 import type { EnemyActionKind } from "../application/resolve-enemy-phase";
+import { EnemyTargetEvaluations } from "./enemy-target-evaluations";
 
 const ACTION_KIND_LABELS: Record<EnemyActionKind, string> = {
   attacked: "攻撃",
@@ -66,6 +67,7 @@ export function EnemyPhaseForecastPanel({ forecast }: { forecast: EnemyPhaseFore
                   <span className="enemy-phase-action-kind">{ACTION_KIND_LABELS[action.kind]}</span>
                 </div>
                 <p>{action.message}</p>
+                <EnemyTargetEvaluations evaluations={action.targetEvaluations} />
               </li>
             ))}
           </ol>

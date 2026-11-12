@@ -824,8 +824,23 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .enemy-phase-action-number { display:inline-grid; width:21px; height:21px; flex:0 0 21px; place-items:center; border:1px solid var(--line); border-radius:50%; color:var(--text-muted); font-size:.68rem; font-variant-numeric:tabular-nums; }
 .enemy-phase-action-kind { margin-left:auto; padding:3px 7px; border:1px solid rgba(132,151,166,.45); border-radius:999px; color:#cbd8df; font-size:.68rem; font-weight:700; white-space:nowrap; }
 .enemy-phase-action > p { margin:7px 0 0 29px; color:var(--text-muted); font-size:.78rem; line-height:1.55; overflow-wrap:anywhere; }
+.enemy-target-evaluations { margin:8px 0 0 29px; min-width:0; }
+.enemy-target-evaluations > summary { color:#b8d7d9; font-size:.72rem; cursor:pointer; }
+.enemy-target-evaluation-list { display:grid; gap:7px; margin:8px 0 0; padding:0; list-style:none; }
+.enemy-target-evaluation { min-width:0; padding:8px 9px; border:1px solid var(--line); border-radius:8px; background:rgba(8,18,27,.38); }
+.enemy-target-evaluation-heading { display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:.72rem; }
+.enemy-target-evaluation-heading > span { color:#9ebfc2; font-size:.65rem; font-weight:800; }
+.enemy-target-evaluation-heading > strong { min-width:0; color:#edf3f7; overflow-wrap:anywhere; }
+.enemy-target-evaluation-heading > b { margin-left:auto; color:#e7d5a5; font-variant-numeric:tabular-nums; }
+.enemy-target-evaluation-factors { display:grid; gap:3px; margin:6px 0 0; padding-left:17px; color:var(--text-muted); font-size:.68rem; line-height:1.45; }
+.enemy-target-evaluation-factors .enemy-target-evaluation-total { color:#e3ecf0; font-weight:800; }
+.enemy-target-evaluations > .helper-text { margin:6px 0 0; font-size:.65rem; }
 .enemy-phase-report-note { margin-top:12px; }
-@media (max-width:380px) { .enemy-phase-action { padding:9px; } .enemy-phase-action > p { margin-left:0; } }
+@media (max-width:380px) {
+  .enemy-phase-action { padding:9px; }
+  .enemy-phase-action > p, .enemy-target-evaluations { margin-left:0; }
+  .enemy-target-evaluation { padding:7px; }
+}
 .player-attack-report .enemy-phase-action > p { font-variant-numeric:tabular-nums; }
 
 
