@@ -1472,7 +1472,16 @@ function CampaignApp() {
         gameState, currentMap, assignments, deploymentSelectedUnitIds
       );
       const stageStartExecution = resolveMapEvents(nextState, currentMap, { type: "stage-start" });
-      const stateToSave = stageStartExecution.nextState;
+      const turnStartExecution = resolveMapEvents(stageStartExecution.nextState, currentMap, {
+        type: "turn-start",
+        turn: stageStartExecution.nextState.turn,
+        phase: stageStartExecution.nextState.phase
+      });
+      const stateToSave = turnStartExecution.nextState;
+      const mapEventMessages = [
+        ...stageStartExecution.messages,
+        ...turnStartExecution.messages
+      ];
 
       setGameState(stateToSave);
       setSelectedUnitId(null);
@@ -1484,7 +1493,7 @@ function CampaignApp() {
         await saveGameState(stateToSave);
         setSaveStatus("saved");
         setHasSavedCampaign(true);
-        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。" + formatMapEventMessages(stageStartExecution.messages));
+        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。" + formatMapEventMessages(mapEventMessages));
       } catch {
         setSaveStatus("failed");
         setMessage("出撃配置は確定しましたが、自動保存に失敗しました。次の行動時に再保存します。");
