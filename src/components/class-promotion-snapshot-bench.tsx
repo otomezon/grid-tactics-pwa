@@ -562,7 +562,7 @@ export function ClassPromotionSnapshotBench() {
                         </label>
                       </div>
                       <p className="helper-text">
-                        {combatSamples.sampleCount}試行。seed系列はsnapshotの開始RNGから固定saltで分離して生成し、各番号を両枝へペアで適用します。seed範囲: {combatSamples.firstSeed} ～ {combatSamples.lastSeed}。
+                        {combatSamples.sampleCount}試行。seed系列はsnapshotの開始RNGから固定saltで分離して生成し、各番号を両枝へペアで適用します。seed系列の先頭／末尾: {combatSamples.firstSeed} ／ {combatSamples.lastSeed}。
                       </p>
                       <p className="helper-text">
                         各試行は元snapshotへ戻した独立の1戦闘です。HP・敵HP・EXP・撃破状態を次の試行へ引き継ぎません。結果はこの仮想戦闘条件での試行集計であり、複数ターンの攻略率・キャンペーン勝率ではありません。

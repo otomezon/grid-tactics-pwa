@@ -127,12 +127,12 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - CP-04／05の正式な能力上限・昇格ボーナス数値、クラス別移動／武器データ、および初回の証の章／イベント／受取人／数量は引き続き未決定。実プレイバランス試験は未実施。
 
 
-### 実セーブsnapshot比較ベンチ（PR #81対象）
+### 実セーブsnapshot比較ベンチ（PR #81〜#83）
 
 - 開発route /?promotion-snapshots=1 で、portable save JSON（envelope v1／GameState saveVersion 3）をメモリ上へ複数読み込み、既存validatorで章・マップ・ユニットを検証する。
 - 現行7基本職のLv.10以上の出撃味方を候補とし、同クラス内の8能力percentileの平均を参考値として表示。3 snapshot未満は分布不足と扱い、low／median／highは自動で決めない。
 - 元snapshotと、試験用promotion tokenをコピーにだけ用いた昇格command結果を比較する。IndexedDB／GameState／RNG／自動保存への書込み・外部送信なし。
-- このベンチは実セーブの能力分布と昇格直後のcommand差分を調べるもの。戦闘を実行しないため、統制21ケースの実戦比較は未完了。CP-04／05の数値承認も未実施。
+- PR #82で既存 `performAttack` を使う単一seedのcontrol／promotion戦闘比較を追加し、PR #83では20／100／250seedの独立単発戦闘集計を追加。seedはcontrol／promotionでペアにし、各試行は元snapshotへ戻して実行する。HP／敵HP／EXP／撃破状態は試行間で持ち越さない。結果は攻撃命中率・命中時必殺率・平均与ダメージ・対象撃破率・反撃被ダメージ・生存率等を表示するが、敵軍フェイズ・移動・複数ターンの攻略を含まない。統制21ケースの実プレイ比較は未完了で、CP-04／05の数値承認も未実施。
 
 
 ### 複数seedの昇格戦闘サンプル（PR #83対象）
