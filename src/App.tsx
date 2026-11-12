@@ -44,6 +44,8 @@ import type { PlayerAttackReport } from "./application/get-player-attack-report"
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import type { EnemyActionLog } from "./application/resolve-enemy-phase";
+import { resolveMapEvents, type MapEventMessage } from "./application/resolve-map-events";
+import { resolveMapEventTransition } from "./application/resolve-map-event-transition";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateMovementPath, calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
@@ -268,6 +270,13 @@ function strikeKindLabel(kind: AttackPlan["forecast"]["strikes"][number]["kind"]
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "戦闘操作に失敗しました。";
+}
+
+function formatMapEventMessages(messages: readonly MapEventMessage[]): string {
+  if (messages.length === 0) return "";
+  return " " + messages.map((event) =>
+    event.speaker ? "【" + event.speaker + "】" + event.text : event.text
+  ).join(" ");
 }
 
 function formatFortRecoverySummary(recoveries: FortRecoveryRecord[]): string {
@@ -739,16 +748,20 @@ function CampaignApp() {
 
   async function persist(
     nextState: GameStateSnapshot,
-    successMessage = "行動をIndexedDBに自動保存しました。"
+    successMessage = "行動をIndexedDBに自動保存しました。",
+    previousState: GameStateSnapshot = gameState
   ): Promise<void> {
     touchMoveConfirmationPositionRef.current = null;
     setMovementPreviewPosition(null);
     setSaveStatus("saving");
 
     try {
-      await saveGameState(nextState);
+      const eventExecution = resolveMapEventTransition(previousState, nextState, currentMap);
+      const stateToSave = eventExecution.nextState;
+      setGameState(stateToSave);
+      await saveGameState(stateToSave);
       setSaveStatus("saved");
-      setMessage(successMessage);
+      setMessage(successMessage + formatMapEventMessages(eventExecution.messages));
     } catch {
       setSaveStatus("failed");
       setMessage("行動は画面に反映されましたが、セーブに失敗しました。ストレージ設定を確認してください。");
@@ -1451,18 +1464,29 @@ function CampaignApp() {
       const nextState = preparePlayerDeployment(
         gameState, currentMap, assignments, deploymentSelectedUnitIds
       );
+      const stageStartExecution = resolveMapEvents(nextState, currentMap, { type: "stage-start" });
+      const turnStartExecution = resolveMapEvents(stageStartExecution.nextState, currentMap, {
+        type: "turn-start",
+        turn: stageStartExecution.nextState.turn,
+        phase: stageStartExecution.nextState.phase
+      });
+      const stateToSave = turnStartExecution.nextState;
+      const mapEventMessages = [
+        ...stageStartExecution.messages,
+        ...turnStartExecution.messages
+      ];
 
-      setGameState(nextState);
+      setGameState(stateToSave);
       setSelectedUnitId(null);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
       setSaveStatus("saving");
 
       try {
-        await saveGameState(nextState);
+        await saveGameState(stateToSave);
         setSaveStatus("saved");
         setHasSavedCampaign(true);
-        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。");
+        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。" + formatMapEventMessages(mapEventMessages));
       } catch {
         setSaveStatus("failed");
         setMessage("出撃配置は確定しましたが、自動保存に失敗しました。次の行動時に再保存します。");
@@ -1499,7 +1523,11 @@ function CampaignApp() {
         { sequence: entries.length, turn: enemyPhaseState.turn, kind: "enemy-phase", actions: execution.actions }
       ]);
       setGameState(execution.nextState);
-      await persist(execution.nextState, formatEnemyPhaseSummary(execution, currentMap));
+      await persist(
+        execution.nextState,
+        formatEnemyPhaseSummary(execution, currentMap),
+        enemyPhaseState
+      );
     } catch (error) {
       setMessage(getErrorMessage(error));
     }
