@@ -114,11 +114,11 @@ function addBattleToMetrics(
         metrics.attackHits += 1;
         if (event.critical) metrics.criticalHits += 1;
       }
-      metrics.totalAttackDamage += event.damage;
+      metrics.totalAttackDamage += Math.max(0, event.defenderHpBefore - event.defenderHpAfter);
     } else if (event.attackerId === defenderId && event.defenderId === attackerId) {
       metrics.counterAttempts += 1;
       if (event.hit) metrics.counterHits += 1;
-      metrics.totalCounterDamage += event.damage;
+      metrics.totalCounterDamage += Math.max(0, event.defenderHpBefore - event.defenderHpAfter);
     }
   }
 

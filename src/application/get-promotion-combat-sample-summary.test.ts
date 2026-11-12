@@ -101,6 +101,10 @@ describe("promotion combat sample summary", () => {
     expect(summary.promotion.enemyDefeatRate).toBeLessThanOrEqual(100);
     expect(summary.control.attackerSurvivalRate).toBeGreaterThanOrEqual(0);
     expect(summary.control.attackerSurvivalRate).toBeLessThanOrEqual(100);
+    expect(summary.control.totalAttackDamage).toBeLessThanOrEqual(30 * 25);
+    expect(summary.promotion.totalAttackDamage).toBeLessThanOrEqual(30 * 25);
+    expect(summary.control.totalCounterDamage).toBeLessThanOrEqual(17 * 25);
+    expect(summary.promotion.totalCounterDamage).toBeLessThanOrEqual(17 * 25);
     expect(control).toEqual(original);
     expect(promotion.nextState.units.find((unit) => unit.id === "unit_001")?.hasActed).toBe(true);
   });
