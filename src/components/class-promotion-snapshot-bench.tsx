@@ -5,6 +5,7 @@ import { getChapterById } from "../content/chapters";
 import { performClassChange } from "../application/perform-class-change";
 import { createAttackPlan } from "../application/perform-attack";
 import { getPromotionCombatComparison } from "../application/get-promotion-combat-comparison";
+import { getPromotionCombatSampleSummary } from "../application/get-promotion-combat-sample-summary";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import type { GameStateSnapshot, GameUnit, UnitStats } from "../domain/models/game";
@@ -170,6 +171,10 @@ function getAttackableEnemyTargets(candidate: ImportedCandidate): GameUnit[] {
   });
 }
 
+function formatDelta(value: number, suffix: string): string {
+  return (value > 0 ? "+" : "") + value.toFixed(1) + suffix;
+}
+
 function getStrikeLabel(kind: "initial" | "counter" | "follow-up"): string {
   if (kind === "initial") return "先制攻撃";
   if (kind === "counter") return "反撃";
@@ -181,6 +186,7 @@ export function ClassPromotionSnapshotBench() {
   const [errors, setErrors] = useState<string[]>([]);
   const [selectedKey, setSelectedKey] = useState("");
   const [selectedTargetId, setSelectedTargetId] = useState("");
+  const [sampleCount, setSampleCount] = useState(100);
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
@@ -212,6 +218,17 @@ export function ClassPromotionSnapshotBench() {
       selectedTarget.id
     );
   }, [selectedCandidate, comparison, selectedTarget, selectedChapter]);
+  const combatSamples = useMemo(() => {
+    if (!selectedCandidate || !comparison || !selectedTarget || !selectedChapter) return null;
+    return getPromotionCombatSampleSummary(
+      selectedCandidate.snapshot,
+      comparison.promotionState,
+      selectedChapter.map,
+      selectedCandidate.unit.id,
+      selectedTarget.id,
+      sampleCount
+    );
+  }, [selectedCandidate, comparison, selectedTarget, selectedChapter, sampleCount]);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -523,6 +540,86 @@ export function ClassPromotionSnapshotBench() {
                       </div>
                     ))}
                   </div>
+
+                  {combatSamples && (
+                    <section className="promotion-snapshot-samples" data-testid="promotion-snapshot-combat-samples">
+                      <div className="promotion-lab-section-heading">
+                        <div>
+                          <p className="eyebrow">PAIRED DETERMINISTIC SAMPLES</p>
+                          <h3>複数seed試行（独立した1戦闘の反復）</h3>
+                        </div>
+                        <label className="promotion-snapshot-candidate-label">
+                          <span>乱数試行回数</span>
+                          <select
+                            aria-label="乱数試行回数"
+                            value={sampleCount}
+                            onChange={(event) => setSampleCount(Number(event.target.value))}
+                          >
+                            <option value={20}>20</option>
+                            <option value={100}>100</option>
+                            <option value={250}>250</option>
+                          </select>
+                        </label>
+                      </div>
+                      <p className="helper-text">
+                        {combatSamples.sampleCount}試行。seed系列はsnapshotの開始RNGから固定saltで分離して生成し、各番号を両枝へペアで適用します。seed系列の先頭／末尾: {combatSamples.firstSeed} ／ {combatSamples.lastSeed}。
+                      </p>
+                      <p className="helper-text">
+                        各試行は元snapshotへ戻した独立の1戦闘です。HP・敵HP・EXP・撃破状態を次の試行へ引き継ぎません。結果はこの仮想戦闘条件での試行集計であり、複数ターンの攻略率・キャンペーン勝率ではありません。
+                      </p>
+                      <div className="promotion-lab-table-wrap">
+                        <table className="promotion-lab-table" aria-label="昇格前後の複数seed戦闘集計">
+                          <thead>
+                            <tr><th>指標</th><th>control</th><th>promotion</th><th>差（昇格−非昇格）</th></tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <th scope="row">攻撃命中率</th>
+                              <td>{combatSamples.control.attackHitRate.toFixed(1)}%（{combatSamples.control.attackHits}/{combatSamples.control.attackAttempts}）</td>
+                              <td>{combatSamples.promotion.attackHitRate.toFixed(1)}%（{combatSamples.promotion.attackHits}/{combatSamples.promotion.attackAttempts}）</td>
+                              <td>{formatDelta(combatSamples.promotion.attackHitRate - combatSamples.control.attackHitRate, "pt")}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">命中時必殺率</th>
+                              <td>{combatSamples.control.criticalRateOnHit.toFixed(1)}%（{combatSamples.control.criticalHits}）</td>
+                              <td>{combatSamples.promotion.criticalRateOnHit.toFixed(1)}%（{combatSamples.promotion.criticalHits}）</td>
+                              <td>{formatDelta(combatSamples.promotion.criticalRateOnHit - combatSamples.control.criticalRateOnHit, "pt")}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">平均与ダメージ／戦闘</th>
+                              <td>{combatSamples.control.averageAttackDamagePerBattle.toFixed(1)}</td>
+                              <td>{combatSamples.promotion.averageAttackDamagePerBattle.toFixed(1)}</td>
+                              <td>{formatDelta(combatSamples.promotion.averageAttackDamagePerBattle - combatSamples.control.averageAttackDamagePerBattle, "")}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">この敵の撃破率</th>
+                              <td>{combatSamples.control.enemyDefeatRate.toFixed(1)}%（{combatSamples.control.enemyDefeats}/{combatSamples.sampleCount}）</td>
+                              <td>{combatSamples.promotion.enemyDefeatRate.toFixed(1)}%（{combatSamples.promotion.enemyDefeats}/{combatSamples.sampleCount}）</td>
+                              <td>{formatDelta(combatSamples.promotion.enemyDefeatRate - combatSamples.control.enemyDefeatRate, "pt")}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">平均反撃被ダメージ／戦闘</th>
+                              <td>{combatSamples.control.averageCounterDamagePerBattle.toFixed(1)}</td>
+                              <td>{combatSamples.promotion.averageCounterDamagePerBattle.toFixed(1)}</td>
+                              <td>{formatDelta(combatSamples.promotion.averageCounterDamagePerBattle - combatSamples.control.averageCounterDamagePerBattle, "")}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">反撃後の生存率</th>
+                              <td>{combatSamples.control.attackerSurvivalRate.toFixed(1)}%（{combatSamples.control.attackerSurvivals}/{combatSamples.sampleCount}）</td>
+                              <td>{combatSamples.promotion.attackerSurvivalRate.toFixed(1)}%（{combatSamples.promotion.attackerSurvivals}/{combatSamples.sampleCount}）</td>
+                              <td>{formatDelta(combatSamples.promotion.attackerSurvivalRate - combatSamples.control.attackerSurvivalRate, "pt")}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">平均戦闘後HP</th>
+                              <td>{combatSamples.control.averageAttackerHpRemaining.toFixed(1)}</td>
+                              <td>{combatSamples.promotion.averageAttackerHpRemaining.toFixed(1)}</td>
+                              <td>{formatDelta(combatSamples.promotion.averageAttackerHpRemaining - combatSamples.control.averageAttackerHpRemaining, "")}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  )}
                 </>
               )}
             </>
@@ -536,7 +633,7 @@ export function ClassPromotionSnapshotBench() {
         <ul>
           <li>実セーブのユニット能力値・HP／EXP・移動・武器適性・装備を、読み込んだ時点のsnapshotとして表示します。</li>
           <li>7経路のうち対象の1ユニットについて、既存application/domain commandを切り離したコピーへ実行し、レベル／EXP／能力値／HP／移動／装備／行動消費を比較します。</li>
-          <li>射程内に生存敵がいる場合は、既存performAttackを使った1回の固定seed戦闘を両枝で実行し、予測とそのseedでの実結果を並べます。これは単一戦闘サンプルであり、複数乱数の勝率・敵軍フェイズ・移動・複数ターンや21ケースの統制プレイテストを代替しません。</li>
+          <li>射程内に生存敵がいる場合は、既存performAttackを使った単一seedの比較と、20／100／250個の同一seedペアによる独立1戦闘反復を表示します。集計は命中率・必殺率・平均ダメージ・対象撃破率・反撃被ダメージ・生存率です。HPや撃破を試行間で持ち越さず、複数ターンの攻略率・敵AI・移動・21ケースの実プレイを代替しません。</li>
           <li>読み込みはsaveVersion 3のJSON exportだけです。旧版の自動migration、IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
           <li>現行クラス上限・ボーナスは仮値のままです。実データの比較はできてもCP-04／05の承認にはなりません。</li>
         </ul>
