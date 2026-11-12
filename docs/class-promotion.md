@@ -207,10 +207,23 @@ CIでは `npm run typecheck`、`npm test`、`npm run build`、`npm run test:e2e`
 
 
 
-## 7. 開発専用昇格試験室
+## 7. 開発専用の合成fixture試験室
 
-Vite開発サーバーで `npm run dev` を起動し、`http://localhost:5173/?promotion-lab=1` を開くと、7経路×3合成profileのstat previewを確認できる。これは `import.meta.env.DEV` でのみ有効な独立画面であり、本番ビルドではクエリを指定しても表示されない。試験室は `src/test-support/class-promotion-balance-scenarios.ts` の固定fixtureだけを読み取り、キャンペーンUI、GameState、RNG、IndexedDB、自動保存、セーブ形式を変更しない。経路とprofileを選び、昇格しない場合の現在値と仮ボーナス／仮上限を適用したpreviewを並べて確認できる。combat simulation・移動／武器差・実セーブ取込は行わない。実プレイ21ケースの記録や数値バランスの承認を代替しない。
+Vite開発サーバーで `npm run dev` を起動し、`http://localhost:5173/?promotion-lab=1` を開くと、7経路×3合成profileのstat previewを確認できる。これは `import.meta.env.DEV` でのみ有効な独立画面であり、本番ビルドではクエリを指定しても表示されない。試験室は `src/test-support/class-promotion-balance-scenarios.ts` の固定fixtureだけを読み取り、キャンペーンUI、GameState、RNG、IndexedDB、自動保存、セーブ形式を変更しない。合成値はdomain計算の再現性確認用であり、実プレイ21ケースの記録や数値バランスの承認を代替しない。
 
-## 8. 今回の範囲外
+## 8. 開発専用の実セーブsnapshot比較ベンチ
+
+Vite開発サーバーの `http://localhost:5173/?promotion-snapshots=1` では、アプリのセーブ管理から書き出したJSONを複数読み込み、実際のユニットsnapshotを比較できる。
+
+- 対応形式はportable envelope version 1内の `GameStateSnapshot.saveVersion: 3`。章IDを既存章registryで解決し、現在のmap definitionに対して `isValidGameStateSnapshot` を適用する。不正なJSON、未対応version、未登録章、validator不合格は拒否する。
+- 対象はsnapshot内の出撃中の味方で、現行7基本職、Lv.10以上のユニット。比較コマンドを実行するには自軍フェイズ、未移動・未行動、証を追加できる所持品空き（または証を既に所持）が必要。条件を満たさない候補は理由を表示する。
+- 同一クラスの読み込みsnapshotが3件以上ある場合、各能力の同クラス内順位の平均を参考percentileとして表示する。3件未満は「分布データ不足」とし、low／median／highを自動選択しない。ユーザーは試験記録で候補を判断する。
+- controlは読み込んだ元snapshot、promotionは同じsnapshotから作る切り離しコピーに既存 `performClassChange` を実行した結果。セーブに証がない場合はコピー内だけに試験用 `promotion_seal` を一時追加して消費する。これはCP-13の報酬決定でも、実セーブへの付与でもない。
+- UIは能力8項目、要求ボーナス／実増加／仮上限、クラス・Lv・EXP、最大／現在HP、移動／武器／装備、行動消費、RNG不変を表示する。戦闘は実行しないため、ダメージ・命中・追撃・生存・移動可能マス等の実戦比較は別途必要。
+- 読み込んだファイルと候補はReactのメモリだけに保持し、IndexedDB・GameState・自動保存・saveVersionを読み書きしない。ネットワーク送信や永続キャッシュも行わない。リロードまたは破棄操作で消去する。これは開発サーバー専用で、本番ビルドでは表示されない。
+
+実セーブsnapshot比較は、実データの分布把握と昇格直後のdomain処理確認を進めるための道具である。これだけでは統制したcontrol／promotion戦闘21ケースやCP-04／05の数値承認を完了したことにはならない。
+
+## 9. 今回の範囲外
 
 数値ボーナス・クラス別上限・具体的な章報酬／受取人／数量は未決定のままとする。`docs/game-design.md` 原文、セーブ形式、依存関係は変更しない。現在の仮ボーナス・仮上限を正式バランスとして扱わない。昇格時の行動消費と証の初期自動付与廃止は、採択済みの非数値ベースラインに沿った実装である。
