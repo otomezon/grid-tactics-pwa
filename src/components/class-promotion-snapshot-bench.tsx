@@ -6,6 +6,7 @@ import { performClassChange } from "../application/perform-class-change";
 import { createAttackPlan } from "../application/perform-attack";
 import { getPromotionCombatComparison } from "../application/get-promotion-combat-comparison";
 import { getPromotionCombatSampleSummary, type PromotionCombatSampleSummary } from "../application/get-promotion-combat-sample-summary";
+import { getPromotionEnemyPhaseSampleSummary, type PromotionEnemyPhaseSampleSummary } from "../application/get-promotion-enemy-phase-sample-summary";
 import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../application/build-promotion-playtest-matrix";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
@@ -73,6 +74,7 @@ interface PromotionPlaytestMatrixResult {
   enemyPosition: string;
   dataClassification: MatrixDataClassification;
   summary: PromotionCombatSampleSummary;
+  enemyPhaseSummary: PromotionEnemyPhaseSampleSummary;
 }
 
 function getMatrixDataClassificationLabel(value: MatrixDataClassification): string {
@@ -369,6 +371,13 @@ export function ClassPromotionSnapshotBench() {
           row.target.id,
           sampleCount
         );
+        const enemyPhaseSummary = getPromotionEnemyPhaseSampleSummary(
+          row.candidate.snapshot,
+          promotion.promotionState,
+          chapter.map,
+          row.candidate.unit.id,
+          sampleCount
+        );
         const requestedBonuses = promotion.statPreview.changes.reduce<Partial<UnitStats>>(
           (values, change) => ({ ...values, [change.key]: change.requestedBonus }),
           {}
@@ -402,7 +411,8 @@ export function ClassPromotionSnapshotBench() {
           enemyCurrentHp: row.target.currentHp,
           enemyPosition: formatUnitLocation(row.target),
           dataClassification: row.dataClassification,
-          summary
+          summary,
+          enemyPhaseSummary
         };
       }
       setMatrixResults(nextResults);
@@ -438,7 +448,16 @@ export function ClassPromotionSnapshotBench() {
       "control_enemy_defeat_rate", "promotion_enemy_defeat_rate",
       "control_avg_counter_damage", "promotion_avg_counter_damage",
       "control_attacker_survival_rate", "promotion_attacker_survival_rate",
-      "control_avg_attacker_hp", "promotion_avg_attacker_hp"
+      "control_avg_attacker_hp", "promotion_avg_attacker_hp",
+      "control_enemy_phase_actions", "promotion_enemy_phase_actions",
+      "control_enemy_phase_attack_actions", "promotion_enemy_phase_attack_actions",
+      "control_selected_unit_targeted_phase_rate", "promotion_selected_unit_targeted_phase_rate",
+      "control_selected_unit_avg_damage", "promotion_selected_unit_avg_damage",
+      "control_selected_unit_survival_rate", "promotion_selected_unit_survival_rate",
+      "control_party_avg_damage", "promotion_party_avg_damage",
+      "control_battle_defeat_rate", "promotion_battle_defeat_rate",
+      "control_party_wipe_rate", "promotion_party_wipe_rate",
+      "control_player_phase_advance_rate", "promotion_player_phase_advance_rate"
     ];
     const rows = results.map((entry) => {
       const candidate = matrixRows.find((row) => row.id === entry.caseId)?.candidate;
@@ -472,7 +491,25 @@ export function ClassPromotionSnapshotBench() {
         control.enemyDefeatRate, promotion.enemyDefeatRate,
         control.averageCounterDamagePerBattle, promotion.averageCounterDamagePerBattle,
         control.attackerSurvivalRate, promotion.attackerSurvivalRate,
-        control.averageAttackerHpRemaining, promotion.averageAttackerHpRemaining
+        control.averageAttackerHpRemaining, promotion.averageAttackerHpRemaining,
+        entry.enemyPhaseSummary.control.totalEnemyActions,
+        entry.enemyPhaseSummary.promotion.totalEnemyActions,
+        entry.enemyPhaseSummary.control.enemyAttackActions,
+        entry.enemyPhaseSummary.promotion.enemyAttackActions,
+        entry.enemyPhaseSummary.control.selectedUnitTargetedPhaseRate,
+        entry.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRate,
+        entry.enemyPhaseSummary.control.selectedUnitAverageDamagePerPhase,
+        entry.enemyPhaseSummary.promotion.selectedUnitAverageDamagePerPhase,
+        entry.enemyPhaseSummary.control.selectedUnitSurvivalRate,
+        entry.enemyPhaseSummary.promotion.selectedUnitSurvivalRate,
+        entry.enemyPhaseSummary.control.averageTotalPlayerDamagePerPhase,
+        entry.enemyPhaseSummary.promotion.averageTotalPlayerDamagePerPhase,
+        entry.enemyPhaseSummary.control.battleDefeatRate,
+        entry.enemyPhaseSummary.promotion.battleDefeatRate,
+        entry.enemyPhaseSummary.control.partyWipeRate,
+        entry.enemyPhaseSummary.promotion.partyWipeRate,
+        entry.enemyPhaseSummary.control.playerPhaseAdvanceRate,
+        entry.enemyPhaseSummary.promotion.playerPhaseAdvanceRate
       ].map(escapeCsvField).join(",");
     });
     const csv = "\ufeff" + [headers.map(escapeCsvField).join(","), ...rows].join("\r\n");
@@ -826,7 +863,7 @@ export function ClassPromotionSnapshotBench() {
         </div>
         {matrixRunError && <p className="promotion-snapshot-errors" role="alert">{matrixRunError}</p>}
         {completedMatrixCount > 0 && (
-          <div data-testid="promotion-playtest-matrix-results">
+          <div className="promotion-playtest-matrix-results" data-testid="promotion-playtest-matrix-results">
             <h3>試行結果（{completedMatrixCount}/21件）</h3>
             <div className="promotion-lab-table-wrap">
               <table className="promotion-lab-table" aria-label="21ケースのseed反復集計結果">
@@ -839,7 +876,16 @@ export function ClassPromotionSnapshotBench() {
                     <th>平均与ダメージ／戦闘</th>
                     <th>敵撃破率</th>
                     <th>平均反撃被ダメージ</th>
-                    <th>生存率</th>
+                    <th>単発攻撃後の生存率</th>
+                    <th>敵軍行動数</th>
+                    <th>敵軍攻撃数</th>
+                    <th>本人が狙われた割合</th>
+                    <th>敵軍phase本人平均被ダメージ</th>
+                    <th>敵軍phase本人生存率</th>
+                    <th>味方全体平均被ダメージ</th>
+                    <th>敗北結果率</th>
+                    <th>味方全滅率</th>
+                    <th>次の自軍phase進行率</th>
                     <th>データ区分</th>
                   </tr>
                 </thead>
@@ -857,6 +903,15 @@ export function ClassPromotionSnapshotBench() {
                         <td>{result.summary.control.enemyDefeatRate.toFixed(1)}% → {result.summary.promotion.enemyDefeatRate.toFixed(1)}%</td>
                         <td>{result.summary.control.averageCounterDamagePerBattle.toFixed(1)} → {result.summary.promotion.averageCounterDamagePerBattle.toFixed(1)}</td>
                         <td>{result.summary.control.attackerSurvivalRate.toFixed(1)}% → {result.summary.promotion.attackerSurvivalRate.toFixed(1)}%</td>
+                        <td>{result.enemyPhaseSummary.control.totalEnemyActions.toFixed(1)} → {result.enemyPhaseSummary.promotion.totalEnemyActions.toFixed(1)}</td>
+                        <td>{result.enemyPhaseSummary.control.enemyAttackActions.toFixed(1)} → {result.enemyPhaseSummary.promotion.enemyAttackActions.toFixed(1)}</td>
+                        <td>{result.enemyPhaseSummary.control.selectedUnitTargetedPhaseRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRate.toFixed(1)}%</td>
+                        <td>{result.enemyPhaseSummary.control.selectedUnitAverageDamagePerPhase.toFixed(1)} → {result.enemyPhaseSummary.promotion.selectedUnitAverageDamagePerPhase.toFixed(1)}</td>
+                        <td>{result.enemyPhaseSummary.control.selectedUnitSurvivalRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.selectedUnitSurvivalRate.toFixed(1)}%</td>
+                        <td>{result.enemyPhaseSummary.control.averageTotalPlayerDamagePerPhase.toFixed(1)} → {result.enemyPhaseSummary.promotion.averageTotalPlayerDamagePerPhase.toFixed(1)}</td>
+                        <td>{result.enemyPhaseSummary.control.battleDefeatRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.battleDefeatRate.toFixed(1)}%</td>
+                        <td>{result.enemyPhaseSummary.control.partyWipeRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.partyWipeRate.toFixed(1)}%</td>
+                        <td>{result.enemyPhaseSummary.control.playerPhaseAdvanceRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.playerPhaseAdvanceRate.toFixed(1)}%</td>
                         <td>{getMatrixDataClassificationLabel(result.dataClassification)}</td>
                       </tr>
                     );
@@ -867,7 +922,7 @@ export function ClassPromotionSnapshotBench() {
           </div>
         )}
         <p className="helper-text">
-          このマトリクスは実セーブの候補選定と単発戦闘反復の準備・記録用です。各試行は初期snapshotへ戻した独立戦闘であり、敵フェイズ・移動・複数ターンの攻略結果ではありません。「実プレイ由来」は利用者の申告であり、ファイルの真正性を自動検証するものではありません。合成fixtureの結果を実プレイ記録として扱わないでください。
+          このマトリクスは実セーブの候補選定と戦闘反復の記録用です。各ケースは独立した単発攻撃比較に加え、両枝とも選択ユニットの行動を消費した状態で既存beginEnemyPhase／runEnemyPhaseを実行し、敵AIの移動・標的選択・戦闘・砦回復を比較します。controlは昇格せず行動を見送り、promotionは昇格を行います。敵軍フェイズ1回のみで、次の自軍行動や複数ターン・章攻略は再現しません。敗北結果率はマップ固有の敗北条件を含み、味方全滅率は生存プレイヤーユニットが全員いなくなった場合を別に数えます。現行の敵AIは試作ロジックです。「実プレイ由来」は利用者の申告であり、ファイルの真正性を自動検証するものではありません。合成fixtureや未確認の結果を実プレイ記録として扱わないでください。
         </p>
       </section>
 
@@ -1108,6 +1163,7 @@ export function ClassPromotionSnapshotBench() {
           <li>7経路のうち対象の1ユニットについて、既存application/domain commandを切り離したコピーへ実行し、レベル／EXP／能力値／HP／移動／装備／行動消費を比較します。</li>
           <li>射程内に生存敵がいる場合は、既存performAttackを使った単一seedの比較と、20／100／250個の同一seedペアによる独立1戦闘反復を表示します。集計は命中率・必殺率・平均ダメージ・対象撃破率・反撃被ダメージ・生存率です。HPや撃破を試行間で持ち越さず、複数ターンの攻略率・敵AI・移動・21ケースの実プレイを代替しません。</li>
           <li>21ケースマトリクスでは、各基本職3件以上の候補からlow／median／upper相当を参考選出し、利用者が候補・敵・条件を確認した後に一括反復・CSV出力できます。実プレイ由来かどうかは利用者申告として保存し、自動判定しません。</li>
+          <li>21ケースの集計には既存の敵軍フェイズ解決を使った1 phase比較も含みます。control／promotionの双方で選択ユニットは行動済みにしてphaseを進め、敵AIの移動・攻撃・生存・被ダメージを集計します。複数turnの戦闘やキャンペーン勝率ではありません。</li>
           <li>読み込みはsaveVersion 3のJSON exportだけです。旧版の自動migration、IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
           <li>現行クラス上限・ボーナスは仮値のままです。実データの比較はできてもCP-04／05の承認にはなりません。</li>
         </ul>
