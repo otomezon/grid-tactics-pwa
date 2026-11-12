@@ -120,3 +120,12 @@ src/
 App.tsx の battleHistory に、確定済みの味方コマンドを player-action として追加する。対象は移動、武器変更、アイテム使用、クラスチェンジ、待機。既存の player-attack と enemy-phase エントリーと同じ連番にし、ターン内の発生順で表示する。各行はユニット名・操作種別・移動元／先や装備武器、消費アイテム／回復量、昇格先／適用ボーナスなど確認可能な結果を示す。
 
 イベントを追加するのは、既存コマンドが成功して次のGameStateを画面に反映する箇所だけ。プレビュー、クリック／キーボードの選択、インスペクション、戦闘予測、確認キャンセルやエラーは記録しない。履歴は従来どおりReactのセッション状態であり、GameStateSnapshot／RNG／IndexedDB／saveVersion 3／JSON save exportには含めず、リロード・セーブ読込・バックアップ復元・章切替で消去する。
+
+
+## タイトル画面・キャンペーン起動
+
+src/components/campaign-title-screen.tsx は新規開始／続きからとローカルセーブ管理の画面を担当する。保存データの読込・検証・移行は CampaignApp と既存のpersistence/application処理に委譲する。新規キャンペーンはメモリ上で初期snapshotを準備し、出撃配置確定時の保存が成功するまでauto slotを置き換えない。saveVersion／IndexedDB schemaの変更は不要。
+
+## 第3章コンテンツ登録
+
+src/content/maps/chapter-03.ts は既存の第1章ユニット定義を再利用し、章3固有のterrain／deploymentと初期RNG stateを定義する。src/content/chapters.ts が第1〜第3章を順序付きで登録し、getNextChapterを通じて遷移させる。第3章も isPrototype: true であり、新規キャスト・最終シナリオ・章報酬を追加したわけではない。
