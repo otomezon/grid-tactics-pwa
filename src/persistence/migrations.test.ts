@@ -39,7 +39,7 @@ describe("migrateGameStateSnapshot", () => {
     return { ...legacy, saveVersion: 4 };
   }
 
-  it("migrates a version 1 save through v4 and maps prototype weapons", () => {
+  it("migrates a version 1 save through v5 and maps prototype weapons", () => {
     const result = migrateGameStateSnapshot(createLegacySnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
     expect(result?.snapshot.saveVersion).toBe(5);
@@ -70,6 +70,7 @@ describe("migrateGameStateSnapshot", () => {
     expect(result?.snapshot.saveVersion).toBe(5);
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
+    expect(result?.snapshot.firedMapEventIds).toEqual([]);
     expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
   });
 
@@ -93,7 +94,7 @@ describe("migrateGameStateSnapshot", () => {
     legacy.turn = 4;
     legacy.phase = "enemy";
     const result = migrateGameStateSnapshot(legacy, CHAPTER_01_MAP);
-    expect(result?.snapshot.turn).toBe(5);
+    expect(result?.snapshot.turn).toBe(4);
     expect(result?.snapshot.phase).toBe("enemy");
     expect(result?.snapshot.units[0]).toMatchObject({ currentHp: 7, position: { x: 2, y: 7 } });
   });
