@@ -84,22 +84,35 @@ function isNonNegativeStatGains(value: unknown): value is UnitStats {
 
 function isCampaignUnitBattleRecord(value: unknown): value is CampaignUnitBattleRecord {
   if (!isRecord(value)) return false;
-  const numericKeys = [
-    "attacks", "strikes", "hits", "misses", "criticalHits",
-    "damageDealt", "enemiesDefeated", "experienceAwarded", "levelUps"
-  ] as const;
+  const attacks = value.attacks;
+  const strikes = value.strikes;
+  const hits = value.hits;
+  const misses = value.misses;
+  const criticalHits = value.criticalHits;
+  const damageDealt = value.damageDealt;
+  const enemiesDefeated = value.enemiesDefeated;
+  const experienceAwarded = value.experienceAwarded;
+  const levelUps = value.levelUps;
   if (
     !isNonEmptyString(value.unitId) ||
     !isNonEmptyString(value.unitName) ||
-    !numericKeys.every((key) => isNonNegativeInteger(value[key])) ||
+    !isNonNegativeInteger(attacks) ||
+    !isNonNegativeInteger(strikes) ||
+    !isNonNegativeInteger(hits) ||
+    !isNonNegativeInteger(misses) ||
+    !isNonNegativeInteger(criticalHits) ||
+    !isNonNegativeInteger(damageDealt) ||
+    !isNonNegativeInteger(enemiesDefeated) ||
+    !isNonNegativeInteger(experienceAwarded) ||
+    !isNonNegativeInteger(levelUps) ||
     !isNonNegativeStatGains(value.statGains)
   ) return false;
 
-  return value.attacks > 0 &&
-    value.strikes > 0 &&
-    value.strikes === value.hits + value.misses &&
-    value.criticalHits <= value.hits &&
-    value.enemiesDefeated <= value.attacks;
+  return attacks > 0 &&
+    strikes > 0 &&
+    strikes === hits + misses &&
+    criticalHits <= hits &&
+    enemiesDefeated <= attacks;
 }
 
 function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
