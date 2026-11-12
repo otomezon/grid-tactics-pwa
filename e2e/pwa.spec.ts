@@ -8,17 +8,6 @@ async function enterNewCampaign(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
 }
 
-async function continueSavedCampaign(page: Page): Promise<void> {
-  const title = page.getByTestId("campaign-title-screen");
-  await expect(title).toBeVisible();
-  const button = title.getByRole("button", { name: "つづきから" });
-  if (await button.count()) {
-    await button.click();
-  } else {
-    await enterNewCampaign(page);
-  }
-}
-
 async function startBattle(page: Page): Promise<void> {
   await page.goto("/");
   await enterNewCampaign(page);
