@@ -64,7 +64,7 @@ src/
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
 | domain/rules | defeat_all／defeat_boss／味方全滅／マップ指定ユニット撃破の勝敗判定、砦回復 | 実装あり。主人公ID未決定のため試作マップの個別敗北対象は未設定。回復端数は暫定切り捨て |
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
-| application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、敵AI／フェイズ進行、目標進行・地形情報の読み取り専用projection | 出撃準備は開発ブランチで実装中。報酬は章データで明示したアイテムのみ適用 |
+| application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、出撃前の装備変更、敵AI／フェイズ進行、目標進行・地形情報の読み取り専用projection | 出撃前装備変更は既存のweapon ownership／class／type compatibilityを再利用し、active／reserveを不変更新。保存は既存の配置確定時のみ。報酬は章データで明示したアイテムのみ適用 |
 | ui | 出撃準備から戦闘・地形判断・ターン進行・保存を6段階で説明する任意表示の操作ガイド（`src/components/operation-guide.tsx`）を含む。ガイドはセーブ非変更。章別マップ（狭幅画面では各40pxタイルの横スクロール領域）、目標進行・マス情報パネル、移動可能マスの累計コスト／経路プレビュー、戦闘予測／セッション内時系列戦闘履歴、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルはPR #17でmainに実装済み。狭幅マップ操作はPR #44でmainに実装済み。PR #46／#47で320px幅の横スワイプとスワイプ後の右端ユニット選択をChromium E2Eで検証済み（実機未確認）。第2章は遷移検証用 |
 | persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1／2→3 migration、JSON export/import | 3世代backup／復元、export/importともmain実装済み。PR #23で最大3世代の保持、最古世代ローテーション、auto不変、確認付き復元をCI検証。DB version／saveVersionは据え置き |
 | pwa | manifest、Service Worker、静的アセットキャッシュ、ブラウザ標準のインストールプロンプトとstandalone状態表示 | Vite pluginとAppのイベント連携あり |
@@ -83,6 +83,8 @@ src/
 ## 4. 章間遷移
 
 `content/chapters.ts` が章ID・マップ・初期状態・クリア報酬を登録する。起動時は保存されたchapterIdに対応するマップでセーブを検証・復元する。勝利後は `apply-chapter-rewards.ts` が設定済み報酬を生存味方へ付与し、`prepare-next-chapter.ts` が次章stateを構築する。Appは章別マップへ切り替え、通常のIndexedDB auto slotへ保存する。撃破済み味方を復帰させず、章間HPは現在の設計未決定のためUIでは暫定的に維持する。saveVersion 3で控え名簿を保持する。
+
+装備変更は `perform-deployment-weapon-change.ts` が登録済み武器・所持・クラス／武器種適性を検証し、`units` または `reserveUnits` の対象だけを不変更新する。これは出撃準備中のApp stateにだけ反映し、既存の配置確定処理が `saveGameState` を呼ぶまでIndexedDBへ保存しない。GameStateスキーマ／saveVersionは変更しない。
 
 出撃準備は `prepare-player-deployment.ts` がturn 1のplayer phaseかつ味方未行動であることを確認し、マップの `playerDeployment` 候補から出撃メンバーを選択して座標を一意に割り当てる。非選択の生存者は `reserveUnits` へ移し、HP・経験値・能力・所持品・装備を保持する。控えは戦闘stateの `units` に含めない。Appは新規ゲーム／次章開始直後に出撃準備画面を表示し、確定時にv3 snapshotを保存してから戦闘操作を有効化する。次章stateは配置確定までauto slotへ保存せず、前章の勝利セーブを保持する。正式な章ごとの人数条件は未決定で、現在の上限はマップ候補数。
 

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
 import { DeploymentPreview } from "./components/deployment-preview";
+import { DeploymentLoadoutEditor } from "./components/deployment-loadout-editor";
 import { BattleObjectivePanel } from "./components/battle-objective-panel";
 import { EnemyRoster } from "./components/enemy-roster";
 import { EnemyInspector } from "./components/enemy-inspector";
@@ -24,6 +25,7 @@ import { getClassPromotionStatPreview } from "./domain/progression/class-change"
 import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
+import { performDeploymentWeaponChange } from "./application/perform-deployment-weapon-change";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
 import { getEnemyInspectionDetails } from "./application/get-enemy-inspection-details";
 import { getPlayerInspectionDetails } from "./application/get-player-inspection-details";
@@ -1388,6 +1390,29 @@ function CampaignApp() {
     );
   }
 
+  function handleDeploymentWeaponChange(unitId: string, weaponId: string | null): void {
+    if (
+      !deploymentPending ||
+      loadBlocked ||
+      saveStatus === "loading" ||
+      saveStatus === "saving"
+    ) return;
+
+    try {
+      const execution = performDeploymentWeaponChange(gameState, unitId, weaponId);
+      setGameState(execution.nextState);
+      setMessage(
+        execution.updatedUnit.name +
+          (execution.equippedWeaponName
+            ? "は" + execution.equippedWeaponName + "を装備しました。"
+            : "は武器を外しました。") +
+          "出撃配置を確定すると保存されます。"
+      );
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    }
+  }
+
   async function handleConfirmDeployment(): Promise<void> {
     if (
       !deploymentPending ||
@@ -1829,6 +1854,16 @@ function CampaignApp() {
                   </div>
                 ))}
               </div>
+              {deploymentDetail && (
+                <DeploymentLoadoutEditor
+                  unitId={deploymentDetailCandidate.id}
+                  unitName={deploymentDetailCandidate.name}
+                  equippedWeaponId={deploymentDetailCandidate.equippedWeaponId}
+                  weapons={deploymentDetail.weapons}
+                  disabled={saveStatus === "loading" || saveStatus === "saving" || loadBlocked}
+                  onChange={(weaponId) => handleDeploymentWeaponChange(deploymentDetailCandidate.id, weaponId)}
+                />
+              )}
               <div className="deployment-detail-inventory">
                 <section>
                   <h4>所持武器</h4>
@@ -1844,6 +1879,9 @@ function CampaignApp() {
                           </div>
                           <span>
                             {WEAPON_TYPE_LABELS[weapon.weaponType]} · 威力 {weapon.power} · 命中 {weapon.hit}% · 必殺 {weapon.critical}% · 射程 {weapon.minRange}-{weapon.maxRange}
+                          </span>
+                          <span className={weapon.isUsable ? "deployment-weapon-suitable" : "deployment-weapon-unsuitable"}>
+                            {weapon.isUsable ? "装備可能" : "このユニットは装備できません"}
                           </span>
                         </li>
                       ))}
