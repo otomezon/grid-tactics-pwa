@@ -200,7 +200,7 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - commandはフェイズ、対象ユニットの陣営／生存状態、行動フラグ、武器所持・適性、移動力・地形・占有を検証し、入力snapshotを変更せずに次状態を返す。
 - 移動経路は既存のDijkstra helperを再利用する。UIのタッチ2回確定・キーボード／ポインターによるプレビューはApp側に残し、確定時にapplication commandで再検証する。
 - 武器変更は移動後も行動前なら実行可能という従来挙動を維持し、待機は移動済みでも未行動なら実行可能とする。
-- GameStateのフィールド、saveVersion 4、IndexedDB schema、戦闘式、RNG、キャンペーン累計戦績の仕様は変更しない。
+- これら3 command自体はGameStateフィールドを追加せず、RNGやキャンペーン累計戦績を変更しない。マップイベント統合で追加した `firedMapEventIds` のみをsaveVersion 5へ保存し、IndexedDB schemaは維持する。
 
 ## マップイベント基盤（saveVersion 5）
 
