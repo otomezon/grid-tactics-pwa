@@ -70,7 +70,8 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | 昇格先パス | 実装済み（設計書§5.5の7系統） | `src/content/classes.ts` | mapping tests |
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み。採択済みCP-12により移動・行動前のみ実行可、成功時に行動済みとなる。CP-09／10の移動・武器適性・装備維持、7経路すべての一段階昇格を回帰テスト化。PR #32でCP-07／08のEXP 0／99保持、現在HP 1／満タン維持、HP上限でのボーナス制限を追加 | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts`, `src/domain/progression/class-change.test.ts`, `src/content/class-promotion.test.ts` | PR #32 CI run #503: 22 test files／146 tests、Chromium E2E 11件成功 |
 | クラスチェンジアイテム定義・所持品表示 | アイテム定義と表示は実装済み。採択済みCP-13により初期付与を廃止し、章報酬／イベント定義による配布のみ許可。具体的な報酬は未登録。PR #29で明示報酬は勝利後のみ付与、所持枠満杯時は状態を変更せず拒否することを検証 | `src/content/items.ts`, `src/content/maps/chapter-01.ts`, `src/application/apply-chapter-rewards.ts`, `src/App.tsx` | PR #29 CI run #497: chapter-reward tests passed |
-| クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ／未移動・未行動条件。確定でユニットの行動を消費）。確認画面に8能力の現在値・昇格後予測・実増加量・仮上限、最大HP／現在HP、Lv.1化・EXP保持、証消費、移動／武器適性／装備の維持、行動消費を表示する（暫定表示でありCP-15の最終仕様ではない） | `src/App.tsx`, `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts` | PR #38で8能力の現在値・昇格後値・実増加量・仮上限、HP／EXP等の影響を表示。PR #39で8能力すべての画面表示、暫定上限超過値の維持、キャンセル時のセーブ不変、確定後の状態保持をE2E検証。PR #39最終head CI run #532: typecheck、22 test files／148 tests、production build、Chromium E2E 11件すべて成功（オーナーがマージ済み） |
+| クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ／未移動・未行動条件。確定でユニットの行動を消費）。確認画面に8能力の現在値・昇格後予測・実増加量・仮上限、最大HP／現在HP、Lv.1化・EXP保持、証消費、移動／武器適性／装備の維持、行動消費を表示する（CP-15の必須表示は採択済み。能力数値／上限は引き続き試作値） | `src/App.tsx`, `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts` | PR #38で8能力の現在値・昇格後値・実増加量・仮上限、HP／EXP等の影響を表示。PR #39で8能力すべての画面表示、暫定上限超過値の維持、キャンセル時のセーブ不変、確定後の状態保持をE2E検証。PR #39最終head CI run #532: typecheck、22 test files／148 tests、production build、Chromium E2E 11件すべて成功（オーナーがマージ済み） |
+| 開発専用の昇格比較ベンチ | PR #81対象。合成fixture preview（/?promotion-lab=1）に加え、v3実セーブJSONをローカルメモリで読み込み、Lv.10+基本職候補を検証し、元snapshotと切り離した昇格command copyを比較する。証はコピー内のみ試験用に補う場合がある。戦闘解決・保存・外部送信なし | `src/components/class-promotion-lab.tsx`, `src/components/class-promotion-snapshot-bench.tsx`, `src/persistence/save-file.ts`, `src/domain/models/validate-game-state.ts` | 開発用Playwrightでsnapshot import、バリデーション拒否、能力8項目、Lv／EXP／HP／行動コスト、RNG不変、IndexedDB非作成、reload後のメモリ消去を検証 |
 | 正式な昇格ボーナス・上限・昇格後移動／武器データ | 未決定（現行は仮値） | `src/content/classes.ts` | playtest／仕様決定待ち |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
 | 砦のフェイズ開始回復 | 実装済み（該当陣営の生存ユニット／最大HPの10%／端数切り捨ては暫定） | `src/domain/rules/apply-fort-recovery.ts`, `src/application/resolve-enemy-phase.ts` |
@@ -124,3 +125,11 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - CP-01／02／03／06／15をIssue #26で採択。CP-01は初期7基本職のみ、CP-02は基本職Lv.10以上、CP-03は7経路、CP-06は既存能力を切り下げず以後の成長のみ上限で停止、CP-15は確定前の影響情報表示を必須とする。
 - 開発専用の試験室は `npm run dev` 起動後 `/?promotion-lab=1`。合成profileのstat previewだけを扱い、本編state／RNG／IndexedDB／自動保存／saveVersionには接続しない。
 - CP-04／05の正式な能力上限・昇格ボーナス数値、クラス別移動／武器データ、および初回の証の章／イベント／受取人／数量は引き続き未決定。実プレイバランス試験は未実施。
+
+
+### 実セーブsnapshot比較ベンチ（PR #81対象）
+
+- 開発route /?promotion-snapshots=1 で、portable save JSON（envelope v1／GameState saveVersion 3）をメモリ上へ複数読み込み、既存validatorで章・マップ・ユニットを検証する。
+- 現行7基本職のLv.10以上の出撃味方を候補とし、同クラス内の8能力percentileの平均を参考値として表示。3 snapshot未満は分布不足と扱い、low／median／highは自動で決めない。
+- 元snapshotと、試験用promotion tokenをコピーにだけ用いた昇格command結果を比較する。IndexedDB／GameState／RNG／自動保存への書込み・外部送信なし。
+- このベンチは実セーブの能力分布と昇格直後のcommand差分を調べるもの。戦闘を実行しないため、統制21ケースの実戦比較は未完了。CP-04／05の数値承認も未実施。
