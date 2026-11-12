@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 function makePromotionSnapshotFile() {
@@ -93,6 +94,104 @@ function makePromotionSnapshotFile() {
   };
 }
 
+function makePromotionMatrixSnapshotFile(classId: string, profileIndex: number) {
+  const envelope = makePromotionSnapshotFile();
+  const snapshot = structuredClone(envelope.data);
+  const weaponByClass: Record<string, { type: string; id: string }> = {
+    swordsman: { type: "sword", id: "iron_sword" },
+    mercenary: { type: "sword", id: "iron_sword" },
+    fighter: { type: "axe", id: "iron_axe" },
+    soldier: { type: "lance", id: "iron_lance" },
+    cavalry: { type: "lance", id: "iron_lance" },
+    archer: { type: "bow", id: "short_bow" },
+    mage: { type: "magic", id: "fire_tome" }
+  };
+  const weapon = weaponByClass[classId];
+  if (!weapon) throw new Error("Missing fixture weapon for " + classId);
+
+  const player = snapshot.units[0]!;
+  const enemy = snapshot.units[1]!;
+  const step = profileIndex * 3;
+  player.classId = classId;
+  player.level = 10;
+  player.experience = 40 + profileIndex;
+  player.stats = {
+    hp: 24 + step,
+    strength: 7 + step,
+    magic: profileIndex,
+    skill: 8 + step,
+    speed: 8 + step,
+    luck: 4 + step,
+    defense: 5 + step,
+    resistance: 1 + profileIndex
+  };
+  player.currentHp = 17;
+  player.usableWeaponTypes = [weapon.type];
+  player.inventory = [weapon.id];
+  player.equippedWeaponId = weapon.id;
+  player.hasMoved = false;
+  player.hasActed = false;
+  enemy.position = { x: 1, y: classId === "archer" ? 6 : 7 };
+
+  return {
+    ...envelope,
+    exportedAt: "2026-11-12T00:00:00.000Z",
+    data: snapshot
+  };
+}
+
+test("organizes and runs all 21 class-promotion cases, keeping synthetic data explicitly classified", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/?promotion-snapshots=1");
+  const bench = page.getByTestId("promotion-snapshot-bench");
+  const classIds = ["swordsman", "mercenary", "fighter", "soldier", "cavalry", "archer", "mage"];
+  const profiles = ["low", "median", "upper"];
+  const files = classIds.flatMap((classId) =>
+    profiles.map((profile, index) => ({
+      name: classId + "-" + profile + ".json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(makePromotionMatrixSnapshotFile(classId, index)))
+    }))
+  );
+
+  await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles(files);
+  await expect(bench).toContainText("21候補");
+
+  const matrix = bench.getByTestId("promotion-playtest-matrix");
+  const caseRows = matrix.locator('tr[data-testid^="promotion-playtest-case-"]');
+  await expect(caseRows).toHaveCount(21);
+  await expect(matrix).toContainText("0/21 実行準備完了");
+  const runButton = matrix.getByRole("button", { name: "21ケースのseed反復を実行" });
+  await expect(runButton).toBeDisabled();
+
+  await matrix.getByLabel("21ケースの乱数試行回数").selectOption("20");
+  for (let index = 0; index < 21; index += 1) {
+    await caseRows.nth(index).getByRole("checkbox").check();
+  }
+  await expect(matrix).toContainText("21/21 実行準備完了");
+  await expect(runButton).toBeEnabled();
+  await runButton.click();
+
+  const results = matrix.getByTestId("promotion-playtest-matrix-results");
+  await expect(results).toContainText("試行結果（21/21件）");
+  await expect(results.locator('tr[data-testid^="promotion-playtest-result-"]')).toHaveCount(21);
+  await expect(results).toContainText("未確認");
+
+  const downloadPromise = page.waitForEvent("download");
+  await matrix.getByRole("button", { name: "21ケース結果CSVを書き出す" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("class-promotion-playtest-matrix.csv");
+  const downloadPath = await download.path();
+  if (!downloadPath) throw new Error("CSV download path was not available.");
+  const csv = await readFile(downloadPath, "utf8");
+  expect(csv).toContain("basic_class");
+  expect(csv).toContain("swordsman:low");
+  expect(csv).toContain("promotion_strength");
+  expect(csv).toContain("requested_hp_bonus");
+  expect(csv).toContain("applied_hp_bonus");
+  expect(csv).toContain("未確認");
+});
+ 
 test("imports an exported save locally and compares the actual unit snapshot with a detached promotion copy", async ({ page }) => {
   await page.goto("/?promotion-snapshots=1");
   const bench = page.getByTestId("promotion-snapshot-bench");

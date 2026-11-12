@@ -71,7 +71,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み。採択済みCP-12により移動・行動前のみ実行可、成功時に行動済みとなる。CP-09／10の移動・武器適性・装備維持、7経路すべての一段階昇格を回帰テスト化。PR #32でCP-07／08のEXP 0／99保持、現在HP 1／満タン維持、HP上限でのボーナス制限を追加 | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts`, `src/domain/progression/class-change.test.ts`, `src/content/class-promotion.test.ts` | PR #32 CI run #503: 22 test files／146 tests、Chromium E2E 11件成功 |
 | クラスチェンジアイテム定義・所持品表示 | アイテム定義と表示は実装済み。採択済みCP-13により初期付与を廃止し、章報酬／イベント定義による配布のみ許可。具体的な報酬は未登録。PR #29で明示報酬は勝利後のみ付与、所持枠満杯時は状態を変更せず拒否することを検証 | `src/content/items.ts`, `src/content/maps/chapter-01.ts`, `src/application/apply-chapter-rewards.ts`, `src/App.tsx` | PR #29 CI run #497: chapter-reward tests passed |
 | クラスチェンジUI・確認・自動保存接続 | 実装済み（Lv.10／証所持／自軍フェイズ／未移動・未行動条件。確定でユニットの行動を消費）。確認画面に8能力の現在値・昇格後予測・実増加量・仮上限、最大HP／現在HP、Lv.1化・EXP保持、証消費、移動／武器適性／装備の維持、行動消費を表示する（CP-15の必須表示は採択済み。能力数値／上限は引き続き試作値） | `src/App.tsx`, `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts` | PR #38で8能力の現在値・昇格後値・実増加量・仮上限、HP／EXP等の影響を表示。PR #39で8能力すべての画面表示、暫定上限超過値の維持、キャンセル時のセーブ不変、確定後の状態保持をE2E検証。PR #39最終head CI run #532: typecheck、22 test files／148 tests、production build、Chromium E2E 11件すべて成功（オーナーがマージ済み） |
-| 開発専用の昇格・戦闘比較ベンチ | PR #81／#82をmainへマージ済み。/?promotion-lab=1 の合成stat previewと、/?promotion-snapshots=1 のv3セーブJSONローカル読込を提供。後者はLv.10+の7基本職候補、昇格command copy、既存performAttackによる単一seed戦闘、20／100／250 seedのペア反復集計（命中率・命中時必殺率・平均与ダメージ・対象撃破率・平均反撃被ダメージ・生存率）を表示する。各seedはcontrol／promotionへ同一適用し、各試行は元snapshotから独立。昇格で消費した行動は次の自軍行動機会を模したコピーだけで再有効化する。仮想単発戦闘の反復であり、敵軍フェイズ・移動・複数ターンの攻略率／21ケースの実プレイ評価ではない。IndexedDB／実snapshot／GameStateの保存変更・外部送信なし | `src/components/class-promotion-snapshot-bench.tsx`, `src/application/get-promotion-combat-comparison.ts`, `src/application/get-promotion-combat-sample-summary.ts`, `src/application/perform-attack.ts` | PR #83 final-head CI run #1039: typecheck、41 test files／243 unit tests、production build、production-preview Chromium E2E 48件、development-only E2E 4件すべて成功 |
+| 開発専用の昇格・戦闘比較ベンチ | PR #81〜#83をmainへマージ済み。/?promotion-lab=1 の合成stat previewと、/?promotion-snapshots=1 のv3セーブJSONローカル読込を提供。後者はLv.10+の7基本職候補、昇格command copy、既存performAttackによる単一seed戦闘、20／100／250 seedのペア反復集計を表示。PR #84対象の21ケースmatrixは、各基本職3件以上の候補から8能力順位平均に基づく低位25%／中央値50%／上位90%の参考候補を提示し、人が候補・敵・条件を確認してから一括実行・CSV出力する。データ区分は利用者申告であり真正性を自動検証しない。単発戦闘反復は敵軍フェイズ・移動・複数ターンの実プレイを再現せず、統制21ケースの実プレイ完了やCP-04／05承認とは別。IndexedDB／GameState／自動保存／外部送信なし | `src/components/class-promotion-snapshot-bench.tsx`, `src/application/build-promotion-playtest-matrix.ts`, `src/application/get-promotion-combat-comparison.ts`, `src/application/get-promotion-combat-sample-summary.ts` | PR #84 CIでtypecheck／unit tests／build／production-preview E2E／dev E2Eを検証予定 |
 | 正式な昇格ボーナス・上限・昇格後移動／武器データ | 未決定（現行は仮値） | `src/content/classes.ts` | playtest／仕様決定待ち |
 | 敵の役割タグ／AI優先度 | 未実装 | — |
 | 砦のフェイズ開始回復 | 実装済み（該当陣営の生存ユニット／最大HPの10%／端数切り捨ては暫定） | `src/domain/rules/apply-fort-recovery.ts`, `src/application/resolve-enemy-phase.ts` |
@@ -141,3 +141,12 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - seed系列はsnapshotの初期RNGをsaltで分離したXorshift32 streamから決定論的に生成する。選択できる試行数は20／100／250。各試行は同じHP／EXP／敵HPから開始し、結果を次試行へ持ち越さない。
 - 表示指標は攻撃命中率、命中時必殺率、平均与ダメージ／戦闘、対象敵撃破率、平均反撃被ダメージ／戦闘、反撃後の生存率、平均戦闘後HP。これは単一戦闘条件における固定seed集計で、完全な敵軍フェイズ・移動・複数ターン・地図攻略の勝率ではない。
 - E2Eでは合成snapshotを使う。実プレイヤーのセーブ／プレイ結果を取り込んだものではなく、CP-04／05や初回証報酬の承認根拠にしない。
+
+
+### 21ケース統制評価の候補整理（PR #84対象）
+
+- 実セーブsnapshotベンチに7基本職×低位／中央値／上位の21 slot matrixを追加。各基本職3件以上の候補がない場合は候補不足とし、候補が少ないことを合成データで補わない。
+- 各候補は8能力ごとの同クラス内mid-rank平均percentileで並べ、下位25%・50%・90%に近い候補を仮提案する。プロフィールは相対的な候補選定ラベルであり、成長率や正式上限近傍の意味ではない。最終候補・敵・条件は利用者が各行で確認する。
+- 21ケース一括実行は既存performAttackの独立単発戦闘20／100／250 seed反復を21組実行するもの。各ケースでcontrol／promotionに同一seedを適用し、元snapshotから各試行を再開始する。敵軍フェイズ・移動・複数turnは含まないため、実プレイ21ケースの代替ではない。
+- CSVにcase/profile、候補source file・fingerprint・unit／class／stats、enemy／map／turn／RNG、seed range、sample count、control／promotion metrics、data classificationを記録する。data classificationの「実プレイ由来」は利用者申告であり、ファイルの真正性を機械的に検証しない。初期値「未確認」のままの出力は実プレイ結果に数えない。
+- CSVはユーザーが明示的にダウンロードした時だけ作成される。import snapshot、matrix候補、結果はメモリ上だけであり、IndexedDB／GameState／自動保存／ネットワーク送信は行わない。
