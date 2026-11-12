@@ -167,7 +167,7 @@ Issue #26でCP-01〜03／06／15を採択した。以下の方針を初期版の
 ### 5.2 プロファイルの選び方
 
 1. 各基本職について、基本職Lv.10以上で昇格条件を満たす実プレイのユニットsnapshotを複数集める。能力8項目、HP、EXP、移動値、武器適性、装備、inventory、マップ位置、セーブrevisionを保存する。
-2. 各能力のクラス内percentileを算出し、ユニットごとの平均percentileを「成長プロファイル指標」として記録する。指標が下位25%に近い個体を低成長、50%に近い個体を中央値、90%に近い個体を上位ケースとして選ぶ。選定した実ユニットIDとsnapshot hashを記録する。
+2. 実セーブsnapshot比較ベンチは、基本職ごとの候補数と8能力の同クラス内順位の平均を参考percentileとして表示する。3件未満は分布データ不足とする。候補一覧をもとに指標が下位25%に近い個体を低成長、50%に近い個体を中央値、90%に近い個体を上位ケースとして人が選び、実ユニットIDとsnapshot fingerprintを記録する。fingerprintはツール上の短い識別ラベルであり、暗号学的hashではない。
 3. 実ユニット数が足りずpercentileを計算できない場合は「実測データ不足」と記録する。仮の能力値を実測値として補完しない。必要なら別枠の合成fixtureで境界挙動を確認するが、実プレイのバランス証拠とは分ける。
 4. 「上位」は実測分布内の上位ケースを意味し、CP-05の正式上限近傍を意味しない。上限近傍テストは候補上限が別途提示された後、各能力について上限直前・到達・超過の境界fixtureを追加する。
 
@@ -235,3 +235,14 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 - 分離: `import.meta.env.DEV` のときだけ表示。本編画面をマウントせず、GameState／RNG／IndexedDB／自動保存／saveVersionにアクセスしない。
 - 限界: 合成fixtureによるstat-only previewであり、実プレイ成長分布、戦闘結果、移動・武器性能、CP-04／05のバランス妥当性を証明しない。実プレイ21ケースの記録は別途必要。
 - 検証: `npm run test:e2e` は本番Previewでの既存E2Eに加え、Vite開発サーバーでの試験室E2Eを実行する。
+
+
+## 実セーブsnapshotの取り込み・比較（開発専用）
+
+- 起動: `npm run dev` の後、`http://localhost:5173/?promotion-snapshots=1` を開く。
+- 入力: セーブ管理から書き出したJSON export（envelope version 1／GameState saveVersion 3）を複数選択する。ゲーム内でLv.10以上の基本職ユニットが自軍フェイズ・未移動・未行動のタイミングで書き出すと、昇格コマンドの比較候補になる。
+- 検証: snapshotのchapterIdを既存registryから解決し、対象mapに対するsave validatorを通す。未登録章、不正JSON、旧／未知saveVersion、不正なunit／item／positionを拒否する。
+- profile整理: 基本職ごとに読み込んだLv.10+出撃ユニットの件数を集計する。3件以上でのみ8能力の同クラス内percentile rank平均を表示する。3件未満は分布データ不足とし、low／median／highを自動選定しない。候補を低／中央値／上位へ割り当てる判断は人が記録表で行う。
+- control／promotion: controlは元snapshot、promotionはコピーへ既存application commandを実行した結果。promotion_sealが元snapshotに無い場合は、比較コピーの所持品へだけ一時挿入し、コピー内で消費する。これは試験用で、章報酬／既存セーブの所持品へ反映しない。
+- 限界: 統計的に十分なサンプル数を保証せず、戦闘解決もしない。ダメージ・命中・追撃・生存・移動／射程の実戦比較は別途必要。実プレイ21ケースの完了・CP-04／05の承認根拠とは数えない。
+- 分離: 読み込みはブラウザメモリだけ。IndexedDB／GameState／RNG／自動保存／saveVersionへ書き込まない。再読み込みまたは画面の破棄操作でクリア。本番ビルドではroute無効。

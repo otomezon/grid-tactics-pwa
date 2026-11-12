@@ -2549,10 +2549,27 @@ const LazyClassPromotionLab = lazy(() =>
   }))
 );
 
-/** Development-only isolated promotion preview; never mount campaign persistence on this route. */
+/** Load local save data only after the explicit development snapshot-bench route is opened. */
+const LazyClassPromotionSnapshotBench = lazy(() =>
+  import("./components/class-promotion-snapshot-bench").then((module) => ({
+    default: module.ClassPromotionSnapshotBench
+  }))
+);
+
+/** Development-only isolated promotion previews; never mount campaign persistence on these routes. */
 export default function App() {
-  const isPromotionLabRoute = import.meta.env.DEV &&
-    new URLSearchParams(window.location.search).get("promotion-lab") === "1";
+  const params = new URLSearchParams(window.location.search);
+  const isDevelopment = import.meta.env.DEV;
+  const isSnapshotBenchRoute = isDevelopment && params.get("promotion-snapshots") === "1";
+  const isPromotionLabRoute = isDevelopment && params.get("promotion-lab") === "1";
+
+  if (isSnapshotBenchRoute) {
+    return (
+      <Suspense fallback={<main className="promotion-lab"><p>セーブ比較ベンチを読み込んでいます…</p></main>}>
+        <LazyClassPromotionSnapshotBench />
+      </Suspense>
+    );
+  }
 
   return isPromotionLabRoute ? (
     <Suspense fallback={<main className="promotion-lab"><p>試験室を読み込んでいます…</p></main>}>
