@@ -58,6 +58,12 @@ interface PromotionPlaytestMatrixResult {
   currentHp: number;
   experience: number;
   equippedWeaponId: string | null;
+  promotedStats: UnitStats;
+  promotedCurrentHp: number;
+  promotedExperience: number;
+  promotedEquippedWeaponId: string | null;
+  requestedBonuses: Partial<UnitStats>;
+  appliedBonuses: Partial<UnitStats>;
   chapterId: string;
   turn: number;
   rngState: number;
@@ -363,6 +369,10 @@ export function ClassPromotionSnapshotBench() {
           row.target.id,
           sampleCount
         );
+        const requestedBonuses = promotion.statPreview.changes.reduce<Partial<UnitStats>>(
+          (values, change) => ({ ...values, [change.key]: change.requestedBonus }),
+          {}
+        );
         nextResults[row.id] = {
           caseId: row.id,
           classId: row.classId,
@@ -378,6 +388,12 @@ export function ClassPromotionSnapshotBench() {
           currentHp: row.candidate.unit.currentHp,
           experience: row.candidate.unit.experience,
           equippedWeaponId: row.candidate.unit.equippedWeaponId,
+          promotedStats: promotion.promotedUnit.stats,
+          promotedCurrentHp: promotion.promotedUnit.currentHp,
+          promotedExperience: promotion.promotedUnit.experience,
+          promotedEquippedWeaponId: promotion.promotedUnit.equippedWeaponId,
+          requestedBonuses,
+          appliedBonuses: promotion.appliedBonuses,
           chapterId: row.candidate.snapshot.chapterId,
           turn: row.candidate.snapshot.turn,
           rngState: row.candidate.snapshot.rngState,
@@ -408,8 +424,12 @@ export function ClassPromotionSnapshotBench() {
     const headers = [
       "case_id", "basic_class", "promoted_class", "profile", "target_percentile",
       "candidate_percentile", "source_file", "snapshot_fingerprint", "unit_id", "unit_name",
-      "hp", "strength", "magic", "skill", "speed", "luck", "defense", "resistance",
-      "current_hp", "experience", "movement", "move", "weapon_types", "equipped_weapon",
+      "control_hp", "control_strength", "control_magic", "control_skill", "control_speed", "control_luck", "control_defense", "control_resistance",
+      "control_current_hp", "control_experience", "movement", "move", "weapon_types", "control_equipped_weapon",
+      "promotion_hp", "promotion_strength", "promotion_magic", "promotion_skill", "promotion_speed", "promotion_luck", "promotion_defense", "promotion_resistance",
+      "promotion_current_hp", "promotion_experience", "promotion_equipped_weapon",
+      "requested_hp_bonus", "requested_strength_bonus", "requested_magic_bonus", "requested_skill_bonus", "requested_speed_bonus", "requested_luck_bonus", "requested_defense_bonus", "requested_resistance_bonus",
+      "applied_hp_bonus", "applied_strength_bonus", "applied_magic_bonus", "applied_skill_bonus", "applied_speed_bonus", "applied_luck_bonus", "applied_defense_bonus", "applied_resistance_bonus",
       "chapter_id", "turn", "starting_rng", "enemy_id", "enemy_class", "enemy_hp", "enemy_position",
       "sample_count", "first_seed", "last_seed", "data_classification",
       "control_hit_rate", "promotion_hit_rate", "hit_rate_delta_pt",
@@ -428,10 +448,19 @@ export function ClassPromotionSnapshotBench() {
       return [
         entry.caseId, entry.classId, entry.promotedClassId, entry.profile,
         entry.targetPercentile, entry.candidatePercentile, entry.fileName, entry.fingerprint,
-        entry.unitId, entry.unitName, stats.hp, stats.strength, stats.magic, stats.skill,
-        stats.speed, stats.luck, stats.defense, stats.resistance, entry.currentHp,
-        entry.experience, candidate?.unit.movementType ?? "", candidate?.unit.move ?? "",
+        entry.unitId, entry.unitName,
+        stats.hp, stats.strength, stats.magic, stats.skill, stats.speed, stats.luck, stats.defense, stats.resistance,
+        entry.currentHp, entry.experience, candidate?.unit.movementType ?? "", candidate?.unit.move ?? "",
         candidate?.unit.usableWeaponTypes.join("|") ?? "", entry.equippedWeaponId ?? "",
+        entry.promotedStats.hp, entry.promotedStats.strength, entry.promotedStats.magic, entry.promotedStats.skill,
+        entry.promotedStats.speed, entry.promotedStats.luck, entry.promotedStats.defense, entry.promotedStats.resistance,
+        entry.promotedCurrentHp, entry.promotedExperience, entry.promotedEquippedWeaponId ?? "",
+        entry.requestedBonuses.hp ?? 0, entry.requestedBonuses.strength ?? 0, entry.requestedBonuses.magic ?? 0,
+        entry.requestedBonuses.skill ?? 0, entry.requestedBonuses.speed ?? 0, entry.requestedBonuses.luck ?? 0,
+        entry.requestedBonuses.defense ?? 0, entry.requestedBonuses.resistance ?? 0,
+        entry.appliedBonuses.hp ?? 0, entry.appliedBonuses.strength ?? 0, entry.appliedBonuses.magic ?? 0,
+        entry.appliedBonuses.skill ?? 0, entry.appliedBonuses.speed ?? 0, entry.appliedBonuses.luck ?? 0,
+        entry.appliedBonuses.defense ?? 0, entry.appliedBonuses.resistance ?? 0,
         entry.chapterId, entry.turn, entry.rngState, entry.enemyId, entry.enemyClassId,
         entry.enemyCurrentHp, entry.enemyPosition, entry.summary.sampleCount,
         entry.summary.firstSeed, entry.summary.lastSeed,

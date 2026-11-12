@@ -186,6 +186,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   const csv = await readFile(downloadPath, "utf8");
   expect(csv).toContain("basic_class");
   expect(csv).toContain("swordsman:low");
+  expect(csv).toContain("promotion_strength");
+  expect(csv).toContain("requested_hp_bonus");
+  expect(csv).toContain("applied_hp_bonus");
   expect(csv).toContain("未確認");
 });
  

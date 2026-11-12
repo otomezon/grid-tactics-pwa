@@ -247,7 +247,7 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 - 21行それぞれでcandidateと射程内enemyを選び直し、条件を確認してチェックを入れる。候補の重複や昇格不可、攻撃対象なし、候補不足の行は実行可能扱いにしない。profilesは相対分布上の選定目安で、growth rate／正式cap近傍の判定ではない。
 - 一括実行は各caseのcontrol／promotionを同一seedペアで20／100／250回反復する単発combat sampleであり、各試行を元snapshotから再開する。敵phase／移動／複数turn／map clearは再現しない。
 - 各caseのデータ区分は「未確認」「実プレイ由来（利用者申告）」「合成fixture」。実プレイ由来はユーザーの申告をCSVに残すもので、アプリはファイルの真正性・出所を検証しない。合成fixtureまたは未確認データを実プレイ結果としてWorksheetへ転記しない。
-- 21件完了後に手動CSV downloadが可能。CSVにはprofile／候補fingerprint／unit／stat／map／enemy／seed range／sample count／control・promotion metrics／data classificationを含める。CSV以外の永続記録や自動送信は行わない。
+- 21件完了後に手動CSV downloadが可能。CSVにはprofile／候補fingerprint／unit／control・promotionの8能力／現在HP／EXP／装備／要求・実適用ボーナス／map／enemy／seed range／sample count／combat metrics／data classificationを含める。昇格後能力・ボーナスは現在の仮prototype dataに基づく。CSV以外の永続記録や自動送信は行わない。
 
 ## 実セーブsnapshotの取り込み・比較（開発専用）
 
