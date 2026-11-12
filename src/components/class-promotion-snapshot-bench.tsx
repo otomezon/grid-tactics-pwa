@@ -3,6 +3,8 @@ import { CLASS_PROMOTION_TARGETS, getClassDisplayName, getClassPromotionDefiniti
 import { PROMOTION_ITEM_ID } from "../content/items";
 import { getChapterById } from "../content/chapters";
 import { performClassChange } from "../application/perform-class-change";
+import { createAttackPlan } from "../application/perform-attack";
+import { getPromotionCombatComparison } from "../application/get-promotion-combat-comparison";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import type { GameStateSnapshot, GameUnit, UnitStats } from "../domain/models/game";
@@ -145,6 +147,7 @@ function buildPromotionComparison(candidate: ImportedCandidate) {
     promotedUnit: execution.promotedUnit,
     statPreview,
     appliedBonuses: execution.appliedBonuses,
+    promotionState: execution.nextState,
     rngUnchanged: promotionInput.rngState === execution.nextState.rngState
   };
 }
@@ -153,10 +156,31 @@ function formatUnitLocation(unit: GameUnit): string {
   return (unit.position.x + 1) + "列・" + (unit.position.y + 1) + "行";
 }
 
+function getAttackableEnemyTargets(candidate: ImportedCandidate): GameUnit[] {
+  const chapter = getChapterById(candidate.snapshot.chapterId);
+  if (!chapter || !candidate.eligible) return [];
+  return candidate.snapshot.units.filter((unit) => {
+    if (unit.faction !== "enemy" || unit.currentHp <= 0) return false;
+    try {
+      createAttackPlan(candidate.snapshot, chapter.map, candidate.unit.id, unit.id);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+function getStrikeLabel(kind: "initial" | "counter" | "follow-up"): string {
+  if (kind === "initial") return "先制攻撃";
+  if (kind === "counter") return "反撃";
+  return "追撃";
+}
+
 export function ClassPromotionSnapshotBench() {
   const [candidates, setCandidates] = useState<ImportedCandidate[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [selectedKey, setSelectedKey] = useState("");
+  const [selectedTargetId, setSelectedTargetId] = useState("");
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
@@ -167,6 +191,27 @@ export function ClassPromotionSnapshotBench() {
     () => selectedCandidate ? buildPromotionComparison(selectedCandidate) : null,
     [selectedCandidate]
   );
+  const combatTargets = useMemo(
+    () => selectedCandidate ? getAttackableEnemyTargets(selectedCandidate) : [],
+    [selectedCandidate]
+  );
+  const effectiveTargetId = combatTargets.some((target) => target.id === selectedTargetId)
+    ? selectedTargetId
+    : combatTargets[0]?.id ?? "";
+  const selectedTarget = combatTargets.find((target) => target.id === effectiveTargetId);
+  const selectedChapter = selectedCandidate
+    ? getChapterById(selectedCandidate.snapshot.chapterId)
+    : undefined;
+  const combatComparison = useMemo(() => {
+    if (!selectedCandidate || !comparison || !selectedTarget || !selectedChapter) return null;
+    return getPromotionCombatComparison(
+      selectedCandidate.snapshot,
+      comparison.promotionState,
+      selectedChapter.map,
+      selectedCandidate.unit.id,
+      selectedTarget.id
+    );
+  }, [selectedCandidate, comparison, selectedTarget, selectedChapter]);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
@@ -402,13 +447,96 @@ export function ClassPromotionSnapshotBench() {
         </section>
       )}
 
+      {selectedCandidate && comparison && (
+        <section
+          className="promotion-lab-card"
+          aria-labelledby="promotion-snapshot-combat-heading"
+          data-testid="promotion-snapshot-combat"
+        >
+          <div className="promotion-lab-section-heading">
+            <div>
+              <p className="eyebrow">SAME SNAPSHOT · SAME RNG</p>
+              <h2 id="promotion-snapshot-combat-heading">同条件の仮想戦闘比較</h2>
+            </div>
+            <span className="promotion-lab-provisional">試作戦闘データ</span>
+          </div>
+          <p className="helper-text">
+            昇格は現在の自軍フェイズの行動を消費します。この比較では、元snapshotと昇格後コピーの両方で次の自軍行動機会を模し、同じ開始RNG・位置・敵・地形から既存の戦闘コマンドを1回ずつ実行します。敵軍フェイズや移動、複数ターンの進行は再現しません。
+          </p>
+          {combatTargets.length === 0 ? (
+            <p className="helper-text" role="status">
+              現在のsnapshotには、装備武器の射程内で攻撃可能な生存敵がいません。戦闘比較には同じchapter／phase／unit編成で敵が射程内にいるsnapshotを読み込んでください。
+            </p>
+          ) : (
+            <>
+              <label className="promotion-snapshot-candidate-label">
+                <span>比較対象の敵</span>
+                <select
+                  aria-label="比較対象の敵"
+                  value={effectiveTargetId}
+                  onChange={(event) => setSelectedTargetId(event.target.value)}
+                >
+                  {combatTargets.map((target) => (
+                    <option key={target.id} value={target.id}>
+                      {target.name} · HP {target.currentHp}/{target.stats.hp} · {formatUnitLocation(target)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {combatComparison && selectedTarget && (
+                <>
+                  <p className="helper-text" data-testid="promotion-snapshot-combat-rng">
+                    共通開始RNG: {combatComparison.startingRngState}。両枝はそれぞれ同じseedから独立して乱数を進めます。
+                  </p>
+                  <div className="promotion-snapshot-branch-grid">
+                    {([
+                      { id: "control", label: "control（昇格なし）", branch: combatComparison.control, attacker: comparison.controlUnit },
+                      { id: "promotion", label: "promotion（昇格後）", branch: combatComparison.promotion, attacker: comparison.promotedUnit }
+                    ] as const).map(({ id, label, branch, attacker }) => (
+                      <div key={id} data-testid={"promotion-snapshot-combat-" + id}>
+                        <h3>{label}</h3>
+                        <dl>
+                          <div><dt>攻撃側／相手</dt><dd>{attacker.name} → {selectedTarget.name}</dd></div>
+                          <div><dt>初期HP</dt><dd>{attacker.currentHp}/{attacker.stats.hp} → {selectedTarget.currentHp}/{selectedTarget.stats.hp}</dd></div>
+                        </dl>
+                        <strong>予測（既存forecast）</strong>
+                        <ul>
+                          {branch.forecast.strikes.map((strike, index) => (
+                            <li key={strike.kind + "-" + index}>
+                              {getStrikeLabel(strike.kind)}: 命中 {strike.hitRate}%・通常 {strike.normalDamage}・必殺 {strike.criticalRate}%
+                            </li>
+                          ))}
+                        </ul>
+                        <strong>実行結果（このseedの1試行）</strong>
+                        <ul>
+                          {branch.result.events.map((event, index) => (
+                            <li key={event.kind + "-" + index}>
+                              {getStrikeLabel(event.kind)}: {event.hit ? (event.critical ? "必殺命中" : "命中") : "回避"}・{event.damage} damage・相手HP {event.defenderHpBefore} → {event.defenderHpAfter}
+                            </li>
+                          ))}
+                        </ul>
+                        <dl>
+                          <div><dt>戦闘後HP</dt><dd>攻撃側 {branch.result.attackerHp} / 相手 {branch.result.defenderHp}</dd></div>
+                          <div><dt>獲得EXP／レベルアップ</dt><dd>+{branch.experienceAwarded} EXP／{branch.levelUps.length}回</dd></div>
+                          <div><dt>終了RNG</dt><dd>{branch.finalRngState}</dd></div>
+                        </dl>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
       <section className="promotion-lab-card promotion-lab-caveats">
         <p className="eyebrow">SCOPE & LIMITS</p>
         <h2>このベンチで確認できること／できないこと</h2>
         <ul>
           <li>実セーブのユニット能力値・HP／EXP・移動・武器適性・装備を、読み込んだ時点のsnapshotとして表示します。</li>
           <li>7経路のうち対象の1ユニットについて、既存application/domain commandを切り離したコピーへ実行し、レベル／EXP／能力値／HP／移動／装備／行動消費を比較します。</li>
-          <li>戦闘を解決しないため、ダメージ・命中・追撃・生存・到達マス等の実戦指標は得られません。統制プレイテスト21ケースの一部であるsnapshot準備・能力比較用です。</li>
+          <li>射程内に生存敵がいる場合は、既存performAttackを使った1回の固定seed戦闘を両枝で実行し、予測とそのseedでの実結果を並べます。これは単一戦闘サンプルであり、複数乱数の勝率・敵軍フェイズ・移動・複数ターンや21ケースの統制プレイテストを代替しません。</li>
           <li>読み込みはsaveVersion 3のJSON exportだけです。旧版の自動migration、IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
           <li>現行クラス上限・ボーナスは仮値のままです。実データの比較はできてもCP-04／05の承認にはなりません。</li>
         </ul>
