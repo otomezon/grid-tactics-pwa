@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
 import { DeploymentPreview } from "./components/deployment-preview";
 import { BattleObjectivePanel } from "./components/battle-objective-panel";
@@ -59,6 +59,7 @@ import {
 } from "./persistence/save-repository";
 import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 import { OperationGuide } from "./components/operation-guide";
+import { CampaignTitleScreen } from "./components/campaign-title-screen";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -355,6 +356,8 @@ function CampaignApp() {
   const [movementPreviewPosition, setMovementPreviewPosition] = useState<Position | null>(null);
   const [battleHistory, setBattleHistory] = useState<BattleHistoryEntry[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
+  const [isTitleScreenVisible, setIsTitleScreenVisible] = useState(true);
+  const [hasSavedCampaign, setHasSavedCampaign] = useState(false);
   const [message, setMessage] = useState("味方ユニットを選択してください。");
   const [loadBlocked, setLoadBlocked] = useState(false);
   const [promotionConfirmUnitId, setPromotionConfirmUnitId] = useState<string | null>(null);
@@ -430,6 +433,7 @@ function CampaignApp() {
           return;
         }
 
+        setHasSavedCampaign(true);
         const savedChapterId = typeof stored === "object" && stored !== null &&
           "chapterId" in stored && typeof stored.chapterId === "string"
           ? stored.chapterId
@@ -864,6 +868,7 @@ function CampaignApp() {
       setDeploymentDetailUnitId(null);
       setLoadBlocked(false);
       setSaveStatus("saved");
+      setHasSavedCampaign(true);
       setMessage(restoreMessage);
     } catch (error) {
       setSaveStatus("failed");
@@ -873,9 +878,7 @@ function CampaignApp() {
     }
   }
 
-  async function handleImportSaveFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
+  async function handleImportSaveFile(file: File | null): Promise<void> {
     if (!file) return;
 
     if (file.size > MAX_SAVE_FILE_BYTES) {
@@ -952,6 +955,7 @@ function CampaignApp() {
       setDeploymentDetailUnitId(null);
       setLoadBlocked(false);
       setSaveStatus("saved");
+      setHasSavedCampaign(true);
       setMessage(importMessage);
     } catch (error) {
       setSaveStatus("failed");
@@ -1028,6 +1032,39 @@ function CampaignApp() {
     const roster = document.querySelector<HTMLElement>("#enemy-roster");
     roster?.focus();
     roster?.scrollIntoView({ block: "nearest" });
+  }
+
+  function handleContinueCampaign(): void {
+    if (!hasSavedCampaign || loadBlocked || saveStatus === "loading" || saveStatus === "saving") return;
+    setIsTitleScreenVisible(false);
+    setMessage("保存されたキャンペーンを再開しました。");
+  }
+
+  function handleStartNewCampaign(): void {
+    if (loadBlocked || saveStatus === "loading" || saveStatus === "saving") return;
+    const freshState: GameStateSnapshot = {
+      ...INITIAL_CHAPTER.initialState,
+      rngState: createRandomSeed()
+    };
+    setActiveChapter(INITIAL_CHAPTER);
+    setGameState(freshState);
+    setDeploymentAssignments(createDeploymentAssignments(freshState, INITIAL_CHAPTER.map));
+    setDeploymentSelectedUnitIds(createDeploymentSelection(freshState, INITIAL_CHAPTER.map));
+    setDeploymentPending(true);
+    setBattleHistory([]);
+    setSelectedUnitId(null);
+    setCombatTargetId(null);
+    setShowEnemyThreatRange(false);
+    setIsPhaseEndReviewOpen(false);
+    setInspectedPosition(null);
+    setMovementPreviewPosition(null);
+    setPromotionConfirmUnitId(null);
+    setDeploymentDetailUnitId(null);
+    setIsStartingNextChapter(false);
+    touchMoveConfirmationPositionRef.current = null;
+    setSaveStatus("ready");
+    setIsTitleScreenVisible(false);
+    setMessage("新しいキャンペーンです。出撃配置を確定するまでは既存の自動セーブを保持します。");
   }
 
   function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
@@ -1390,6 +1427,7 @@ function CampaignApp() {
       try {
         await saveGameState(nextState);
         setSaveStatus("saved");
+        setHasSavedCampaign(true);
         setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。");
       } catch {
         setSaveStatus("failed");
@@ -1553,6 +1591,36 @@ function CampaignApp() {
     ? deploymentSlots.find((slot) => slot.value === deploymentAssignments[deploymentDetailCandidate.id])?.label ?? "未割当"
     : "控え（配置なし）";
 
+  if (isTitleScreenVisible) {
+    return (
+      <CampaignTitleScreen
+        isLoading={saveStatus === "loading" || saveStatus === "saving"}
+        hasSavedCampaign={hasSavedCampaign}
+        saveBlocked={loadBlocked}
+        canExportSave={hasSavedCampaign && !loadBlocked && saveStatus === "saved"}
+        canCreateBackup={hasSavedCampaign && !loadBlocked && saveStatus === "saved"}
+        saveStatusLabel={SAVE_STATUS_LABELS[saveStatus]}
+        message={message}
+        savedChapterTitle={activeChapter.title}
+        savedTurn={gameState.turn}
+        savedPhaseLabel={gameState.phase === "player" ? "自軍" : "敵軍"}
+        savedOutcomeLabel={battleOutcome === "victory" ? "クリア" : battleOutcome === "defeat" ? "敗北" : "進行中"}
+        isInstalledApp={isInstalledApp}
+        canInstall={!isInstalledApp && Boolean(installPrompt)}
+        backups={saveBackupViews}
+        backupListLoaded={backupListLoaded}
+        backupActionPending={backupActionPending}
+        onContinue={handleContinueCampaign}
+        onStartNewCampaign={handleStartNewCampaign}
+        onExportSaveFile={() => void handleExportSaveFile()}
+        onImportSaveFile={(file) => void handleImportSaveFile(file)}
+        onCreateBackup={() => void handleCreateSaveBackup()}
+        onRestoreBackup={(slotId) => void handleRestoreSaveBackup(slotId)}
+        onInstallApp={() => void handleInstallApp()}
+      />
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -1608,7 +1676,11 @@ function CampaignApp() {
             type="file"
             accept="application/json,.json"
             aria-label="読み込むセーブファイル"
-            onChange={(event) => void handleImportSaveFile(event)}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0] ?? null;
+              event.currentTarget.value = "";
+              void handleImportSaveFile(file);
+            }}
           />
           {battleOutcome === "playing" && gameState.phase === "player" && (
             <button

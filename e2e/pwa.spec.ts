@@ -3,6 +3,20 @@ import { expect, test, type Page } from "@playwright/test";
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 const navigationCountKey = "__pwa_e2e_navigation_count";
 
+async function enterNewCampaign(page: Page): Promise<void> {
+  const title = page.getByTestId("campaign-title-screen");
+  await expect(title).toBeVisible();
+  await title.getByRole("button", { name: "はじめから" }).click();
+  await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+}
+
+async function startBattle(page: Page): Promise<void> {
+  await page.goto("/");
+  await enterNewCampaign(page);
+  await page.getByRole("button", { name: deploymentStartButton }).click();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+}
+
 async function readAutoSave(page: Page): Promise<unknown | null> {
   return page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -137,7 +151,7 @@ test.describe("production PWA shell", () => {
     await expect.poll(() => page.evaluate(
       () => navigator.serviceWorker.controller?.scriptURL ?? ""
     )).toContain("/sw.js");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
   });
 
   test("offers the browser install prompt and reflects successful installation", async ({ page }) => {
@@ -197,7 +211,7 @@ test.describe("production PWA shell", () => {
 
   test("reopens the cached application shell after going offline", async ({ page, context }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
 
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready;
@@ -206,7 +220,7 @@ test.describe("production PWA shell", () => {
     await expect.poll(() => page.evaluate(
       () => navigator.serviceWorker.controller?.scriptURL ?? ""
     )).toContain("/sw.js");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
 
     const precacheEntries = await page.evaluate(async () => {
       const cacheNames = await caches.keys();
@@ -221,15 +235,13 @@ test.describe("production PWA shell", () => {
 
     await context.setOffline(true);
     await page.reload();
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Grid Tactics" })).toBeVisible();
   });
 
 
   test("exports a battle save and restores it in a fresh browser context", async ({ page, browser }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
-    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
@@ -253,7 +265,7 @@ test.describe("production PWA shell", () => {
     try {
       const importPage = await freshContext.newPage();
       await importPage.goto("/");
-      await expect(importPage.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+      await enterNewCampaign(importPage);
       importPage.on("dialog", (dialog) => dialog.accept());
 
       await importPage.locator('[data-testid="save-import-input"]').setInputFiles(filePath!);
@@ -272,9 +284,7 @@ test.describe("production PWA shell", () => {
   });
 
   test("rejects an invalid save file without overwriting the current autosave", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
-    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
@@ -347,6 +357,7 @@ test.describe("production PWA shell", () => {
     }, navigationCountKey);
 
     await page.goto("/");
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready;
     });
@@ -354,7 +365,7 @@ test.describe("production PWA shell", () => {
     await expect.poll(() => page.evaluate(
       () => navigator.serviceWorker.controller?.scriptURL ?? ""
     )).toContain("/sw.js");
-
+    await enterNewCampaign(page);
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
@@ -386,20 +397,22 @@ test.describe("production PWA shell", () => {
       { timeout: 30_000 }
     ).toBeGreaterThan(navigationCountBeforeUpdate);
 
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
+    await page.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
 
     await context.setOffline(true);
     await page.reload();
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
+    await page.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
   test("creates three backup generations, rotates the oldest, and validates confirmed restores", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
-    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const initialAutoSave = await readAutoSave(page);

@@ -19,7 +19,8 @@ describe("chapter content registry", () => {
     expect(INITIAL_CHAPTER.number).toBe(1);
     expect(getChapterById("chapter_02_map")?.number).toBe(2);
     expect(getNextChapter("chapter_01_map")?.id).toBe("chapter_02_map");
-    expect(getNextChapter("chapter_02_map")).toBeUndefined();
+    expect(getNextChapter("chapter_02_map")?.id).toBe("chapter_03_map");
+    expect(getNextChapter("chapter_03_map")).toBeUndefined();
     expect(getNextChapter("missing_chapter")).toBeUndefined();
   });
 });

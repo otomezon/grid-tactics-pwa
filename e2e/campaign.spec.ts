@@ -2,9 +2,28 @@ import { expect, test, type Page } from "@playwright/test";
 
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 
-async function startBattle(page: Page): Promise<void> {
+async function startNewCampaign(page: Page): Promise<void> {
   await page.goto("/");
+  await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
+  await expect(page.getByRole("button", { name: "はじめから" })).toBeEnabled();
+  await page.getByRole("button", { name: "はじめから" }).click();
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+}
+
+async function continueSavedCampaign(page: Page): Promise<void> {
+  const title = page.getByTestId("campaign-title-screen");
+  await expect(title).toBeVisible();
+  const continueButton = title.getByRole("button", { name: "つづきから" });
+  if (await continueButton.count()) {
+    await expect(continueButton).toBeEnabled();
+    await continueButton.click();
+  } else {
+    await title.getByRole("button", { name: "はじめから" }).click();
+  }
+}
+
+async function startBattle(page: Page): Promise<void> {
+  await startNewCampaign(page);
   await page.getByRole("button", { name: deploymentStartButton }).click();
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 }
@@ -70,6 +89,81 @@ async function writeAutoSave(page: Page, data: unknown): Promise<void> {
   }, data);
 }
 
+test.describe("campaign title and save hub", () => {
+  test("starts a new campaign without writing a save before deployment confirmation", async ({ page }) => {
+    await page.goto("/");
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await expect(title.getByRole("heading", { name: "Grid Tactics" })).toBeVisible();
+    await expect(title.getByRole("button", { name: "つづきから" })).toHaveCount(0);
+    await expect(title.getByRole("button", { name: "はじめから" })).toBeEnabled();
+    expect(await readAutoSave(page)).toBeNull();
+
+    await title.getByRole("button", { name: "はじめから" }).click();
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    expect(await readAutoSave(page)).toBeNull();
+
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    const saved = await readAutoSave(page) as { chapterId: string; turn: number; phase: string; saveVersion: number };
+    expect(saved.saveVersion).toBe(3);
+    expect(saved.turn).toBe(1);
+    expect(saved.phase).toBe("player");
+    expect(saved.chapterId).toBeTruthy();
+  });
+
+  test("shows a saved campaign on launch and continues without changing the auto save", async ({ page }) => {
+    await startBattle(page);
+    const savedBeforeReload = await readAutoSave(page);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await expect(title.getByTestId("campaign-resume-summary")).toBeVisible();
+    await expect(title.getByRole("button", { name: "つづきから" })).toBeEnabled();
+    expect(await readAutoSave(page)).toEqual(savedBeforeReload);
+
+    await title.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    expect(await readAutoSave(page)).toEqual(savedBeforeReload);
+  });
+
+  test("keeps the old auto save when a new campaign is cancelled or not yet deployed", async ({ page }) => {
+    await startBattle(page);
+    const existingSave = await readAutoSave(page);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByRole("button", { name: "はじめから" }).click();
+    await expect(title.getByRole("heading", { name: "新しいキャンペーンを始めますか？" })).toBeVisible();
+    await title.getByRole("button", { name: "キャンセル" }).click();
+    expect(await readAutoSave(page)).toEqual(existingSave);
+
+    await title.getByRole("button", { name: "はじめから" }).click();
+    await title.getByRole("button", { name: "新しいゲームを開始" }).click();
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(existingSave);
+
+    await page.reload();
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(existingSave);
+  });
+
+  test("keeps the launch and save controls within a 320px viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await page.goto("/");
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      viewport: window.innerWidth,
+      document: document.documentElement.scrollWidth,
+      title: document.querySelector("[data-testid=campaign-title-screen]")?.getBoundingClientRect().width ?? 0
+    }));
+    expect(dimensions.title).toBeGreaterThan(0);
+    expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+  });
+});
+
 test.describe("browser campaign flow", () => {
   test("provides a responsive step-by-step operation guide without changing the save", async ({ page }) => {
     await startBattle(page);
@@ -123,8 +217,7 @@ test.describe("browser campaign flow", () => {
 
   test("previews deployment positions, swaps assignments, and saves only after confirmation", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await startNewCampaign(page);
 
     const savedBeforePreview = await readAutoSave(page);
     const preview = page.getByTestId("deployment-preview");
@@ -207,8 +300,7 @@ test.describe("browser campaign flow", () => {
   });
 
   test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await startNewCampaign(page);
 
     const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
     await firstCandidate.getByRole("button", { name: "詳細" }).click();
@@ -233,6 +325,7 @@ test.describe("browser campaign flow", () => {
     expect(savedState.reserveUnits.map((unit) => unit.id)).toContain("unit_004");
 
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await expect(page.locator(".deployment-panel")).toHaveCount(0);
   });
@@ -259,6 +352,7 @@ test.describe("browser campaign flow", () => {
     actedUnit.hasActed = true;
     await writeAutoSave(page, savedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const roster = page.getByTestId("unit-roster");
@@ -291,6 +385,7 @@ test.describe("browser campaign flow", () => {
     ally.inventory.push("short_bow", "healing_potion", "healing_potion");
     await writeAutoSave(page, savedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     const savedBeforeInspection = await readAutoSave(page);
     await page.getByRole("button", { name: /味方01を選択/ }).click();
@@ -366,6 +461,7 @@ test.describe("browser campaign flow", () => {
     };
     await writeAutoSave(page, afterDefeat);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await expect(page.getByTestId("enemy-roster-summary")).toHaveText("生存 4 / 配置 5体");
     await expect(page.getByRole("button", { name: /敵01を確認/ })).toHaveCount(0);
@@ -482,6 +578,7 @@ test.describe("browser campaign flow", () => {
     expect(savedState).not.toHaveProperty("battleHistory");
 
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
@@ -512,6 +609,7 @@ test.describe("browser campaign flow", () => {
     expect(saved).not.toHaveProperty("battleHistory");
 
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
   });
 
@@ -595,6 +693,7 @@ test.describe("browser campaign flow", () => {
     player.position = { x: 0, y: 0 };
     await writeAutoSave(page, savedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const playerTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
@@ -625,6 +724,7 @@ test.describe("browser campaign flow", () => {
     attacker.position = { x: 0, y: 4 };
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforePreview = await readAutoSave(page);
@@ -661,6 +761,7 @@ test.describe("browser campaign flow", () => {
     attacker.position = { x: 0, y: 4 };
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforePreview = await readAutoSave(page);
@@ -690,6 +791,7 @@ test.describe("browser campaign flow", () => {
     attacker.position = { x: 1, y: 4 };
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforePreview = await readAutoSave(page);
@@ -730,6 +832,7 @@ test.describe("browser campaign flow", () => {
       attacker.position = { x: 0, y: 4 };
       await writeAutoSave(touchPage, preparedState);
       await touchPage.reload();
+      await continueSavedCampaign(touchPage);
       await expect(touchPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
       const savedBeforePreview = await readAutoSave(touchPage);
@@ -816,6 +919,7 @@ test.describe("browser campaign flow", () => {
     preparedState.rngState = 0x6d2b79f5;
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
@@ -875,6 +979,7 @@ test.describe("browser campaign flow", () => {
     expect(savedState).not.toHaveProperty("battleHistory");
     expect(savedState).not.toHaveProperty("lastPlayerAttackReport");
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(savedState);
   });
@@ -905,6 +1010,7 @@ test.describe("browser campaign flow", () => {
     preparedState.units = [player, enemy];
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
@@ -943,6 +1049,7 @@ test.describe("browser campaign flow", () => {
     preparedState.units = [player, enemy];
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     const savedBeforeInspection = await readAutoSave(page);
 
@@ -990,6 +1097,7 @@ test.describe("browser campaign flow", () => {
 
     await showButton.click();
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await expect(page.getByRole("button", { name: "敵の攻撃範囲を表示" })).toHaveAttribute("aria-pressed", "false");
   });
@@ -1019,6 +1127,7 @@ test.describe("browser campaign flow", () => {
     preparedState.units = [player, enemy];
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforeInspection = await readAutoSave(page);
@@ -1055,6 +1164,7 @@ test.describe("browser campaign flow", () => {
     };
     await writeAutoSave(page, clearedState);
     await page.reload();
+    await continueSavedCampaign(page);
 
     await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
     const enemyRoster = page.getByTestId("result-enemy-roster");
@@ -1074,6 +1184,7 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".battle-outcome")).toContainText("撃破者別の戦闘記録は保存していない");
 
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
     await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("撃破");
     await expect(page.locator(".result-player-row")).toHaveCount(4);
@@ -1106,6 +1217,7 @@ test.describe("browser campaign flow", () => {
     preparedUnit.hasActed = false;
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
 
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     const promotionPanel = page.locator(".promotion-panel");
@@ -1115,6 +1227,7 @@ test.describe("browser campaign flow", () => {
     preparedUnit.hasMoved = false;
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
 
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
@@ -1193,6 +1306,7 @@ test.describe("browser campaign flow", () => {
     expect(promotedState.units.find((unit) => unit.id === "unit_001")?.inventory).not.toContain("promotion_seal");
 
     await page.reload();
+    await continueSavedCampaign(page);
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
@@ -1250,6 +1364,7 @@ test.describe("browser campaign flow", () => {
     const configuredSave = { ...saved, units };
     await writeAutoSave(page, configuredSave);
     await page.reload();
+    await continueSavedCampaign(page);
 
     const savedBeforeForecast = await readAutoSave(page);
     const forecast = page.getByTestId("enemy-phase-forecast");
@@ -1328,6 +1443,7 @@ test.describe("browser campaign flow", () => {
     });
     await writeAutoSave(page, { ...saved, units });
     await page.reload();
+    await continueSavedCampaign(page);
 
     const savedBeforeForecast = await readAutoSave(page);
     const forecast = page.getByTestId("enemy-phase-forecast");
@@ -1448,6 +1564,7 @@ test.describe("browser campaign flow", () => {
     const savedState = await readAutoSave(page);
     expect(savedState).not.toHaveProperty("battleHistory");
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(savedState);
@@ -1462,6 +1579,7 @@ test.describe("browser campaign flow", () => {
     checkpoint.phase = "enemy";
     await writeAutoSave(page, checkpoint);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });    const report = page.getByTestId("battle-history");
     await expect(report).toBeVisible();
     await expect(report.getByTestId("battle-history-entry")).toHaveCount(1);
@@ -1474,6 +1592,7 @@ test.describe("browser campaign flow", () => {
     expect(resolvedState.turn).toBe(2);
     expect(resolvedState).not.toHaveProperty("battleHistory");
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(resolvedState);
@@ -1564,6 +1683,7 @@ test.describe("browser campaign flow", () => {
     preparedUnit.hasActed = false;
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
 
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     const useButtons = page.getByRole("button", { name: "回復薬を使用" });
@@ -1614,6 +1734,7 @@ test.describe("browser campaign flow", () => {
     await expect(healingPotionRow).toContainText("所持数：1個");
 
     await page.reload();
+    await continueSavedCampaign(page);
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await expect(page.locator(".unit-details div").first()).toContainText(
       preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
@@ -1709,8 +1830,7 @@ test.describe("browser campaign flow", () => {
   }
 
   test("keeps deployment details usable at a narrow mobile viewport", async ({ page }) => {    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    await startNewCampaign(page);
 
     const archerCandidate = page.locator(".deployment-unit").filter({ hasText: "味方02" });
     await archerCandidate.getByRole("button", { name: "詳細" }).click();
@@ -1751,6 +1871,7 @@ test.describe("browser campaign flow", () => {
     allies[1]!.hasActed = true;
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforeReview = await readAutoSave(page);
@@ -1834,6 +1955,7 @@ test.describe("browser campaign flow", () => {
     }
     await writeAutoSave(page, preparedState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
@@ -1944,6 +2066,7 @@ test.describe("browser campaign flow", () => {
     // victory presentation, reward gate, next-chapter preparation, and save flow.
     await writeAutoSave(page, clearedChapterState);
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
     await expect(page.locator(".chapter-rewards")).toContainText(
       "この章には追加アイテム報酬が設定されていません"
@@ -2016,11 +2139,90 @@ test.describe("browser campaign flow", () => {
       .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
 
     await page.reload();
+    await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     expect(await readAutoSave(page)).toEqual(nextChapterState);
   });
 
 });
+
+  test("continues the campaign from Chapter 2 into the third registered prototype stage", async ({ page }) => {
+    await startBattle(page);
+    const chapterOneState = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      turn: number;
+      phase: string;
+      rngState: number;
+      units: Array<{ id: string; faction: string; position: { x: number; y: number } }>;
+      reserveUnits: unknown[];
+    };
+    const clearedChapterTwo = {
+      ...chapterOneState,
+      chapterId: "chapter_02_map",
+      rngState: 0x1234abcd,
+      units: chapterOneState.units.filter((unit) => unit.faction === "player"),
+      reserveUnits: []
+    };
+    await writeAutoSave(page, clearedChapterTwo);
+    await page.reload();
+    await continueSavedCampaign(page);
+    await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+
+    const nextChapterButton = page.getByRole("button", { name: "第3章・試作マップを開始" });
+    await expect(nextChapterButton).toBeVisible();
+    await nextChapterButton.click();
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(clearedChapterTwo);
+
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    const chapterThreeState = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      phase: string;
+      turn: number;
+      units: Array<{ id: string; faction: string }>;
+    };
+    expect(chapterThreeState).toMatchObject({
+      saveVersion: 3,
+      chapterId: "chapter_03_map",
+      phase: "player",
+      turn: 1
+    });
+    expect(chapterThreeState.units.filter((unit) => unit.faction === "enemy").map((unit) => unit.id))
+      .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
+
+    await page.reload();
+    await continueSavedCampaign(page);
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    expect(await readAutoSave(page)).toEqual(chapterThreeState);
+  });
+
+  test("creates a local backup from the launch screen without changing the current campaign", async ({ page }) => {
+    await startBattle(page);
+    const saved = await readAutoSave(page);
+    await page.reload();
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByTestId("title-create-save-backup").click();
+    await expect(title.getByTestId("title-backup-entry-backup-1")).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(saved);
+  });
+
+  test("blocks new-campaign overwrite when the stored snapshot cannot be validated", async ({ page }) => {
+    await startBattle(page);
+    const invalidStoredSnapshot = { saveVersion: 999, chapterId: "chapter_01_map" };
+    await writeAutoSave(page, invalidStoredSnapshot);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await expect(title.getByRole("alert")).toContainText("保存データを保護しています");
+    await expect(title.getByRole("button", { name: "はじめから" })).toBeDisabled();
+    await expect(title.getByRole("button", { name: "つづきから" })).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(invalidStoredSnapshot);
+  });
 
 test("does not expose the development-only promotion lab in the production preview", async ({ page }) => {
   await page.goto("/?promotion-lab=1");
