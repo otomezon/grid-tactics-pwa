@@ -63,6 +63,25 @@ describe("resolveMapEvents", () => {
     expect(repeated.nextState.firedMapEventIds).toEqual(["opening"]);
   });
 
+  it("keeps global map content order when several triggers are true at once", () => {
+    const result = resolveMapEvents(
+      INITIAL_GAME_STATE,
+      EVENT_MAP,
+      [
+        { type: "unit-defeated", unitId: "enemy_001" },
+        { type: "boss-defeated" }
+      ]
+    );
+    expect(result.nextState.firedMapEventIds).toEqual([
+      "enemy-001-defeated",
+      "boss-defeated"
+    ]);
+    expect(result.messages.map((message) => message.id)).toEqual([
+      "enemy-001-defeated",
+      "boss-defeated"
+    ]);
+  });
+
   it("matches turn and phase exactly and ignores unrelated events", () => {
     const result = resolveMapEvents(
       INITIAL_GAME_STATE,
