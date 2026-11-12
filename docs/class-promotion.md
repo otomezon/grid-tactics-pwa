@@ -170,7 +170,7 @@ CP-12により昇格はその自軍フェイズの行動を消費する。した
 
 現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存のGameUnitフィールドだけを使う変更ではsaveVersionを上げずに済むが、saveVersion 4ではキャンペーン累計戦績もsnapshotに保持する。
 
-ただし、クラス変更履歴、昇格回数、ユニット単位の例外値、移動・武器データの新規フィールドなどを `GameUnit`／`GameStateSnapshot` に追加する判断をした場合は、保存設計を先に更新し、旧v3からの明示的なmigration・validator・export/import・backup復元テストを実装する。セーブに保存済みの能力値や所持品を、クラス定義変更を理由に起動時に無断で再計算しない。
+ただし、クラス変更履歴、昇格回数、ユニット単位の例外値、移動・武器データの新規フィールドなどを `GameUnit`／`GameStateSnapshot` に追加する判断をした場合は、保存設計を先に更新し、現行saveVersion 4から次versionへの明示的なmigration・validator・export/import・backup復元テストを実装する。今回のsaveVersion 4への更新はキャンペーン累計戦績の追加であり、昇格回数やクラス変更履歴を追加したものではない。セーブに保存済みの能力値や所持品を、クラス定義変更を理由に起動時に無断で再計算しない。
 
 ## 5. 実装計画
 
