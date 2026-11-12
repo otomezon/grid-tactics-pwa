@@ -80,7 +80,7 @@ export function DeploymentUnitComparison({ candidates }: DeploymentUnitCompariso
       </div>
 
       {sameCandidate ? (
-        <p className="helper-text" role="status">異なる2人を選択してください。</p>
+        <p className="helper-text" aria-live="polite">異なる2人を選択してください。</p>
       ) : left && right ? (
         <div className="deployment-comparison-table-wrap" role="region" aria-label="ユニット比較表。横スクロールできます。" tabIndex={0} data-testid="deployment-comparison-table-wrap">
           <table className="deployment-comparison-table" aria-label="出撃候補ユニット比較">
@@ -121,7 +121,7 @@ export function DeploymentUnitComparison({ candidates }: DeploymentUnitCompariso
           </table>
         </div>
       ) : (
-        <p className="helper-text" role="status">比較する味方を2人選択すると、差を確認できます。</p>
+        <p className="helper-text" aria-live="polite">比較する味方を2人選択すると、差を確認できます。</p>
       )}
       <p className="helper-text deployment-comparison-note">
         能力値・成長率は登録済みデータの表示です。数値から優劣や将来の成長結果を判定せず、成長判定・乱数・出撃人数ルールには影響しません。
