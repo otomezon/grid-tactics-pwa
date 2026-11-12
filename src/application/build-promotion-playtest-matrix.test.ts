@@ -6,17 +6,6 @@ import {
   getAverageClassStatPercentile
 } from "./build-promotion-playtest-matrix";
 
-const STAT_KEYS = [
-  "hp",
-  "strength",
-  "magic",
-  "skill",
-  "speed",
-  "luck",
-  "defense",
-  "resistance"
-] as const;
-
 function makeCandidate(key: string, classId: string, stat: number) {
   const stats: UnitStats = {
     hp: stat,
