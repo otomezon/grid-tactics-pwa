@@ -131,3 +131,9 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - Battle contribution summaries must be derived only from actual player-initiated attack reports. Match strike actor IDs to the initiating ally to exclude enemy counters. Never infer kills, damage, or hit outcomes from forecasts or incomplete persisted snapshots; report no data when the session history is absent.
 - Deployment candidate comparison is a read-only view over the existing chapter candidate roster, including active and reserve units. Keep its selection local to the comparison component; do not mutate member selection, assignments, loadouts, GameState, IndexedDB, or saveVersion. Do not turn numeric comparisons into an invented unit ranking.
 - Campaign unit battle records are persistent aggregates, not event logs. Validate unique registered player IDs and non-negative counts, update them only from actual player-initiated attack execution, copy them into the next chapter state, and preserve them through JSON save and backup. Version 1/2/3 migrations initialize an empty record list; never fabricate past statistics.
+
+## プレイヤー操作の実装境界
+
+- App/UIイベントハンドラー内で `GameStateSnapshot` のユニット配列を直接更新しない。移動・武器変更・待機を含む確定操作は `src/application/` のcommandへ委譲する。
+- commandは入力snapshotを不変に保ち、合法性検証と次状態の生成を担う。UI側はプレビュー・確認・履歴・保存・表示を担当する。
+- 移動のUIプレビューは最終確定の根拠にせず、commandでも地形・占有・移動力を再検証する。

@@ -163,3 +163,10 @@ saveVersionを4へ更新し、v1／v2／v3は既存データを保持したま�
 `src/content/classes.ts` は既存呼び出し元向けの互換projectionで、表示名・能力上限・昇格先・昇格定義をレジストリから導出する。レジストリを二重に保持しない。セーブ検証（`validate-game-state.ts`）も `isRegisteredClassId` を共有し、content登録外のクラスIDを拒否する。
 
 味方／敵インスペクターは登録された職階ラベルを表示し、基本職の味方には昇格先と現行条件を示す。いずれも読み取り専用。CP-04／05の数値は仮データと明示し、CP-09／10が未承認の移動・武器適性を推測しない。クラスIDやGameStateSnapshotの形は変更せず、saveVersion 4／IndexedDB schema 1を維持する。
+
+
+## プレイヤー行動commandの境界
+
+プレイヤーフェイズ中の状態遷移は、攻撃（`perform-attack.ts`）、アイテム使用（`perform-item-use.ts`）、クラスチェンジ（`perform-class-change.ts`）に加え、移動（`perform-player-move.ts`）、武器変更（`perform-player-weapon-change.ts`）、待機（`perform-player-wait.ts`）もapplication層が担当する。`App.tsx` は入力プレビュー・選択・メッセージ・保存・戦闘履歴などUIセッションの責務を持ち、GameStateの変更ルールを直接再実装しない。
+
+移動commandはマップ地形、移動種別、移動力、他ユニットの占有を含めて既存の最小コスト経路探索で合法性を再検証する。武器変更commandは登録武器・所持・クラス／武器種適性を検証し、移動後の行動前変更を許可する。待機commandは生存味方の未行動状態を検証して行動フラグのみを更新する。3 commandとも入力snapshotを不変に保ち、RNGや累計戦績を変更しない。
