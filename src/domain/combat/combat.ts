@@ -107,7 +107,10 @@ export function isWithinWeaponRange(distance: number, weapon: WeaponDefinition):
 }
 
 /** A unit must own the weapon, support its weapon type, and meet any class restriction. */
-export function canUnitUseWeapon(unit: GameUnit, weapon: WeaponDefinition): boolean {
+export function canUnitUseWeapon(
+  unit: Pick<GameUnit, "inventory" | "usableWeaponTypes" | "classId">,
+  weapon: WeaponDefinition
+): boolean {
   return (
     unit.inventory.includes(weapon.id) &&
     unit.usableWeaponTypes.includes(weapon.weaponType) &&

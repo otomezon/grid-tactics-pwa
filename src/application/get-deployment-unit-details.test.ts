@@ -2,15 +2,17 @@ import { describe, expect, it } from "vitest";
 import { getDeploymentUnitDetails } from "./get-deployment-unit-details";
 
 describe("getDeploymentUnitDetails", () => {
-  it("separates owned weapons from items and marks the equipped weapon", () => {
+  it("separates owned weapons from items, marks equipment, and reports suitability", () => {
     const details = getDeploymentUnitDetails({
+      classId: "swordsman",
+      usableWeaponTypes: ["sword"],
       inventory: ["iron_sword", "promotion_seal", "short_bow"],
       equippedWeaponId: "iron_sword"
     });
 
-    expect(details.weapons.map(({ id, isEquipped }) => ({ id, isEquipped }))).toEqual([
-      { id: "iron_sword", isEquipped: true },
-      { id: "short_bow", isEquipped: false }
+    expect(details.weapons.map(({ id, isEquipped, isUsable }) => ({ id, isEquipped, isUsable }))).toEqual([
+      { id: "iron_sword", isEquipped: true, isUsable: true },
+      { id: "short_bow", isEquipped: false, isUsable: false }
     ]);
     expect(details.equippedWeapon?.id).toBe("iron_sword");
     expect(details.items).toEqual([{
@@ -23,6 +25,8 @@ describe("getDeploymentUnitDetails", () => {
 
   it("keeps unknown item IDs visible instead of dropping them", () => {
     const details = getDeploymentUnitDetails({
+      classId: "swordsman",
+      usableWeaponTypes: ["sword"],
       inventory: ["unknown_relic"],
       equippedWeaponId: "missing_weapon"
     });
@@ -38,17 +42,21 @@ describe("getDeploymentUnitDetails", () => {
 
   it("preserves repeated inventory entries with distinct display keys", () => {
     const details = getDeploymentUnitDetails({
-      inventory: ["iron_sword", "iron_sword", "promotion_seal", "promotion_seal"],
+      classId: "cavalry",
+      usableWeaponTypes: ["sword", "lance"],
+      inventory: ["iron_sword", "iron_sword", "iron_lance", "promotion_seal", "promotion_seal"],
       equippedWeaponId: "iron_sword"
     });
 
-    expect(details.weapons.map(({ inventoryIndex }) => inventoryIndex)).toEqual([0, 1]);
-    expect(details.weapons.every(({ isEquipped }) => isEquipped)).toBe(true);
-    expect(details.items.map(({ inventoryIndex }) => inventoryIndex)).toEqual([2, 3]);
+    expect(details.weapons.map(({ inventoryIndex }) => inventoryIndex)).toEqual([0, 1, 2]);
+    expect(details.weapons.every(({ isUsable }) => isUsable)).toBe(true);
+    expect(details.items.map(({ inventoryIndex }) => inventoryIndex)).toEqual([3, 4]);
   });
 
   it("returns empty collections and no equipped weapon for an empty inventory", () => {
     const details = getDeploymentUnitDetails({
+      classId: "swordsman",
+      usableWeaponTypes: ["sword"],
       inventory: [],
       equippedWeaponId: null
     });

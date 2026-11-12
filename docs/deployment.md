@@ -37,11 +37,11 @@
 
 ## 5. 実装・検証
 
-- application: `prepare-player-deployment.ts`、`prepare-next-chapter.ts`
+- application: `prepare-player-deployment.ts`、`perform-deployment-weapon-change.ts`、`prepare-next-chapter.ts`
 - UI: `src/App.tsx`（PR #17で候補詳細・所持武器確認を追加）
 - validation: `src/domain/models/validate-game-state.ts`
 - persistence: `src/persistence/migrations.ts`
-- tests: deployment／chapter transition／migration suites、`get-deployment-unit-details.test.ts`（武器・アイテムの分類、装備中武器、未知ID、重複所持）
+- tests: deployment／chapter transition／migration suites、`perform-deployment-weapon-change.test.ts`（active／reserve、装備／解除、所有・適性、行動状態、不正ID）、`get-deployment-unit-details.test.ts`（武器適性projectionを含むインベントリ分類）
 
 ## 6. 出撃候補の詳細確認
 
@@ -49,7 +49,10 @@
 - 表示項目はクラス、Lv、EXP、現在HP／最大HP、移動種別／移動力、武器適性、HP・力・魔力・技・速さ・幸運・守備・魔防。
 - 所持武器ごとに名前、武器種、威力、命中、必殺、射程を表示し、装備中の武器を明示する。
 - 武器以外の所持アイテムも名前と定義済み説明を表示する。
-- 詳細表示は閲覧専用。出撃準備中に装備変更、アイテム使用、能力変更は行わない。既存の戦闘中ユニット情報パネルで装備を変更するフローには影響しない。
+- 能力値・位置・移動性能・所持アイテムの説明は閲覧専用。所持武器については同じ詳細カード内の「出撃時の装備」selectから変更できる。
+- 装備候補は登録済み武器IDのうち、対象ユニットが所持し、現在のクラスと武器適性で使用できるものだけ。必要なら「未装備」にできる。アイテム移動、武器の受け渡し、所持品の追加／削除は行わない。
+- 現在出撃中の候補と控え候補のどちらも変更できる。変更はAppのメモリ上のsnapshotにだけ適用し、出撃確定前はIndexedDB／auto slot／saveVersionを変更しない。既存の出撃確定処理が成功したときにのみ装備変更を含むactive／reserve両名簿を保存する。
+- マッププレビュー、能力値、所持品の表示そのものは読み取り専用のままで、装備selector以外の詳細欄にゲーム状態を変更する操作は追加しない。
 - 武器・クラス能力値は現行contentの試作データをそのまま表示する。正式なバランス値として扱わない。
 
 ## 7. 戦闘中の味方ユニット一覧

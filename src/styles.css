@@ -1833,3 +1833,38 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .campaign-title-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 4px 14px; color: #8199a3; font-size: .66rem; }
 @media (max-width: 720px) { .campaign-title-grid { grid-template-columns: 1fr; } .campaign-title-main-card { min-height: 0; } }
 @media (max-width: 420px) { .campaign-title-screen { padding: 10px 8px 20px; } .campaign-title-shell { gap: 12px; } .campaign-title-hero { padding: 22px 4px 13px; } .campaign-resume-stats { gap: 5px; } .campaign-resume-stats > div { padding: 7px 5px; } .campaign-confirmation-actions { grid-template-columns: 1fr; } .campaign-title-footer { display: grid; } }
+
+
+/* Editable, pre-deployment weapon loadout; changes remain uncommitted until deployment starts. */
+.deployment-loadout-editor {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(116, 158, 175, .5);
+  border-radius: 9px;
+  background: rgba(12, 27, 38, .62);
+}
+.deployment-loadout-editor h4 { margin: 0; color: #edf3f7; font-size: .82rem; }
+.deployment-loadout-editor p { margin: 0; color: var(--text-muted); font-size: .7rem; line-height: 1.5; }
+.deployment-loadout-editor label { color: #dbe5eb; font-size: .72rem; font-weight: 750; }
+.deployment-loadout-editor select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(110, 151, 170, .6);
+  border-radius: 7px;
+  color: #edf3f7;
+  background: #142332;
+  font: inherit;
+  font-size: .78rem;
+}
+.deployment-loadout-editor select:focus-visible {
+  outline: 3px solid rgba(131, 189, 187, .85);
+  outline-offset: 2px;
+}
+.deployment-loadout-editor select:disabled { opacity: .55; }
+.deployment-loadout-note { overflow-wrap: anywhere; }
+.deployment-weapon-suitable { color: #9ed7c8 !important; }
+.deployment-weapon-unsuitable { color: #e9b5a9 !important; }

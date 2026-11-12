@@ -1,8 +1,9 @@
 import { INVENTORY_ITEMS_BY_ID } from "../content/items";
 import { WEAPONS_BY_ID } from "../content/weapons";
+import { canUnitUseWeapon } from "../domain/combat/combat";
 import type { CampaignUnit } from "../domain/models/game";
 
-type DeploymentInventorySource = Pick<CampaignUnit, "inventory" | "equippedWeaponId">;
+type DeploymentInventorySource = Pick<CampaignUnit, "classId" | "usableWeaponTypes" | "inventory" | "equippedWeaponId">;
 
 /**
  * Resolve the inventory shown in the deployment candidate's read-only detail panel.
@@ -12,7 +13,7 @@ export function getDeploymentUnitDetails(unit: DeploymentInventorySource) {
   const weapons = unit.inventory.flatMap((itemId, inventoryIndex) => {
     const weapon = WEAPONS_BY_ID[itemId];
     return weapon
-      ? [{ ...weapon, inventoryIndex, isEquipped: unit.equippedWeaponId === weapon.id }]
+      ? [{ ...weapon, inventoryIndex, isEquipped: unit.equippedWeaponId === weapon.id, isUsable: canUnitUseWeapon(unit, weapon) }]
       : [];
   });
 
