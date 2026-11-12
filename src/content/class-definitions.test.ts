@@ -103,12 +103,14 @@ describe("typed class definition registry", () => {
     }
 
     const promotion = CLASS_PROMOTION_DEFINITIONS.swordsman;
+    if (!promotion) throw new Error("The swordsman promotion definition is missing.");
     expect(Reflect.set(promotion.statBonuses, "hp", 99)).toBe(false);
     expect(Reflect.set(promotion.statCaps, "hp", 1)).toBe(false);
     expect(promotion.statBonuses.hp).toBe(2);
     expect(promotion.statCaps.hp).toBe(60);
 
     const caps = PROTOTYPE_CLASS_STAT_CAPS.swordsman;
+    if (!caps) throw new Error("The swordsman prototype stat caps are missing.");
     expect(Reflect.set(caps, "hp", 1)).toBe(false);
     expect(caps.hp).toBe(60);
   });
