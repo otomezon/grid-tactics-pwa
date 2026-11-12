@@ -203,6 +203,29 @@ describe("enemy phase controller", () => {
     }
   });
 
+  it("keeps Y-then-X ordering when reachable movement candidates have equal scores", () => {
+    const player = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
+      position: { x: 0, y: 0 },
+      currentHp: 20
+    };
+    const enemy = {
+      ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
+      position: { x: 4, y: 4 },
+      move: 1
+    };
+
+    const result = runEnemyPhase(battleState([player, enemy]), openMap());
+    const candidates = result.actions[0]?.movementEvaluations ?? [];
+
+    expect(result.actions[0]?.kind).toBe("moved");
+    expect(candidates[0]?.scoreBreakdown.totalScore).toBe(candidates[1]?.scoreBreakdown.totalScore);
+    expect(candidates.slice(0, 2).map((candidate) => candidate.position)).toEqual([
+      { x: 4, y: 3 },
+      { x: 3, y: 4 }
+    ]);
+  });
+
   it("uses lexical ID order for enemy actions", () => {
     const player = {
       ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!,
