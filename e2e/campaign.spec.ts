@@ -1690,3 +1690,9 @@ test("does not expose the development-only promotion lab in the production previ
   await page.goto("/?promotion-lab=1");
   await expect(page.getByTestId("promotion-lab")).toHaveCount(0);
 });
+
+
+test("does not expose the real-save promotion snapshot bench in the production preview", async ({ page }) => {
+  await page.goto("/?promotion-snapshots=1");
+  await expect(page.getByTestId("promotion-snapshot-bench")).toHaveCount(0);
+});
