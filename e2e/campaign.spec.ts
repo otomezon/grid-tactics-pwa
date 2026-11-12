@@ -299,7 +299,24 @@ test.describe("browser campaign flow", () => {
     expect(committedState.reserveUnits.map((unit) => unit.id)).toContain("unit_004");
   });
 
-  test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
+  test("shows growth rates and EXP progress in deployment candidate details without saving", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await startNewCampaign(page);
+    expect(await readAutoSave(page)).toBeNull();
+
+    const candidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
+    await candidate.getByRole("button", { name: "詳細" }).click();
+    const panel = page.getByTestId("unit-growth-panel");
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText("次のレベルまで 100 EXP");
+    await expect(panel.locator('[data-testid="unit-growth-rate"]')).toHaveCount(8);
+    await expect(panel).toContainText("HP80%");
+    await expect(panel).toContainText("力35%");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    expect(await readAutoSave(page)).toBeNull();
+  });
+
+test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
     await startNewCampaign(page);
 
     const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
@@ -396,6 +413,12 @@ test.describe("browser campaign flow", () => {
     await expect(inspector).toContainText("HP 20 / 20");
     await expect(inspector).toContainText("2列・9行");
     await expect(inspector).toContainText("EXP");
+    const growthPanel = inspector.getByTestId("unit-growth-panel");
+    await expect(growthPanel).toBeVisible();
+    await expect(growthPanel).toContainText("次のレベルまで 100 EXP");
+    await expect(growthPanel.locator('[data-testid="unit-growth-rate"]')).toHaveCount(8);
+    await expect(growthPanel).toContainText("HP80%");
+    await expect(growthPanel).toContainText("魔力5%");
     await expect(inspector).toContainText("未移動・未行動");
     await expect(inspector.locator(".enemy-inspector-stat")).toHaveCount(7);
     await expect(inspector.locator('[data-testid="player-inspector-weapon"]')).toHaveCount(2);
