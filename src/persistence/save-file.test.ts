@@ -68,6 +68,6 @@ describe("save file export and import format", () => {
   it("does not assume the enclosed snapshot is valid", () => {
     const content = createSaveFileContent(INITIAL_GAME_STATE);
     const result = parseSaveFileContent(content) as { saveVersion: number };
-    expect(result.saveVersion).toBe(4);
+    expect(result.saveVersion).toBe(5);
   });
 });
