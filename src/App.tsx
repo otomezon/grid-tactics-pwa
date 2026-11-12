@@ -1464,17 +1464,16 @@ function CampaignApp() {
       const nextState = preparePlayerDeployment(
         gameState, currentMap, assignments, deploymentSelectedUnitIds
       );
-      const stageStartExecution = resolveMapEvents(nextState, currentMap, { type: "stage-start" });
-      const turnStartExecution = resolveMapEvents(stageStartExecution.nextState, currentMap, {
-        type: "turn-start",
-        turn: stageStartExecution.nextState.turn,
-        phase: stageStartExecution.nextState.phase
-      });
-      const stateToSave = turnStartExecution.nextState;
-      const mapEventMessages = [
-        ...stageStartExecution.messages,
-        ...turnStartExecution.messages
-      ];
+      const stageStartExecution = resolveMapEvents(nextState, currentMap, [
+        { type: "stage-start" },
+        {
+          type: "turn-start",
+          turn: nextState.turn,
+          phase: nextState.phase
+        }
+      ]);
+      const stateToSave = stageStartExecution.nextState;
+      const mapEventMessages = stageStartExecution.messages;
 
       setGameState(stateToSave);
       setSelectedUnitId(null);
