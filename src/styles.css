@@ -2082,3 +2082,68 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .deployment-comparison { padding: 10px; }
   .deployment-comparison-selectors { grid-template-columns: 1fr; }
 }
+
+
+/* Persistent, save-backed campaign totals for each ally. */
+.campaign-unit-record-panel,
+.campaign-unit-record-summary {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(80, 124, 119, .42);
+  border-radius: 9px;
+  background: rgba(18, 34, 39, .52);
+}
+.campaign-unit-record-panel h3,
+.campaign-unit-record-summary h2,
+.campaign-unit-record-card h3 {
+  margin: 0;
+  color: #e8f4f0;
+  font-size: .82rem;
+}
+.campaign-unit-record-summary h2 { font-size: .9rem; }
+.campaign-unit-record-summary-list { display: grid; gap: 9px; }
+.campaign-unit-record-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(80, 124, 119, .3);
+  border-radius: 8px;
+  background: rgba(17, 29, 35, .58);
+}
+.campaign-unit-record-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.campaign-unit-record-metrics > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px;
+  border-radius: 6px;
+  background: rgba(35, 58, 60, .48);
+}
+.campaign-unit-record-metrics dt { color: var(--text-muted); font-size: .62rem; }
+.campaign-unit-record-metrics dd {
+  margin: 0;
+  color: #d7eee7;
+  font-size: .74rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.campaign-unit-record-gains {
+  margin: 0;
+  color: #bce2d7;
+  font-size: .68rem;
+  font-weight: 750;
+}
+.campaign-unit-record-note { margin: 0; line-height: 1.45; }
+@media (max-width: 420px) {
+  .campaign-unit-record-panel,
+  .campaign-unit-record-summary { padding: 9px; }
+  .campaign-unit-record-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

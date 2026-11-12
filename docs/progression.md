@@ -156,3 +156,12 @@
 ## 10. テスト
 
 `src/domain/progression/level-up.test.ts` は閾値、成長判定、能力上限、HP現在値維持、複数レベルアップ、EXP不正値を確認する。`src/application/perform-attack.test.ts` はダメージ、撃破、ボス撃破、レベルアップ、ミス、敵AI攻撃時の報酬除外を確認する。`src/domain/progression/class-change.test.ts` と `src/application/perform-class-change.test.ts` は昇格条件、アイテム消費、能力上限、現在HP／EXPの扱い、状態更新を確認する。 `src/content/class-promotion.test.ts` は7系統の昇格データ、仮上限、初期状態の証配布とセーブ検証を確認する。
+
+
+## 11. キャンペーン累計戦績（saveVersion 4）
+
+- 攻撃コマンドを実行した味方ごとに、攻撃行動数・実strike・命中／ミス／必殺・与ダメージ・撃破・獲得EXP・レベルアップ数・能力上昇を累計する。
+- 集計対象は味方自身が開始した攻撃strikeのみで、敵の反撃は含めない。レベルアップと能力上昇は既存の `performAttack`／`applyExperience` の結果をそのまま保存する。
+- 累計値は `GameStateSnapshot.campaignUnitBattleRecords` に保存し、JSONセーブ、IndexedDB、バックアップ、章間引き継ぎで保持する。新規キャンペーンでは空配列。
+- 出撃候補詳細と戦闘中味方インスペクターで各ユニットの個別累計、リザルトでキャンペーン全体の記録を確認できる。既存のステージ内一時集計とは別の記録。
+- v1／v2／v3からの移行時は空配列を追加する。旧セーブに存在しなかった過去の戦闘結果は復元しない。

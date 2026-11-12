@@ -6,6 +6,7 @@ import { isValidGameMapDefinition } from "./validate-game-map";
 import {
   SAVE_VERSION,
   type CampaignUnit,
+  type CampaignUnitBattleRecord,
   type GameMapDefinition,
   type GameStateSnapshot,
   type GameUnit,
@@ -77,6 +78,43 @@ function hasValidCampaignUnitData(value: unknown): value is CampaignUnit {
     ))
   );
 }
+function isNonNegativeStatGains(value: unknown): value is UnitStats {
+  return isRecord(value) && STAT_KEYS.every((key) => isNonNegativeInteger(value[key]));
+}
+
+function isCampaignUnitBattleRecord(value: unknown): value is CampaignUnitBattleRecord {
+  if (!isRecord(value)) return false;
+  const attacks = value.attacks;
+  const strikes = value.strikes;
+  const hits = value.hits;
+  const misses = value.misses;
+  const criticalHits = value.criticalHits;
+  const damageDealt = value.damageDealt;
+  const enemiesDefeated = value.enemiesDefeated;
+  const experienceAwarded = value.experienceAwarded;
+  const levelUps = value.levelUps;
+  if (
+    !isNonEmptyString(value.unitId) ||
+    !isNonEmptyString(value.unitName) ||
+    !isNonNegativeInteger(attacks) ||
+    !isNonNegativeInteger(strikes) ||
+    !isNonNegativeInteger(hits) ||
+    !isNonNegativeInteger(misses) ||
+    !isNonNegativeInteger(criticalHits) ||
+    !isNonNegativeInteger(damageDealt) ||
+    !isNonNegativeInteger(enemiesDefeated) ||
+    !isNonNegativeInteger(experienceAwarded) ||
+    !isNonNegativeInteger(levelUps) ||
+    !isNonNegativeStatGains(value.statGains)
+  ) return false;
+
+  return attacks > 0 &&
+    strikes > 0 &&
+    strikes === hits + misses &&
+    criticalHits <= hits &&
+    enemiesDefeated <= attacks;
+}
+
 function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
   if (!isRecord(value)) return false;
   const fields = value;
@@ -108,6 +146,7 @@ export function isValidGameStateSnapshot(
     !isNonNegativeInteger(value.rngState) || value.rngState === 0 || value.rngState > 0xffffffff ||
     !Array.isArray(value.units) || value.units.length === 0 ||
     !Array.isArray(value.reserveUnits) ||
+    !Array.isArray(value.campaignUnitBattleRecords) ||
     map.terrain.length !== map.height || map.terrain.some((row) => row.length !== map.width)
   ) return false;
 
@@ -138,6 +177,12 @@ export function isValidGameStateSnapshot(
       map.defeatCondition?.targetUnitId === candidate.id
     ) return false;
     ids.add(candidate.id);
+  }
+
+  const battleRecordIds = new Set<string>();
+  for (const record of value.campaignUnitBattleRecords) {
+    if (!isCampaignUnitBattleRecord(record) || battleRecordIds.has(record.unitId)) return false;
+    battleRecordIds.add(record.unitId);
   }
   return true;
 }

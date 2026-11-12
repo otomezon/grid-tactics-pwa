@@ -16,15 +16,25 @@ describe("migrateGameStateSnapshot", () => {
     };
   }
   function createVersionTwoSnapshot() {
-    const { reserveUnits: _reserveUnits, saveVersion: _saveVersion, ...legacy } = INITIAL_GAME_STATE;
+    const {
+      reserveUnits: _reserveUnits,
+      campaignUnitBattleRecords: _campaignUnitBattleRecords,
+      saveVersion: _saveVersion,
+      ...legacy
+    } = INITIAL_GAME_STATE;
     return { ...legacy, saveVersion: 2 };
   }
+  function createVersionThreeSnapshot() {
+    const { campaignUnitBattleRecords: _records, saveVersion: _saveVersion, ...legacy } = INITIAL_GAME_STATE;
+    return { ...legacy, saveVersion: 3 };
+  }
 
-  it("migrates a version 1 save through v3 and maps prototype weapons", () => {
+  it("migrates a version 1 save through v4 and maps prototype weapons", () => {
     const result = migrateGameStateSnapshot(createLegacySnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(3);
+    expect(result?.snapshot.saveVersion).toBe(4);
     expect(result?.snapshot.reserveUnits).toEqual([]);
+    expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.rngState).toBeGreaterThan(0);
     expect(result?.snapshot.units[0]?.inventory).toEqual(["iron_sword"]);
     expect(result?.snapshot.units[0]?.equippedWeaponId).toBe("iron_sword");
@@ -33,12 +43,27 @@ describe("migrateGameStateSnapshot", () => {
     expect(result?.snapshot.units[4]?.equippedWeaponId).toBe("iron_axe");
   });
 
-  it("adds an empty reserve list when migrating a valid version 2 save", () => {
+  it("adds empty reserve and campaign record lists when migrating a valid version 2 save", () => {
     const result = migrateGameStateSnapshot(createVersionTwoSnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(3);
+    expect(result?.snapshot.saveVersion).toBe(4);
     expect(result?.snapshot.reserveUnits).toEqual([]);
+    expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
+  });
+
+  it("adds an empty campaign record list when migrating a valid version 3 save", () => {
+    const result = migrateGameStateSnapshot(createVersionThreeSnapshot(), CHAPTER_01_MAP);
+    expect(result?.migrated).toBe(true);
+    expect(result?.snapshot.saveVersion).toBe(4);
+    expect(result?.snapshot.reserveUnits).toEqual([]);
+    expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
+    expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
+  });
+
+  it("does not rewrite a valid version 4 save", () => {
+    expect(migrateGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP))
+      .toEqual({ snapshot: INITIAL_GAME_STATE, migrated: false });
   });
 
   it("preserves HP, position, phase, and turn when migrating", () => {
@@ -59,11 +84,6 @@ describe("migrateGameStateSnapshot", () => {
     const second = migrateGameStateSnapshot(legacy, CHAPTER_01_MAP);
     expect(first?.snapshot.rngState).toBe(second?.snapshot.rngState);
     expect(first?.snapshot.rngState).not.toBe(0);
-  });
-
-  it("does not rewrite a valid version 3 save", () => {
-    expect(migrateGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP))
-      .toEqual({ snapshot: INITIAL_GAME_STATE, migrated: false });
   });
 
   it("rejects unsupported versions and invalid legacy snapshots", () => {

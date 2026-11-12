@@ -68,7 +68,7 @@
 - アイテムIDは `promotion_seal`、表示名は「クラスチェンジの証」。既存の `inventory: string[]` に格納し、同じIDの重複で個数を表す。
 - 2026-11-10にCP-13の推奨案を採択し、新規初期状態の味方01への試作付与を廃止した。証は明示的な章報酬／イベント定義でのみ配布する。現時点で章報酬は未登録のため、通常の初期キャンペーンではまだ入手できない。
 - 既存セーブへの自動付与は行わない。既に所持している証は既存インベントリのまま保持する。セーブスキーマ変更やmigrationは不要。
-- 現行処理はクラスチェンジ専用の `GameStateSnapshot`／`GameUnit` フィールドを追加しない。現行の `SAVE_VERSION` は3であり、クラスID・レベル・EXP・能力・所持品・移動／武器情報は既存フィールドを使う。
+- 現行処理はクラスチェンジ専用の `GameStateSnapshot`／`GameUnit` フィールドを追加しない。現行の `SAVE_VERSION` は4であり、クラスID・レベル・EXP・能力・所持品・移動／武器情報は既存フィールドを使う。
 
 ### 2026-11-10に採択した非数値ベースライン
 
@@ -168,9 +168,9 @@ CP-12により昇格はその自軍フェイズの行動を消費する。した
 
 ## 4. 保存データ互換性の方針
 
-現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存 `SAVE_VERSION: 3` を維持できる見込み。
+現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存のGameUnitフィールドだけを使う変更ではsaveVersionを上げずに済むが、saveVersion 4ではキャンペーン累計戦績もsnapshotに保持する。
 
-ただし、クラス変更履歴、昇格回数、ユニット単位の例外値、移動・武器データの新規フィールドなどを `GameUnit`／`GameStateSnapshot` に追加する判断をした場合は、保存設計を先に更新し、旧v3からの明示的なmigration・validator・export/import・backup復元テストを実装する。セーブに保存済みの能力値や所持品を、クラス定義変更を理由に起動時に無断で再計算しない。
+ただし、クラス変更履歴、昇格回数、ユニット単位の例外値、移動・武器データの新規フィールドなどを `GameUnit`／`GameStateSnapshot` に追加する判断をした場合は、保存設計を先に更新し、現行saveVersion 4から次versionへの明示的なmigration・validator・export/import・backup復元テストを実装する。今回のsaveVersion 4への更新はキャンペーン累計戦績の追加であり、昇格回数やクラス変更履歴を追加したものではない。セーブに保存済みの能力値や所持品を、クラス定義変更を理由に起動時に無断で再計算しない。
 
 ## 5. 実装計画
 
@@ -223,7 +223,7 @@ CP-01〜03／06／15は2026-11-12に採択済み。CP-04／05は記入表の21�
 | クラス性能 | 移動力・移動種別・武器適性・装備整合性 |
 | 行動ルール | player/enemy phase、移動済み／行動済み、確定後の行動フラグ |
 | 不変性 | 入力state・他ユニット・控え・未選択データが不変 |
-| セーブ | save/load後も昇格後状態が維持される。必要ならv3→新version migrationと旧JSON／backup復元も検証 |
+| セーブ | save/load後も昇格後状態が維持される。saveVersion 4でv3からのmigration、旧JSON／backup復元を実装・検証済み |
 | UI E2E | 事前確認、キャンセル、確定、保存後リロード、モバイル幅 |
 
 CIでは `npm run typecheck`、`npm test`、`npm run build`、`npm run test:e2e` を実行する。実機で確認していない場合は未実施と記載し、CIのChromium結果をスマートフォン実機確認の代用として表現しない。
@@ -239,7 +239,7 @@ Vite開発サーバーで `npm run dev` を起動し、`http://localhost:5173/?p
 
 Vite開発サーバーの `http://localhost:5173/?promotion-snapshots=1` では、アプリのセーブ管理から書き出したJSONを複数読み込み、実際のユニットsnapshotを比較できる。
 
-- 対応形式はportable envelope version 1内の `GameStateSnapshot.saveVersion: 3`。章IDを既存章registryで解決し、現在のmap definitionに対して `isValidGameStateSnapshot` を適用する。不正なJSON、未対応version、未登録章、validator不合格は拒否する。
+- 対応形式はportable envelope version 1内の `GameStateSnapshot.saveVersion: 4`。章IDを既存章registryで解決し、現在のmap definitionに対して `isValidGameStateSnapshot` を適用する。不正なJSON、未対応version、未登録章、validator不合格は拒否する。
 - 対象はsnapshot内の出撃中の味方で、現行7基本職、Lv.10以上のユニット。比較コマンドを実行するには自軍フェイズ、未移動・未行動、証を追加できる所持品空き（または証を既に所持）が必要。条件を満たさない候補は理由を表示する。
 - 同一クラスの読み込みsnapshotが3件以上ある場合、各能力の同クラス内順位の平均を参考percentileとして表示する。3件未満は「分布データ不足」とし、low／median／highを自動選択しない。ユーザーは試験記録で候補を判断する。
 - controlは読み込んだ元snapshot、promotionは同じsnapshotから作る切り離しコピーに既存 `performClassChange` を実行した結果。セーブに証がない場合はコピー内だけに試験用 `promotion_seal` を一時追加して消費する。これはCP-13の報酬決定でも、実セーブへの付与でもない。

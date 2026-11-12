@@ -16,6 +16,31 @@ describe("save file export and import format", () => {
     expect(parseSaveFileContent(content)).toEqual(INITIAL_GAME_STATE);
   });
 
+  it("round-trips cumulative per-unit campaign battle records", () => {
+    const snapshot = {
+      ...INITIAL_GAME_STATE,
+      campaignUnitBattleRecords: [{
+        unitId: "unit_001",
+        unitName: "味方01",
+        attacks: 2,
+        strikes: 3,
+        hits: 2,
+        misses: 1,
+        criticalHits: 1,
+        damageDealt: 14,
+        enemiesDefeated: 1,
+        experienceAwarded: 30,
+        levelUps: 1,
+        statGains: {
+          hp: 1, strength: 1, magic: 0, skill: 0,
+          speed: 0, luck: 0, defense: 0, resistance: 0
+        }
+      }]
+    };
+    const content = createSaveFileContent(snapshot);
+    expect(parseSaveFileContent(content)).toEqual(snapshot);
+  });
+
   it("rejects malformed JSON", () => {
     expect(() => parseSaveFileContent("{")).toThrow("JSONとして読み込めません");
   });
@@ -43,6 +68,6 @@ describe("save file export and import format", () => {
   it("does not assume the enclosed snapshot is valid", () => {
     const content = createSaveFileContent(INITIAL_GAME_STATE);
     const result = parseSaveFileContent(content) as { saveVersion: number };
-    expect(result.saveVersion).toBe(3);
+    expect(result.saveVersion).toBe(4);
   });
 });

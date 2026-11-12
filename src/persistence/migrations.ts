@@ -4,7 +4,8 @@ import { SAVE_VERSION } from "../domain/models/game";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 
 const LEGACY_SAVE_VERSION = 1;
-const PREVIOUS_SAVE_VERSION = 2;
+const VERSION_TWO_SAVE_VERSION = 2;
+const PREVIOUS_SAVE_VERSION = 3;
 const FALLBACK_RNG_STATE = 0x6d2b79f5;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -57,7 +58,7 @@ export interface GameStateMigrationResult {
   snapshot: GameStateSnapshot;
   migrated: boolean;
 }
-/** Adds reserveUnits in v3; v1 saves also receive the earlier weapon/RNG migration. */
+/** Adds persistent campaign battle records in v4 while preserving earlier migrations. */
 export function migrateGameStateSnapshot(
   value: unknown,
   map: GameMapDefinition
@@ -67,7 +68,14 @@ export function migrateGameStateSnapshot(
 
   let candidate: unknown;
   if (value.saveVersion === PREVIOUS_SAVE_VERSION) {
-    candidate = { ...value, saveVersion: SAVE_VERSION, reserveUnits: [] };
+    candidate = { ...value, saveVersion: SAVE_VERSION, campaignUnitBattleRecords: [] };
+  } else if (value.saveVersion === VERSION_TWO_SAVE_VERSION) {
+    candidate = {
+      ...value,
+      saveVersion: SAVE_VERSION,
+      reserveUnits: [],
+      campaignUnitBattleRecords: []
+    };
   } else if (value.saveVersion === LEGACY_SAVE_VERSION) {
     const units = Array.isArray(value.units) ? value.units.map(migrateLegacyUnit) : value.units;
     candidate = {
@@ -75,7 +83,8 @@ export function migrateGameStateSnapshot(
       saveVersion: SAVE_VERSION,
       rngState: legacyRngState(value),
       units,
-      reserveUnits: []
+      reserveUnits: [],
+      campaignUnitBattleRecords: []
     };
   } else {
     return null;

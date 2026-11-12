@@ -145,3 +145,12 @@ src/content/maps/chapter-03.ts は既存の第1章ユニット定義を再利用
 ## 出撃準備のユニット比較
 
 `src/components/deployment-unit-comparison.tsx` は、Appが既存の章候補／キャンペーン名簿から投影した候補を受け取り、2人の出撃候補を読み取り専用で並べる。比較対象選択はコンポーネント内の一時React stateのみ。能力値・成長率は候補の `CampaignUnit` データを直接表示し、優位度や将来の成長結果を推計しない。狭い画面で比較表の横幅を専用スクロール領域へ閉じ込める。GameStateSnapshot、IndexedDB、装備、deployment assignments、saveVersion 3は変更しない。
+
+
+## キャンペーン累計戦績とsaveVersion 4
+
+`GameStateSnapshot.campaignUnitBattleRecords` は味方IDごとに重複しない累計値を保持する。`src/application/record-player-battle-contribution.ts` は `performAttackForFaction` が返す確定済み `CombatResult` のうち、攻撃開始者IDと一致するstrikeだけを加算し、EXP／レベルアップ／成長値は同じattack executionの出力を用いる。敵の反撃は記録対象外。`prepareNextChapter` は累計名簿をコピーし、active／reserve／その章で撃破された味方を含むキャンペーン履歴を次章へ維持する。
+
+`CampaignUnitBattleRecordPanel` は候補詳細と戦闘インスペクターの個別戦績を表示し、`CampaignUnitBattleRecordsSummary` はリザルトの累計一覧を表示する。PR #97の現在ステージ内 `BattleContributionPanel` は引き続きセッション限定であり、両者の表示は用途が異なる。
+
+saveVersionを4へ更新し、v1／v2／v3は既存データを保持したまま空の累計配列を追加して移行する。新しい累計値はJSON save envelope、IndexedDB auto slot、ローカルバックアップに含まれる。IndexedDB database versionは1のまま。戦闘式、乱数、経験値配分、敵AIは変更しない。

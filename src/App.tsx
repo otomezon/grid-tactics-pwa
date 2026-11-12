@@ -65,6 +65,7 @@ import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-
 import { OperationGuide } from "./components/operation-guide";
 import { CampaignTitleScreen } from "./components/campaign-title-screen";
 import { BattleContributionPanel } from "./components/battle-contribution-panel";
+import { CampaignUnitBattleRecordPanel, CampaignUnitBattleRecordsSummary } from "./components/campaign-unit-battle-records";
 import { DeploymentUnitComparison } from "./components/deployment-unit-comparison";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
@@ -611,7 +612,10 @@ function CampaignApp() {
   const inspectedPlayer = inspectedPosition
     ? gameState.units.find((unit) => unit.faction === "player" && samePosition(unit.position, inspectedPosition))
     : undefined;
-  const inspectedPlayerDetails = inspectedPlayer ? getPlayerInspectionDetails(inspectedPlayer) : null;
+  const inspectedPlayerDetails = inspectedPlayer ? getPlayerInspectionDetails(
+    inspectedPlayer,
+    gameState.campaignUnitBattleRecords.find((record) => record.unitId === inspectedPlayer.id) ?? null
+  ) : null;
   const enemyThreatInspectionDetails = useMemo(
     () => showEnemyThreatRange
       ? getEnemyThreatInspectionDetails(gameState, currentMap, inspectedPosition)
@@ -1636,6 +1640,9 @@ function CampaignApp() {
   const deploymentDetail = deploymentDetailCandidate
     ? getDeploymentUnitDetails(deploymentDetailCandidate)
     : null;
+  const deploymentDetailCampaignRecord = deploymentDetailCandidate
+    ? gameState.campaignUnitBattleRecords.find((record) => record.unitId === deploymentDetailCandidate.id) ?? null
+    : null;
   const deploymentSlots = currentMap.playerDeployment.map(({ x, y }) => ({
     value: x + "," + y,
     label: positionLabel({ x, y })
@@ -1887,6 +1894,7 @@ function CampaignApp() {
                 growthRates={deploymentDetailCandidate.growthRates}
                 experience={deploymentDetailCandidate.experience}
               />
+              <CampaignUnitBattleRecordPanel record={deploymentDetailCampaignRecord} />
               {deploymentDetail && (
                 <DeploymentLoadoutEditor
                   unitId={deploymentDetailCandidate.id}
@@ -2048,10 +2056,11 @@ function CampaignApp() {
             ) : (
               <p className="helper-text">生存している味方ユニットはいません。</p>
             )}
-            <p className="helper-text">撃破された味方の最終状態や撃破者別の戦闘記録は保存していないため、生存中の味方のみを表示しています。</p>
+            <p className="helper-text">撃破された味方の最終HPは保存していないため、生存中の味方のみを表示しています。</p>
           </div>
           <BattleContributionPanel contributions={battleContributionDetails} />
-          <p className="helper-text">この画面は現在のステージ結果を表示します。経験値・能力値・撃破状態は自動保存済みのゲームデータに反映されています。</p>
+          <CampaignUnitBattleRecordsSummary records={gameState.campaignUnitBattleRecords} />
+          <p className="helper-text">この画面は現在のステージ結果を表示します。キャンペーン累計戦績はセーブデータに反映されています。</p>
         </section>
       )}
 

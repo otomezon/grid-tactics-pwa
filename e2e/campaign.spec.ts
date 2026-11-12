@@ -106,7 +106,7 @@ test.describe("campaign title and save hub", () => {
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     const saved = await readAutoSave(page) as { chapterId: string; turn: number; phase: string; saveVersion: number };
-    expect(saved.saveVersion).toBe(3);
+    expect(saved.saveVersion).toBe(4);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
@@ -440,10 +440,40 @@ test("shows candidate details and persists the selected deployment roster", asyn
   test("shows read-only ally stats, weapon suitability, and grouped items without changing the autosave", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await startBattle(page);
-    const savedState = await readAutoSave(page) as { units: Array<{ id: string; inventory: string[] }> };
+    const savedState = await readAutoSave(page) as {
+      units: Array<{ id: string; inventory: string[] }>;
+      campaignUnitBattleRecords: Array<{
+        unitId: string;
+        unitName: string;
+        attacks: number;
+        strikes: number;
+        hits: number;
+        misses: number;
+        criticalHits: number;
+        damageDealt: number;
+        enemiesDefeated: number;
+        experienceAwarded: number;
+        levelUps: number;
+        statGains: { hp: number; strength: number; magic: number; skill: number; speed: number; luck: number; defense: number; resistance: number };
+      }>;
+    };
     const ally = savedState.units.find((unit) => unit.id === "unit_001");
     if (!ally) throw new Error("The player inspector fixture is missing unit_001.");
     ally.inventory.push("short_bow", "healing_potion", "healing_potion");
+    savedState.campaignUnitBattleRecords = [{
+      unitId: "unit_001",
+      unitName: "味方01",
+      attacks: 2,
+      strikes: 3,
+      hits: 2,
+      misses: 1,
+      criticalHits: 1,
+      damageDealt: 14,
+      enemiesDefeated: 1,
+      experienceAwarded: 30,
+      levelUps: 1,
+      statGains: { hp: 1, strength: 1, magic: 0, skill: 0, speed: 0, luck: 0, defense: 0, resistance: 0 }
+    }];
     await writeAutoSave(page, savedState);
     await page.reload();
     await continueSavedCampaign(page);
@@ -475,6 +505,11 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(inspector).toContainText("回復薬");
     await expect(inspector).toContainText("所持数：2個");
     await expect(inspector).toContainText("表示専用");
+    const campaignRecord = inspector.getByTestId("campaign-unit-battle-record");
+    await expect(campaignRecord).toContainText("キャンペーン累計戦績");
+    await expect(campaignRecord).toContainText("与ダメージ");
+    await expect(campaignRecord).toContainText("14");
+    await expect(campaignRecord).toContainText("累計能力上昇：HP +1 · 力 +1");
     const inspectorBounds = await inspector.boundingBox();
     if (!inspectorBounds) throw new Error("The player inspector is not laid out on the narrow viewport.");
     expect(inspectorBounds.width).toBeLessThanOrEqual(320);
@@ -1286,7 +1321,24 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(contribution).toContainText("+30");
     await expect(contribution).toContainText("レベルアップ");
     await expect(contribution).toContainText("能力上昇：HP +1");
+    const career = page.getByTestId("campaign-unit-record-unit_001");
+    await expect(career).toBeVisible();
+    await expect(career).toContainText("攻撃行動");
+    await expect(career).toContainText("与ダメージ");
+    await expect(career).toContainText("撃破");
+    await expect(career).toContainText("レベルアップ");
+    await expect(career).toContainText("累計能力上昇：HP +1");
+    expect(await readAutoSave(page)).not.toBeNull();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+    await page.reload();
+    await continueSavedCampaign(page);
+    await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
+    await expect(page.getByTestId("battle-contributions")).toContainText("集計できる味方の攻撃記録はありません");
+    const restoredCareer = page.getByTestId("campaign-unit-record-unit_001");
+    await expect(restoredCareer).toBeVisible();
+    await expect(restoredCareer).toContainText("味方01");
+    await expect(restoredCareer).toContainText("累計能力上昇：HP +1");
   });
 
   test("shows the defeated enemy roster and surviving allies in battle results", async ({ page }) => {
@@ -2257,7 +2309,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 3,
+      saveVersion: 4,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2331,7 +2383,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 3,
+      saveVersion: 4,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1

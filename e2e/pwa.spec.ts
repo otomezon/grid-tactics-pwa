@@ -496,7 +496,7 @@ test.describe("production PWA shell", () => {
       reserveUnits: unknown[];
     };
     expect(migratedAutoSave.turn).toBe(4);
-    expect(migratedAutoSave.saveVersion).toBe(3);
+    expect(migratedAutoSave.saveVersion).toBe(4);
     expect(migratedAutoSave.reserveUnits).toEqual([]);
     await expect(page.locator(".phase-badge")).toHaveText("第4ターン · 自軍フェイズ");
 

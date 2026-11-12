@@ -1,5 +1,6 @@
 import type { PlayerInspectionDetails } from "../application/get-player-inspection-details";
 import { UnitGrowthPanel } from "./unit-growth-panel";
+import { CampaignUnitBattleRecordPanel } from "./campaign-unit-battle-records";
 
 interface PlayerInspectorProps {
   details: PlayerInspectionDetails;
@@ -31,6 +32,7 @@ export function PlayerInspector({ details }: PlayerInspectorProps) {
         </dl>
       </section>
       <UnitGrowthPanel growthRates={details.growthRates} experience={details.experience} />
+      <CampaignUnitBattleRecordPanel record={details.campaignBattleRecord} />
       <section className="enemy-inspector-section" aria-labelledby="player-inspector-weapons-heading">
         <h3 id="player-inspector-weapons-heading">所持武器</h3>
         {details.weapons.length > 0 ? (

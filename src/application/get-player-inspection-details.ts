@@ -1,7 +1,7 @@
 import { getClassDisplayName } from "../content/classes";
 import { WEAPONS_BY_ID } from "../content/weapons";
 import { getInventoryItemStacks } from "./get-inventory-item-stacks";
-import type { GameUnit, UnitStats } from "../domain/models/game";
+import type { CampaignUnitBattleRecord, GameUnit, UnitStats } from "../domain/models/game";
 
 type NonHpStatKey = Exclude<keyof UnitStats, "hp">;
 const STAT_LABELS: Readonly<Record<NonHpStatKey, string>> = {
@@ -13,7 +13,7 @@ const WEAPON_TYPE_LABELS = {
 } as const;
 
 /** Projects a living player's current combat data for display without changing it. */
-export function getPlayerInspectionDetails(unit: GameUnit) {
+export function getPlayerInspectionDetails(unit: GameUnit, battleRecord?: CampaignUnitBattleRecord | null) {
   if (unit.faction !== "player" || unit.currentHp <= 0) return null;
   const weapons = unit.inventory.flatMap((itemId, inventoryIndex) => {
     const weapon = WEAPONS_BY_ID[itemId];
@@ -55,6 +55,10 @@ export function getPlayerInspectionDetails(unit: GameUnit) {
     movementTypeLabel: unit.movementType === "infantry" ? "歩兵" : "騎馬",
     actionStatus: unit.hasActed ? "行動済" : unit.hasMoved ? "移動済・未行動" : "未移動・未行動",
     growthRates: { ...unit.growthRates },
+    campaignBattleRecord: battleRecord ? {
+      ...battleRecord,
+      statGains: { ...battleRecord.statGains }
+    } : null,
     stats: (Object.keys(STAT_LABELS) as NonHpStatKey[]).map((key) => ({
       key, label: STAT_LABELS[key], value: unit.stats[key]
     })),

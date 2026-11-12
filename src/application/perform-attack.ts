@@ -17,6 +17,7 @@ import type {
 } from "../domain/models/game";
 import type { CombatForecast, CombatInput, CombatResult } from "../domain/combat/types";
 import { createCombatRollSequence } from "../domain/random/xorshift32";
+import { recordPlayerBattleContribution } from "./record-player-battle-contribution";
 
 export interface AttackPlan {
   input: CombatInput;
@@ -203,14 +204,26 @@ export function performAttackForFaction(
     }
   }
 
+  const nextState: GameStateSnapshot = {
+    ...state,
+    rngState: nextRngState,
+    units: nextUnits
+  };
+  const recordedState = attackerFaction === "player"
+    ? recordPlayerBattleContribution(nextState, {
+        attacker: plan.input.attacker.unit,
+        defenderId,
+        defenderDefeated: result.defenderHp <= 0,
+        result,
+        experienceAwarded,
+        levelUps
+      })
+    : nextState;
+
   return {
     plan,
     result,
-    nextState: {
-      ...state,
-      rngState: nextRngState,
-      units: nextUnits
-    },
+    nextState: recordedState,
     experienceAwarded,
     levelUps
   };
