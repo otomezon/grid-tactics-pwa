@@ -1984,3 +1984,101 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .battle-contribution-card { padding: 9px; }
   .battle-contribution-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 }
+
+
+/* Two-candidate comparison is a read-only deployment planning aid. */
+.deployment-comparison {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(91, 126, 148, .48);
+  border-radius: 10px;
+  background: rgba(14, 26, 37, .72);
+}
+.deployment-comparison-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.deployment-comparison-heading h3 { margin: 0; color: #edf3f7; font-size: .9rem; }
+.deployment-comparison-heading .eyebrow { margin: 0 0 3px; }
+.deployment-comparison > .helper-text { margin: 0; }
+.deployment-comparison-selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.deployment-comparison-selectors label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.deployment-comparison-selectors label > span {
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 750;
+}
+.deployment-comparison-selectors select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 28px 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+  background: rgba(24, 39, 52, .96);
+  font: inherit;
+  font-size: .76rem;
+}
+.deployment-comparison-table-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid rgba(67, 92, 110, .72);
+  border-radius: 8px;
+  scrollbar-width: thin;
+}
+.deployment-comparison-table {
+  width: 100%;
+  min-width: 470px;
+  border-collapse: collapse;
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+.deployment-comparison-table th,
+.deployment-comparison-table td {
+  padding: 7px 9px;
+  border-bottom: 1px solid rgba(67, 92, 110, .46);
+  white-space: nowrap;
+}
+.deployment-comparison-table thead th {
+  position: sticky;
+  top: 0;
+  color: #e8f1f6;
+  background: #1d3040;
+  font-size: .74rem;
+}
+.deployment-comparison-table thead th:first-child,
+.deployment-comparison-table tbody th[scope="row"] {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.deployment-comparison-table td { color: #edf3f7; }
+.deployment-comparison-table .deployment-comparison-group th {
+  padding: 8px 9px 5px;
+  color: #b9d6e6;
+  background: rgba(48, 73, 91, .58);
+  font-size: .68rem;
+  letter-spacing: .035em;
+}
+.deployment-comparison-table tbody tr:last-child th,
+.deployment-comparison-table tbody tr:last-child td { border-bottom: 0; }
+.deployment-comparison-note { line-height: 1.5; }
+@media (max-width: 420px) {
+  .deployment-comparison { padding: 10px; }
+  .deployment-comparison-selectors { grid-template-columns: 1fr; }
+}

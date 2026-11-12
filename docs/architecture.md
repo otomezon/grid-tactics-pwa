@@ -140,3 +140,8 @@ src/content/maps/chapter-03.ts は既存の第1章ユニット定義を再利用
 ## ステージリザルトの一時戦闘貢献集計
 
 `src/application/get-battle-contribution-details.ts` は画面セッション内の `PlayerAttackReport` だけを入力にし、攻撃開始者ごとに実strikeの命中／ミス／必殺／ダメージ、撃破、EXP、レベルアップを集計する。攻撃開始者IDと各strikeのactor IDを照合して敵の反撃を除外する。リザルトUIは `BattleContributionPanel` が読み取り専用で表示する。履歴がリロード／セーブ読込／章切替で消えた場合に結果を推測せず、「記録なし」と示す。戦闘履歴と集計はGameStateSnapshot／IndexedDB／saveVersion 3へ保存しない。
+
+
+## 出撃準備のユニット比較
+
+`src/components/deployment-unit-comparison.tsx` は、Appが既存の章候補／キャンペーン名簿から投影した候補を受け取り、2人の出撃候補を読み取り専用で並べる。比較対象選択はコンポーネント内の一時React stateのみ。能力値・成長率は候補の `CampaignUnit` データを直接表示し、優位度や将来の成長結果を推計しない。狭い画面で比較表の横幅を専用スクロール領域へ閉じ込める。GameStateSnapshot、IndexedDB、装備、deployment assignments、saveVersion 3は変更しない。

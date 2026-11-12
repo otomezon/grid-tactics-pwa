@@ -316,6 +316,50 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toBeNull();
   });
 
+test("compares active and reserve deployment candidates without changing the save", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await startNewCampaign(page);
+
+  const reserveCandidate = page.locator(".deployment-unit").filter({ hasText: "味方04" });
+  await reserveCandidate.getByRole("checkbox").uncheck();
+  await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
+
+  const comparison = page.getByTestId("deployment-comparison");
+  await expect(comparison).toBeVisible();
+  await comparison.getByLabel("比較する味方A").selectOption("unit_001");
+  await comparison.getByLabel("比較する味方B").selectOption("unit_004");
+
+  const table = comparison.getByRole("table", { name: "出撃候補ユニット比較" });
+  await expect(table).toBeVisible();
+  await expect(table).toContainText("味方01");
+  await expect(table).toContainText("味方04");
+  await expect(table).toContainText("出撃予定");
+  await expect(table).toContainText("控え予定");
+  await expect(table).toContainText("能力値");
+  await expect(table).toContainText("成長率");
+  await expect(table).toContainText("EXP");
+  await expect(table).toContainText("武器適性");
+
+  await comparison.getByLabel("比較する味方B").selectOption("unit_001");
+  await expect(comparison).toContainText("異なる2人を選択してください。");
+  await comparison.getByRole("button", { name: "比較をクリア" }).click();
+  await expect(comparison).toContainText("比較する味方を2人選択すると");
+
+  const tableWrap = comparison.getByTestId("deployment-comparison-table-wrap");
+  await comparison.getByLabel("比較する味方A").selectOption("unit_001");
+  await comparison.getByLabel("比較する味方B").selectOption("unit_004");
+  await expect(tableWrap).toBeVisible();
+  const dimensions = await tableWrap.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth
+  }));
+  expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+  expect(await readAutoSave(page)).toBeNull();
+});
+
 test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
     await startNewCampaign(page);
 
