@@ -79,7 +79,7 @@ describe("synthetic class-promotion balance scenarios", () => {
       const scenarios = PROTOTYPE_PROMOTION_SCENARIOS.filter(
         (scenario) => scenario.sourceClassId === sourceClassId
       );
-      expect(scenarios.map((scenario) => scenario.profileId).sort()).toEqual(profiles);
+      expect(scenarios.map((scenario) => scenario.profileId)).toEqual(profiles);
 
       for (const scenario of scenarios) {
         const definition = CLASS_PROMOTION_DEFINITIONS[sourceClassId]!;
