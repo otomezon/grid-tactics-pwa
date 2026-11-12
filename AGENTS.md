@@ -5,7 +5,7 @@
 - Repository: `otomezon/grid-tactics-pwa`
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
-- Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal. PR #1–#98 are merged; latest merge commit `72d08aa61e6eb6828201832322c9df3af82fd295` (main CI run #1172 passed). PR #95 adds pre-deployment loadout editing, PR #96 the read-only growth-rate panels, PR #97 the session-only stage contribution summary, and PR #98 the read-only active/reserve unit comparison. The current feature branch adds campaign-persistent per-ally attack totals and saveVersion 4 migration. Preserve exact resolved combat results: only strikes whose actor ID is the player who initiated the attack may increment player career totals; enemy counterattacks are excluded. Never infer old save statistics. Carry the record array across chapter transitions and do not alter combat formulas, XP awards, RNG, or enemy AI.
+- Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal. PR #1–#99 are merged; latest merge commit `d978ee42a13426ce50f13e97d80cf52d9cbf20bf` (main CI run #1182 passed). PR #99 adds campaign-persistent per-ally battle records and saveVersion 4 migration. The current feature branch centralizes the fourteen adopted class IDs, display names, prototype caps, and seven promotion paths in a typed content registry. Preserve the distinction between approved non-numeric promotion policy and unapproved numeric values; do not invent class caps, bonuses, movement, or weapon-access data.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 - Deployment-slot terrain inspection is limited to existing configured playerDeployment coordinates and existing TERRAIN_DEFINITIONS. Show movement-type passability using the same terrain movementCost values already used by validation; if an assigned unit cannot enter the tile, warn but do not invent a new placement rule or auto-correct the assignment.
 - The deployment formation preview is a view of the current selected roster and slot assignments. The existing position dropdown remains the sole editing path; occupied preview tiles may open candidate details, but the preview must not invent slots or alter party/deployment rules.
@@ -22,7 +22,7 @@
 
 ## 3. Current architecture
 
-- `content`: terrain, test map/units, provisional weapon content, promotion paths/bonuses and promotion-item definitions.
+- `content`: terrain, test map/units, provisional weapon content, the typed fourteen-class registry (`class-definitions.ts`), promotion paths/bonuses, and promotion-item definitions. Class movement and weapon access remain on the saved unit until CP-09／10 data is approved.
 - `domain/models`: serializable game state and save validation.
 - `domain/movement`: terrain-cost reachability and deterministic lowest-cost route reconstruction.
 - `domain/combat`: weapon compatibility, formulas, forecast, deterministic resolver, provisional Manhattan distance, and projected enemy threat range.
@@ -34,7 +34,7 @@
 - `src/components/enemy-target-evaluations.tsx` and `src/components/enemy-movement-evaluations.tsx`: collapsible, read-only explanations of the actual enemy resolver candidate scores. Reuse returned score breakdowns; do not calculate alternate AI decisions in UI.
 - `src/components/campaign-title-screen.tsx`: startup hub for new/continued campaigns, JSON save import/export, and local backup creation/restoration. New campaign setup must not replace the previous auto-save until deployment is explicitly confirmed.
 - `App.tsx`: chapter-aware prototype map UI with live victory/defeat objective progress and focused-tile terrain details (existing costs/modifiers only; view-only), chronological in-session battle history from resolved attacks and enemy-phase actions (not persisted), deployment preparation and read-only candidate details, battle forecast, results/rewards summary with enemy roster and surviving-player details, next-chapter launch, inventory display, class-promotion confirmation with an eight-stat preview, HP/EXP outcomes, item/action cost, and preserved movement/weapon/equipment details, plus a player-phase enemy threat-range toggle with accessible map overlays, transient movement-cost and route previews on reachable tiles, a transient enemy-phase action report derived from `EnemyPhaseResult.actions`, and a transient player-attack strike report derived from `AttackExecution`. Neither report is saved; the enemy-phase report is regenerated when an enemy-phase checkpoint is resumed. The preview shares the domain calculation with the promotion command; all numeric values remain provisional and do not settle CP-15.
-- `persistence`: IndexedDB, saveVersion 1／2→3 migration, versioned JSON save export/import, and three-generation local backup/restore.
+- `persistence`: IndexedDB, saveVersion 1／2／3→4 migration, versioned JSON save export/import, and three-generation local backup/restore.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 

@@ -1,134 +1,123 @@
 import type { UnitStats } from "../domain/models/game";
 import type { ClassPromotionDefinition } from "../domain/progression/class-change";
-import { PROMOTION_ITEM_ID } from "./items";
+import {
+  CLASS_DEFINITIONS,
+  getClassDefinition,
+  type BasicClassDefinition,
+  type PromotedClassId
+} from "./class-definitions";
 
-/**
- * Placeholder class caps for the prototype.
- *
- * The design document requires class-based caps but does not provide numeric
- * values. These shared provisional caps keep growth bounded until class data
- * and balance values are authored.
- */
-const PROTOTYPE_STAT_CAPS: UnitStats = {
-  hp: 60,
-  strength: 30,
-  magic: 30,
-  skill: 30,
-  speed: 30,
-  luck: 30,
-  defense: 30,
-  resistance: 30
-};
+export {
+  BASIC_CLASS_IDS,
+  CLASS_DEFINITIONS,
+  PROMOTED_CLASS_IDS,
+  getClassDefinition,
+  isRegisteredClassId
+} from "./class-definitions";
+export type {
+  BasicClassDefinition,
+  BasicClassId,
+  ClassDefinition,
+  GameClassId,
+  PromotedClassDefinition,
+  PromotedClassId
+} from "./class-definitions";
 
-export const PROTOTYPE_CLASS_STAT_CAPS: Readonly<Record<string, UnitStats>> = {
-  swordsman: PROTOTYPE_STAT_CAPS,
-  mercenary: PROTOTYPE_STAT_CAPS,
-  fighter: PROTOTYPE_STAT_CAPS,
-  soldier: PROTOTYPE_STAT_CAPS,
-  cavalry: PROTOTYPE_STAT_CAPS,
-  archer: PROTOTYPE_STAT_CAPS,
-  mage: PROTOTYPE_STAT_CAPS,
-  swordmaster: PROTOTYPE_STAT_CAPS,
-  hero: PROTOTYPE_STAT_CAPS,
-  warrior: PROTOTYPE_STAT_CAPS,
-  general: PROTOTYPE_STAT_CAPS,
-  paladin: PROTOTYPE_STAT_CAPS,
-  sniper: PROTOTYPE_STAT_CAPS,
-  sage: PROTOTYPE_STAT_CAPS
-};
-
-export function getPrototypeStatCaps(classId: string): UnitStats {
-  const caps = PROTOTYPE_CLASS_STAT_CAPS[classId];
-  if (!caps) {
-    throw new Error("No prototype stat caps are defined for class: " + classId);
-  }
-  return caps;
+function copyStatCaps(caps: Readonly<UnitStats>): UnitStats {
+  return { ...caps };
 }
 
-/**
- * Promotion paths proposed by docs/game-design.md §5.5.
- * Stat bonuses, promoted-class caps, and other runtime class data are configured
- * separately because the design proposal does not provide those values.
- */
-export const CLASS_PROMOTION_TARGETS = {
-  swordsman: "swordmaster",
-  mercenary: "hero",
-  fighter: "warrior",
-  soldier: "general",
-  cavalry: "paladin",
-  archer: "sniper",
-  mage: "sage"
-} as const;
-
-export function getPromotionTargetClassId(classId: string): string | undefined {
-  if (!Object.hasOwn(CLASS_PROMOTION_TARGETS, classId)) return undefined;
-  return CLASS_PROMOTION_TARGETS[classId as keyof typeof CLASS_PROMOTION_TARGETS];
-}
-
-
-export const CLASS_DISPLAY_NAMES: Readonly<Record<string, string>> = {
-  swordsman: "剣士",
-  mercenary: "傭兵",
-  fighter: "戦士",
-  soldier: "ソルジャー",
-  cavalry: "騎兵",
-  archer: "アーチャー",
-  mage: "魔道士",
-  swordmaster: "ソードマスター",
-  hero: "勇者",
-  warrior: "ウォーリア",
-  general: "ジェネラル",
-  paladin: "パラディン",
-  sniper: "スナイパー",
-  sage: "賢者"
-};
+export const CLASS_DISPLAY_NAMES: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(
+    Object.values(CLASS_DEFINITIONS).map((definition) => [
+      definition.id,
+      definition.displayName
+    ])
+  ) as Record<string, string>
+);
 
 export function getClassDisplayName(classId: string): string {
-  return CLASS_DISPLAY_NAMES[classId] ?? classId;
+  return getClassDefinition(classId)?.displayName ?? classId;
 }
 
-/**
- * Temporary stat bonuses for the playable prototype.
- * The design proposal requires promotion bonuses but does not specify values;
- * these are test-balancing placeholders, not final class balance.
- */
-const PROTOTYPE_PROMOTION_BONUSES: Readonly<Record<string, Partial<UnitStats>>> = {
-  swordsman: { hp: 2, skill: 1, speed: 1 },
-  mercenary: { hp: 2, strength: 1, speed: 1 },
-  fighter: { hp: 3, strength: 2 },
-  soldier: { hp: 2, defense: 1 },
-  cavalry: { hp: 2, strength: 1, speed: 1 },
-  archer: { hp: 2, skill: 2 },
-  mage: { hp: 2, magic: 2 }
-};
+export function getClassTierLabel(classId: string): "基本職" | "昇格職" | "未登録職" {
+  const definition = getClassDefinition(classId);
+  if (!definition) return "未登録職";
+  return definition.tier === "basic" ? "基本職" : "昇格職";
+}
 
-function createPrototypePromotion(
-  fromClassId: string,
-  toClassId: string
+export const PROTOTYPE_CLASS_STAT_CAPS: Readonly<Record<string, UnitStats>> = Object.freeze(
+  Object.fromEntries(
+    Object.values(CLASS_DEFINITIONS).map((definition) => [
+      definition.id,
+      Object.freeze(copyStatCaps(definition.prototypeStatCaps))
+    ])
+  ) as Record<string, UnitStats>
+);
+
+export function getPrototypeStatCaps(classId: string): UnitStats {
+  const definition = getClassDefinition(classId);
+  if (!definition) {
+    throw new Error("No prototype stat caps are defined for class: " + classId);
+  }
+  return copyStatCaps(definition.prototypeStatCaps);
+}
+
+function toPromotionDefinition(
+  definition: BasicClassDefinition
 ): ClassPromotionDefinition {
   return {
-    fromClassId,
-    toClassId,
-    requiredItemId: PROMOTION_ITEM_ID,
-    statBonuses: PROTOTYPE_PROMOTION_BONUSES[fromClassId] ?? { hp: 2 },
-    statCaps: getPrototypeStatCaps(toClassId),
-    experiencePolicy: "preserve"
+    fromClassId: definition.id,
+    toClassId: definition.promotion.targetClassId,
+    requiredItemId: definition.promotion.requiredItemId,
+    statBonuses: { ...definition.promotion.statBonuses },
+    statCaps: copyStatCaps(
+      CLASS_DEFINITIONS[definition.promotion.targetClassId].prototypeStatCaps
+    ),
+    experiencePolicy: definition.promotion.experiencePolicy
   };
 }
 
-/** Promotion definitions are provisional until class balance is authored. */
-export const CLASS_PROMOTION_DEFINITIONS: Readonly<Record<string, ClassPromotionDefinition>> = {
-  swordsman: createPrototypePromotion("swordsman", "swordmaster"),
-  mercenary: createPrototypePromotion("mercenary", "hero"),
-  fighter: createPrototypePromotion("fighter", "warrior"),
-  soldier: createPrototypePromotion("soldier", "general"),
-  cavalry: createPrototypePromotion("cavalry", "paladin"),
-  archer: createPrototypePromotion("archer", "sniper"),
-  mage: createPrototypePromotion("mage", "sage")
-};
+const basicClassDefinitions = Object.values(CLASS_DEFINITIONS).filter(
+  (definition): definition is BasicClassDefinition => definition.tier === "basic"
+);
+
+export const CLASS_PROMOTION_TARGETS: Readonly<
+  Record<string, PromotedClassId>
+> = Object.freeze(
+  Object.fromEntries(
+    basicClassDefinitions.map((definition) => [
+      definition.id,
+      definition.promotion.targetClassId
+    ])
+  ) as Record<string, PromotedClassId>
+);
+
+export function getPromotionTargetClassId(
+  classId: string
+): PromotedClassId | undefined {
+  const definition = getClassDefinition(classId);
+  return definition?.tier === "basic"
+    ? definition.promotion.targetClassId
+    : undefined;
+}
+
+export const CLASS_PROMOTION_DEFINITIONS: Readonly<
+  Record<string, ClassPromotionDefinition>
+> = Object.freeze(
+  Object.fromEntries(
+    basicClassDefinitions.map((definition) => [
+      definition.id,
+      Object.freeze(toPromotionDefinition(definition))
+    ])
+  ) as Record<string, ClassPromotionDefinition>
+);
 
 export function getClassPromotionDefinition(
   classId: string
 ): ClassPromotionDefinition | undefined {
-  return CLASS_PROMOTION_DEFINITIONS[classId];
+  const definition = getClassDefinition(classId);
+  return definition?.tier === "basic"
+    ? toPromotionDefinition(definition)
+    : undefined;
 }

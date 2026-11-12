@@ -51,6 +51,7 @@ describe("getEnemyInspectionDetails", () => {
       id: "enemy_test",
       name: "敵テスト",
       className: "戦士",
+      classTierLabel: "基本職",
       level: 3,
       currentHp: 17,
       maxHp: 24,

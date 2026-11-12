@@ -1,4 +1,8 @@
-import { getClassDisplayName } from "../content/classes";
+import {
+  getClassDefinition,
+  getClassDisplayName,
+  getClassTierLabel
+} from "../content/classes";
 import { WEAPONS_BY_ID } from "../content/weapons";
 import { getInventoryItemStacks } from "./get-inventory-item-stacks";
 import type { CampaignUnitBattleRecord, GameUnit, UnitStats } from "../domain/models/game";
@@ -15,6 +19,10 @@ const WEAPON_TYPE_LABELS = {
 /** Projects a living player's current combat data for display without changing it. */
 export function getPlayerInspectionDetails(unit: GameUnit, battleRecord?: CampaignUnitBattleRecord | null) {
   if (unit.faction !== "player" || unit.currentHp <= 0) return null;
+  const classDefinition = getClassDefinition(unit.classId);
+  const promotionTarget = classDefinition?.tier === "basic"
+    ? getClassDisplayName(classDefinition.promotion.targetClassId)
+    : null;
   const weapons = unit.inventory.flatMap((itemId, inventoryIndex) => {
     const weapon = WEAPONS_BY_ID[itemId];
     if (!weapon) return [];
@@ -46,6 +54,11 @@ export function getPlayerInspectionDetails(unit: GameUnit, battleRecord?: Campai
     id: unit.id,
     name: unit.name,
     className: getClassDisplayName(unit.classId),
+    classTierLabel: getClassTierLabel(unit.classId),
+    promotionTargetClassName: promotionTarget,
+    promotionRequirementLabel: promotionTarget
+      ? "基本職Lv.10以上・クラスチェンジの証1個"
+      : null,
     level: unit.level,
     experience: unit.experience,
     currentHp: unit.currentHp,

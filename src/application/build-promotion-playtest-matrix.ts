@@ -69,6 +69,9 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
 ): PromotionPlaytestMatrixSlot<T>[] {
   return (Object.keys(CLASS_PROMOTION_TARGETS) as Array<keyof typeof CLASS_PROMOTION_TARGETS>)
     .flatMap((classId) => {
+      const promotedClassId = CLASS_PROMOTION_TARGETS[classId];
+      if (!promotedClassId) return [];
+
       const classCandidates = candidates.filter((candidate) => candidate.unit.classId === classId);
       const ranked = classCandidates
         .map((candidate) => ({
@@ -106,7 +109,7 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
         return {
           id: classId + ":" + profile.id,
           classId,
-          promotedClassId: CLASS_PROMOTION_TARGETS[classId],
+          promotedClassId,
           profile: profile.id,
           profileLabel: profile.label,
           targetPercentile: profile.targetPercentile,

@@ -1,4 +1,4 @@
-import { getClassDisplayName } from "../content/classes";
+import { getClassDisplayName, getClassTierLabel } from "../content/classes";
 import { WEAPONS_BY_ID } from "../content/weapons";
 import type { GameUnit, UnitStats } from "../domain/models/game";
 
@@ -57,6 +57,7 @@ export function getEnemyInspectionDetails(unit: GameUnit) {
     id: unit.id,
     name: unit.name,
     className: getClassDisplayName(unit.classId),
+    classTierLabel: getClassTierLabel(unit.classId),
     level: unit.level,
     currentHp: unit.currentHp,
     maxHp: unit.stats.hp,

@@ -1,5 +1,5 @@
 import { INVENTORY_ITEMS_BY_ID } from "../../content/items";
-import { PROTOTYPE_CLASS_STAT_CAPS } from "../../content/classes";
+import { isRegisteredClassId } from "../../content/class-definitions";
 import { TERRAIN_DEFINITIONS } from "../../content/terrain";
 import { WEAPONS_BY_ID } from "../../content/weapons";
 import { isValidGameMapDefinition } from "./validate-game-map";
@@ -59,7 +59,7 @@ function hasValidCampaignUnitData(value: unknown): value is CampaignUnit {
     : undefined;
   return (
     isNonEmptyString(value.id) && isNonEmptyString(value.name) &&
-    isNonEmptyString(value.classId) && Object.hasOwn(PROTOTYPE_CLASS_STAT_CAPS, value.classId) &&
+    isNonEmptyString(value.classId) && isRegisteredClassId(value.classId) &&
     isNonNegativeInteger(value.level) && (value.level as number) >= 1 &&
     isNonNegativeInteger(value.experience) && (value.experience as number) < 100 &&
     isUnitStats(stats) && isGrowthRates(value.growthRates) &&
