@@ -48,6 +48,49 @@ describe("isValidGameMapDefinition", () => {
     expect(isValidGameMapDefinition(enemyTarget)).toBe(false);
   });
 
+  it("validates map-local one-shot event triggers and message actions", () => {
+    const valid: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "opening",
+        trigger: { type: "stage-start" },
+        action: { type: "show-message", speaker: "作戦メモ", text: "敵軍を全滅させましょう。" }
+      }, {
+        id: "enemy-turn-two",
+        trigger: { type: "turn-start", turn: 2, phase: "enemy" },
+        action: { type: "show-message", text: "敵軍フェイズです。" }
+      }, {
+        id: "enemy-one-defeated",
+        trigger: { type: "unit-defeated", unitId: "enemy_001" },
+        action: { type: "show-message", text: "敵を撃破しました。" }
+      }]
+    };
+    expect(isValidGameMapDefinition(valid)).toBe(true);
+
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: [...valid.events!, valid.events![0]!]
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: [{ ...valid.events![0]!, trigger: { type: "unknown" } }]
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: [{
+        ...valid.events![0]!,
+        trigger: { type: "unit-defeated", unitId: "not-deployed" }
+      }]
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: [{
+        ...valid.events![0]!,
+        action: { type: "show-message", text: "" }
+      }]
+    })).toBe(false);
+  });
+
   it("rejects duplicate deployment IDs, overlapping positions, and invalid coordinates", () => {
     const duplicateId = {
       ...CHAPTER_01_MAP,
