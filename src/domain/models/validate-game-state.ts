@@ -147,6 +147,7 @@ export function isValidGameStateSnapshot(
     !Array.isArray(value.units) || value.units.length === 0 ||
     !Array.isArray(value.reserveUnits) ||
     !Array.isArray(value.campaignUnitBattleRecords) ||
+    !Array.isArray(value.firedMapEventIds) || value.firedMapEventIds.length > 1000 ||
     map.terrain.length !== map.height || map.terrain.some((row) => row.length !== map.width)
   ) return false;
 
@@ -183,6 +184,16 @@ export function isValidGameStateSnapshot(
   for (const record of value.campaignUnitBattleRecords) {
     if (!isCampaignUnitBattleRecord(record) || battleRecordIds.has(record.unitId)) return false;
     battleRecordIds.add(record.unitId);
+  }
+
+  const firedMapEventIds = new Set<string>();
+  for (const eventId of value.firedMapEventIds) {
+    if (
+      !isNonEmptyString(eventId) ||
+      eventId.length > 128 ||
+      firedMapEventIds.has(eventId)
+    ) return false;
+    firedMapEventIds.add(eventId);
   }
   return true;
 }
