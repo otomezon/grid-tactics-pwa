@@ -101,7 +101,9 @@ describe("resolveMapEvents", () => {
   });
 
   it("does not mutate or clone state when no event matches", () => {
-    const result = resolveMapEvents(INITIAL_GAME_STATE, EVENT_MAP, { type: "victory" });
+    const result = resolveMapEvents(INITIAL_GAME_STATE, EVENT_MAP, {
+      type: "turn-start", turn: 99, phase: "enemy"
+    });
     expect(result.nextState).toBe(INITIAL_GAME_STATE);
     expect(result.messages).toEqual([]);
   });
