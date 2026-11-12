@@ -193,3 +193,20 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - `CLASS_PROMOTION_DEFINITIONS` は定義レコードに加えて能力ボーナス・能力上限も凍結し、実行時の誤変更を防ぐ。TypeScript上もネストした値を読み取り専用として扱う。
 - `getClassPromotionDefinition` は従来どおり独立した防御的コピーを返すため、昇格処理側の計算・呼び出し規約は変えない。
 - ゲームルール、暫定バランス値、 `GameStateSnapshot`、 `saveVersion: 4`、IndexedDB形式は変更しない。
+
+## プレイヤー行動コマンドのapplication境界
+
+- プレイヤーの移動・武器変更・待機を、それぞれ `perform-player-move.ts`、`perform-player-weapon-change.ts`、`perform-player-wait.ts` のapplication commandへ集約した。
+- commandはフェイズ、対象ユニットの陣営／生存状態、行動フラグ、武器所持・適性、移動力・地形・占有を検証し、入力snapshotを変更せずに次状態を返す。
+- 移動経路は既存のDijkstra helperを再利用する。UIのタッチ2回確定・キーボード／ポインターによるプレビューはApp側に残し、確定時にapplication commandで再検証する。
+- 武器変更は移動後も行動前なら実行可能という従来挙動を維持し、待機は移動済みでも未行動なら実行可能とする。
+- GameStateのフィールド、saveVersion 4、IndexedDB schema、戦闘式、RNG、キャンペーン累計戦績の仕様は変更しない。
+
+## マップイベント基盤（saveVersion 5）
+
+- `GameMapDefinition.events` にマップ固有のイベントを定義する。トリガーはステージ開始、指定ターン／フェイズ開始、特定ユニット撃破、ボス撃破、勝利、敗北をサポートする。
+- 初期アクションは `show-message` のみ。イベントはマップ定義順に評価し、メッセージを既存のステータスメッセージへ追加表示する。村・宝箱・扉・増援・加入・選択肢付き会話・アイテム配布は未実装。
+- `GameStateSnapshot.firedMapEventIds` に発火済みイベントIDを保存する。同じイベントは同一章内で一度だけ発火し、出撃配置確定時のステージ開始／初回自軍ターン開始、以降のフェイズ／ターン遷移、ユニット撃破、ボス撃破、勝敗確定の各コミット後に判定する。
+- セーブ検証はマップイベント定義の構造・参照と発火済みIDの一意性・サイズを検証する。v1〜v4セーブは過去のイベント履歴を推測せず、空の発火済みID配列を加えてv5へ移行する。新章は空のイベント進行から開始する。
+- 章1には中立的な操作案内を1件だけ定義し、章2／3はイベントなしを明示している。ストーリー・報酬・正式シナリオの追加を意味しない。
+- 関連テスト: `resolve-map-events.test.ts`、`resolve-map-event-transition.test.ts`、マップ／GameState validator tests、v1〜v4 migration tests、キャンペーンE2E。

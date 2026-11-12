@@ -98,5 +98,54 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
     }
   }
 
+  if (value.events !== undefined) {
+    if (!Array.isArray(value.events) || value.events.length > 256) return false;
+    const eventIds = new Set<string>();
+    const deployedUnitIds = new Set([...playerIds, ...enemyIds]);
+    for (const candidate of value.events) {
+      if (
+        !isRecord(candidate) ||
+        !isNonEmptyString(candidate.id) ||
+        candidate.id.length > 128 ||
+        eventIds.has(candidate.id) ||
+        !isRecord(candidate.trigger) ||
+        !isRecord(candidate.action)
+      ) return false;
+      eventIds.add(candidate.id);
+
+      const trigger = candidate.trigger;
+      switch (trigger.type) {
+        case "stage-start":
+        case "boss-defeated":
+        case "victory":
+        case "defeat":
+          break;
+        case "turn-start":
+          if (
+            !Number.isInteger(trigger.turn) || (trigger.turn as number) < 1 ||
+            (trigger.phase !== "player" && trigger.phase !== "enemy")
+          ) return false;
+          break;
+        case "unit-defeated":
+          if (
+            !isNonEmptyString(trigger.unitId) ||
+            !deployedUnitIds.has(trigger.unitId)
+          ) return false;
+          break;
+        default:
+          return false;
+      }
+
+      const action = candidate.action;
+      if (
+        action.type !== "show-message" ||
+        !isNonEmptyString(action.text) ||
+        action.text.length > 2000 ||
+        (action.speaker !== undefined &&
+          (!isNonEmptyString(action.speaker) || action.speaker.length > 80))
+      ) return false;
+    }
+  }
+
   return true;
 }
