@@ -16,6 +16,28 @@ export type EnemyMovementReason =
   | { kind: "attack-after-move"; targetId: string; targetName: string }
   | { kind: "approach-player"; nearestPlayerDistanceBefore: number; nearestPlayerDistanceAfter: number };
 
+export interface EnemyTargetScoreBreakdown {
+  canDefeatTarget: boolean;
+  killBonus: number;
+  triangleBonus: number;
+  lostHp: number;
+  lowHpBonus: number;
+  expectedDamage: number;
+  expectedDamageBonus: number;
+  counterExpectedDamage: number;
+  counterDamagePenalty: number;
+  counterLethalPenalty: number;
+  rolePriorityBonus: number;
+  totalScore: number;
+}
+
+export interface EnemyTargetEvaluation {
+  targetId: string;
+  targetName: string;
+  targetRoles: readonly TacticalRole[];
+  scoreBreakdown: EnemyTargetScoreBreakdown;
+}
+
 export interface EnemyActionLog {
   enemyId: string;
   enemyName: string;
@@ -25,6 +47,7 @@ export interface EnemyActionLog {
   destination?: Position;
   targetRoles?: readonly TacticalRole[];
   targetRolePriorityBonus?: number;
+  targetEvaluations?: readonly EnemyTargetEvaluation[];
   movementReason?: EnemyMovementReason;
   message: string;
 }
@@ -47,6 +70,7 @@ interface AttackCandidate {
   score: number;
   targetRoles: readonly TacticalRole[];
   targetRolePriorityBonus: number;
+  scoreBreakdown: EnemyTargetScoreBreakdown;
 }
 
 interface TileCandidate {
@@ -95,19 +119,13 @@ function getAttackCandidates(
   for (const target of targets) {
     try {
       const plan = createAttackPlanForFaction(state, map, enemy.id, target.id, "enemy");
-      candidates.push({
-        target,
-        plan,
-        score: scoreAttack(enemy, target, plan) + getClassTacticalRoles(target.classId).reduce(
-          (bonus, role) => bonus + getTacticalRolePriorityBonus(role),
-          0
-        ),
-        targetRoles: getClassTacticalRoles(target.classId),
-        targetRolePriorityBonus: getClassTacticalRoles(target.classId).reduce(
-          (bonus, role) => bonus + getTacticalRolePriorityBonus(role),
-          0
-        )
-      });
+      const targetRoles = getClassTacticalRoles(target.classId);
+      const targetRolePriorityBonus = targetRoles.reduce(
+        (bonus, role) => bonus + getTacticalRolePriorityBonus(role),
+        0
+      );
+      const scoreBreakdown = scoreAttack(enemy, target, plan, targetRolePriorityBonus);
+      candidates.push({ target, plan, score: scoreBreakdown.totalScore, targetRoles, targetRolePriorityBonus, scoreBreakdown });
     } catch {
       // Out-of-range or otherwise invalid targets are not attack candidates.
     }
@@ -115,34 +133,46 @@ function getAttackCandidates(
   return candidates.sort(compareAttackCandidates);
 }
 
-function scoreAttack(enemy: GameUnit, target: GameUnit, plan: AttackPlan): number {
+function scoreAttack(enemy: GameUnit, target: GameUnit, plan: AttackPlan, rolePriorityBonus: number): EnemyTargetScoreBreakdown {
   const opening = plan.forecast.strikes[0];
-  if (!opening) return Number.NEGATIVE_INFINITY;
+  if (!opening) return {
+    canDefeatTarget: false, killBonus: 0, triangleBonus: 0,
+    lostHp: target.stats.hp - target.currentHp, lowHpBonus: 0,
+    expectedDamage: 0, expectedDamageBonus: 0, counterExpectedDamage: 0,
+    counterDamagePenalty: 0, counterLethalPenalty: 0, rolePriorityBonus,
+    totalScore: Number.NEGATIVE_INFINITY
+  };
 
   const expectedDamage = opening.normalDamage * opening.hitRate / 100;
-  const canDefeat = opening.hitRate > 0 && (
+  const canDefeatTarget = opening.hitRate > 0 && (
     opening.normalDamage >= target.currentHp ||
     (opening.criticalRate > 0 && opening.criticalDamage >= target.currentHp)
   );
+  const killBonus = canDefeatTarget ? KILL_BONUS : 0;
   const triangleBonus = opening.weaponTriangleHitModifier > 0 ? TRIANGLE_BONUS : 0;
-  const lowHpBonus = (target.stats.hp - target.currentHp) * LOW_HP_BONUS_PER_POINT;
+  const lostHp = target.stats.hp - target.currentHp;
+  const lowHpBonus = lostHp * LOW_HP_BONUS_PER_POINT;
+  const expectedDamageBonus = expectedDamage * EXPECTED_DAMAGE_WEIGHT;
   const counter = plan.forecast.strikes.find((strike) => strike.kind === "counter");
-  const counterExpectedDamage = counter
-    ? counter.normalDamage * counter.hitRate / 100
-    : 0;
+  const counterExpectedDamage = counter ? counter.normalDamage * counter.hitRate / 100 : 0;
+  const counterDamagePenalty = counterExpectedDamage * COUNTER_DAMAGE_PENALTY_WEIGHT;
   const counterLethalPenalty = counter && counter.hitRate > 0 && (
     counter.normalDamage >= enemy.currentHp ||
     (counter.criticalRate > 0 && counter.criticalDamage >= enemy.currentHp)
   ) ? COUNTER_LETHAL_PENALTY : 0;
+  const totalScore = killBonus + triangleBonus + lowHpBonus + expectedDamageBonus -
+    counterDamagePenalty - counterLethalPenalty + rolePriorityBonus;
+  return {
+    canDefeatTarget, killBonus, triangleBonus, lostHp, lowHpBonus, expectedDamage,
+    expectedDamageBonus, counterExpectedDamage, counterDamagePenalty,
+    counterLethalPenalty, rolePriorityBonus, totalScore
+  };
+}
 
-  return (
-    (canDefeat ? KILL_BONUS : 0) +
-    triangleBonus +
-    lowHpBonus +
-    expectedDamage * EXPECTED_DAMAGE_WEIGHT -
-    counterExpectedDamage * COUNTER_DAMAGE_PENALTY_WEIGHT -
-    counterLethalPenalty
-  );
+function toTargetEvaluations(candidates: readonly AttackCandidate[]): EnemyTargetEvaluation[] {
+  return candidates.map(({ target, targetRoles, scoreBreakdown }) => ({
+    targetId: target.id, targetName: target.name, targetRoles, scoreBreakdown
+  }));
 }
 
 function formatTargetPriorityReason(candidate: AttackCandidate): string {
@@ -254,7 +284,8 @@ function executeEnemyAction(
     throw new Error("The enemy unit is no longer available.");
   }
 
-  const currentAttack = getAttackCandidates(state, map, enemyId)[0];
+  const currentAttackCandidates = getAttackCandidates(state, map, enemyId);
+  const currentAttack = currentAttackCandidates[0];
   if (currentAttack) {
     const result = performEnemyAttack(state, map, enemyId, currentAttack.target.id);
     const logs = result.result.events.map((event) =>
@@ -274,6 +305,7 @@ function executeEnemyAction(
           targetRoles: currentAttack.targetRoles,
           targetRolePriorityBonus: currentAttack.targetRolePriorityBonus
         } : {}),
+        targetEvaluations: toTargetEvaluations(currentAttackCandidates),
         message: `${currentEnemy.name}は${currentAttack.target.name}に攻撃（${logs}）${formatTargetPriorityReason(currentAttack)}`
       }
     };
@@ -290,7 +322,8 @@ function executeEnemyAction(
             : unit
         )
       };
-      const postMoveAttack = getAttackCandidates(movedState, map, enemyId)[0];
+      const postMoveAttackCandidates = getAttackCandidates(movedState, map, enemyId);
+      const postMoveAttack = postMoveAttackCandidates[0];
       if (postMoveAttack) {
         const result = performEnemyAttack(movedState, map, enemyId, postMoveAttack.target.id);
         const logs = result.result.events.map((event) =>
@@ -312,6 +345,7 @@ function executeEnemyAction(
               targetRoles: postMoveAttack.targetRoles,
               targetRolePriorityBonus: postMoveAttack.targetRolePriorityBonus
             } : {}),
+            targetEvaluations: toTargetEvaluations(postMoveAttackCandidates),
             message: `${currentEnemy.name}は${positionText(destination.position)}へ移動し、${postMoveAttack.target.name}に攻撃（${logs}）${formatMovementReason(destination.movementReason)}${formatTargetPriorityReason(postMoveAttack)}`
           }
         };

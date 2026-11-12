@@ -7,6 +7,7 @@ import { EnemyInspector } from "./components/enemy-inspector";
 import { PlayerInspector } from "./components/player-inspector";
 import { EnemyThreatInspector } from "./components/enemy-threat-inspector";
 import { EnemyPhaseForecastPanel } from "./components/enemy-phase-forecast";
+import { EnemyTargetEvaluations } from "./components/enemy-target-evaluations";
 import { PlayerPhaseEndReview } from "./components/player-phase-end-review";
 import { CombatForecastPanel } from "./components/combat-forecast";
 import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapters";
@@ -2463,6 +2464,7 @@ function CampaignApp() {
                                 <span className="enemy-phase-action-kind">{ENEMY_ACTION_KIND_LABELS[action.kind]}</span>
                               </div>
                               <p>{action.message}</p>
+                              <EnemyTargetEvaluations evaluations={action.targetEvaluations} />
                             </li>
                           ))}
                         </ol>

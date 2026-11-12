@@ -1254,12 +1254,26 @@ test.describe("browser campaign flow", () => {
     const savedBeforeForecast = await readAutoSave(page);
     const forecast = page.getByTestId("enemy-phase-forecast");
     await expect(forecast).toBeVisible();
-    await forecast.locator("details > summary").click();
+    await forecast.locator(":scope > details > summary").click();
 
     const actions = forecast.getByTestId("enemy-phase-forecast-action");
     await expect(actions).toHaveCount(1);
     await expect(actions.first()).toContainText("遠距離攻撃役を優先 +35点");
     await expect(actions.first()).toContainText("味方02");
+    const forecastEvaluations = actions.first().getByTestId("enemy-target-evaluations");
+    await expect(forecastEvaluations).toBeVisible();
+    await forecastEvaluations.locator("summary").click();
+    const forecastCandidates = forecastEvaluations.getByTestId("enemy-target-evaluation");
+    await expect(forecastCandidates).toHaveCount(2);
+    await expect(forecastCandidates.nth(0)).toHaveAttribute("data-target-id", "unit_002");
+    await expect(forecastCandidates.nth(0)).toContainText("採用対象");
+    await expect(forecastCandidates.nth(0)).toContainText("遠距離攻撃役");
+    await expect(forecastCandidates.nth(0)).toContainText("+35点");
+    await expect(forecastCandidates.nth(1)).toHaveAttribute("data-target-id", "unit_001");
+    const candidateScores = await forecastCandidates.evaluateAll((nodes) =>
+      nodes.map((node) => Number(node.getAttribute("data-score")))
+    );
+    expect(candidateScores[0]).toBeGreaterThan(candidateScores[1]!);
     expect(await readAutoSave(page)).toEqual(savedBeforeForecast);
 
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
@@ -1267,7 +1281,14 @@ test.describe("browser campaign flow", () => {
     await expect(review).toBeVisible();
     await review.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
-    await expect(page.getByTestId("battle-history")).toContainText("遠距離攻撃役を優先 +35点");
+    const historyAction = page.getByTestId("battle-history").getByTestId("enemy-phase-action").first();
+    await expect(historyAction).toContainText("遠距離攻撃役を優先 +35点");
+    const historyEvaluations = historyAction.getByTestId("enemy-target-evaluations");
+    await expect(historyEvaluations).toBeVisible();
+    await historyEvaluations.locator("summary").click();
+    await expect(historyEvaluations.getByTestId("enemy-target-evaluation")).toHaveCount(2);
+    await expect(historyEvaluations.getByTestId("enemy-target-evaluation").first())
+      .toHaveAttribute("data-target-id", "unit_002");
   });
 
   test("explains enemy approach movement in forecast and actual history without saving the preview", async ({ page }) => {
@@ -1311,7 +1332,7 @@ test.describe("browser campaign flow", () => {
     const savedBeforeForecast = await readAutoSave(page);
     const forecast = page.getByTestId("enemy-phase-forecast");
     await expect(forecast).toBeVisible();
-    await forecast.locator("details > summary").click();
+    await forecast.locator(":scope > details > summary").click();
     const actions = forecast.getByTestId("enemy-phase-forecast-action");
     await expect(actions).toHaveCount(1);
     await expect(actions.first()).toContainText("最寄りの味方との距離 6→4");
@@ -1334,9 +1355,9 @@ test.describe("browser campaign flow", () => {
     const savedBeforePreview = await readAutoSave(page);
     const forecast = page.getByTestId("enemy-phase-forecast");
     await expect(forecast).toBeVisible();
-    const details = forecast.locator("details");
-    await expect(details.locator("summary")).toHaveText("行動順と予測結果を表示");
-    await details.locator("summary").click();
+    const details = forecast.locator(":scope > details");
+    await expect(details.locator(":scope > summary")).toHaveText("行動順と予測結果を表示");
+    await details.locator(":scope > summary").click();
 
     const projected = forecast.getByTestId("enemy-phase-forecast-action");
     await expect(projected).toHaveCount(5);
