@@ -24,7 +24,8 @@ export const CHAPTER_02_MAP: GameMapDefinition = {
     { unitId: "enemy_004", x: 2, y: 4 },
     { unitId: "enemy_005", x: 8, y: 4 }
   ],
-  objective: { type: "defeat_all" }
+  objective: { type: "defeat_all" },
+  events: []
 };
 
 // Placeholder chapter data exists to exercise chapter carry-over and save restoration.
