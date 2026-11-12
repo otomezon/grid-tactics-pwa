@@ -5,7 +5,8 @@ import { getChapterById } from "../content/chapters";
 import { performClassChange } from "../application/perform-class-change";
 import { createAttackPlan } from "../application/perform-attack";
 import { getPromotionCombatComparison } from "../application/get-promotion-combat-comparison";
-import { getPromotionCombatSampleSummary } from "../application/get-promotion-combat-sample-summary";
+import { getPromotionCombatSampleSummary, type PromotionCombatSampleSummary } from "../application/get-promotion-combat-sample-summary";
+import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../application/build-promotion-playtest-matrix";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import type { GameStateSnapshot, GameUnit, UnitStats } from "../domain/models/game";
@@ -38,6 +39,46 @@ interface ImportedCandidate {
 interface ImportedFileResult {
   candidates: ImportedCandidate[];
   error?: string;
+}
+
+type MatrixDataClassification = "unconfirmed" | "actual-play" | "synthetic";
+
+interface PromotionPlaytestMatrixResult {
+  caseId: string;
+  classId: string;
+  promotedClassId: string;
+  profile: string;
+  targetPercentile: number;
+  candidatePercentile: number | null;
+  fileName: string;
+  fingerprint: string;
+  unitId: string;
+  unitName: string;
+  candidateStats: UnitStats;
+  currentHp: number;
+  experience: number;
+  equippedWeaponId: string | null;
+  chapterId: string;
+  turn: number;
+  rngState: number;
+  enemyId: string;
+  enemyClassId: string;
+  enemyCurrentHp: number;
+  enemyPosition: string;
+  dataClassification: MatrixDataClassification;
+  summary: PromotionCombatSampleSummary;
+}
+
+function getMatrixDataClassificationLabel(value: MatrixDataClassification): string {
+  if (value === "actual-play") return "実プレイ由来（利用者申告）";
+  if (value === "synthetic") return "合成fixture";
+  return "未確認";
+}
+
+function escapeCsvField(value: string | number | null | undefined): string {
+  const text = value === null || value === undefined ? "" : String(value);
+  const safe = /^[=+\\-@\\t\\r]/.test(text) ? "'" + text : text;
+  return '"' + safe.replace(/"/g, '""') + '"';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -112,17 +153,7 @@ function getAverageClassPercentile(
   candidate: ImportedCandidate,
   classCandidates: readonly ImportedCandidate[]
 ): number | null {
-  if (classCandidates.length < 3) return null;
-
-  const average = STAT_ROWS.reduce((total, { key }) => {
-    const values = classCandidates.map((entry) => entry.unit.stats[key]);
-    const lower = values.filter((value) => value < candidate.unit.stats[key]).length;
-    const equal = values.filter((value) => value === candidate.unit.stats[key]).length;
-    const midRank = (lower + (equal - 1) / 2) / Math.max(1, values.length - 1);
-    return total + midRank * 100;
-  }, 0) / STAT_ROWS.length;
-
-  return Math.round(average);
+  return getAverageClassStatPercentile(candidate, classCandidates);
 }
 
 function buildPromotionComparison(candidate: ImportedCandidate) {
@@ -187,6 +218,12 @@ export function ClassPromotionSnapshotBench() {
   const [selectedKey, setSelectedKey] = useState("");
   const [selectedTargetId, setSelectedTargetId] = useState("");
   const [sampleCount, setSampleCount] = useState(100);
+  const [matrixCandidateSelections, setMatrixCandidateSelections] = useState<Record<string, string>>({});
+  const [matrixTargetSelections, setMatrixTargetSelections] = useState<Record<string, string>>({});
+  const [matrixConfirmations, setMatrixConfirmations] = useState<Record<string, boolean>>({});
+  const [matrixDataClassifications, setMatrixDataClassifications] = useState<Record<string, MatrixDataClassification>>({});
+  const [matrixResults, setMatrixResults] = useState<Record<string, PromotionPlaytestMatrixResult>>({});
+  const [matrixRunError, setMatrixRunError] = useState("");
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
@@ -230,6 +267,193 @@ export function ClassPromotionSnapshotBench() {
     );
   }, [selectedCandidate, comparison, selectedTarget, selectedChapter, sampleCount]);
 
+  const matrixSlots = useMemo(
+    () => buildPromotionPlaytestMatrix(candidates),
+    [candidates]
+  );
+  const matrixRows = useMemo(() => {
+    const selectedCandidates = matrixSlots.map((slot) => {
+      const selectedKey = matrixCandidateSelections[slot.id];
+      const candidate = slot.candidatePool.find((entry) => entry.key === selectedKey) ??
+        slot.suggestedCandidate;
+      return { slot, candidate };
+    });
+    const usageCounts = new Map<string, number>();
+    for (const entry of selectedCandidates) {
+      if (!entry.candidate) continue;
+      const usageKey = entry.slot.classId + ":" + entry.candidate.key;
+      usageCounts.set(usageKey, (usageCounts.get(usageKey) ?? 0) + 1);
+    }
+
+    return selectedCandidates.map(({ slot, candidate }) => {
+      const targets = candidate ? getAttackableEnemyTargets(candidate) : [];
+      const chosenTargetId = matrixTargetSelections[slot.id];
+      const target = targets.find((enemy) => enemy.id === chosenTargetId) ?? targets[0];
+      const usageKey = candidate ? slot.classId + ":" + candidate.key : "";
+      const duplicateCandidate = candidate !== null && (usageCounts.get(usageKey) ?? 0) > 1;
+      const confirmed = matrixConfirmations[slot.id] === true;
+      const eligible = candidate?.eligible === true;
+      const ready =
+        slot.candidateCount >= 3 &&
+        candidate !== null &&
+        !duplicateCandidate &&
+        eligible &&
+        target !== undefined &&
+        confirmed;
+      let status = "実行可能";
+      if (slot.candidateCount < 3) status = "候補数不足（" + slot.candidateCount + "/3）";
+      else if (!candidate) status = "候補未選択";
+      else if (duplicateCandidate) status = "同一候補が重複";
+      else if (!eligible) status = candidate.reasons.join("／");
+      else if (!target) status = "射程内の生存敵なし";
+      else if (!confirmed) status = "候補・敵条件の確認待ち";
+      return {
+        ...slot,
+        candidate,
+        candidatePercentile: candidate
+          ? getAverageClassStatPercentile(candidate, slot.candidatePool)
+          : null,
+        targets,
+        target,
+        duplicateCandidate,
+        confirmed,
+        dataClassification: matrixDataClassifications[slot.id] ?? "unconfirmed",
+        ready,
+        status
+      };
+    });
+  }, [
+    matrixSlots,
+    matrixCandidateSelections,
+    matrixTargetSelections,
+    matrixConfirmations,
+    matrixDataClassifications
+  ]);
+  const readyMatrixCount = matrixRows.filter((row) => row.ready).length;
+  const completedMatrixCount = Object.keys(matrixResults).length;
+
+  function handleSampleCountChange(nextCount: number) {
+    setSampleCount(nextCount);
+    setMatrixResults({});
+    setMatrixRunError("");
+  }
+
+  function handleRunPromotionPlaytestMatrix() {
+    const nextResults: Record<string, PromotionPlaytestMatrixResult> = {};
+    setMatrixRunError("");
+
+    try {
+      for (const row of matrixRows) {
+        if (!row.ready || !row.candidate || !row.target) continue;
+        const chapter = getChapterById(row.candidate.snapshot.chapterId);
+        const promotion = buildPromotionComparison(row.candidate);
+        if (!chapter || !promotion) {
+          throw new Error(row.id + ": 昇格commandまたは章マップを解決できません。");
+        }
+
+        const summary = getPromotionCombatSampleSummary(
+          row.candidate.snapshot,
+          promotion.promotionState,
+          chapter.map,
+          row.candidate.unit.id,
+          row.target.id,
+          sampleCount
+        );
+        nextResults[row.id] = {
+          caseId: row.id,
+          classId: row.classId,
+          promotedClassId: row.promotedClassId,
+          profile: row.profile,
+          targetPercentile: row.targetPercentile,
+          candidatePercentile: row.candidatePercentile,
+          fileName: row.candidate.fileName,
+          fingerprint: row.candidate.fingerprint,
+          unitId: row.candidate.unit.id,
+          unitName: row.candidate.unit.name,
+          candidateStats: row.candidate.unit.stats,
+          currentHp: row.candidate.unit.currentHp,
+          experience: row.candidate.unit.experience,
+          equippedWeaponId: row.candidate.unit.equippedWeaponId,
+          chapterId: row.candidate.snapshot.chapterId,
+          turn: row.candidate.snapshot.turn,
+          rngState: row.candidate.snapshot.rngState,
+          enemyId: row.target.id,
+          enemyClassId: row.target.classId,
+          enemyCurrentHp: row.target.currentHp,
+          enemyPosition: formatUnitLocation(row.target),
+          dataClassification: row.dataClassification,
+          summary
+        };
+      }
+      setMatrixResults(nextResults);
+      if (Object.keys(nextResults).length !== 21) {
+        setMatrixRunError("21ケースすべてを完了できませんでした。条件と各候補を確認してください。");
+      }
+    } catch (error) {
+      setMatrixResults(nextResults);
+      setMatrixRunError(error instanceof Error ? error.message : "21ケースの試行に失敗しました。");
+    }
+  }
+
+  function handleDownloadPromotionPlaytestMatrix() {
+    const results = matrixSlots
+      .map((slot) => matrixResults[slot.id])
+      .filter((entry): entry is PromotionPlaytestMatrixResult => entry !== undefined);
+    if (results.length !== 21) return;
+
+    const headers = [
+      "case_id", "basic_class", "promoted_class", "profile", "target_percentile",
+      "candidate_percentile", "source_file", "snapshot_fingerprint", "unit_id", "unit_name",
+      "hp", "strength", "magic", "skill", "speed", "luck", "defense", "resistance",
+      "current_hp", "experience", "movement", "move", "weapon_types", "equipped_weapon",
+      "chapter_id", "turn", "starting_rng", "enemy_id", "enemy_class", "enemy_hp", "enemy_position",
+      "sample_count", "first_seed", "last_seed", "data_classification",
+      "control_hit_rate", "promotion_hit_rate", "hit_rate_delta_pt",
+      "control_critical_rate_on_hit", "promotion_critical_rate_on_hit",
+      "control_avg_damage_per_battle", "promotion_avg_damage_per_battle",
+      "control_enemy_defeat_rate", "promotion_enemy_defeat_rate",
+      "control_avg_counter_damage", "promotion_avg_counter_damage",
+      "control_attacker_survival_rate", "promotion_attacker_survival_rate",
+      "control_avg_attacker_hp", "promotion_avg_attacker_hp"
+    ];
+    const rows = results.map((entry) => {
+      const candidate = matrixRows.find((row) => row.id === entry.caseId)?.candidate;
+      const stats = entry.candidateStats;
+      const control = entry.summary.control;
+      const promotion = entry.summary.promotion;
+      return [
+        entry.caseId, entry.classId, entry.promotedClassId, entry.profile,
+        entry.targetPercentile, entry.candidatePercentile, entry.fileName, entry.fingerprint,
+        entry.unitId, entry.unitName, stats.hp, stats.strength, stats.magic, stats.skill,
+        stats.speed, stats.luck, stats.defense, stats.resistance, entry.currentHp,
+        entry.experience, candidate?.unit.movementType ?? "", candidate?.unit.move ?? "",
+        candidate?.unit.usableWeaponTypes.join("|") ?? "", entry.equippedWeaponId ?? "",
+        entry.chapterId, entry.turn, entry.rngState, entry.enemyId, entry.enemyClassId,
+        entry.enemyCurrentHp, entry.enemyPosition, entry.summary.sampleCount,
+        entry.summary.firstSeed, entry.summary.lastSeed,
+        getMatrixDataClassificationLabel(entry.dataClassification),
+        control.attackHitRate, promotion.attackHitRate,
+        Number((promotion.attackHitRate - control.attackHitRate).toFixed(1)),
+        control.criticalRateOnHit, promotion.criticalRateOnHit,
+        control.averageAttackDamagePerBattle, promotion.averageAttackDamagePerBattle,
+        control.enemyDefeatRate, promotion.enemyDefeatRate,
+        control.averageCounterDamagePerBattle, promotion.averageCounterDamagePerBattle,
+        control.attackerSurvivalRate, promotion.attackerSurvivalRate,
+        control.averageAttackerHpRemaining, promotion.averageAttackerHpRemaining
+      ].map(escapeCsvField).join(",");
+    });
+    const csv = "\ufeff" + [headers.map(escapeCsvField).join(","), ...rows].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "class-promotion-playtest-matrix.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
@@ -264,7 +488,15 @@ export function ClassPromotionSnapshotBench() {
       return next;
     });
     setErrors(nextErrors);
-    if (imported.length > 0) setSelectedKey(imported[0]!.key);
+    if (imported.length > 0) {
+      setSelectedKey(imported[0]!.key);
+      setMatrixCandidateSelections({});
+      setMatrixTargetSelections({});
+      setMatrixConfirmations({});
+      setMatrixDataClassifications({});
+      setMatrixResults({});
+      setMatrixRunError("");
+    }
     event.target.value = "";
   }
 
@@ -316,7 +548,17 @@ export function ClassPromotionSnapshotBench() {
           <button
             className="secondary-button"
             type="button"
-            onClick={() => { setCandidates([]); setSelectedKey(""); setErrors([]); }}
+            onClick={() => {
+              setCandidates([]);
+              setSelectedKey("");
+              setErrors([]);
+              setMatrixCandidateSelections({});
+              setMatrixTargetSelections({});
+              setMatrixConfirmations({});
+              setMatrixDataClassifications({});
+              setMatrixResults({});
+              setMatrixRunError("");
+            }}
           >
             読み込んだsnapshotをすべて破棄
           </button>
@@ -330,6 +572,9 @@ export function ClassPromotionSnapshotBench() {
             <h2 id="promotion-snapshot-profile-heading">基本職ごとの実データ候補</h2>
           </div>
         </div>
+        <p className="helper-text">
+          21ケースの候補を用意するには、各基本職でLv.10以上のユニットsnapshotが3件以上必要です。候補のpercentileから低位25%・中央値50%・上位90%に近い個体を候補表示しますが、自動確定ではありません。上位プロファイルは実測分布内の上位であり、正式な上限近傍を意味しません。
+        </p>
         <div className="promotion-snapshot-class-grid">
           {classCounts.map(({ classId, count }) => (
             <div key={classId} className="promotion-snapshot-class-count">
@@ -396,6 +641,201 @@ export function ClassPromotionSnapshotBench() {
             )}
           </div>
         )}
+      </section>
+
+      <section className="promotion-lab-card" aria-labelledby="promotion-snapshot-matrix-heading" data-testid="promotion-playtest-matrix">
+        <div className="promotion-lab-section-heading">
+          <div>
+            <p className="eyebrow">7 PATHS × 3 MEASURED PROFILES</p>
+            <h2 id="promotion-snapshot-matrix-heading">21ケース統制評価マトリクス</h2>
+          </div>
+          <span className="promotion-lab-count">{readyMatrixCount}/21 実行準備完了</span>
+        </div>
+        <p className="helper-text">
+          各基本職の実測候補から低位25%・中央値50%・上位90%に近い個体を仮選出します。各行で候補と射程内の敵を確認し、条件確認チェックを入れてください。percentileは8能力順位の平均であり、成長率そのものではありません。実プレイ由来かどうかは自動判定できないため、各ケースのデータ区分を別途指定します。
+        </p>
+        <div className="promotion-snapshot-matrix-controls">
+          <label className="promotion-snapshot-candidate-label">
+            <span>各ケースのseed試行回数</span>
+            <select
+              aria-label="21ケースの乱数試行回数"
+              value={sampleCount}
+              onChange={(event) => handleSampleCountChange(Number(event.target.value))}
+            >
+              <option value={20}>20</option>
+              <option value={100}>100</option>
+              <option value={250}>250</option>
+            </select>
+          </label>
+          <span className="helper-text">実行結果: {completedMatrixCount}/21ケース</span>
+        </div>
+        <div className="promotion-lab-table-wrap">
+          <table className="promotion-lab-table promotion-snapshot-matrix-table" aria-label="21ケース統制評価の候補割当">
+            <thead>
+              <tr>
+                <th>昇格経路</th>
+                <th>プロフィール／目標順位</th>
+                <th>候補ユニット・実測順位</th>
+                <th>比較対象の敵</th>
+                <th>データ区分</th>
+                <th>条件確認</th>
+                <th>状態</th>
+              </tr>
+            </thead>
+            <tbody>
+              {matrixRows.map((row) => (
+                <tr key={row.id} data-testid={"promotion-playtest-case-" + row.id}>
+                  <th scope="row">
+                    {getClassDisplayName(row.classId)} → {getClassDisplayName(row.promotedClassId)}
+                  </th>
+                  <td>{row.profileLabel}<small>目標 {row.targetPercentile}%</small></td>
+                  <td>
+                    <select
+                      aria-label={getClassDisplayName(row.classId) + " " + row.profileLabel + " 候補"}
+                      value={row.candidate?.key ?? ""}
+                      onChange={(event) => {
+                        setMatrixCandidateSelections((current) => ({
+                          ...current,
+                          [row.id]: event.target.value
+                        }));
+                        setMatrixConfirmations((current) => ({ ...current, [row.id]: false }));
+                        setMatrixResults({});
+                      }}
+                    >
+                      <option value="">候補を選択</option>
+                      {row.candidatePool.map((candidate) => (
+                        <option key={candidate.key} value={candidate.key}>
+                          {candidate.unit.name} · {candidate.fileName} · {getAverageClassStatPercentile(candidate, row.candidatePool) ?? "順位不足"} percentile
+                        </option>
+                      ))}
+                    </select>
+                    {row.candidate && (
+                      <small>
+                        {row.candidate.unit.id} · {row.candidatePercentile === null ? "順位不足" : "約" + row.candidatePercentile + " percentile"} · {row.candidate.fingerprint}
+                      </small>
+                    )}
+                  </td>
+                  <td>
+                    {row.targets.length > 0 ? (
+                      <select
+                        aria-label={getClassDisplayName(row.classId) + " " + row.profileLabel + " 比較対象の敵"}
+                        value={row.target?.id ?? ""}
+                        onChange={(event) => {
+                          setMatrixTargetSelections((current) => ({ ...current, [row.id]: event.target.value }));
+                          setMatrixConfirmations((current) => ({ ...current, [row.id]: false }));
+                          setMatrixResults({});
+                        }}
+                      >
+                        {row.targets.map((enemy) => (
+                          <option key={enemy.id} value={enemy.id}>
+                            {enemy.name} · HP {enemy.currentHp} · {formatUnitLocation(enemy)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : <small>攻撃可能な敵なし</small>}
+                  </td>
+                  <td>
+                    <select
+                      aria-label={getClassDisplayName(row.classId) + " " + row.profileLabel + " データ区分"}
+                      value={row.dataClassification}
+                      onChange={(event) => {
+                        setMatrixDataClassifications((current) => ({
+                          ...current,
+                          [row.id]: event.target.value as MatrixDataClassification
+                        }));
+                        setMatrixResults({});
+                      }}
+                    >
+                      <option value="unconfirmed">未確認</option>
+                      <option value="actual-play">実プレイ由来（利用者申告）</option>
+                      <option value="synthetic">合成fixture</option>
+                    </select>
+                  </td>
+                  <td>
+                    <label className="promotion-matrix-confirm">
+                      <input
+                        type="checkbox"
+                        checked={row.confirmed}
+                        disabled={!row.candidate || !row.target || !row.candidate.eligible || row.candidateCount < 3 || row.duplicateCandidate}
+                        onChange={(event) => {
+                          setMatrixConfirmations((current) => ({ ...current, [row.id]: event.target.checked }));
+                          setMatrixResults({});
+                        }}
+                      />
+                      <span>確認済み</span>
+                    </label>
+                  </td>
+                  <td>
+                    <small>{row.status}</small>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="promotion-snapshot-matrix-actions">
+          <button
+            className="primary-button"
+            type="button"
+            disabled={readyMatrixCount !== 21}
+            onClick={handleRunPromotionPlaytestMatrix}
+          >
+            21ケースのseed反復を実行
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={completedMatrixCount !== 21}
+            onClick={handleDownloadPromotionPlaytestMatrix}
+          >
+            21ケース結果CSVを書き出す
+          </button>
+        </div>
+        {matrixRunError && <p className="promotion-snapshot-errors" role="alert">{matrixRunError}</p>}
+        {completedMatrixCount > 0 && (
+          <div data-testid="promotion-playtest-matrix-results">
+            <h3>試行結果（{completedMatrixCount}/21件）</h3>
+            <div className="promotion-lab-table-wrap">
+              <table className="promotion-lab-table" aria-label="21ケースのseed反復集計結果">
+                <thead>
+                  <tr>
+                    <th>基本職／プロフィール</th>
+                    <th>候補／敵</th>
+                    <th>試行数</th>
+                    <th>命中率 control → promotion</th>
+                    <th>平均与ダメージ／戦闘</th>
+                    <th>敵撃破率</th>
+                    <th>平均反撃被ダメージ</th>
+                    <th>生存率</th>
+                    <th>データ区分</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrixSlots.map((slot) => {
+                    const result = matrixResults[slot.id];
+                    if (!result) return null;
+                    return (
+                      <tr key={slot.id} data-testid={"promotion-playtest-result-" + slot.id}>
+                        <th scope="row">{getClassDisplayName(result.classId)}・{result.profile}</th>
+                        <td>{result.unitName} → {result.enemyId}</td>
+                        <td>{result.summary.sampleCount}</td>
+                        <td>{result.summary.control.attackHitRate.toFixed(1)}% → {result.summary.promotion.attackHitRate.toFixed(1)}%</td>
+                        <td>{result.summary.control.averageAttackDamagePerBattle.toFixed(1)} → {result.summary.promotion.averageAttackDamagePerBattle.toFixed(1)}</td>
+                        <td>{result.summary.control.enemyDefeatRate.toFixed(1)}% → {result.summary.promotion.enemyDefeatRate.toFixed(1)}%</td>
+                        <td>{result.summary.control.averageCounterDamagePerBattle.toFixed(1)} → {result.summary.promotion.averageCounterDamagePerBattle.toFixed(1)}</td>
+                        <td>{result.summary.control.attackerSurvivalRate.toFixed(1)}% → {result.summary.promotion.attackerSurvivalRate.toFixed(1)}%</td>
+                        <td>{getMatrixDataClassificationLabel(result.dataClassification)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        <p className="helper-text">
+          このマトリクスは実セーブの候補選定と単発戦闘反復の準備・記録用です。各試行は初期snapshotへ戻した独立戦闘であり、敵フェイズ・移動・複数ターンの攻略結果ではありません。「実プレイ由来」は利用者の申告であり、ファイルの真正性を自動検証するものではありません。合成fixtureの結果を実プレイ記録として扱わないでください。
+        </p>
       </section>
 
       {selectedCandidate && comparison && (
@@ -553,7 +993,7 @@ export function ClassPromotionSnapshotBench() {
                           <select
                             aria-label="乱数試行回数"
                             value={sampleCount}
-                            onChange={(event) => setSampleCount(Number(event.target.value))}
+                            onChange={(event) => handleSampleCountChange(Number(event.target.value))}
                           >
                             <option value={20}>20</option>
                             <option value={100}>100</option>
@@ -634,6 +1074,7 @@ export function ClassPromotionSnapshotBench() {
           <li>実セーブのユニット能力値・HP／EXP・移動・武器適性・装備を、読み込んだ時点のsnapshotとして表示します。</li>
           <li>7経路のうち対象の1ユニットについて、既存application/domain commandを切り離したコピーへ実行し、レベル／EXP／能力値／HP／移動／装備／行動消費を比較します。</li>
           <li>射程内に生存敵がいる場合は、既存performAttackを使った単一seedの比較と、20／100／250個の同一seedペアによる独立1戦闘反復を表示します。集計は命中率・必殺率・平均ダメージ・対象撃破率・反撃被ダメージ・生存率です。HPや撃破を試行間で持ち越さず、複数ターンの攻略率・敵AI・移動・21ケースの実プレイを代替しません。</li>
+          <li>21ケースマトリクスでは、各基本職3件以上の候補からlow／median／upper相当を参考選出し、利用者が候補・敵・条件を確認した後に一括反復・CSV出力できます。実プレイ由来かどうかは利用者申告として保存し、自動判定しません。</li>
           <li>読み込みはsaveVersion 3のJSON exportだけです。旧版の自動migration、IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
           <li>現行クラス上限・ボーナスは仮値のままです。実データの比較はできてもCP-04／05の承認にはなりません。</li>
         </ul>
