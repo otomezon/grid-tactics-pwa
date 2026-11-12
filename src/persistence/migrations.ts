@@ -93,7 +93,8 @@ export function migrateGameStateSnapshot(
       rngState: legacyRngState(value),
       units,
       reserveUnits: [],
-      campaignUnitBattleRecords: []
+      campaignUnitBattleRecords: [],
+      firedMapEventIds: []
     };
   } else {
     return null;
