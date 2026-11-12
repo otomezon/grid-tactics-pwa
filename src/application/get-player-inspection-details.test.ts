@@ -21,6 +21,9 @@ describe("getPlayerInspectionDetails", () => {
     const details = getPlayerInspectionDetails(createPlayer());
     expect(details).toMatchObject({
       id: "unit_test", name: "味方テスト", className: "剣士", level: 4, experience: 37,
+      classTierLabel: "基本職",
+      promotionTargetClassName: "ソードマスター",
+      promotionRequirementLabel: "基本職Lv.10以上・クラスチェンジの証1個",
       currentHp: 19, maxHp: 28, positionLabel: "4列・3行", move: 5,
       movementTypeLabel: "歩兵", actionStatus: "移動済・未行動",
       growthRates: { hp: 80, strength: 35, magic: 5, skill: 55, speed: 60, luck: 35, defense: 25, resistance: 15 }
@@ -43,6 +46,16 @@ describe("getPlayerInspectionDetails", () => {
       { id: PROMOTION_ITEM_ID, name: "クラスチェンジの証", quantity: 1, description: expect.any(String) },
       { id: "unknown_item", name: "unknown_item", quantity: 1, description: null }
     ]);
+  });
+
+  it("shows no promotion destination for an already promoted class", () => {
+    const details = getPlayerInspectionDetails(createPlayer({ classId: "swordmaster" }));
+    expect(details).toMatchObject({
+      className: "ソードマスター",
+      classTierLabel: "昇格職",
+      promotionTargetClassName: null,
+      promotionRequirementLabel: null
+    });
   });
 
   it("returns no inspection for enemies or defeated players", () => {

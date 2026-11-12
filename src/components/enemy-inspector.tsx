@@ -16,7 +16,7 @@ export function EnemyInspector({ details }: EnemyInspectorProps) {
         <span className="large-unit-token unit-enemy" aria-hidden="true">敵</span>
         <div>
           <h2 id="enemy-inspector-heading">{details.name}</h2>
-          <p>Lv.{details.level} · {details.className}</p>
+          <p>Lv.{details.level} · {details.className} · {details.classTierLabel}</p>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ import { getPlayerInspectionDetails } from "../application/get-player-inspection
 import { PlayerInspector } from "./player-inspector";
 
 describe("PlayerInspector", () => {
-  it("renders the selected ally's stats, weapon suitability, and item quantities as read-only details", () => {
+  it("renders class tier and the approved promotion destination with current requirements", () => {
     const ally = INITIAL_UNITS.find((unit) => unit.id === "unit_001");
     if (!ally) throw new Error("The player inspector fixture is missing unit_001.");
     const details = getPlayerInspectionDetails({
@@ -17,6 +17,8 @@ describe("PlayerInspector", () => {
     const html = renderToStaticMarkup(createElement(PlayerInspector, { details }));
     expect(html).toContain('data-testid="player-inspector"');
     expect(html).toContain("味方01");
+    expect(html).toContain("剣士 · 基本職");
+    expect(html).toContain("昇格先：ソードマスター（基本職Lv.10以上・クラスチェンジの証1個）");
     expect(html).toContain("能力値");
     expect(html).toContain("成長率");
     expect(html).toContain("次のレベルまで");
