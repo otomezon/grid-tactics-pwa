@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
 import { DeploymentPreview } from "./components/deployment-preview";
 import { BattleObjectivePanel } from "./components/battle-objective-panel";

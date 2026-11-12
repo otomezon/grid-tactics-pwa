@@ -2146,6 +2146,84 @@ test.describe("browser campaign flow", () => {
 
 });
 
+  test("continues the campaign from Chapter 2 into the third registered prototype stage", async ({ page }) => {
+    await startBattle(page);
+    const chapterOneState = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      turn: number;
+      phase: string;
+      rngState: number;
+      units: Array<{ id: string; faction: string; position: { x: number; y: number } }>;
+      reserveUnits: unknown[];
+    };
+    const clearedChapterTwo = {
+      ...chapterOneState,
+      chapterId: "chapter_02_map",
+      rngState: 0x1234abcd,
+      units: chapterOneState.units.filter((unit) => unit.faction === "player"),
+      reserveUnits: []
+    };
+    await writeAutoSave(page, clearedChapterTwo);
+    await page.reload();
+    await continueSavedCampaign(page);
+    await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+
+    const nextChapterButton = page.getByRole("button", { name: "第3章・試作マップを開始" });
+    await expect(nextChapterButton).toBeVisible();
+    await nextChapterButton.click();
+    await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(clearedChapterTwo);
+
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    const chapterThreeState = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      phase: string;
+      turn: number;
+      units: Array<{ id: string; faction: string }>;
+    };
+    expect(chapterThreeState).toMatchObject({
+      saveVersion: 3,
+      chapterId: "chapter_03_map",
+      phase: "player",
+      turn: 1
+    });
+    expect(chapterThreeState.units.filter((unit) => unit.faction === "enemy").map((unit) => unit.id))
+      .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
+
+    await page.reload();
+    await continueSavedCampaign(page);
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    expect(await readAutoSave(page)).toEqual(chapterThreeState);
+  });
+
+  test("creates a local backup from the launch screen without changing the current campaign", async ({ page }) => {
+    await startBattle(page);
+    const saved = await readAutoSave(page);
+    await page.reload();
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByTestId("title-create-save-backup").click();
+    await expect(title.getByTestId("title-backup-entry-backup-1")).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(saved);
+  });
+
+  test("blocks new-campaign overwrite when the stored snapshot cannot be validated", async ({ page }) => {
+    await startBattle(page);
+    const invalidStoredSnapshot = { saveVersion: 999, chapterId: "chapter_01_map" };
+    await writeAutoSave(page, invalidStoredSnapshot);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await expect(title.getByRole("alert")).toContainText("保存データを保護しています");
+    await expect(title.getByRole("button", { name: "はじめから" })).toBeDisabled();
+    await expect(title.getByRole("button", { name: "つづきから" })).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(invalidStoredSnapshot);
+  });
+
 test("does not expose the development-only promotion lab in the production preview", async ({ page }) => {
   await page.goto("/?promotion-lab=1");
   await expect(page.getByTestId("promotion-lab")).toHaveCount(0);
