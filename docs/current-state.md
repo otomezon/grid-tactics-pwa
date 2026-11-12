@@ -23,7 +23,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | 機能 | 状況 | 関連ファイル |
 |---|---|---|
 | タイトル画面・キャンペーン開始／再開 | 実装追加（起動時に「はじめから」「つづきから」を提供。新規開始の出撃確定前は既存auto saveを保持し、確定後の保存成功時に置換。セーブJSON import/exportと3世代バックアップ管理も起動時画面に集約） | `src/components/campaign-title-screen.tsx`, `src/App.tsx` | Chromium E2Eで初回起動・再開・キャンセル／未確定時セーブ不変・壊れたセーブによる上書き防止・バックアップ作成・320px幅を検証 |
-| キャンペーン3章カタログ | 実装追加（既存の地形・ユニット・武器・勝利条件を再利用した第3章の試作マップを登録。章1→2→3の順次遷移とsaveVersion 4の読み込みを維持。正式シナリオ／報酬／バランスを含まない） | `src/content/maps/chapter-03.ts`, `src/content/chapters.ts` | chapter registry unit testで各マップ／初期snapshotの妥当性と次章参照を検証。Chromium E2Eで第2章クリア→第3章出撃確定→再読み込みを検証 |
+| キャンペーン3章カタログ | 実装追加（既存の地形・ユニット・武器・勝利条件を再利用した第3章の試作マップを登録。章1→2→3の順次遷移と現行saveVersion 5の読み込みを維持。正式シナリオ／報酬／バランスを含まない） | `src/content/maps/chapter-03.ts`, `src/content/chapters.ts` | chapter registry unit testで各マップ／初期snapshotの妥当性と次章参照を検証。Chromium E2Eで第2章クリア→第3章出撃確定→再読み込みを検証 |
 | React／Vite／PWA | 実装済み（manifest／Service Worker／オフライン起動に加え、ブラウザ標準のインストールプロンプトとインストール済み状態のUIを提供） | `package.json`, `vite.config.ts`, `src/main.tsx`, `src/App.tsx` |
 | 操作ガイド | 実装済み（任意で開閉できる6段階の案内。出撃準備・移動・攻撃予測・アイテム／行動・地形・敵攻撃範囲・ターン進行・セーブ管理を説明。表示専用でGameState／saveVersion／IndexedDBを変更しない） | `src/components/operation-guide.tsx`, `src/App.tsx`, `src/styles.css` | Chromium E2Eで全6段階の遷移、320px幅での横はみ出し防止、閉じた後の再表示、ガイド表示中のオートセーブ不変を確認 |
 | 10×10マップ・地形 | 実装済み（仮コンテンツ） | `src/content/maps/chapter-01.ts`, `src/content/terrain.ts` |
@@ -192,7 +192,7 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - `PROTOTYPE_CLASS_STAT_CAPS` はクラスごとの能力上限オブジェクトまで読み取り専用として公開する。返却値を変更する場合は `getPrototypeStatCaps` の防御的コピーを使う。
 - `CLASS_PROMOTION_DEFINITIONS` は定義レコードに加えて能力ボーナス・能力上限も凍結し、実行時の誤変更を防ぐ。TypeScript上もネストした値を読み取り専用として扱う。
 - `getClassPromotionDefinition` は従来どおり独立した防御的コピーを返すため、昇格処理側の計算・呼び出し規約は変えない。
-- ゲームルール、暫定バランス値、 `GameStateSnapshot`、 `saveVersion: 4`、IndexedDB形式は変更しない。
+- PR #101のクラス定義projection不変化では、ゲームルール、暫定バランス値、 `GameStateSnapshot`、当時の `saveVersion: 4`、IndexedDB形式を変更しなかった。後続のイベント基盤が発火済みIDを追加し、現行saveVersion 5となっている。
 
 ## プレイヤー行動コマンドのapplication境界
 
