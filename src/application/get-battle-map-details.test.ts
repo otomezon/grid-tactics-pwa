@@ -4,12 +4,18 @@ import type { GameMapDefinition } from "../domain/models/game";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./get-battle-map-details";
 
 describe("getBattleObjectiveDetails", () => {
+
+function createDefeatAllMap(): GameMapDefinition {
+  const map: GameMapDefinition = {
+    ...CHAPTER_01_MAP,
+    objective: { type: "defeat_all" }
+  };
+  delete map.defeatCondition;
+  return map;
+}
+
   it("shows the remaining enemy count for a defeat-all objective", () => {
-    const map: GameMapDefinition = {
-      ...CHAPTER_01_MAP,
-      objective: { type: "defeat_all" },
-      defeatCondition: undefined
-    };
+    const map = createDefeatAllMap();
     expect(getBattleObjectiveDetails(INITIAL_GAME_STATE, map, INITIAL_GAME_STATE)).toMatchObject({
       victoryLabel: "敵を全滅させる",
       victoryStatus: "残り 5 / 5体",
@@ -23,11 +29,7 @@ describe("getBattleObjectiveDetails", () => {
       ...INITIAL_GAME_STATE,
       units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "enemy_001")
     };
-    const map: GameMapDefinition = {
-      ...CHAPTER_01_MAP,
-      objective: { type: "defeat_all" },
-      defeatCondition: undefined
-    };
+    const map = createDefeatAllMap();
     expect(getBattleObjectiveDetails(state, map, INITIAL_GAME_STATE).victoryStatus)
       .toBe("残り 4 / 5体");
   });
@@ -65,11 +67,7 @@ describe("getBattleObjectiveDetails", () => {
   });
 
   it("reports an empty player roster for a defeat-all map without a protected unit", () => {
-    const map: GameMapDefinition = {
-      ...CHAPTER_01_MAP,
-      objective: { type: "defeat_all" },
-      defeatCondition: undefined
-    };
+    const map = createDefeatAllMap();
     const defeated = { ...INITIAL_GAME_STATE, units: [] };
     expect(getBattleObjectiveDetails(defeated, map, INITIAL_GAME_STATE).defeatStatus)
       .toBe("味方ユニットが残っていません");
