@@ -39,6 +39,44 @@ function matchesTrigger(
   }
 }
 
+/** Returns fired message events that still need explicit player acknowledgement. */
+export function getPendingMapEventMessages(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): MapEventMessage[] {
+  if (state.chapterId !== map.id) {
+    throw new Error("Map events can only run for the snapshot's current chapter.");
+  }
+
+  const eventsById = new Map((map.events ?? []).map((event) => [event.id, event] as const));
+  const acknowledged = new Set(state.acknowledgedMapEventIds);
+  return state.firedMapEventIds.flatMap((eventId) => {
+    if (acknowledged.has(eventId)) return [];
+    const event = eventsById.get(eventId);
+    if (!event || event.action.type !== "show-message") return [];
+    return [{
+      id: event.id,
+      speaker: event.action.speaker ?? null,
+      text: event.action.text
+    }];
+  });
+}
+
+/** Acknowledges only an event message that has fired and is still pending. */
+export function acknowledgeMapEvent(
+  state: GameStateSnapshot,
+  map: GameMapDefinition,
+  eventId: string
+): GameStateSnapshot {
+  if (!getPendingMapEventMessages(state, map).some((event) => event.id === eventId)) {
+    return state;
+  }
+  return {
+    ...state,
+    acknowledgedMapEventIds: [...state.acknowledgedMapEventIds, eventId]
+  };
+}
+
 /** Resolves one or more map-local triggers in content order without mutating the input snapshot. */
 export function resolveMapEvents(
   state: GameStateSnapshot,

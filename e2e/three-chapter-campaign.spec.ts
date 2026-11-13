@@ -168,7 +168,7 @@ test("carries one campaign through all three registered chapters and reloads eac
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   const chapterTwoState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterTwoState).toMatchObject({
-    saveVersion: 5,
+    saveVersion: 6,
     chapterId: "chapter_02_map",
     phase: "player",
     turn: 1,
@@ -217,7 +217,7 @@ test("carries one campaign through all three registered chapters and reloads eac
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterThreeState).toMatchObject({
-    saveVersion: 5,
+    saveVersion: 6,
     chapterId: "chapter_03_map",
     phase: "player",
     turn: 1,

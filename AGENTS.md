@@ -34,7 +34,7 @@
 - `src/components/enemy-target-evaluations.tsx` and `src/components/enemy-movement-evaluations.tsx`: collapsible, read-only explanations of the actual enemy resolver candidate scores. Reuse returned score breakdowns; do not calculate alternate AI decisions in UI.
 - `src/components/campaign-title-screen.tsx`: startup hub for new/continued campaigns, JSON save import/export, and local backup creation/restoration. New campaign setup must not replace the previous auto-save until deployment is explicitly confirmed.
 - `App.tsx`: chapter-aware prototype map UI with live victory/defeat objective progress and focused-tile terrain details (existing costs/modifiers only; view-only), chronological in-session battle history from resolved attacks and enemy-phase actions (not persisted), deployment preparation and read-only candidate details, battle forecast, results/rewards summary with enemy roster and surviving-player details, next-chapter launch, inventory display, class-promotion confirmation with an eight-stat preview, HP/EXP outcomes, item/action cost, and preserved movement/weapon/equipment details, plus a player-phase enemy threat-range toggle with accessible map overlays, transient movement-cost and route previews on reachable tiles, a transient enemy-phase action report derived from `EnemyPhaseResult.actions`, and a transient player-attack strike report derived from `AttackExecution`. Neither report is saved; the enemy-phase report is regenerated when an enemy-phase checkpoint is resumed. The preview shares the domain calculation with the promotion command; all numeric values remain provisional and do not settle CP-15.
-- `persistence`: IndexedDB, saveVersion 1／2／3／4→5 migration, versioned JSON save export/import, and three-generation local backup/restore.
+- `persistence`: IndexedDB, saveVersion 1〜5→6 migration, versioned JSON save export/import, and three-generation local backup/restore.
 
 See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 
@@ -51,7 +51,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - Game state is serializable plain data.
 - UI actions go through validated application/domain commands.
 - Xorshift32 state is persisted as non-zero 32-bit `rngState`; do not change without migration/tests.
-- saveVersion is 5; preserve migration tests for versions 1 through 4.
+- saveVersion is 6; preserve migration tests for versions 1 through 5.
 - Enemy IDs are processed in stable lexical order. Current AI score and Manhattan distance are provisional, not approved final rules.
 
 ## 5. Coding and design rules
@@ -139,5 +139,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - 移動のUIプレビューは最終確定の根拠にせず、commandでも地形・占有・移動力を再検証する。
 
 - Map events are map-local content (`GameMapDefinition.events`). Supported one-shot triggers are stage start, exact turn/phase start, deployed-unit defeat, boss defeat, victory, and defeat. Resolve matching events in content order and persist their IDs in `GameStateSnapshot.firedMapEventIds`; do not re-fire them after reload, JSON import, backup restore, or within the same chapter. New chapter templates start with an empty event ID list.
+- Fired map-event messages remain pending until the player explicitly acknowledges them. Persist acknowledgement IDs in `GameStateSnapshot.acknowledgedMapEventIds`; validate them as a unique subset of fired IDs. Rebuild pending message text from the active map definition and persisted fired IDs so reload/import/backup restore can display it without copying message text into the save. Preserve event firing order using the persisted fired-ID sequence.
+- Block battle input and next-chapter transition while a map-event message is pending. Use an accessible modal dialog with a visible acknowledgement control; do not dismiss on Escape/backdrop click. When an enemy-phase-start event is pending, save the enemy-phase checkpoint but do not run enemy AI until the last pending message is acknowledged. On v5→v6 migration, treat existing fired IDs as acknowledged because v5 did not persist whether transient status messages had been read; never replay old events as a side effect of migration.
 - Run stage-start and initial player turn-start only after deployment confirmation succeeds. Resolve later turn/phase, defeat, boss, and outcome triggers only from committed state transitions. Do not fire events for previews, selection, inspection, forecasts, cancellation, invalid commands, or uncommitted UI state.
 - Event messages are presentation output; the only implemented event action is `show-message`. Do not treat unimplemented villages, chests, doors, reinforcements, recruitment, dialogue choices, or item grants as supported. Never invent campaign rewards or retroactively mark historical events as fired during save migration.

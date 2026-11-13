@@ -44,7 +44,11 @@ import type { PlayerAttackReport } from "./application/get-player-attack-report"
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import type { EnemyActionLog } from "./application/resolve-enemy-phase";
-import { resolveMapEvents, type MapEventMessage } from "./application/resolve-map-events";
+import {
+  acknowledgeMapEvent,
+  getPendingMapEventMessages,
+  resolveMapEvents
+} from "./application/resolve-map-events";
 import { resolveMapEventTransition } from "./application/resolve-map-event-transition";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
@@ -71,6 +75,7 @@ import { CampaignTitleScreen } from "./components/campaign-title-screen";
 import { BattleContributionPanel } from "./components/battle-contribution-panel";
 import { CampaignUnitBattleRecordPanel, CampaignUnitBattleRecordsSummary } from "./components/campaign-unit-battle-records";
 import { DeploymentUnitComparison } from "./components/deployment-unit-comparison";
+import { MapEventDialog } from "./components/map-event-dialog";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -270,13 +275,6 @@ function strikeKindLabel(kind: AttackPlan["forecast"]["strikes"][number]["kind"]
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "戦闘操作に失敗しました。";
-}
-
-function formatMapEventMessages(messages: readonly MapEventMessage[]): string {
-  if (messages.length === 0) return "";
-  return " " + messages.map((event) =>
-    event.speaker ? "【" + event.speaker + "】" + event.text : event.text
-  ).join(" ");
 }
 
 function formatFortRecoverySummary(recoveries: FortRecoveryRecord[]): string {
@@ -497,6 +495,11 @@ function CampaignApp() {
         }
 
         if (restoredState.phase === "enemy") {
+          if (getPendingMapEventMessages(restoredState, restoredChapter.map).length > 0) {
+            setSaveStatus((current) => current === "failed" ? "failed" : "saved");
+            setMessage("未確認のイベントがあります。内容を確認すると敵軍フェイズが進みます。");
+            return;
+          }
           const enemyPhaseTurn = restoredState.turn;
           const enemyPhase = runEnemyPhase(restoredState, restoredChapter.map);
           restoredState = enemyPhase.nextState;
@@ -653,8 +656,15 @@ function CampaignApp() {
     () => gameState.units.filter((unit) => unit.faction === "player" && !unit.hasActed),
     [gameState.units]
   );
+  const pendingMapEventMessages = useMemo(
+    () => gameState.chapterId === currentMap.id
+      ? getPendingMapEventMessages(gameState, currentMap)
+      : [],
+    [currentMap, gameState]
+  );
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
-    !deploymentPending && gameState.phase === "player" && battleOutcome === "playing";
+    pendingMapEventMessages.length === 0 && !deploymentPending &&
+    gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
     () => new Set(reachableTiles.map((tile) => String(tile.x) + "," + String(tile.y))),
     [reachableTiles]
@@ -750,21 +760,73 @@ function CampaignApp() {
     nextState: GameStateSnapshot,
     successMessage = "行動をIndexedDBに自動保存しました。",
     previousState: GameStateSnapshot = gameState
-  ): Promise<void> {
+  ): Promise<{ saved: boolean; state: GameStateSnapshot }> {
     touchMoveConfirmationPositionRef.current = null;
     setMovementPreviewPosition(null);
     setSaveStatus("saving");
 
+    let stateToSave = nextState;
     try {
       const eventExecution = resolveMapEventTransition(previousState, nextState, currentMap);
-      const stateToSave = eventExecution.nextState;
+      stateToSave = eventExecution.nextState;
       setGameState(stateToSave);
       await saveGameState(stateToSave);
       setSaveStatus("saved");
-      setMessage(successMessage + formatMapEventMessages(eventExecution.messages));
+      setMessage(successMessage);
+      return { saved: true, state: stateToSave };
     } catch {
       setSaveStatus("failed");
       setMessage("行動は画面に反映されましたが、セーブに失敗しました。ストレージ設定を確認してください。");
+      return { saved: false, state: stateToSave };
+    }
+  }
+
+  async function resolveEnemyPhaseAndPersist(enemyPhaseState: GameStateSnapshot): Promise<void> {
+    try {
+      const execution = runEnemyPhase(enemyPhaseState, currentMap);
+      setBattleHistory((entries) => [
+        ...entries,
+        { sequence: entries.length, turn: enemyPhaseState.turn, kind: "enemy-phase", actions: execution.actions }
+      ]);
+      setGameState(execution.nextState);
+      await persist(
+        execution.nextState,
+        formatEnemyPhaseSummary(execution, currentMap),
+        enemyPhaseState
+      );
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    }
+  }
+
+  async function handleAcknowledgeMapEvent(eventId: string): Promise<void> {
+    if (saveStatus === "loading" || saveStatus === "saving" || backupActionPending) return;
+    const acknowledgedState = acknowledgeMapEvent(gameState, currentMap, eventId);
+    if (acknowledgedState === gameState) return;
+
+    if (saveStatus === "unavailable") {
+      setGameState(acknowledgedState);
+      setMessage("イベントを確認しました。IndexedDBを利用できないため、確認状態はこの画面内だけに保持されます。");
+    } else {
+      setSaveStatus("saving");
+      try {
+        await saveGameState(acknowledgedState);
+        setGameState(acknowledgedState);
+        setSaveStatus("saved");
+        setMessage("イベントを確認しました。");
+      } catch {
+        setGameState(acknowledgedState);
+        setSaveStatus("failed");
+        setMessage("イベントの確認状態を保存できませんでした。再読み込み後に再表示される場合があります。");
+      }
+    }
+
+    if (
+      getPendingMapEventMessages(acknowledgedState, currentMap).length === 0 &&
+      acknowledgedState.phase === "enemy" &&
+      evaluateBattleOutcome(acknowledgedState, currentMap) === "playing"
+    ) {
+      await resolveEnemyPhaseAndPersist(acknowledgedState);
     }
   }
 
@@ -1473,7 +1535,6 @@ function CampaignApp() {
         }
       ]);
       const stateToSave = stageStartExecution.nextState;
-      const mapEventMessages = stageStartExecution.messages;
 
       setGameState(stateToSave);
       setSelectedUnitId(null);
@@ -1485,7 +1546,7 @@ function CampaignApp() {
         await saveGameState(stateToSave);
         setSaveStatus("saved");
         setHasSavedCampaign(true);
-        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。" + formatMapEventMessages(mapEventMessages));
+        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。");
       } catch {
         setSaveStatus("failed");
         setMessage("出撃配置は確定しましたが、自動保存に失敗しました。次の行動時に再保存します。");
@@ -1509,24 +1570,15 @@ function CampaignApp() {
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
       const recoverySummary = formatFortRecoverySummary(phaseStart.fortRecoveries);
-      await persist(
+      const checkpoint = await persist(
         enemyPhaseState,
         recoverySummary
           ? "敵軍フェイズを開始します。" + recoverySummary + "。"
           : "敵軍フェイズを開始します。"
       );
+      if (getPendingMapEventMessages(checkpoint.state, currentMap).length > 0) return;
 
-      const execution = runEnemyPhase(enemyPhaseState, currentMap);
-      setBattleHistory((entries) => [
-        ...entries,
-        { sequence: entries.length, turn: enemyPhaseState.turn, kind: "enemy-phase", actions: execution.actions }
-      ]);
-      setGameState(execution.nextState);
-      await persist(
-        execution.nextState,
-        formatEnemyPhaseSummary(execution, currentMap),
-        enemyPhaseState
-      );
+      await resolveEnemyPhaseAndPersist(checkpoint.state);
     } catch (error) {
       setMessage(getErrorMessage(error));
     }
@@ -1536,6 +1588,7 @@ function CampaignApp() {
     const targetChapter = getNextChapter(activeChapter.id);
     if (
       !targetChapter ||
+      pendingMapEventMessages.length > 0 ||
       battleOutcome !== "victory" ||
       saveStatus === "saving" ||
       saveStatus === "loading" ||
@@ -2717,6 +2770,15 @@ function CampaignApp() {
           </section>
         </aside>
       </div>
+
+      {pendingMapEventMessages.length > 0 && !isTitleScreenVisible && (
+        <MapEventDialog
+          event={pendingMapEventMessages[0]!}
+          remainingCount={pendingMapEventMessages.length}
+          disabled={saveStatus === "saving" || backupActionPending}
+          onAcknowledge={(eventId) => void handleAcknowledgeMapEvent(eventId)}
+        />
+      )}
 
       <footer className="app-footer">
         <span>Grid Tactics PWA · Prototype</span>

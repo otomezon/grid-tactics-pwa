@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 function makePromotionSnapshotFile() {
   const snapshot = {
-    saveVersion: 5,
+    saveVersion: 6,
     chapterId: "chapter_01_map",
     phase: "player",
     turn: 4,
@@ -86,7 +86,8 @@ function makePromotionSnapshotFile() {
     ],
     reserveUnits: [],
     campaignUnitBattleRecords: [],
-    firedMapEventIds: []
+    firedMapEventIds: [],
+    acknowledgedMapEventIds: []
   };
   return {
     format: "grid-tactics-pwa-save",

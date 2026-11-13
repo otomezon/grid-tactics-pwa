@@ -111,25 +111,87 @@ test.describe("campaign title and save hub", () => {
       phase: string;
       saveVersion: number;
       firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
     };
-    expect(saved.saveVersion).toBe(5);
+    expect(saved.saveVersion).toBe(6);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
     expect(saved.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
-    await expect(
-      page.locator(".message-text").filter({ hasText: "【作戦メモ】" })
-    ).toContainText("敵軍を全滅させると勝利です。");
+    expect(saved.acknowledgedMapEventIds).toEqual([]);
+    const openingDialog = page.getByTestId("map-event-dialog");
+    await expect(openingDialog).toBeVisible();
+    await expect(openingDialog).toHaveAttribute("data-event-id", "chapter-01-opening-briefing");
+    await expect(openingDialog).toContainText("作戦メモ");
+    await expect(openingDialog).toContainText("敵軍を全滅させると勝利です。");
 
     await page.reload();
     const titleAfterReload = page.getByTestId("campaign-title-screen");
     await expect(titleAfterReload).toBeVisible();
     await titleAfterReload.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    expect(await readAutoSave(page)).toEqual(saved);
-    await expect(
-      page.locator(".message-text").filter({ hasText: "【作戦メモ】" })
-    ).toHaveCount(0);
+    await expect(page.getByTestId("map-event-dialog")).toContainText("敵軍を全滅させると勝利です。");
+    await page.getByRole("button", { name: "確認して続ける" }).click();
+    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
+
+    const acknowledgedSave = await readAutoSave(page) as {
+      saveVersion: number;
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+    };
+    expect(acknowledgedSave.saveVersion).toBe(6);
+    expect(acknowledgedSave.firedMapEventIds).toEqual(saved.firedMapEventIds);
+    expect(acknowledgedSave.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+
+    await page.reload();
+    const titleAfterAcknowledgement = page.getByTestId("campaign-title-screen");
+    await expect(titleAfterAcknowledgement).toBeVisible();
+    await titleAfterAcknowledgement.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(acknowledgedSave);
+  });
+
+  test("pauses a restored enemy phase until its pending map event is acknowledged", async ({ page }) => {
+    await startBattle(page);
+    await page.getByRole("button", { name: "確認して続ける" }).click();
+    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
+
+    const playerCheckpoint = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      phase: string;
+      turn: number;
+      units: Array<{ id: string; position: { x: number; y: number }; currentHp: number }>;
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+    };
+    expect(playerCheckpoint.phase).toBe("player");
+    const pendingEnemyPhase = {
+      ...playerCheckpoint,
+      phase: "enemy",
+      acknowledgedMapEventIds: []
+    };
+    await writeAutoSave(page, pendingEnemyPhase);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 敵軍フェイズ");
+    await expect(page.getByTestId("map-event-dialog")).toContainText("敵軍を全滅させると勝利です。");
+    expect(await readAutoSave(page)).toEqual(pendingEnemyPhase);
+
+    await page.getByRole("button", { name: "確認して続ける" }).click();
+    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
+    const resumed = await readAutoSave(page) as {
+      phase: string;
+      turn: number;
+      acknowledgedMapEventIds: string[];
+    };
+    expect(resumed.phase).toBe("player");
+    expect(resumed.turn).toBe(2);
+    expect(resumed.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
   });
 
   test("shows a saved campaign on launch and continues without changing the auto save", async ({ page }) => {
@@ -2329,7 +2391,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 5,
+      saveVersion: 6,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2403,7 +2465,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 5,
+      saveVersion: 6,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1

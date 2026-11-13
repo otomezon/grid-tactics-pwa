@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import type { GameMapDefinition, MapEventTrigger } from "../domain/models/game";
-import { resolveMapEvents } from "./resolve-map-events";
+import {
+  acknowledgeMapEvent,
+  getPendingMapEventMessages,
+  resolveMapEvents
+} from "./resolve-map-events";
 
 const EVENT_MAP: GameMapDefinition = {
   ...CHAPTER_01_MAP,
@@ -106,6 +110,31 @@ describe("resolveMapEvents", () => {
     });
     expect(result.nextState).toBe(INITIAL_GAME_STATE);
     expect(result.messages).toEqual([]);
+  });
+
+  it("keeps fired messages pending until they are explicitly acknowledged", () => {
+    const fired = resolveMapEvents(INITIAL_GAME_STATE, EVENT_MAP, { type: "stage-start" }).nextState;
+    expect(getPendingMapEventMessages(fired, EVENT_MAP)).toEqual([{
+      id: "opening",
+      speaker: "作戦メモ",
+      text: "敵軍を全滅させましょう。"
+    }]);
+
+    const acknowledged = acknowledgeMapEvent(fired, EVENT_MAP, "opening");
+    expect(acknowledged.acknowledgedMapEventIds).toEqual(["opening"]);
+    expect(getPendingMapEventMessages(acknowledged, EVENT_MAP)).toEqual([]);
+    expect(acknowledgeMapEvent(acknowledged, EVENT_MAP, "opening")).toBe(acknowledged);
+    expect(acknowledgeMapEvent(fired, EVENT_MAP, "not-fired")).toBe(fired);
+    expect(fired.acknowledgedMapEventIds).toEqual([]);
+  });
+
+  it("preserves the order of pending messages as authored in map content", () => {
+    const fired = {
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["opening", "enemy-001-defeated"]
+    };
+    expect(getPendingMapEventMessages(fired, EVENT_MAP).map((event) => event.id))
+      .toEqual(["opening", "enemy-001-defeated"]);
   });
 
   it("rejects a state from another chapter", () => {
