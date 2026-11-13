@@ -233,6 +233,66 @@ test.describe("campaign title and save hub", () => {
     expect(await readAutoSave(page)).toEqual(savedBeforeReload);
   });
 
+  test("returns to the title from a victory result without discarding or changing the save", async ({ page }) => {
+    await startBattle(page);
+    const startedState = await readAutoSave(page) as {
+      units: Array<{ faction: string; id: string }>;
+    };
+    const clearedState = {
+      ...startedState,
+      units: startedState.units.filter((unit) => unit.faction === "player")
+    };
+    await writeAutoSave(page, clearedState);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+
+    const savedResult = await readAutoSave(page);
+    await page.getByTestId("return-to-campaign-title").click();
+    await expect(title).toBeVisible();
+    await expect(title.getByTestId("campaign-resume-summary")).toContainText("クリア");
+    await expect(title.getByRole("button", { name: "つづきから" })).toBeEnabled();
+    expect(await readAutoSave(page)).toEqual(savedResult);
+
+    await title.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(savedResult);
+  });
+
+  test("returns to the title from a defeat result without discarding or changing the save", async ({ page }) => {
+    await startBattle(page);
+    const startedState = await readAutoSave(page) as {
+      units: Array<{ id: string; currentHp: number }>;
+    };
+    const defeatedState = {
+      ...startedState,
+      units: startedState.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, currentHp: 0 } : unit
+      )
+    };
+    await writeAutoSave(page, defeatedState);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.getByText("敗北", { exact: true })).toBeVisible();
+
+    const savedResult = await readAutoSave(page);
+    await page.getByTestId("return-to-campaign-title").click();
+    await expect(title).toBeVisible();
+    await expect(title.getByTestId("campaign-resume-summary")).toContainText("敗北");
+    await expect(title.getByRole("button", { name: "つづきから" })).toBeEnabled();
+    expect(await readAutoSave(page)).toEqual(savedResult);
+
+    await title.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.getByText("敗北", { exact: true })).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(savedResult);
+  });
+
   test("keeps the old auto save when a new campaign is cancelled or not yet deployed", async ({ page }) => {
     await startBattle(page);
     const existingSave = await readAutoSave(page);
