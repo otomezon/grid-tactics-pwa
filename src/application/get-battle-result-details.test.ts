@@ -46,7 +46,7 @@ describe("getBattleResultDetails", () => {
       "unit_004"
     ]);
     expect(details.survivingPlayers[0]).toMatchObject({
-      name: "味方01",
+      name: "主人公",
       classId: "swordsman",
       level: 1,
       experience: 0,
