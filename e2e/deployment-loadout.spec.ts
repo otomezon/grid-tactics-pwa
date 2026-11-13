@@ -44,14 +44,18 @@ test("edits active and reserve weapon loadouts before committing deployment", as
   await expect(page.locator("#deployment-detail-panel .deployment-detail-overview"))
     .toContainText("試作の鉄の槍");
 
-  const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "主人公" });
-  await firstCandidate.getByRole("button", { name: "詳細" }).click();
-  const firstLoadout = page.getByRole("combobox", { name: "主人公の装備武器" });
-  await expect(firstLoadout).toHaveValue("iron_sword");
-  await firstLoadout.selectOption("");
+  const protagonistCandidate = page.locator(".deployment-unit").filter({ hasText: "主人公" });
+  await expect(protagonistCandidate.getByRole("checkbox")).toBeChecked();
+  await expect(protagonistCandidate.getByRole("checkbox")).toBeDisabled();
+
+  const reserveCandidate = page.locator(".deployment-unit").filter({ hasText: "味方03" });
+  await reserveCandidate.getByRole("button", { name: "詳細" }).click();
+  const reserveLoadout = page.getByRole("combobox", { name: "味方03の装備武器" });
+  await expect(reserveLoadout).toHaveValue("iron_lance");
+  await reserveLoadout.selectOption("");
   await expect(page.locator("#deployment-detail-panel .deployment-detail-overview"))
     .toContainText("未装備");
-  await firstCandidate.getByRole("checkbox").uncheck();
+  await reserveCandidate.getByRole("checkbox").uncheck();
   await expect(page.locator("#deployment-detail-panel .deployment-detail-heading"))
     .toContainText("控え予定");
   expect(await readAutoSave(page)).toBeNull();
@@ -73,8 +77,9 @@ test("edits active and reserve weapon loadouts before committing deployment", as
     faction: "player",
     equippedWeaponId: "iron_lance"
   });
-  expect(saved.units.some((unit) => unit.id === "unit_001")).toBe(false);
-  expect(saved.reserveUnits.find((unit) => unit.id === "unit_001")?.equippedWeaponId).toBeNull();
+  expect(saved.units.some((unit) => unit.id === "unit_001")).toBe(true);
+  expect(saved.units.some((unit) => unit.id === "unit_003")).toBe(false);
+  expect(saved.reserveUnits.find((unit) => unit.id === "unit_003")?.equippedWeaponId).toBeNull();
 
   await page.reload();
   const title = page.getByTestId("campaign-title-screen");

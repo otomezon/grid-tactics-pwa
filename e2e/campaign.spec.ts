@@ -2,6 +2,14 @@ import { expect, test, type Page } from "@playwright/test";
 
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 
+function keepChapterBossOutOfScenario<T extends { id: string; hasMoved: boolean; hasActed: boolean }>(
+  units: readonly T[]
+): T {
+  const boss = units.find((unit) => unit.id === "enemy_005");
+  if (!boss) throw new Error("Chapter 1 boss is missing from the auto save.");
+  return { ...boss, hasMoved: true, hasActed: true };
+}
+
 async function startNewCampaign(page: Page): Promise<void> {
   await page.goto("/");
   await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
@@ -1182,7 +1190,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     if (!player || !enemy) throw new Error("Combat report test units are missing from the auto save.");
     player.position = { x: 3, y: 1 }; player.hasMoved = false; player.hasActed = false;
     enemy.position = { x: 4, y: 1 }; enemy.hasMoved = false; enemy.hasActed = false;
-    preparedState.units = [player, enemy];
+    preparedState.units = [player, enemy, keepChapterBossOutOfScenario(preparedState.units)];
     preparedState.rngState = 0x6d2b79f5;
     await writeAutoSave(page, preparedState);
     await page.reload();
@@ -1274,7 +1282,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     enemy.equippedWeaponId = null;
     enemy.hasMoved = false;
     enemy.hasActed = false;
-    preparedState.units = [player, enemy];
+    preparedState.units = [player, enemy, keepChapterBossOutOfScenario(preparedState.units)];
     await writeAutoSave(page, preparedState);
     await page.reload();
     await continueSavedCampaign(page);
@@ -1313,7 +1321,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     enemy.move = 2;
     enemy.hasMoved = false;
     enemy.hasActed = false;
-    preparedState.units = [player, enemy];
+    preparedState.units = [player, enemy, keepChapterBossOutOfScenario(preparedState.units)];
     await writeAutoSave(page, preparedState);
     await page.reload();
     await continueSavedCampaign(page);
@@ -1391,7 +1399,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     enemy.move = 2;
     enemy.hasMoved = false;
     enemy.hasActed = false;
-    preparedState.units = [player, enemy];
+    preparedState.units = [player, enemy, keepChapterBossOutOfScenario(preparedState.units)];
     await writeAutoSave(page, preparedState);
     await page.reload();
     await continueSavedCampaign(page);
@@ -1484,7 +1492,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(contribution).toContainText("命中（必殺含む）");
     await expect(contribution).toContainText("与ダメージ");
     await expect(contribution).toContainText("撃破");
-    await expect(contribution).toContainText("+30");
+    await expect(contribution).toContainText("+40");
     await expect(contribution).toContainText("レベルアップ");
     await expect(contribution).toContainText("能力上昇：HP +1");
     const career = page.getByTestId("campaign-unit-record-unit_001");
