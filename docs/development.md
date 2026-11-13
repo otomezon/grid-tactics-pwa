@@ -51,7 +51,7 @@ npm run preview
 
 ## 5. PWA
 
-`vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。アプリはブラウザの `beforeinstallprompt` イベントを受け取った場合だけインストールボタンを表示し、ユーザー操作からブラウザ標準のインストールプロンプトを呼び出す。`appinstalled` またはstandalone display modeを検知するとインストール済み表示へ切り替える。イベントに対応しないブラウザ向けには手動追加方法を案内し、iPhone／iPadではSafariの共有メニューを利用する。インストール可否はブラウザ・OS・利用条件に依存するため、イベントが届かない場合に独自のインストール成功表示は行わない。CIのブラウザE2Eでは、本番Preview上でmanifest・Service Worker・オフライン起動・インストールイベントの表示／確定／キャンセル／完了状態に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。
+`vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。アプリはブラウザの `beforeinstallprompt` イベントを受け取った場合だけインストールボタンを表示し、ユーザー操作からブラウザ標準のインストールプロンプトを呼び出す。`appinstalled` またはstandalone display modeを検知するとインストール済み表示へ切り替える。イベントに対応しないブラウザ向けには手動追加方法を案内し、iPhone／iPadではSafariの共有メニューを利用する。インストール可否はブラウザ・OS・利用条件に依存するため、イベントが届かない場合に独自のインストール成功表示は行わない。CIのブラウザE2Eでは、本番Preview上でmanifest・Service Worker・オフライン起動・インストールイベントの表示／確定／キャンセル／完了状態に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。実施項目・結果記録は [スマートフォン／PWA実機確認手順](smartphone-verification.md) を使用し、CIのChromium結果と実機で確認した端末・OS・ブラウザを区別する。
 
 ## 6. 環境変数・外部サービス・デプロイ
 
