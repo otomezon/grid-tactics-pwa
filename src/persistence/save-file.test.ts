@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { INITIAL_GAME_STATE } from "../content/maps/chapter-01";
+import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
+import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import { createSaveFileContent, parseSaveFileContent } from "./save-file";
 
 describe("save file export and import format", () => {
@@ -49,6 +50,37 @@ describe("save file export and import format", () => {
     };
     const content = createSaveFileContent(snapshot);
     expect(parseSaveFileContent(content)).toEqual(snapshot);
+  });
+
+  it("round-trips a selected dialogue choice in a valid save snapshot", () => {
+    const map = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "save-dialogue-choice",
+        trigger: { type: "stage-start" as const },
+        action: {
+          type: "show-choice" as const,
+          speaker: "保存テスト",
+          text: "どちらへ進みますか？",
+          choices: [
+            { id: "north", label: "北へ進む" },
+            { id: "south", label: "南へ進む" }
+          ]
+        }
+      }]
+    };
+    const snapshot = {
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["save-dialogue-choice"],
+      acknowledgedMapEventIds: ["save-dialogue-choice"],
+      mapEventChoices: [{ eventId: "save-dialogue-choice", choiceId: "north" }]
+    };
+
+    expect(isValidGameStateSnapshot(snapshot, map)).toBe(true);
+
+    const restored = parseSaveFileContent(createSaveFileContent(snapshot));
+    expect(restored).toEqual(snapshot);
+    expect(isValidGameStateSnapshot(restored, map)).toBe(true);
   });
 
   it("rejects malformed JSON", () => {
