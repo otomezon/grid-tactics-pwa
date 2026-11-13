@@ -279,7 +279,7 @@ test.describe("campaign title and save hub", () => {
     const title = page.getByTestId("campaign-title-screen");
     await expect(title).toBeVisible();
     await title.getByRole("button", { name: "つづきから" }).click();
-    await expect(page.getByText("敗北", { exact: true })).toBeVisible();
+    await expect(page.locator(".battle-outcome").getByText("敗北", { exact: true })).toBeVisible();
 
     const savedResult = await readAutoSave(page);
     await page.getByTestId("return-to-campaign-title").click();
@@ -289,7 +289,7 @@ test.describe("campaign title and save hub", () => {
     expect(await readAutoSave(page)).toEqual(savedResult);
 
     await title.getByRole("button", { name: "つづきから" }).click();
-    await expect(page.getByText("敗北", { exact: true })).toBeVisible();
+    await expect(page.locator(".battle-outcome").getByText("敗北", { exact: true })).toBeVisible();
     expect(await readAutoSave(page)).toEqual(savedResult);
   });
 
