@@ -2,6 +2,14 @@ import { expect, test, type Page } from "@playwright/test";
 
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 
+async function acknowledgePendingMapEvents(page: Page): Promise<void> {
+  const dialog = page.getByTestId("map-event-dialog");
+  while (await dialog.count()) {
+    await dialog.getByRole("button", { name: /次のイベントへ|確認して続ける/ }).click();
+  }
+  await expect(dialog).toHaveCount(0);
+}
+
 type SavedUnit = {
   id: string;
   name: string;
@@ -42,6 +50,7 @@ async function startCampaign(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
   await page.getByRole("button", { name: deploymentStartButton }).click();
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page);
 }
 
 async function continueCampaign(page: Page): Promise<void> {
@@ -166,6 +175,7 @@ test("carries one campaign through all three registered chapters and reloads eac
 
   await page.getByRole("button", { name: deploymentStartButton }).click();
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page);
   const chapterTwoState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterTwoState).toMatchObject({
     saveVersion: 6,
@@ -215,6 +225,7 @@ test("carries one campaign through all three registered chapters and reloads eac
 
   await page.getByRole("button", { name: deploymentStartButton }).click();
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page);
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterThreeState).toMatchObject({
     saveVersion: 6,
