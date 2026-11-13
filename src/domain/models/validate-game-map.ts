@@ -195,7 +195,7 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
       }
       if (action.type === "spawn-reinforcement") continue;
       if (action.type === "recruit-unit") {
-        if ((trigger.type !== "unit-interacts" && trigger.type !== "event-choice") || !isValidCampaignUnitData(action.unit)) return false;
+        if (trigger.type !== "unit-interacts" || !isValidCampaignUnitData(action.unit)) return false;
         continue;
       }
       return false;
