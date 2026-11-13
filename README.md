@@ -71,6 +71,7 @@ npm run preview
 - [クラスチェンジの仕様・判断待ち・実装計画](docs/class-promotion.md)
 - [クラスチェンジ・バランス記入表](docs/class-promotion-balance-worksheet.md)
 - [開発環境・手順](docs/development.md)
+- [スマートフォン／PWA実機確認](docs/smartphone-verification.md)
 - [データ保存設計](docs/database.md)
 - [セキュリティ](docs/security.md)
 - [実装状況](docs/current-state.md)
