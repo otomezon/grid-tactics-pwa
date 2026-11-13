@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { acknowledgePendingMapEvents } from "./helpers/map-events";
 
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 
@@ -16,14 +17,6 @@ async function startNewCampaign(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: "はじめから" })).toBeEnabled();
   await page.getByRole("button", { name: "はじめから" }).click();
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
-}
-
-async function acknowledgePendingMapEvents(page: Page): Promise<void> {
-  const dialog = page.getByTestId("map-event-dialog");
-  while (await dialog.count()) {
-    await dialog.getByRole("button", { name: /次のイベントへ|確認して続ける/ }).click();
-  }
-  await expect(dialog).toHaveCount(0);
 }
 
 async function continueSavedCampaign(page: Page): Promise<void> {
