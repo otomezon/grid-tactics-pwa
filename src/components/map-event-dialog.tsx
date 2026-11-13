@@ -3,16 +3,14 @@ import type { MapEventMessage } from "../application/resolve-map-events";
 
 export interface MapEventDialogProps {
   event: MapEventMessage;
-  currentIndex: number;
-  total: number;
+  remainingCount: number;
   disabled?: boolean;
   onAcknowledge: (eventId: string) => void;
 }
 
 export function MapEventDialog({
   event,
-  currentIndex,
-  total,
+  remainingCount,
   disabled = false,
   onAcknowledge
 }: MapEventDialogProps) {
@@ -32,10 +30,18 @@ export function MapEventDialog({
         aria-describedby="map-event-dialog-message"
         data-testid="map-event-dialog"
         data-event-id={event.id}
+        onKeyDown={(keyboardEvent) => {
+          if (keyboardEvent.key === "Escape") {
+            keyboardEvent.preventDefault();
+          } else if (keyboardEvent.key === "Tab") {
+            keyboardEvent.preventDefault();
+            continueButtonRef.current?.focus();
+          }
+        }}
       >
         <div className="map-event-dialog-heading">
           <p className="eyebrow">MAP EVENT</p>
-          <span>{currentIndex} / {total}</span>
+          <span>未確認イベント {remainingCount}件</span>
         </div>
         <h2 id="map-event-dialog-title">{event.speaker ?? "イベント"}</h2>
         <p id="map-event-dialog-message" className="map-event-dialog-message">
