@@ -183,6 +183,7 @@ export function isValidGameStateSnapshot(
     const source = choiceEvents.get(candidate.eventId);
     if (
       !source ||
+      source.action.type !== "show-choice" ||
       !firedMapEventIds.has(candidate.eventId) ||
       !acknowledgedMapEventIds.has(candidate.eventId) ||
       !source.action.choices.some((choice) => choice.id === candidate.choiceId)

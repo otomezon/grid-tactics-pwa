@@ -21,6 +21,7 @@ describe("migrateGameStateSnapshot", () => {
       campaignUnitBattleRecords: _campaignUnitBattleRecords,
       firedMapEventIds: _firedMapEventIds,
       acknowledgedMapEventIds: _acknowledgedMapEventIds,
+      mapEventChoices: _mapEventChoices,
       saveVersion: _saveVersion,
       ...legacy
     } = INITIAL_GAME_STATE;
@@ -31,6 +32,7 @@ describe("migrateGameStateSnapshot", () => {
       campaignUnitBattleRecords: _records,
       firedMapEventIds: _firedMapEventIds,
       acknowledgedMapEventIds: _acknowledgedMapEventIds,
+      mapEventChoices: _mapEventChoices,
       saveVersion: _saveVersion,
       ...legacy
     } = INITIAL_GAME_STATE;

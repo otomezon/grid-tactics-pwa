@@ -213,6 +213,7 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
       const source = eventsById.get(trigger.eventId as string);
       if (
         !source ||
+        source.id === candidate.id ||
         !isRecord(source.action) ||
         source.action.type !== "show-choice" ||
         !isEventChoiceList(source.action.choices) ||
