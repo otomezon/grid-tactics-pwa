@@ -5,6 +5,7 @@ import type { GameUnit } from "../domain/models/game";
 
 interface PlayerPhaseEndReviewProps {
   pendingUnits: GameUnit[];
+  playerUnits: GameUnit[];
   forecast: EnemyPhaseForecast | null;
   disabled: boolean;
   onSelectUnit: (unit: GameUnit) => void;
@@ -13,11 +14,18 @@ interface PlayerPhaseEndReviewProps {
 }
 
 function getActionStatus(unit: GameUnit): string {
+  if (unit.hasActed) return "行動済み";
   return unit.hasMoved ? "移動済み・未行動" : "未移動・未行動";
+}
+
+function getPredictedDamageLabel(defeated: boolean, incomingDamage: number): string {
+  if (defeated) return "撃破見込み";
+  return incomingDamage > 0 ? "被ダメージ見込み " + incomingDamage : "被ダメージなし";
 }
 
 export function PlayerPhaseEndReview({
   pendingUnits,
+  playerUnits,
   forecast,
   disabled,
   onSelectUnit,
@@ -25,6 +33,8 @@ export function PlayerPhaseEndReview({
   onEndPhase
 }: PlayerPhaseEndReviewProps) {
   const reviewRef = useRef<HTMLElement | null>(null);
+  const playerUnitsById = new Map(playerUnits.map((unit) => [unit.id, unit] as const));
+  const attackActions = forecast?.actions.filter((action) => action.targetId && action.targetName) ?? [];
   const unitsWithPredictedDamage = forecast?.playerUnitOutcomes.filter(
     (unit) => unit.incomingDamage > 0
   ) ?? [];
@@ -72,7 +82,7 @@ export function PlayerPhaseEndReview({
                   <span className="phase-end-review-unit-copy">
                     <strong>{unit.name}</strong>
                     <span>Lv.{unit.level} · {getClassDisplayName(unit.classId)}</span>
-                    <span>{getActionStatus(unit)} · HP {unit.currentHp}/{unit.stats.hp}</span>
+                    <span>{unit.hasMoved ? "移動済み・未行動" : "未移動・未行動"} · HP {unit.currentHp}/{unit.stats.hp}</span>
                   </span>
                   <span className="phase-end-review-unit-action">確認</span>
                 </button>
@@ -99,6 +109,92 @@ export function PlayerPhaseEndReview({
                   <dd>{defeatedUnits.length}人</dd>
                 </div>
               </dl>
+
+              <section className="phase-end-review-forecast-section" aria-labelledby="phase-end-review-health-heading">
+                <h3 id="phase-end-review-health-heading">味方全員の予測HP</h3>
+                <ul className="phase-end-review-health-list">
+                  {forecast.playerUnitOutcomes.map((outcome) => {
+                    const unit = playerUnitsById.get(outcome.unitId);
+                    const damageLabel = getPredictedDamageLabel(outcome.defeated, outcome.incomingDamage);
+                    const accessibleLabel = outcome.unitName + "の予測HPを確認、HP " +
+                      outcome.currentHp + "から" + outcome.hpAfterResolution + "、" + damageLabel;
+                    return (
+                      <li
+                        className={"phase-end-review-health-item" +
+                          (outcome.defeated ? " is-defeated" : outcome.incomingDamage > 0 ? " is-damaged" : "")}
+                        key={outcome.unitId}
+                        data-testid="phase-end-review-forecast-unit"
+                        data-unit-id={outcome.unitId}
+                        data-predicted-hp={outcome.hpAfterResolution}
+                        data-predicted-damage={outcome.incomingDamage}
+                        data-defeated={outcome.defeated}
+                      >
+                        <button
+                          className="phase-end-review-health-button"
+                          type="button"
+                          disabled={disabled || !unit}
+                          aria-label={accessibleLabel}
+                          onClick={() => {
+                            if (unit) onSelectUnit(unit);
+                          }}
+                        >
+                          <span className="phase-end-review-health-copy">
+                            <strong>{outcome.unitName}</strong>
+                            <span>{unit ? getActionStatus(unit) : "現在の名簿にありません"}</span>
+                          </span>
+                          <span className="phase-end-review-health-value">
+                            HP {outcome.currentHp} → {outcome.hpAfterResolution} / {outcome.maxHp}
+                          </span>
+                          <progress
+                            className="phase-end-review-health-progress"
+                            max={outcome.maxHp}
+                            value={outcome.hpAfterResolution}
+                            aria-label={outcome.unitName + "の敵軍フェイズ後の予測HP"}
+                          />
+                          <span className="phase-end-review-health-status">
+                            {damageLabel}
+                            {outcome.fortRecovery > 0 ? " · 砦回復 +" + outcome.fortRecovery : ""}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+
+              <section className="phase-end-review-forecast-section" aria-labelledby="phase-end-review-attacks-heading">
+                <h3 id="phase-end-review-attacks-heading">予測される敵の攻撃対象</h3>
+                {attackActions.length > 0 ? (
+                  <ol className="phase-end-review-attack-list">
+                    {attackActions.map((action) => (
+                      <li
+                        className="phase-end-review-attack"
+                        key={action.enemyId}
+                        data-testid="phase-end-review-attack"
+                        data-enemy-id={action.enemyId}
+                        data-target-id={action.targetId}
+                      >
+                        <div className="phase-end-review-attack-heading">
+                          <strong>{action.enemyName}</strong>
+                          <span aria-hidden="true">→</span>
+                          <strong>{action.targetName}</strong>
+                          <span className="phase-end-review-attack-kind">
+                            {action.kind === "moved-and-attacked" ? "移動後攻撃" : "攻撃"}
+                          </span>
+                        </div>
+                        <p>{action.message}</p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="phase-end-review-note">
+                    {forecast.actions.length === 0
+                      ? "敵ユニットの行動はありません。"
+                      : "敵の攻撃は予測されていません。敵は移動または待機します。"}
+                  </p>
+                )}
+              </section>
+
               {defeatedUnits.length > 0 ? (
                 <p className="phase-end-review-danger" data-testid="phase-end-review-defeated">
                   撃破見込み：{defeatedUnits.map((unit) => unit.unitName).join("、")}

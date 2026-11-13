@@ -1872,6 +1872,7 @@ function CampaignApp() {
       {isPhaseEndReviewOpen && (
         <PlayerPhaseEndReview
           pendingUnits={pendingPlayerUnits}
+          playerUnits={gameState.units.filter((unit) => unit.faction === "player")}
           forecast={enemyPhaseForecast}
           disabled={!interactive}
           onSelectUnit={handleSelectUnitFromPhaseReview}
