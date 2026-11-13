@@ -111,6 +111,7 @@ test.describe("campaign title and save hub", () => {
       phase: string;
       saveVersion: number;
       firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
     };
     expect(saved.saveVersion).toBe(6);
     expect(saved.turn).toBe(1);
@@ -2347,7 +2348,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 5,
+      saveVersion: 6,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2421,7 +2422,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 5,
+      saveVersion: 6,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1
