@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test("opens deployment details with iPhone-sized WebKit touch input without horizontal overflow", async ({ page }) => {
   await page.goto("/");
@@ -43,8 +43,7 @@ test("opens deployment details with iPhone-sized WebKit touch input without hori
   }
 });
 
-
-async function readAutoSave(page: import("@playwright/test").Page): Promise<unknown | null> {
+async function readAutoSave(page: Page): Promise<unknown | null> {
   return page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("grid-tactics-pwa", 1);
@@ -66,7 +65,7 @@ async function readAutoSave(page: import("@playwright/test").Page): Promise<unkn
   });
 }
 
-async function writeAutoSave(page: import("@playwright/test").Page, data: unknown): Promise<void> {
+async function writeAutoSave(page: Page, data: unknown): Promise<void> {
   await page.evaluate(async (nextData) => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("grid-tactics-pwa", 1);
@@ -103,7 +102,7 @@ async function writeAutoSave(page: import("@playwright/test").Page, data: unknow
   }, data);
 }
 
-async function startWebKitBattle(page: import("@playwright/test").Page): Promise<void> {
+async function startWebKitBattle(page: Page): Promise<void> {
   await page.goto("/");
   const title = page.getByTestId("campaign-title-screen");
   await expect(title).toBeVisible();
