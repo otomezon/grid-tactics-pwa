@@ -265,13 +265,11 @@ test.describe("campaign title and save hub", () => {
   test("returns to the title from a defeat result without discarding or changing the save", async ({ page }) => {
     await startBattle(page);
     const startedState = await readAutoSave(page) as {
-      units: Array<{ id: string; currentHp: number }>;
+      units: Array<{ id: string }>;
     };
     const defeatedState = {
       ...startedState,
-      units: startedState.units.map((unit) =>
-        unit.id === "unit_001" ? { ...unit, currentHp: 0 } : unit
-      )
+      units: startedState.units.filter((unit) => unit.id !== "unit_001")
     };
     await writeAutoSave(page, defeatedState);
     await page.reload();
