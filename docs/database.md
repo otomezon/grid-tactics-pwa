@@ -47,6 +47,7 @@
 - version 4: 既存の進行データとキャンペーン累計戦績を保持し、空の `firedMapEventIds` と `acknowledgedMapEventIds` を加えてversion 6にする。
 - version 5: 既存の発火済みイベントIDを保持し、これまでのイベント表示は一時メッセージのみで確認状態が保存されていないため、既発火IDをすべて `acknowledgedMapEventIds` に複製してversion 6にする。これにより既存イベントを意図せず再表示しない。
 - version 6: 現行validatorで検証し、書き換えない。
+- version 6: 現行validatorで検証し、書き換えない。
 - version 5: 現行validatorで検証し、書き換えない。
 
 不正／未対応データは自動初期化・上書きしない。移行後の保存に失敗した場合も、ロードしたデータを画面上で扱い続けることと保存成功を混同しない。
@@ -89,7 +90,7 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 - 自動セーブslotのスナップショットを、形式識別子 `grid-tactics-pwa-save` とファイル形式version 1を持つJSONファイルとして書き出す。
 - 読み込み時はJSON envelope、形式version、exportedAt、章ID、既存のsaveVersion 1／2／3／4／5から6へのmigrationと、現行saveVersion 6の章マップに対するsnapshot validatorを順に検証する。
 - 未対応形式・不正JSON・不正snapshot・未知の章IDは拒否し、確認ダイアログおよび検証が完了するまで既存auto slotを変更しない。
-- 読み込み確定後にだけauto slotを置き換える。IndexedDBのschemaとGameStateSnapshot saveVersionは変更しない。
+- 読み込み確定後にだけauto slotを置き換える。IndexedDBのdatabase versionは1のまま維持し、GameStateSnapshotは現行saveVersion 6として保存する。
 - JSONファイルは平文であり暗号化されない。共有・保管先に注意する。
 
 ## 10. ローカルバックアップ世代
