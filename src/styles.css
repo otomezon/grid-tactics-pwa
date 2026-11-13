@@ -2207,3 +2207,86 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .map-event-dialog { gap: 12px; padding: 18px 16px; border-radius: 13px; }
   .map-event-dialog-message { font-size: .9rem; line-height: 1.8; }
 }
+
+
+/* Read-only replay of map event messages already fired in this chapter. */
+.map-event-history-panel {
+  display: grid;
+  gap: 14px;
+  margin: 12px 0 18px;
+  padding: clamp(14px, 3vw, 20px);
+  border: 1px solid rgba(113, 175, 172, .45);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(31, 54, 68, .96), rgba(17, 31, 42, .96));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
+}
+.map-event-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.map-event-history-header h2 {
+  margin: 2px 0 0;
+  color: #f0f6f8;
+  font-size: 1.05rem;
+}
+.map-event-history-note {
+  margin: 5px 0 0;
+  color: #b3c6cf;
+  font-size: .76rem;
+  font-weight: 700;
+}
+.map-event-history-close {
+  min-height: 36px;
+  padding: 7px 12px;
+}
+.map-event-history-list {
+  display: grid;
+  gap: 10px;
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 6px 0 24px;
+}
+.map-event-history-list > li {
+  padding-left: 3px;
+}
+.map-event-history-list > li::marker {
+  color: #83bdbb;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.map-event-history-entry {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid rgba(142, 177, 185, .2);
+  border-radius: 10px;
+  background: rgba(7, 18, 27, .36);
+}
+.map-event-history-sequence {
+  margin: 0;
+  color: #93c9c5;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+.map-event-history-entry h3 {
+  margin: 0;
+  color: #f0f6f8;
+  font-size: .92rem;
+}
+.map-event-history-message {
+  margin: 0;
+  color: #dce8ed;
+  font-size: .88rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+@media (max-width: 420px) {
+  .map-event-history-panel { gap: 11px; padding: 12px; }
+  .map-event-history-entry { padding: 10px 11px; }
+  .map-event-history-message { font-size: .82rem; }
+}

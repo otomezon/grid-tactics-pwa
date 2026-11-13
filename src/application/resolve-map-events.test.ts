@@ -3,6 +3,7 @@ import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import type { GameMapDefinition, MapEventTrigger } from "../domain/models/game";
 import {
   acknowledgeMapEvent,
+  getMapEventMessageHistory,
   getPendingMapEventMessages,
   resolveMapEvents
 } from "./resolve-map-events";
@@ -126,6 +127,34 @@ describe("resolveMapEvents", () => {
     expect(acknowledgeMapEvent(acknowledged, EVENT_MAP, "opening")).toBe(acknowledged);
     expect(acknowledgeMapEvent(fired, EVENT_MAP, "not-fired")).toBe(fired);
     expect(fired.acknowledgedMapEventIds).toEqual([]);
+  });
+
+  it("rebuilds all fired messages in persisted chronology, including acknowledged messages", () => {
+    const state = {
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["enemy-phase-two", "opening", "unknown-id", "enemy-001-defeated"],
+      acknowledgedMapEventIds: ["opening"]
+    };
+
+    expect(getMapEventMessageHistory(state, EVENT_MAP)).toEqual([
+      { id: "enemy-phase-two", speaker: null, text: "敵軍フェイズです。" },
+      { id: "opening", speaker: "作戦メモ", text: "敵軍を全滅させましょう。" },
+      { id: "enemy-001-defeated", speaker: null, text: "敵01を撃破しました。" }
+    ]);
+    expect(getPendingMapEventMessages(state, EVENT_MAP).map((event) => event.id))
+      .toEqual(["enemy-phase-two", "enemy-001-defeated"]);
+    expect(state.acknowledgedMapEventIds).toEqual(["opening"]);
+  });
+
+  it("does not include map messages that have not fired", () => {
+    expect(getMapEventMessageHistory(INITIAL_GAME_STATE, EVENT_MAP)).toEqual([]);
+  });
+
+  it("rejects a history request for another chapter", () => {
+    expect(() => getMapEventMessageHistory(
+      { ...INITIAL_GAME_STATE, chapterId: "other_chapter" },
+      EVENT_MAP
+    )).toThrow(/current chapter/);
   });
 
   it("preserves the order of pending messages as authored in map content", () => {

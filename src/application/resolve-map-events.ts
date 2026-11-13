@@ -39,8 +39,8 @@ function matchesTrigger(
   }
 }
 
-/** Returns fired message events that still need explicit player acknowledgement. */
-export function getPendingMapEventMessages(
+/** Rebuilds every fired message in the order recorded by the persisted event IDs. */
+export function getMapEventMessageHistory(
   state: GameStateSnapshot,
   map: GameMapDefinition
 ): MapEventMessage[] {
@@ -49,9 +49,7 @@ export function getPendingMapEventMessages(
   }
 
   const eventsById = new Map((map.events ?? []).map((event) => [event.id, event] as const));
-  const acknowledged = new Set(state.acknowledgedMapEventIds);
   return state.firedMapEventIds.flatMap((eventId) => {
-    if (acknowledged.has(eventId)) return [];
     const event = eventsById.get(eventId);
     if (!event || event.action.type !== "show-message") return [];
     return [{
@@ -60,6 +58,15 @@ export function getPendingMapEventMessages(
       text: event.action.text
     }];
   });
+}
+
+/** Returns fired message events that still need explicit player acknowledgement. */
+export function getPendingMapEventMessages(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): MapEventMessage[] {
+  const acknowledged = new Set(state.acknowledgedMapEventIds);
+  return getMapEventMessageHistory(state, map).filter((event) => !acknowledged.has(event.id));
 }
 
 /** Acknowledges only an event message that has fired and is still pending. */
