@@ -1383,7 +1383,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     const player = preparedState.units.find((unit) => unit.id === "unit_001");
-    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_005");
     if (!player || !enemy) throw new Error("Battle contribution fixture units are missing.");
 
     player.position = { x: 3, y: 1 };
@@ -1414,7 +1414,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await continueSavedCampaign(page);
 
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
-    await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /敵将/ }).click();
     await page.getByRole("button", { name: "攻撃を確定" }).click();
     await acknowledgePendingMapEvents(page);
 
