@@ -152,18 +152,32 @@ test.describe("campaign title and save hub", () => {
     expect(acknowledgedSave.firedMapEventIds).toEqual(saved.firedMapEventIds);
     expect(acknowledgedSave.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
 
+    const historyButton = page.getByRole("button", { name: "イベント履歴 1件" });
+    await expect(historyButton).toBeEnabled();
+    await historyButton.click();
+    const historyPanel = page.getByTestId("map-event-history");
+    await expect(historyPanel.getByRole("heading", { name: "イベント履歴" })).toBeVisible();
+    await expect(historyPanel.getByTestId("map-event-history-entry"))
+      .toHaveAttribute("data-event-id", "chapter-01-opening-briefing");
+    await expect(historyPanel).toContainText("作戦メモ");
+    await expect(historyPanel).toContainText("敵軍を全滅させると勝利です。");
+    expect(await readAutoSave(page)).toEqual(acknowledgedSave);
+    await historyPanel.getByRole("button", { name: "閉じる" }).click();
+    await expect(page.getByTestId("map-event-history")).toHaveCount(0);
+    await expect(historyButton).toBeFocused();
+
     await page.reload();
     const titleAfterAcknowledgement = page.getByTestId("campaign-title-screen");
     await expect(titleAfterAcknowledgement).toBeVisible();
     await titleAfterAcknowledgement.getByRole("button", { name: "つづきから" }).click();
     await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(acknowledgedSave);
+    await page.getByRole("button", { name: "イベント履歴 1件" }).click();
+    await expect(page.getByTestId("map-event-history")).toContainText("敵軍を全滅させると勝利です。");
   });
 
   test("pauses a restored enemy phase until its pending map event is acknowledged", async ({ page }) => {
     await startBattle(page);
-    await page.getByRole("button", { name: "確認して続ける" }).click();
-    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
 
     const playerCheckpoint = await readAutoSave(page) as {
       saveVersion: number;
