@@ -287,4 +287,61 @@ describe("isValidGameMapDefinition", () => {
     })).toBe(false);
   });
 
+
+  it("validates choice definitions and event-choice branch references", () => {
+    const valid: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [
+        {
+          id: "dialogue",
+          trigger: { type: "stage-start" },
+          action: {
+            type: "show-choice",
+            text: "どちらへ進みますか？",
+            choices: [
+              { id: "left", label: "左へ進む" },
+              { id: "right", label: "右へ進む" }
+            ]
+          }
+        },
+        {
+          id: "left-branch",
+          trigger: { type: "event-choice", eventId: "dialogue", choiceId: "left" },
+          action: { type: "show-message", text: "左を選びました。" }
+        }
+      ]
+    };
+    expect(isValidGameMapDefinition(valid)).toBe(true);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event) => event.id === "left-branch"
+        ? { ...event, trigger: { type: "event-choice", eventId: "missing", choiceId: "left" } }
+        : event)
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event) => event.id === "left-branch"
+        ? { ...event, trigger: { type: "event-choice", eventId: "dialogue", choiceId: "missing" } }
+        : event)
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event) => event.id === "dialogue"
+        ? { ...event, action: { ...event.action, choices: [{ id: "one", label: "ひとつだけ" }] } }
+        : event)
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event) => event.id === "dialogue"
+        ? { ...event, action: { ...event.action, choices: [{ id: "same", label: "左" }, { id: "same", label: "右" }] } }
+        : event)
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event) => event.id === "dialogue"
+        ? { ...event, action: { ...event.action, choices: [{ id: "left", label: "" }, { id: "right", label: "右" }] } }
+        : event)
+    })).toBe(false);
+  });
+
 });
