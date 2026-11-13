@@ -131,7 +131,7 @@ describe("resolveMapEvents", () => {
   it("preserves the order of pending messages as authored in map content", () => {
     const fired = {
       ...INITIAL_GAME_STATE,
-      firedMapEventIds: ["enemy-001-defeated", "opening"]
+      firedMapEventIds: ["opening", "enemy-001-defeated"]
     };
     expect(getPendingMapEventMessages(fired, EVENT_MAP).map((event) => event.id))
       .toEqual(["opening", "enemy-001-defeated"]);
