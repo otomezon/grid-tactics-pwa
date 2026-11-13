@@ -41,6 +41,16 @@ describe("save file export and import format", () => {
     expect(parseSaveFileContent(content)).toEqual(snapshot);
   });
 
+  it("round-trips fired and acknowledged event progress", () => {
+    const snapshot = {
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["chapter-01-opening-briefing"],
+      acknowledgedMapEventIds: ["chapter-01-opening-briefing"]
+    };
+    const content = createSaveFileContent(snapshot);
+    expect(parseSaveFileContent(content)).toEqual(snapshot);
+  });
+
   it("rejects malformed JSON", () => {
     expect(() => parseSaveFileContent("{")).toThrow("JSONとして読み込めません");
   });
@@ -68,6 +78,6 @@ describe("save file export and import format", () => {
   it("does not assume the enclosed snapshot is valid", () => {
     const content = createSaveFileContent(INITIAL_GAME_STATE);
     const result = parseSaveFileContent(content) as { saveVersion: number };
-    expect(result.saveVersion).toBe(5);
+    expect(result.saveVersion).toBe(6);
   });
 });
