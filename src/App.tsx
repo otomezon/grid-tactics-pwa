@@ -496,6 +496,7 @@ function CampaignApp() {
 
         if (restoredState.phase === "enemy") {
           if (getPendingMapEventMessages(restoredState, restoredChapter.map).length > 0) {
+            setSaveStatus((current) => current === "failed" ? "failed" : "saved");
             setMessage("未確認のイベントがあります。内容を確認すると敵軍フェイズが進みます。");
             return;
           }
