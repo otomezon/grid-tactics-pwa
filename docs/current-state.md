@@ -18,7 +18,7 @@ PR #1〜#115はmainへマージ済み。PR #114で味方のマップ地点調査
 - PR #6 latest head (`914aca11`) CI run #118: TypeScript型チェック成功、10 test files／66 tests成功、Vite build／PWA Service Worker生成成功（precache 11 entries）。
 - PR #17（出撃候補のキャラクター詳細・所持武器確認UI）とPR #18（詳細表示データ整形のテスト）はmainへマージ済み。PR #19でPlaywrightによるブラウザE2Eテスト、PR #20で本番PreviewにおけるPWA manifest／Service Worker／オフライン起動テストを追加し、いずれもCI検証済み。PR #20のマージコミット: `45e5a41ab16da1fd36fbd54967d68cd23b025a96`。PR #21ではService Worker更新時の自動再読み込み、IndexedDBセーブ復元、オフライン再読み込み後の状態保持をCIで検証済み。
 - Node.js 26、npm、Vitest 5.0.0。
-- Game save schema: `saveVersion: 6`。マップ定義・戦闘ユニット・控え名簿・キャンペーン累計戦績・発火済み／確認済みマップイベントの整合性を検証し、version 1〜5から移行する。
+- Game save schema: `saveVersion: 7`。マップ定義・戦闘ユニット・控え名簿・キャンペーン累計戦績・発火済み／確認済みマップイベント・選択済み会話分岐の整合性を検証し、version 1〜6から移行する。
 
 PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期した（merge commit `451d1b47cd0084af47b2a64b7220bb376250b2e6`、CI run #611成功）。PR #51は320px幅・高さ568／720pxのタッチ操作E2Eと、回復量10HP（試作値）の回復薬使用フローを追加した（merge commit `a6162dc3180b0b635aa73573acf9ec7258dc1b11`、CI run #621: typecheck、26 test files／168 unit tests、production build、Chromium E2E 20件成功）。saveVersion 3は維持。PR #52は採択済み非数値昇格方針と未承認バランス数値を記入表で区別した（merge commit `66ba9bf7769a5f1b97e2a259b547977a9d7c0faf`、CI run #614成功）。PR #53では所持アイテムの数量スタック表示と、登録済みitem IDから効果を解決する安全な使用処理を追加した（merge commit `29ca7cf75343ca3f0c382f62ad43a6c5cdf64ca0`、CI run #638: 27 test files／171 unit tests、production build、Chromium E2E 20件成功）。saveVersion 3と既存inventory配列は維持。
 
@@ -43,7 +43,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | マップ目標・地形情報パネル | 実装済み（既存マップ／GameStateから勝利・敗北条件の進行と、選択／フォーカス中マスの移動コスト・守備／回避補正・配置ユニット・砦効果を表示。PR #73では残敵一覧／名前付きボス／保護対象の位置へ目標パネルから移動する閲覧専用ナビゲーションを追加。ゲーム状態／セーブは変更しない） | `src/application/get-battle-map-details.ts`, `src/application/get-battle-objective-navigation-targets.ts`, `src/components/battle-objective-panel.tsx`, `src/App.tsx`, `src/styles.css` | application／component単体テストとChromium E2Eで残敵数・ボスHP・敗北対象・目標ナビゲーション・320px幅・セーブ不変を検証 |
 | 敵攻撃範囲の表示切替 | 実装済み（PR #40マージ済み。自軍フェイズでON／OFF。生存・未行動敵の現在位置と、地形・占有を考慮した移動可能マス、装備中で使用可能な武器の射程から脅威マスを予測。敵AIの移動先・対象の確定予告ではない。距離は暫定Manhattan。表示状態はセーブしない） | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/App.tsx`, `src/styles.css` | PR #40最終head CI run #560: typecheck、23 test files／154 tests、production build、Chromium E2E 12件成功 |
 | 敵攻撃範囲の発生源詳細 | 実装追加（敵攻撃範囲を表示中にマスを確認すると、そのマスへ攻撃可能な生存・未行動敵、装備武器、現在位置／移動後の候補起点と距離を表示。脅威範囲と同一の移動・射程projectionを使い、敵AIの行動先／攻撃対象を確定しない。UIは一時状態でGameState／オートセーブを変更しない） | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/application/get-enemy-threat-inspection-details.ts`, `src/components/enemy-threat-inspector.tsx`, `src/App.tsx`, `src/styles.css` | 単体テストで複数敵の帰属、起点、敵ID順、無脅威／敵フェイズ、集合overlayとの整合性を確認。Chromium E2Eで詳細表示・空の安全マス・セーブ不変・狭幅表示を検証 |
-| RNG state・save migration | 実装済み（saveVersion 7、version 1〜5→6。v1は旧weapon／RNG変換、v2はreserve追加、v3はcampaignUnitBattleRecords追加、v4は発火済みイベントID追加、v5は既発火イベントIDを確認済みに移行。旧セーブに存在しない履歴は捏造しない） | `src/domain/random/`, `src/persistence/migrations.ts` | migrations／validator／save-file tests、Chromium E2Eでv6の保存・再読み込みを検証 |
+| RNG state・save migration | 実装済み（saveVersion 7、version 1〜6→7。v1は旧weapon／RNG変換、v2はreserve追加、v3はcampaignUnitBattleRecords追加、v4は発火済みイベントID追加、v5は既発火イベントIDを確認済みに移行、v6は空のmapEventChoicesを追加。既存の発火／確認状態を保持し、旧セーブに存在しない選択履歴は捏造しない） | `src/domain/random/`, `src/persistence/migrations.ts` | migrations／validator／save-file tests、Chromium E2Eでv6の保存・再読み込みを検証 |
 | 自軍フェイズ終了／敵軍開始 | 実装済み | `src/application/resolve-enemy-phase.ts`, `src/App.tsx` |
 | ターン終了レビュー | 実装追加（未行動の味方一覧に加え、敵軍フェイズ予測から敵の攻撃対象と味方全員の予測HP／被ダメージ／撃破見込みを表示。予測一覧から行動済みを含む味方を選択して戦闘へ戻れる。未行動者を残してフェイズ終了するかを明示選択し、全員行動済みなら即時終了。確認はゲーム状態を変更しない） | `src/components/player-phase-end-review.tsx`, `src/App.tsx`, `src/styles.css`。component testsとChromium E2Eで全味方のHP予測、敵の攻撃対象、行動済み味方の選択／フォーカス復帰、320px幅、レビュー中のオートセーブ不変、明示確認後のフェイズ進行、全員行動済み時の確認省略を検証。 |
 | 敵AI（攻撃対象評価） | 基本実装・暫定スコア | `src/application/resolve-enemy-phase.ts` |
@@ -148,7 +148,7 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 
 ### 実セーブsnapshot比較ベンチ（PR #81〜#83）
 
-- 開発route /?promotion-snapshots=1 で、portable save JSON（envelope v1／GameState saveVersion 6）をメモリ上へ複数読み込み、既存validatorで章・マップ・ユニットを検証する。
+- 開発route /?promotion-snapshots=1 で、portable save JSON（envelope v1／GameState saveVersion 7）をメモリ上へ複数読み込み、既存validatorで章・マップ・ユニットを検証する。
 - 現行7基本職のLv.10以上の出撃味方を候補とし、同クラス内の8能力percentileの平均を参考値として表示。3 snapshot未満は分布不足と扱い、low／median／highは自動で決めない。
 - 元snapshotと、試験用promotion tokenをコピーにだけ用いた昇格command結果を比較する。IndexedDB／GameState／RNG／自動保存への書込み・外部送信なし。
 - PR #82で既存 `performAttack` を使う単一seedのcontrol／promotion戦闘比較を追加し、PR #83では20／100／250seedの独立単発戦闘集計を追加。seedはcontrol／promotionでペアにし、各試行は元snapshotへ戻して実行する。HP／敵HP／EXP／撃破状態は試行間で持ち越さない。結果は攻撃命中率・命中時必殺率・平均与ダメージ・対象撃破率・反撃被ダメージ・生存率等を表示するが、敵軍フェイズ・移動・複数ターンの攻略を含まない。統制21ケースの実プレイ比較は未完了で、CP-04／05の数値承認も未実施。
