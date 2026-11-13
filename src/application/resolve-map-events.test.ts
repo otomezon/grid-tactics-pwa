@@ -315,11 +315,11 @@ describe("resolveMapEvents", () => {
       }]
     };
     const wrongActor = resolveMapEvents(INITIAL_GAME_STATE, map, {
-      type: "unit-interacts", x: 9, y: 8, unitId: "unit_001"
+      type: "unit-interacts", x: 9, y: 8, label: "試作調査地点", unitId: "unit_001"
     });
     expect(wrongActor.nextState).toBe(INITIAL_GAME_STATE);
     const correctActor = resolveMapEvents(INITIAL_GAME_STATE, map, {
-      type: "unit-interacts", x: 9, y: 8, unitId: "unit_004"
+      type: "unit-interacts", x: 9, y: 8, label: "試作調査地点", unitId: "unit_004"
     });
     expect(correctActor.nextState.firedMapEventIds).toEqual(["prototype-investigation"]);
     expect(correctActor.messages.map((message) => message.text)).toEqual(["調査しました。"]);

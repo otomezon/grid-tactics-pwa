@@ -77,6 +77,7 @@ export function performMapInteraction(
     type: "unit-interacts",
     x: interaction.position.x,
     y: interaction.position.y,
+    label: interaction.label,
     unitId
   });
   if (!eventExecution.nextState.firedMapEventIds.includes(interaction.id)) {
