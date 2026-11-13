@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
+import { CHAPTER_01_MAP, INITIAL_GAME_STATE, MAIN_CHARACTER_UNIT_ID } from "../../content/maps/chapter-01";
 import type { GameMapDefinition } from "../models/game";
 import { evaluateBattleOutcome } from "./evaluate-battle-outcome";
 
@@ -9,11 +9,30 @@ describe("evaluateBattleOutcome", () => {
   });
 
   it("wins when all enemies are defeated for a defeat_all objective", () => {
+    const map: GameMapDefinition = { ...CHAPTER_01_MAP, objective: { type: "defeat_all" } };
     const state = {
       ...INITIAL_GAME_STATE,
       units: INITIAL_GAME_STATE.units.filter((unit) => unit.faction === "player")
     };
+    expect(evaluateBattleOutcome(state, map)).toBe("victory");
+  });
+
+  it("wins when the chapter-one boss is defeated even if other enemies remain", () => {
+    const state = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "enemy_005")
+    };
+    expect(state.units.some((unit) => unit.faction === "enemy")).toBe(true);
     expect(evaluateBattleOutcome(state, CHAPTER_01_MAP)).toBe("victory");
+  });
+
+  it("loses when the prototype protagonist falls while other allies remain", () => {
+    const state = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== MAIN_CHARACTER_UNIT_ID)
+    };
+    expect(state.units.some((unit) => unit.faction === "player")).toBe(true);
+    expect(evaluateBattleOutcome(state, CHAPTER_01_MAP)).toBe("defeat");
   });
 
   it("loses when all player units are defeated", () => {

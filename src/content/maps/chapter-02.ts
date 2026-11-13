@@ -1,5 +1,5 @@
 import type { GameMapDefinition, GameStateSnapshot } from "../../domain/models/game";
-import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "./chapter-01";
+import { CHAPTER_01_MAP, createMainCharacterDefeatEvent, INITIAL_GAME_STATE, MAIN_CHARACTER_UNIT_ID } from "./chapter-01";
 
 const terrain = CHAPTER_01_MAP.terrain.map((row) => [...row]);
 terrain[3]![5] = "forest";
@@ -25,7 +25,8 @@ export const CHAPTER_02_MAP: GameMapDefinition = {
     { unitId: "enemy_005", x: 8, y: 4 }
   ],
   objective: { type: "defeat_all" },
-  events: []
+  defeatCondition: { type: "unit_defeated", targetUnitId: MAIN_CHARACTER_UNIT_ID },
+  events: [createMainCharacterDefeatEvent(2)]
 };
 
 // Placeholder chapter data exists to exercise chapter carry-over and save restoration.

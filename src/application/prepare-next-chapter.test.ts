@@ -33,7 +33,7 @@ describe("prepareNextChapter", () => {
     const previousState = clearedState({
       campaignUnitBattleRecords: [{
         unitId: "unit_001",
-        unitName: "味方01",
+        unitName: "主人公",
         attacks: 3,
         strikes: 5,
         hits: 4,

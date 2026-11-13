@@ -126,14 +126,16 @@ describe("preparePlayerDeployment", () => {
 
   it("moves non-selected survivors into reserves and allows a later redeployment", () => {
     const selectedIds = ["unit_001", "unit_003"];
-    const benched = preparePlayerDeployment(INITIAL_GAME_STATE, CHAPTER_01_MAP, [
+    const genericMap = { ...CHAPTER_01_MAP };
+    delete genericMap.defeatCondition;
+    const benched = preparePlayerDeployment(INITIAL_GAME_STATE, genericMap, [
       { unitId: "unit_001", position: { x: 1, y: 8 } },
       { unitId: "unit_003", position: { x: 3, y: 8 } }
     ], selectedIds);
     expect(benched.units.filter((unit) => unit.faction === "player").map((unit) => unit.id)).toEqual(selectedIds);
     expect(benched.reserveUnits.map((unit) => unit.id).sort()).toEqual(["unit_002", "unit_004"]);
 
-    const redeployed = preparePlayerDeployment(benched, CHAPTER_01_MAP, [
+    const redeployed = preparePlayerDeployment(benched, genericMap, [
       { unitId: "unit_002", position: { x: 1, y: 8 } }
     ], ["unit_002"]);
     expect(redeployed.units.find((unit) => unit.id === "unit_002")).toMatchObject({

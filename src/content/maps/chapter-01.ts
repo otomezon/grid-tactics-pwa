@@ -1,6 +1,7 @@
 import type {
   GameMapDefinition,
   GameStateSnapshot,
+  MapEventDefinition,
   GameUnit,
   UnitGrowthRates,
   UnitStats,
@@ -22,6 +23,20 @@ const terrain = [
   ["plain", "plain", "plain", "plain", "plain", "plain", "plain", "plain", "plain", "plain"]
 ] as const;
 
+export const MAIN_CHARACTER_UNIT_ID = "unit_001" as const;
+
+export function createMainCharacterDefeatEvent(chapterNumber: number): MapEventDefinition {
+  return {
+    id: `chapter-${String(chapterNumber).padStart(2, "0")}-main-character-defeat`,
+    trigger: { type: "defeat" },
+    action: {
+      type: "show-message",
+      speaker: "作戦メモ",
+      text: "主人公が倒されました。作戦失敗です。"
+    }
+  };
+}
+
 export const CHAPTER_01_MAP: GameMapDefinition = {
   id: "chapter_01_map",
   width: 10,
@@ -40,16 +55,29 @@ export const CHAPTER_01_MAP: GameMapDefinition = {
     { unitId: "enemy_004", x: 2, y: 4 },
     { unitId: "enemy_005", x: 8, y: 4 }
   ],
-  objective: { type: "defeat_all" },
-  events: [{
-    id: "chapter-01-opening-briefing",
-    trigger: { type: "stage-start" },
-    action: {
-      type: "show-message",
-      speaker: "作戦メモ",
-      text: "敵軍を全滅させると勝利です。移動可能範囲と戦闘予測を確認しながら進みましょう。"
-    }
-  }]
+  objective: { type: "defeat_boss", targetUnitId: "enemy_005" },
+  defeatCondition: { type: "unit_defeated", targetUnitId: MAIN_CHARACTER_UNIT_ID },
+  events: [
+    {
+      id: "chapter-01-opening-briefing",
+      trigger: { type: "stage-start" },
+      action: {
+        type: "show-message",
+        speaker: "作戦メモ",
+        text: "敵将を撃破すると勝利です。主人公が倒されると敗北です。移動可能範囲と戦闘予測を確認しながら進みましょう。"
+      }
+    },
+    {
+      id: "chapter-01-boss-defeated",
+      trigger: { type: "boss-defeated" },
+      action: {
+        type: "show-message",
+        speaker: "作戦メモ",
+        text: "敵将を撃破しました。作戦成功です。"
+      }
+    },
+    createMainCharacterDefeatEvent(1)
+  ]
 };
 
 const baseStats: UnitStats = {
@@ -112,7 +140,7 @@ function createPrototypeUnit(
 
 // Temporary placeholder content for movement and combat interaction verification only.
 export const INITIAL_UNITS: GameUnit[] = [
-  createPrototypeUnit("unit_001", "味方01", "player", "swordsman", 1, 8, 5, "infantry", ["sword"]),
+  createPrototypeUnit("unit_001", "主人公", "player", "swordsman", 1, 8, 5, "infantry", ["sword"]),
   createPrototypeUnit("unit_002", "味方02", "player", "archer", 3, 8, 5, "infantry", ["bow"]),
   createPrototypeUnit("unit_003", "味方03", "player", "soldier", 5, 8, 5, "infantry", ["lance"]),
   createPrototypeUnit("unit_004", "味方04", "player", "cavalry", 8, 8, 6, "cavalry", ["sword", "lance"]),
@@ -120,7 +148,7 @@ export const INITIAL_UNITS: GameUnit[] = [
   createPrototypeUnit("enemy_002", "敵02", "enemy", "archer", 4, 2, 5, "infantry", ["bow"]),
   createPrototypeUnit("enemy_003", "敵03", "enemy", "soldier", 7, 2, 5, "infantry", ["lance"]),
   createPrototypeUnit("enemy_004", "敵04", "enemy", "swordsman", 2, 4, 5, "infantry", ["sword"]),
-  createPrototypeUnit("enemy_005", "敵05", "enemy", "cavalry", 8, 4, 6, "cavalry", ["lance"])
+  createPrototypeUnit("enemy_005", "敵将", "enemy", "cavalry", 8, 4, 6, "cavalry", ["lance"])
 ];
 
 export const INITIAL_GAME_STATE: GameStateSnapshot = {

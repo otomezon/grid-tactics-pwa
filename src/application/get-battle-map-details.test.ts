@@ -4,8 +4,19 @@ import type { GameMapDefinition } from "../domain/models/game";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./get-battle-map-details";
 
 describe("getBattleObjectiveDetails", () => {
+
+function createDefeatAllMap(): GameMapDefinition {
+  const map: GameMapDefinition = {
+    ...CHAPTER_01_MAP,
+    objective: { type: "defeat_all" }
+  };
+  delete map.defeatCondition;
+  return map;
+}
+
   it("shows the remaining enemy count for a defeat-all objective", () => {
-    expect(getBattleObjectiveDetails(INITIAL_GAME_STATE, CHAPTER_01_MAP, INITIAL_GAME_STATE)).toMatchObject({
+    const map = createDefeatAllMap();
+    expect(getBattleObjectiveDetails(INITIAL_GAME_STATE, map, INITIAL_GAME_STATE)).toMatchObject({
       victoryLabel: "敵を全滅させる",
       victoryStatus: "残り 5 / 5体",
       defeatLabel: "味方全滅",
@@ -18,7 +29,8 @@ describe("getBattleObjectiveDetails", () => {
       ...INITIAL_GAME_STATE,
       units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "enemy_001")
     };
-    expect(getBattleObjectiveDetails(state, CHAPTER_01_MAP, INITIAL_GAME_STATE).victoryStatus)
+    const map = createDefeatAllMap();
+    expect(getBattleObjectiveDetails(state, map, INITIAL_GAME_STATE).victoryStatus)
       .toBe("残り 4 / 5体");
   });
 
@@ -44,20 +56,30 @@ describe("getBattleObjectiveDetails", () => {
       defeatCondition: { type: "unit_defeated", targetUnitId: "unit_001" }
     };
     expect(getBattleObjectiveDetails(INITIAL_GAME_STATE, map, INITIAL_GAME_STATE).defeatStatus)
-      .toBe("味方01 · HP 20 / 20");
+      .toBe("主人公 · HP 20 / 20");
 
     const defeated = {
       ...INITIAL_GAME_STATE,
       units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_001")
     };
     expect(getBattleObjectiveDetails(defeated, map, INITIAL_GAME_STATE).defeatStatus)
-      .toBe("味方01 · 撃破済み");
+      .toBe("主人公 · 撃破済み");
   });
 
-  it("reports an empty player roster as an already met defeat condition", () => {
+  it("reports an empty player roster for a defeat-all map without a protected unit", () => {
+    const map = createDefeatAllMap();
     const defeated = { ...INITIAL_GAME_STATE, units: [] };
-    expect(getBattleObjectiveDetails(defeated, CHAPTER_01_MAP, INITIAL_GAME_STATE).defeatStatus)
+    expect(getBattleObjectiveDetails(defeated, map, INITIAL_GAME_STATE).defeatStatus)
       .toBe("味方ユニットが残っていません");
+  });
+
+  it("uses the prototype boss and protagonist labels for the actual first chapter", () => {
+    expect(getBattleObjectiveDetails(INITIAL_GAME_STATE, CHAPTER_01_MAP, INITIAL_GAME_STATE)).toMatchObject({
+      victoryLabel: "ボスを撃破する",
+      victoryStatus: "敵将 · HP 20 / 20",
+      defeatLabel: "主人公を撃破させない",
+      defeatStatus: "主人公 · HP 20 / 20"
+    });
   });
 });
 
@@ -90,7 +112,7 @@ describe("getTerrainInspectionDetails", () => {
       specialEffect: expect.stringContaining("最大HPの10%")
     });
     expect(getTerrainInspectionDetails(INITIAL_GAME_STATE, CHAPTER_01_MAP, { x: 1, y: 8 })?.occupantLabel)
-      .toBe("味方：味方01");
+      .toBe("味方：主人公");
   });
 
   it("returns null for an absent or out-of-map selection", () => {

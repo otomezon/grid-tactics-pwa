@@ -19,7 +19,7 @@ describe("player attack report projection", () => {
     const report = getPlayerAttackReport(execution);
 
     expect(report).toMatchObject({
-      attackerName: "味方01",
+      attackerName: "主人公",
       defenderName: "敵01",
       defenderDefeated: false,
       defenderRemainingHp: execution.result.defenderHp,
@@ -37,7 +37,7 @@ describe("player attack report projection", () => {
     );
     expect(report.strikes[0]).toMatchObject({
       kindLabel: "先制攻撃",
-      actorName: "味方01",
+      actorName: "主人公",
       targetName: "敵01",
       weaponName: "試作の鉄の剣",
       outcome: "hit",
@@ -49,7 +49,7 @@ describe("player attack report projection", () => {
     expect(report.strikes[1]).toMatchObject({
       kindLabel: "反撃",
       actorName: "敵01",
-      targetName: "味方01",
+      targetName: "主人公",
       weaponName: "試作の鉄の斧"
     });
   });

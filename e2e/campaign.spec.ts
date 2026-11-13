@@ -132,14 +132,14 @@ test.describe("campaign title and save hub", () => {
     await expect(openingDialog).toBeVisible();
     await expect(openingDialog).toHaveAttribute("data-event-id", "chapter-01-opening-briefing");
     await expect(openingDialog).toContainText("作戦メモ");
-    await expect(openingDialog).toContainText("敵軍を全滅させると勝利です。");
+    await expect(openingDialog).toContainText("敵将を撃破すると勝利です。主人公が倒されると敗北です。");
 
     await page.reload();
     const titleAfterReload = page.getByTestId("campaign-title-screen");
     await expect(titleAfterReload).toBeVisible();
     await titleAfterReload.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await expect(page.getByTestId("map-event-dialog")).toContainText("敵軍を全滅させると勝利です。");
+    await expect(page.getByTestId("map-event-dialog")).toContainText("敵将を撃破すると勝利です。主人公が倒されると敗北です。");
     await page.getByRole("button", { name: "確認して続ける" }).click();
     await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
 
@@ -160,7 +160,7 @@ test.describe("campaign title and save hub", () => {
     await expect(historyPanel.getByTestId("map-event-history-entry"))
       .toHaveAttribute("data-event-id", "chapter-01-opening-briefing");
     await expect(historyPanel).toContainText("作戦メモ");
-    await expect(historyPanel).toContainText("敵軍を全滅させると勝利です。");
+    await expect(historyPanel).toContainText("敵将を撃破すると勝利です。主人公が倒されると敗北です。");
     expect(await readAutoSave(page)).toEqual(acknowledgedSave);
     await historyPanel.getByRole("button", { name: "閉じる" }).click();
     await expect(page.getByTestId("map-event-history")).toHaveCount(0);
@@ -173,7 +173,7 @@ test.describe("campaign title and save hub", () => {
     await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
     expect(await readAutoSave(page)).toEqual(acknowledgedSave);
     await page.getByRole("button", { name: "イベント履歴 1件" }).click();
-    await expect(page.getByTestId("map-event-history")).toContainText("敵軍を全滅させると勝利です。");
+    await expect(page.getByTestId("map-event-history")).toContainText("敵将を撃破すると勝利です。主人公が倒されると敗北です。");
   });
 
   test("pauses a restored enemy phase until its pending map event is acknowledged", async ({ page }) => {
@@ -201,7 +201,7 @@ test.describe("campaign title and save hub", () => {
     await expect(title).toBeVisible();
     await title.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 敵軍フェイズ");
-    await expect(page.getByTestId("map-event-dialog")).toContainText("敵軍を全滅させると勝利です。");
+    await expect(page.getByTestId("map-event-dialog")).toContainText("敵将を撃破すると勝利です。主人公が倒されると敗北です。");
     expect(await readAutoSave(page)).toEqual(pendingEnemyPhase);
 
     await page.getByRole("button", { name: "確認して続ける" }).click();
@@ -331,24 +331,24 @@ test.describe("browser campaign flow", () => {
     await expect(preview.getByTestId("deployment-preview-count")).toHaveText("4 / 4か所");
     const terrainPanel = preview.getByTestId("deployment-preview-terrain");
     await expect(terrainPanel).toContainText("2列・9行 · 平地");
-    await expect(terrainPanel).toContainText("味方01 · 歩兵 · 移動力");
+    await expect(terrainPanel).toContainText("主人公 · 歩兵 · 移動力");
     await expect(terrainPanel).toContainText("このユニットの移動タイプで進入できます");
     await expect(terrainPanel).toContainText("移動コスト 1");
     await expect(preview.getByRole("button", {
-      name: "味方01、2列・9行に配置済み。詳細を表示"
+      name: "主人公、2列・9行に配置済み。詳細を表示"
     })).toBeVisible();
 
     await preview.getByRole("button", {
-      name: "味方01、2列・9行に配置済み。詳細を表示"
+      name: "主人公、2列・9行に配置済み。詳細を表示"
     }).click();
     const detailPanel = page.locator("#deployment-detail-panel");
-    await expect(detailPanel.getByRole("heading", { name: "味方01" })).toBeVisible();
+    await expect(detailPanel.getByRole("heading", { name: "主人公" })).toBeVisible();
     await expect(page.locator("#deployment-detail-toggle-unit_001")).toBeFocused();
 
-    const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
-    await firstCandidate.getByRole("combobox", { name: "味方01の出撃位置" }).selectOption("5,8");
+    const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "主人公" });
+    await firstCandidate.getByRole("combobox", { name: "主人公の出撃位置" }).selectOption("5,8");
     await expect(preview.getByRole("button", {
-      name: "味方01、6列・9行に配置済み。詳細を表示"
+      name: "主人公、6列・9行に配置済み。詳細を表示"
     })).toBeVisible();
     await expect(preview.getByRole("button", {
       name: "味方03、2列・9行に配置済み。詳細を表示"
@@ -410,7 +410,7 @@ test.describe("browser campaign flow", () => {
     await startNewCampaign(page);
     expect(await readAutoSave(page)).toBeNull();
 
-    const candidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
+    const candidate = page.locator(".deployment-unit").filter({ hasText: "主人公" });
     await candidate.getByRole("button", { name: "詳細" }).click();
     const panel = page.getByTestId("unit-growth-panel");
     await expect(panel).toBeVisible();
@@ -437,7 +437,7 @@ test("compares active and reserve deployment candidates without changing the sav
 
   const table = comparison.getByRole("table", { name: "出撃候補ユニット比較" });
   await expect(table).toBeVisible();
-  await expect(table).toContainText("味方01");
+  await expect(table).toContainText("主人公");
   await expect(table).toContainText("味方04");
   await expect(table).toContainText("出撃予定");
   await expect(table).toContainText("控え予定");
@@ -469,11 +469,11 @@ test("compares active and reserve deployment candidates without changing the sav
 test("shows candidate details and persists the selected deployment roster", async ({ page }) => {
     await startNewCampaign(page);
 
-    const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
+    const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "主人公" });
     await firstCandidate.getByRole("button", { name: "詳細" }).click();
 
     const detailPanel = page.locator("#deployment-detail-panel");
-    await expect(detailPanel.getByRole("heading", { name: "味方01" })).toBeVisible();
+    await expect(detailPanel.getByRole("heading", { name: "主人公" })).toBeVisible();
     await expect(detailPanel).toContainText("試作の鉄の剣");
     await expect(detailPanel).not.toContainText("クラスチェンジの証");
 
@@ -526,7 +526,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     const roster = page.getByTestId("unit-roster");
     await expect(roster.getByRole("heading", { name: "味方ユニット一覧" })).toBeVisible();
     await expect(page.getByTestId("unit-roster-summary")).toHaveText("未行動 3 / 4人");
-    const movedButton = page.getByRole("button", { name: /味方01を選択/ });
+    const movedButton = page.getByRole("button", { name: /主人公を選択/ });
     const actedButton = page.getByRole("button", { name: /味方02を選択/ });
     const readyButton = page.getByRole("button", { name: /味方03を選択/ });
     await expect(movedButton).toContainText("移動済・未行動");
@@ -569,7 +569,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     ally.inventory.push("short_bow", "healing_potion", "healing_potion");
     savedState.campaignUnitBattleRecords = [{
       unitId: "unit_001",
-      unitName: "味方01",
+      unitName: "主人公",
       attacks: 2,
       strikes: 3,
       hits: 2,
@@ -586,10 +586,10 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     const savedBeforeInspection = await readAutoSave(page);
-    await page.getByRole("button", { name: /味方01を選択/ }).click();
+    await page.getByRole("button", { name: /主人公を選択/ }).click();
     const inspector = page.getByTestId("player-inspector");
     await expect(inspector).toBeVisible();
-    await expect(inspector.getByRole("heading", { name: "味方01" })).toBeVisible();
+    await expect(inspector.getByRole("heading", { name: "主人公" })).toBeVisible();
     await expect(inspector).toContainText("Lv.1 · 剣士");
     await expect(inspector).toContainText("HP 20 / 20");
     await expect(inspector).toContainText("2列・9行");
@@ -722,7 +722,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await startBattle(page);
 
     const savedBeforeInspection = await readAutoSave(page);
-    const rosterButton = page.getByRole("button", { name: /敵05を確認/ });
+    const rosterButton = page.getByRole("button", { name: /敵将を確認/ });
     await rosterButton.click();
     await expect(rosterButton).toHaveAttribute("aria-pressed", "true");
     const inspector = page.getByTestId("enemy-inspector");
@@ -775,12 +775,12 @@ test("shows candidate details and persists the selected deployment roster", asyn
   test("persists a player action across reload", async ({ page }) => {
     await startBattle(page);
 
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
     const historyEntry = page.getByTestId("battle-history").getByTestId("player-action-history");
     await expect(historyEntry).toHaveCount(1);
-    await expect(historyEntry).toContainText("味方01");
+    await expect(historyEntry).toContainText("主人公");
     await expect(historyEntry).toContainText("待機");
     await expect(historyEntry).toContainText("このフェイズの行動を終了");
     const savedState = await readAutoSave(page) as { [key: string]: unknown };
@@ -790,7 +790,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
@@ -826,7 +826,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await startBattle(page);
     const savedBeforePreview = await readAutoSave(page);
 
-    const playerTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
+    const playerTile = page.locator(".map-grid").getByRole("button", { name: /主人公/ });
     await playerTile.click();
     const destination = page.locator(".map-grid").getByRole("button", { name: /2列・8行/ });
     await destination.hover();
@@ -840,10 +840,10 @@ test("shows candidate details and persists the selected deployment roster", asyn
     expect(await readAutoSave(page)).toEqual(savedBeforePreview);
 
     await destination.click();
-    await expect(page.getByRole("status")).toContainText("味方01が2列・8行へ移動しました。");
+    await expect(page.getByRole("status")).toContainText("主人公が2列・8行へ移動しました。");
     const movementHistory = page.getByTestId("battle-history").getByTestId("player-action-history");
     await expect(movementHistory).toHaveCount(1);
-    await expect(movementHistory).toContainText("味方01");
+    await expect(movementHistory).toContainText("主人公");
     await expect(movementHistory).toContainText("移動");
     await expect(movementHistory).toContainText("2列・9行 → 2列・8行");
     await expect(page.locator(".map-grid .movement-path-step")).toHaveCount(0);
@@ -905,7 +905,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
-    const playerTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
+    const playerTile = page.locator(".map-grid").getByRole("button", { name: /主人公/ });
     await playerTile.click();
     const viewport = page.getByRole("region", {
       name: "戦闘マップ。狭い画面では左右にスクロールできます"
@@ -937,7 +937,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforePreview = await readAutoSave(page);
-    const playerTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
+    const playerTile = page.locator(".map-grid").getByRole("button", { name: /主人公/ });
     await playerTile.click();
     const viewport = page.getByRole("region", {
       name: "戦闘マップ。狭い画面では左右にスクロールできます"
@@ -974,7 +974,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforePreview = await readAutoSave(page);
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     const destination = page.locator(".map-grid").getByRole("button", { name: /2列・5行/ });
     const target = page.locator(".map-grid").getByRole("button", { name: /敵04/ });
 
@@ -1004,7 +1004,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
     const savedBeforePreview = await readAutoSave(page);
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     const destination = page.locator(".map-grid").getByRole("button", { name: /3列・6行/ });
     const target = page.locator(".map-grid").getByRole("button", { name: /敵04/ });
 
@@ -1045,7 +1045,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       await expect(touchPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
       const savedBeforePreview = await readAutoSave(touchPage);
-      const playerTile = touchPage.locator(".map-grid").getByRole("button", { name: /味方01/ });
+      const playerTile = touchPage.locator(".map-grid").getByRole("button", { name: /主人公/ });
       await playerTile.tap();
       const destination = touchPage.locator(".map-grid").getByRole("button", { name: /2列・5行/ });
       const target = touchPage.locator(".map-grid").getByRole("button", { name: /敵04/ });
@@ -1060,7 +1060,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       expect(await readAutoSave(touchPage)).toEqual(savedBeforePreview);
 
       await destination.tap();
-      await expect(touchPage.getByRole("status")).toContainText("味方01が2列・5行へ移動しました。");
+      await expect(touchPage.getByRole("status")).toContainText("主人公が2列・5行へ移動しました。");
       await expect(touchPage.locator(".map-grid .movement-path-step")).toHaveCount(0);
       const movedState = await readAutoSave(touchPage) as {
         units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean }>;
@@ -1078,10 +1078,10 @@ test("shows candidate details and persists the selected deployment roster", asyn
   test("shows objective progress and inspects terrain without changing the autosave", async ({ page }) => {
     await startBattle(page);
     const objective = page.getByTestId("battle-objective");
-    await expect(objective).toContainText("敵を全滅させる");
-    await expect(objective).toContainText("残り 5 / 5体");
-    await expect(objective).toContainText("味方全滅");
-    await expect(objective).toContainText("生存味方 4体");
+    await expect(objective).toContainText("ボスを撃破する");
+    await expect(objective).toContainText("敵将 · HP 20 / 20");
+    await expect(objective).toContainText("主人公を撃破させない");
+    await expect(objective).toContainText("主人公 · HP 20 / 20");
 
     const savedBeforeInspection = await readAutoSave(page);
     const terrain = page.getByTestId("terrain-inspector");
@@ -1130,12 +1130,12 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.reload();
     await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
 
     const forecast = page.getByTestId("combat-forecast");
     await expect(forecast).toBeVisible();
-    await expect(forecast).toContainText("味方01");
+    await expect(forecast).toContainText("主人公");
     await expect(forecast).toContainText("敵01");
     await expect(forecast).toContainText("HP 20/20");
     await expect(forecast).toContainText("反撃あり");
@@ -1161,7 +1161,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(report.getByTestId("battle-history-entry")).toHaveCount(1);
     const playerAttack = report.getByTestId("battle-history-entry").first();
     await expect(playerAttack).toContainText("第1ターン");
-    await expect(playerAttack).toContainText("味方01 vs 敵01");
+    await expect(playerAttack).toContainText("主人公 vs 敵01");
     await expect(playerAttack.getByTestId("player-attack-strike")).toHaveCount(2);
     await expect(playerAttack).toContainText("先制攻撃");
     await expect(playerAttack).toContainText("反撃");
@@ -1222,7 +1222,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
 
     const saveBeforeForecast = await readAutoSave(page);
@@ -1383,7 +1383,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     const player = preparedState.units.find((unit) => unit.id === "unit_001");
-    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_005");
     if (!player || !enemy) throw new Error("Battle contribution fixture units are missing.");
 
     player.position = { x: 3, y: 1 };
@@ -1413,14 +1413,15 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.reload();
     await continueSavedCampaign(page);
 
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
-    await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /敵将/ }).click();
     await page.getByRole("button", { name: "攻撃を確定" }).click();
+    await acknowledgePendingMapEvents(page);
 
     await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
     const contribution = page.getByTestId("battle-contribution-unit_001");
     await expect(contribution).toBeVisible();
-    await expect(contribution).toContainText("味方01");
+    await expect(contribution).toContainText("主人公");
     await expect(contribution).toContainText("攻撃行動 1回");
     await expect(contribution).toContainText("命中（必殺含む）");
     await expect(contribution).toContainText("与ダメージ");
@@ -1444,7 +1445,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.getByTestId("battle-contributions")).toContainText("集計できる味方の攻撃記録はありません");
     const restoredCareer = page.getByTestId("campaign-unit-record-unit_001");
     await expect(restoredCareer).toBeVisible();
-    await expect(restoredCareer).toContainText("味方01");
+    await expect(restoredCareer).toContainText("主人公");
     await expect(restoredCareer).toContainText("累計能力上昇：HP +1");
   });
 
@@ -1472,12 +1473,12 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("敵01");
     await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("撃破");
     await expect(page.getByTestId("result-enemy-enemy_001")).toContainText("HP —");
-    await expect(enemyRoster).toContainText("敵05");
+    await expect(enemyRoster).toContainText("敵将");
     await expect(enemyRoster).toContainText("撃破済み敵ユニットの最終HPはセーブデータに残らない");
 
     const survivingPlayers = page.locator(".result-player-row");
     await expect(survivingPlayers).toHaveCount(4);
-    await expect(page.getByTestId("result-player-unit_001")).toContainText("味方01");
+    await expect(page.getByTestId("result-player-unit_001")).toContainText("主人公");
     await expect(page.getByTestId("result-player-unit_001")).toContainText("Lv.1");
     await expect(page.getByTestId("result-player-unit_001")).toContainText("EXP 0/100");
     await expect(page.getByTestId("result-player-unit_001")).toContainText("HP 20/20");
@@ -1524,7 +1525,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.reload();
     await continueSavedCampaign(page);
 
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     const promotionPanel = page.locator(".promotion-panel");
     await expect(promotionPanel).toContainText("移動・行動前のみ可能");
     await expect(promotionPanel.getByRole("button", { name: "クラスチェンジを確認" })).toBeDisabled();
@@ -1534,7 +1535,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.reload();
     await continueSavedCampaign(page);
 
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
     await expect(confirmation).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
@@ -1584,7 +1585,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.getByRole("status")).toContainText("このフェイズの行動を消費しました");
     const promotionHistory = page.getByTestId("battle-history").getByTestId("player-action-history");
     await expect(promotionHistory).toHaveCount(1);
-    await expect(promotionHistory).toContainText("味方01");
+    await expect(promotionHistory).toContainText("主人公");
     await expect(promotionHistory).toContainText("クラスチェンジ");
     await expect(promotionHistory).toContainText("ソードマスターへクラスチェンジ");
 
@@ -1612,7 +1613,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
 
     await page.reload();
     await continueSavedCampaign(page);
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
 
@@ -1908,7 +1909,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(enemyPhase).toContainText("第1ターン");
     await expect(enemyPhase).toContainText("敵軍フェイズ");
     await expect(enemyPhase.getByTestId("enemy-phase-action")).toHaveCount(5);
-    for (const enemyName of ["敵01", "敵02", "敵03", "敵04", "敵05"]) await expect(enemyPhase).toContainText(enemyName);
+    for (const enemyName of ["敵01", "敵02", "敵03", "敵04", "敵将"]) await expect(enemyPhase).toContainText(enemyName);
     await expect(enemyPhase).toContainText(/攻撃|移動|待機/);
     await expect(report).toContainText("セーブデータには保存しません");
     const savedState = await readAutoSave(page);
@@ -1993,7 +1994,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       const page = await context.newPage();
       await startBattle(page);
 
-      const unitTile = page.locator(".map-grid").getByRole("button", { name: /味方01/ });
+      const unitTile = page.locator(".map-grid").getByRole("button", { name: /主人公/ });
       await expect(unitTile).toBeVisible();
       await unitTile.scrollIntoViewIfNeeded();
 
@@ -2004,7 +2005,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
         bounds.x + bounds.width / 2,
         bounds.y + bounds.height / 2
       );
-      await expect(page.locator(".unit-heading")).toContainText("味方01");
+      await expect(page.locator(".unit-heading")).toContainText("主人公");
     } finally {
       await context.close();
     }
@@ -2035,7 +2036,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.reload();
     await continueSavedCampaign(page);
 
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     const useButtons = page.getByRole("button", { name: "回復薬を使用" });
     const healingPotionRow = page.locator(".inventory-items li").filter({ hasText: "回復薬" });
     await expect(useButtons).toHaveCount(1);
@@ -2085,7 +2086,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
 
     await page.reload();
     await continueSavedCampaign(page);
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await expect(page.locator(".unit-details div").first()).toContainText(
       preparedUnit.stats.hp + " / " + preparedUnit.stats.hp
     );
@@ -2330,29 +2331,37 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
   });
 
-  test("navigates from a defeat-all objective to the living enemy roster without changing the save", async ({ page }) => {
+  test("navigates to the chapter boss and protected protagonist without changing the save", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 320, height: 720 });
     const savedBeforeNavigation = await readAutoSave(page);
     const objective = page.getByTestId("battle-objective");
-    const navigationButton = objective.getByRole("button", {
-      name: "残りの敵を一覧で確認、5体"
-    });
-    await expect(navigationButton).toBeVisible();
-    await navigationButton.click();
+    await expect(objective).toContainText("ボスを撃破する");
+    await expect(objective).toContainText("敵将 · HP 20 / 20");
+    await expect(objective).toContainText("主人公を撃破させない");
 
-    const enemyRoster = page.locator("#enemy-roster");
-    await expect(enemyRoster).toBeFocused();
-    await expect(enemyRoster).toContainText("敵ユニット一覧");
-    await expect(enemyRoster.getByRole("button", { name: /敵01/ })).toBeVisible();
+    const bossNavigation = objective.getByRole("button", { name: "敵将をマップで確認" });
+    await expect(bossNavigation).toBeVisible();
+    await bossNavigation.click();
+    const bossInspector = page.getByTestId("enemy-inspector");
+    await expect(bossInspector).toBeVisible();
+    await expect(bossInspector.getByRole("heading", { name: "敵将" })).toBeVisible();
+
+    const protagonistNavigation = objective.getByRole("button", { name: "主人公をマップで確認" });
+    await expect(protagonistNavigation).toBeVisible();
+    await protagonistNavigation.click();
+    const protagonistInspector = page.getByTestId("player-inspector");
+    await expect(protagonistInspector).toBeVisible();
+    await expect(protagonistInspector.getByRole("heading", { name: "主人公" })).toBeVisible();
+
     const dimensions = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,
-      rosterWidth: document.querySelector("#enemy-roster")?.getBoundingClientRect().width ?? 0
+      objectiveWidth: document.querySelector('[data-testid="battle-objective"]')?.getBoundingClientRect().width ?? 0
     }));
-    expect(dimensions.rosterWidth).toBeGreaterThan(0);
+    expect(dimensions.objectiveWidth).toBeGreaterThan(0);
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
-    expect(dimensions.rosterWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.objectiveWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
     expect(await readAutoSave(page)).toEqual(savedBeforeNavigation);
   });
 

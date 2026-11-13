@@ -252,9 +252,9 @@ test.describe("production PWA shell", () => {
   test("exports a battle save and restores it in a fresh browser context", async ({ page, browser }) => {
     await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
 
     await expect.poll(async () => {
       const savedState = await readAutoSave(page) as {
@@ -280,7 +280,7 @@ test.describe("production PWA shell", () => {
       await importPage.locator('[data-testid="save-import-input"]').setInputFiles(filePath!);
       await expect(importPage.getByRole("status")).toContainText("セーブファイルからゲーム状態を復元しました。");
       await expect(importPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-      await importPage.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+      await importPage.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
       await expect(importPage.locator(".unit-details")).toContainText("行動済み");
 
       const importedState = await readAutoSave(importPage) as {
@@ -295,9 +295,9 @@ test.describe("production PWA shell", () => {
   test("rejects an invalid save file without overwriting the current autosave", async ({ page }) => {
     await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
 
     const originalSave = await readAutoSave(page);
     expect(originalSave).not.toBeNull();
@@ -378,9 +378,9 @@ test.describe("production PWA shell", () => {
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await acknowledgePendingMapEvents(page);
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
 
     await expect.poll(async () => {
       const savedState = await readAutoSave(page) as {
@@ -410,7 +410,7 @@ test.describe("production PWA shell", () => {
     await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
     await page.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
 
     await context.setOffline(true);
@@ -418,7 +418,7 @@ test.describe("production PWA shell", () => {
     await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
     await page.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
   test("creates three backup generations, rotates the oldest, and validates confirmed restores", async ({ page }) => {

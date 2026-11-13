@@ -44,9 +44,9 @@ test("edits active and reserve weapon loadouts before committing deployment", as
   await expect(page.locator("#deployment-detail-panel .deployment-detail-overview"))
     .toContainText("試作の鉄の槍");
 
-  const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "味方01" });
+  const firstCandidate = page.locator(".deployment-unit").filter({ hasText: "主人公" });
   await firstCandidate.getByRole("button", { name: "詳細" }).click();
-  const firstLoadout = page.getByRole("combobox", { name: "味方01の装備武器" });
+  const firstLoadout = page.getByRole("combobox", { name: "主人公の装備武器" });
   await expect(firstLoadout).toHaveValue("iron_sword");
   await firstLoadout.selectOption("");
   await expect(page.locator("#deployment-detail-panel .deployment-detail-overview"))

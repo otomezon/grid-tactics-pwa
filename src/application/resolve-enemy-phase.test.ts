@@ -5,12 +5,15 @@ import { beginEnemyPhase, runEnemyPhase } from "./resolve-enemy-phase";
 import { createAttackPlanForFaction } from "./perform-attack";
 
 function openMap(): GameMapDefinition {
-  return {
+  const map: GameMapDefinition = {
     ...CHAPTER_01_MAP,
+    objective: { type: "defeat_all" },
     terrain: Array.from({ length: 10 }, () =>
       Array.from({ length: 10 }, () => "plain" as const)
     )
   };
+  delete map.defeatCondition;
+  return map;
 }
 
 function mapWithFortAt(x: number, y: number): GameMapDefinition {

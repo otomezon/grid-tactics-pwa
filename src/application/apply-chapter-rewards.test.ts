@@ -32,7 +32,7 @@ describe("applyChapterRewards with the class-promotion item", () => {
       .toContain(PROMOTION_ITEM_ID);
     expect(withConfiguredReward.rewardsApplied).toMatchObject([{
       recipientUnitId: "unit_001",
-      recipientName: "味方01",
+      recipientName: "主人公",
       itemId: PROMOTION_ITEM_ID,
       itemName: "クラスチェンジの証",
       quantity: 1

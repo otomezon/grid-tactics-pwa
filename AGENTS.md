@@ -5,7 +5,7 @@
 - Repository: `otomezon/grid-tactics-pwa`
 - Intended product: an original, turn-based tactical SRPG playable in a smartphone browser and installable as a PWA.
 - Product name remains provisional.
-- Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal. PR #1–#107 are merged; PR #99 added campaign-persistent per-ally battle records, PR #100 centralized the fourteen adopted class IDs and seven promotion paths, and PR #101 hardened the immutability of the compatibility projections. PR #102 established player-command boundaries and map events, PR #103–#105 added persisted event acknowledgement and current-chapter event history, PR #106 expanded the player phase-end risk review, and PR #107 added strike-by-strike enemy attack forecast details. Preserve the distinction between approved non-numeric promotion policy and unapproved numeric values; do not invent class caps, bonuses, movement, or weapon-access data.
+- Baseline design: [`docs/game-design.md`](docs/game-design.md), version 1.0 (2026-11-09), initial implementation proposal. PR #1–#108 are merged; PR #99 added campaign-persistent per-ally battle records, PR #100 centralized the fourteen adopted class IDs and seven promotion paths, and PR #101 hardened the immutability of the compatibility projections. PR #102 established player-command boundaries and map events, PR #103–#105 added persisted event acknowledgement and current-chapter event history, PR #106 expanded the player phase-end risk review, and PR #107 added strike-by-strike enemy attack forecast details. Preserve the distinction between approved non-numeric promotion policy and unapproved numeric values; do not invent class caps, bonuses, movement, or weapon-access data.
 - Source and tests prove current implementation, not final balance. Distinguish design proposal, temporary prototype choice, inference, and product decision.
 - Deployment-slot terrain inspection is limited to existing configured playerDeployment coordinates and existing TERRAIN_DEFINITIONS. Show movement-type passability using the same terrain movementCost values already used by validation; if an assigned unit cannot enter the tile, warn but do not invent a new placement rule or auto-correct the assignment.
 - The deployment formation preview is a view of the current selected roster and slot assignments. The existing position dropdown remains the sole editing path; occupied preview tiles may open candidate details, but the preview must not invent slots or alter party/deployment rules.
@@ -53,6 +53,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - Xorshift32 state is persisted as non-zero 32-bit `rngState`; do not change without migration/tests.
 - saveVersion is 6; preserve migration tests for versions 1 through 5.
 - Enemy IDs are processed in stable lexical order. Current AI score and Manhattan distance are provisional, not approved final rules.
+- In the current prototype campaign content, `unit_001` is the protected protagonist in all three chapters; Chapter 1 uses `enemy_005` as its `defeat_boss` target. These IDs and display labels are prototype content, not finalized character/story decisions. Preserve the map defeat condition when authoring prototype chapter variants; do not add save fields for it.
 
 ## 5. Coding and design rules
 
