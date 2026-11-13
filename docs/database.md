@@ -41,9 +41,9 @@
 
 `src/persistence/migrations.ts` は次の移行を行う。
 
-- version 1: 旧所持品・装備・乱数stateを従来どおり変換し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds` を加えてversion 6にする。
+- version 1: 旧所持品・装備・乱数stateを従来どおり変換し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds` を加えてversion 6にする。
 - version 2: 既存の進行データを保持し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds` を加えてversion 6にする。
-- version 3: 既存の進行データと控え名簿を保持し、空の `campaignUnitBattleRecords` と `firedMapEventIds` を加えてversion 6にする。version 3以前のプレイ履歴・イベント履歴は存在しないため、過去の戦績やイベント発火を推測して作らない。
+- version 3: 既存の進行データと控え名簿を保持し、空の `campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds` を加えてversion 6にする。version 3以前のプレイ履歴・イベント履歴は存在しないため、過去の戦績やイベント発火を推測して作らない。
 - version 4: 既存の進行データとキャンペーン累計戦績を保持し、空の `firedMapEventIds` と `acknowledgedMapEventIds` を加えてversion 6にする。
 - version 5: 既存の発火済みイベントIDを保持し、これまでのイベント表示は一時メッセージのみで確認状態が保存されていないため、既発火IDをすべて `acknowledgedMapEventIds` に複製してversion 6にする。これにより既存イベントを意図せず再表示しない。
 - version 6: 現行validatorで検証し、書き換えない。
@@ -65,7 +65,7 @@
 
 敵軍フェイズのAI解決は同期的に状態を作成してから保存する。PlaywrightのブラウザE2Eでは、行動確定後のIndexedDB保存と再読み込み後の復元、Service Worker更新時の自動再読み込み後の復元を確認する。
 
-味方の攻撃結果表示と敵軍フェイズの行動記録は、各処理の実行結果から生成する画面内の一時表示であり、snapshotには保存しない。これとは別に、味方開始攻撃から算出する `campaignUnitBattleRecords` の集計値とイベント確認状態をsaveVersion 6へ保存する。完了済みの状態を再読み込みすると両方の表示は消える。`phase: enemy` のcheckpointから再開した場合のみ、敵軍フェイズを再解決し、その実行結果から敵行動記録を再生成する。
+味方の攻撃結果表示と敵軍フェイズの行動記録は、各処理の実行結果から生成する画面内の一時表示であり、snapshotには保存しない。これとは別に、味方開始攻撃から算出する `campaignUnitBattleRecords` の集計値とイベント確認状態をsaveVersion 6へ保存する。戦闘履歴表示は引き続き一時状態で再読み込み後に消えるが、未確認イベント本文はマップcontentから復元して再表示する。`phase: enemy` のcheckpointから再開した場合のみ、敵軍フェイズを再解決し、その実行結果から敵行動記録を再生成する。
 
 ## 5. 検証
 
@@ -100,4 +100,4 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 - 世代の削除・移動・新規書き込みは単一のIndexedDB `readwrite` transactionで行う。transactionがabortした場合は全変更がロールバックされる。auto slotは書き換えない。読み込み・検証したsnapshotとtransaction内のauto dataが一致しない場合は作成を中止する。
 - 一覧には世代番号、作成日時、章名、章IDを表示する。バックアップを復元する前に章IDを解決し、既存のsaveVersion migrationとsnapshot／map validatorを通す。不正形式や未知versionは拒否する。
 - 復元は確認後にだけauto slotを置き換える。書き込みtransaction内でも選択されたバックアップレコードの内容を再確認し、変更・削除されていれば中止する。確認キャンセルでは保存データも画面状態も変更しない。`phase: enemy` のデータは既存の敵軍フェイズ復旧処理に従う。
-- IndexedDB versionは1、GameStateSnapshot `saveVersion`は5。JSON export/import envelopeとも独立し、追加依存はない。バックアップは同じブラウザ内のローカル保存であり、暗号化・改ざん防止・クラウド同期を提供しない。
+- IndexedDB versionは1、GameStateSnapshot `saveVersion`は6。JSON export/import envelopeとも独立し、追加依存はない。バックアップは同じブラウザ内のローカル保存であり、暗号化・改ざん防止・クラウド同期を提供しない。
