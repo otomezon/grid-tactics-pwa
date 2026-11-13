@@ -9,6 +9,7 @@ import { EnemyInspector } from "./components/enemy-inspector";
 import { PlayerInspector } from "./components/player-inspector";
 import { EnemyThreatInspector } from "./components/enemy-threat-inspector";
 import { EnemyPhaseForecastPanel } from "./components/enemy-phase-forecast";
+import { EnemyAttackForecastDetails } from "./components/enemy-attack-forecast-details";
 import { EnemyTargetEvaluations } from "./components/enemy-target-evaluations";
 import { EnemyMovementEvaluations } from "./components/enemy-movement-evaluations";
 import { PlayerPhaseEndReview } from "./components/player-phase-end-review";
@@ -2733,6 +2734,11 @@ function CampaignApp() {
                                 <span className="enemy-phase-action-kind">{ENEMY_ACTION_KIND_LABELS[action.kind]}</span>
                               </div>
                               <p>{action.message}</p>
+                              <EnemyAttackForecastDetails
+                                forecast={action.attackForecast}
+                                attackerName={action.enemyName}
+                                defenderName={action.targetName ?? "対象ユニット"}
+                              />
                               <EnemyTargetEvaluations evaluations={action.targetEvaluations} />
                               <EnemyMovementEvaluations evaluations={action.movementEvaluations} />
                             </li>
