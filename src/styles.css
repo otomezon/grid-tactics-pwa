@@ -2147,3 +2147,63 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .campaign-unit-record-summary { padding: 9px; }
   .campaign-unit-record-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+
+/* Fired map events remain modal and save-backed until the player acknowledges them. */
+.map-event-dialog-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 10, 15, .82);
+  backdrop-filter: blur(4px);
+}
+.map-event-dialog {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 560px);
+  max-height: min(82vh, 620px);
+  overflow-y: auto;
+  padding: clamp(18px, 4vw, 30px);
+  border: 1px solid rgba(113, 175, 172, .7);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #203746, #14232f 70%);
+  box-shadow: 0 22px 80px rgba(0, 0, 0, .55);
+}
+.map-event-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.map-event-dialog-heading .eyebrow { margin: 0; }
+.map-event-dialog-heading > span {
+  color: #b3c6cf;
+  font-size: .72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.map-event-dialog h2 {
+  margin: 0;
+  color: #f0f6f8;
+  font-size: clamp(1.12rem, 4vw, 1.35rem);
+}
+.map-event-dialog-message {
+  margin: 0;
+  color: #e1ebef;
+  font-size: .96rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.map-event-dialog-continue {
+  min-height: 48px;
+  margin-top: 5px;
+}
+@media (max-width: 420px) {
+  .map-event-dialog-backdrop { padding: 12px; }
+  .map-event-dialog { gap: 12px; padding: 18px 16px; border-radius: 13px; }
+  .map-event-dialog-message { font-size: .9rem; line-height: 1.8; }
+}
