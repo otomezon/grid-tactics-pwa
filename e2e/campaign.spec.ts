@@ -1120,7 +1120,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string; position: { x: number; y: number }; hasMoved: boolean; hasActed: boolean }>;
     };
     const player = preparedState.units.find((unit) => unit.id === "unit_001");
-    const enemy = preparedState.units.find((unit) => unit.id === "enemy_005");
+    const enemy = preparedState.units.find((unit) => unit.id === "enemy_001");
     if (!player || !enemy) throw new Error("Combat report test units are missing from the auto save.");
     player.position = { x: 3, y: 1 }; player.hasMoved = false; player.hasActed = false;
     enemy.position = { x: 4, y: 1 }; enemy.hasMoved = false; enemy.hasActed = false;
@@ -1131,7 +1131,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await continueSavedCampaign(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
-    await page.locator(".map-grid").getByRole("button", { name: /敵将/ }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /敵01/ }).click();
 
     const forecast = page.getByTestId("combat-forecast");
     await expect(forecast).toBeVisible();
