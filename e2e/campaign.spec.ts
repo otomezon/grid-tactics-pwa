@@ -1078,10 +1078,10 @@ test("shows candidate details and persists the selected deployment roster", asyn
   test("shows objective progress and inspects terrain without changing the autosave", async ({ page }) => {
     await startBattle(page);
     const objective = page.getByTestId("battle-objective");
-    await expect(objective).toContainText("敵を全滅させる");
-    await expect(objective).toContainText("残り 5 / 5体");
-    await expect(objective).toContainText("味方全滅");
-    await expect(objective).toContainText("生存味方 4体");
+    await expect(objective).toContainText("ボスを撃破する");
+    await expect(objective).toContainText("敵将 · HP 20 / 20");
+    await expect(objective).toContainText("主人公を撃破させない");
+    await expect(objective).toContainText("主人公 · HP 20 / 20");
 
     const savedBeforeInspection = await readAutoSave(page);
     const terrain = page.getByTestId("terrain-inspector");
