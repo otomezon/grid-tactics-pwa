@@ -151,6 +151,49 @@ test.describe("campaign title and save hub", () => {
     expect(await readAutoSave(page)).toEqual(acknowledgedSave);
   });
 
+  test("pauses a restored enemy phase until its pending map event is acknowledged", async ({ page }) => {
+    await startBattle(page);
+    await page.getByRole("button", { name: "確認して続ける" }).click();
+    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
+
+    const playerCheckpoint = await readAutoSave(page) as {
+      saveVersion: number;
+      chapterId: string;
+      phase: string;
+      turn: number;
+      units: Array<{ id: string; position: { x: number; y: number }; currentHp: number }>;
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+    };
+    expect(playerCheckpoint.phase).toBe("player");
+    const pendingEnemyPhase = {
+      ...playerCheckpoint,
+      phase: "enemy",
+      acknowledgedMapEventIds: []
+    };
+    await writeAutoSave(page, pendingEnemyPhase);
+    await page.reload();
+
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 敵軍フェイズ");
+    await expect(page.getByTestId("map-event-dialog")).toContainText("敵軍を全滅させると勝利です。");
+    expect(await readAutoSave(page)).toEqual(pendingEnemyPhase);
+
+    await page.getByRole("button", { name: "確認して続ける" }).click();
+    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
+    await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
+    const resumed = await readAutoSave(page) as {
+      phase: string;
+      turn: number;
+      acknowledgedMapEventIds: string[];
+    };
+    expect(resumed.phase).toBe("player");
+    expect(resumed.turn).toBe(2);
+    expect(resumed.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+  });
+
   test("shows a saved campaign on launch and continues without changing the auto save", async ({ page }) => {
     await startBattle(page);
     const savedBeforeReload = await readAutoSave(page);
