@@ -190,11 +190,14 @@ export function resolveMapEvents(
   let hasStateEffects = false;
 
   for (const event of map.events ?? []) {
+    const eventTrigger = event.trigger;
+    const choiceNotRecorded = eventTrigger.type === "event-choice" &&
+      !state.mapEventChoices.some((selection) =>
+        selection.eventId === eventTrigger.eventId && selection.choiceId === eventTrigger.choiceId
+      );
     if (
       fired.has(event.id) ||
-      (event.trigger.type === "event-choice" && !state.mapEventChoices.some((selection) =>
-        selection.eventId === event.trigger.eventId && selection.choiceId === event.trigger.choiceId
-      )) ||
+      choiceNotRecorded ||
       !triggers.some((trigger) => matchesTrigger(event, trigger))
     ) continue;
     nextState = applyMapEventAction(nextState, event);
