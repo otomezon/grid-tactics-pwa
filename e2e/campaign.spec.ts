@@ -1713,7 +1713,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(reviewAttackForecast).toBeVisible();
     await reviewAttackForecast.locator(":scope > summary").click();
     await expect(reviewAttackForecast.getByTestId("enemy-attack-forecast-strike")).toHaveCount(forecastStrikeDetails.length);
-    await expect(reviewAttackForecast.getByTestId("enemy-attack-forecast-strike").allTextContents()).resolves.toEqual(forecastStrikeDetails);
+    expect(await reviewAttackForecast.getByTestId("enemy-attack-forecast-strike").allTextContents()).toEqual(forecastStrikeDetails);
     await review.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
     const historyAction = page.getByTestId("battle-history").getByTestId("enemy-phase-action").first();
@@ -1721,7 +1721,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     const historyAttackForecast = historyAction.getByTestId("enemy-attack-forecast");
     await expect(historyAttackForecast).toBeVisible();
     await historyAttackForecast.locator(":scope > summary").click();
-    await expect(historyAttackForecast.getByTestId("enemy-attack-forecast-strike").allTextContents()).resolves.toEqual(forecastStrikeDetails);
+    expect(await historyAttackForecast.getByTestId("enemy-attack-forecast-strike").allTextContents()).toEqual(forecastStrikeDetails);
     const historyEvaluations = historyAction.getByTestId("enemy-target-evaluations");
     await expect(historyEvaluations).toBeVisible();
     await historyEvaluations.locator("summary").click();
