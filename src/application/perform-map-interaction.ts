@@ -9,7 +9,6 @@ export interface MapInteractionPoint {
   description: string | null;
   position: Position;
   unitId: string | null;
-  recruitName: string | null;
 }
 
 export interface MapInteractionExecution {
@@ -34,8 +33,7 @@ export function getMapInteractionPoints(
       label: event.trigger.label,
       description: event.trigger.description ?? null,
       position: { x: event.trigger.x, y: event.trigger.y },
-      unitId: event.trigger.unitId ?? null,
-      recruitName: event.action.type === "recruit-unit" ? event.action.unit.name : null
+      unitId: event.trigger.unitId ?? null
     }];
   });
 }

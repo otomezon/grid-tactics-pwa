@@ -104,8 +104,7 @@ export type MapEventAction =
       itemId: string;
       quantity: number;
     }
-  | { type: "spawn-reinforcement"; speaker?: string; text: string; unit: GameUnit }
-  | { type: "recruit-unit"; speaker?: string; text: string; unit: CampaignUnit };
+  | { type: "spawn-reinforcement"; speaker?: string; text: string; unit: GameUnit };
 
 export interface MapEventDefinition {
   id: string;

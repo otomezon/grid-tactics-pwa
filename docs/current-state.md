@@ -2,7 +2,7 @@
 
 ## 1. 監査スナップショット
 
-PR #1〜#113はmainへマージ済み。PR #105では現章の発火済みイベント履歴、PR #106では自軍フェイズ終了レビューの敵攻撃対象・全味方予測HP表示、PR #107では敵攻撃のstrike別予測詳細を追加した。 PR #108では敵軍フェイズ予測の各行動をマップで一時確認できるようにした。PR #102でプレイヤー操作commandのapplication境界とマップイベント基盤（saveVersion 5）、PR #103で未確認イベントメッセージの再表示・確認状態保存（saveVersion 6）、PR #104でイベント確認に対応したブラウザテストセットアップを追加した。PR #113ではマップイベントに明示的なアイテム付与と事前定義された敵増援の出現を追加し、発火ID・ユニット・所持品の既存GameStateだけで一度限り実行する。PR #95で出撃前の装備変更を出撃予定／控え予定の両方へ追加し、saveVersion 3を維持した。PR #92でタイトル画面／保存データ管理と第3章試作マップを追加し、PR #93でREADME・AGENTS.md・実装状況の記述を同期した。PR #87でクラス役割タグによる遠距離攻撃役の暫定標的優先、PR #88で移動先選択理由、PR #89で攻撃対象候補の既存評価内訳、PR #90で移動先候補の既存評価内訳を予測／戦闘履歴へ追加した。PR #91では章クリアから次章出撃確定・再読込までの統合E2Eを追加した。
+PR #1〜#114はmainへマージ済み。PR #114で味方のマップ地点調査を追加し、PR #115では加入イベントを実装している（レビュー待ち）。PR #105では現章の発火済みイベント履歴、PR #106では自軍フェイズ終了レビューの敵攻撃対象・全味方予測HP表示、PR #107では敵攻撃のstrike別予測詳細を追加した。 PR #108では敵軍フェイズ予測の各行動をマップで一時確認できるようにした。PR #102でプレイヤー操作commandのapplication境界とマップイベント基盤（saveVersion 5）、PR #103で未確認イベントメッセージの再表示・確認状態保存（saveVersion 6）、PR #104でイベント確認に対応したブラウザテストセットアップを追加した。PR #113ではマップイベントに明示的なアイテム付与と事前定義された敵増援の出現を追加し、発火ID・ユニット・所持品の既存GameStateだけで一度限り実行する。PR #95で出撃前の装備変更を出撃予定／控え予定の両方へ追加し、saveVersion 3を維持した。PR #92でタイトル画面／保存データ管理と第3章試作マップを追加し、PR #93でREADME・AGENTS.md・実装状況の記述を同期した。PR #87でクラス役割タグによる遠距離攻撃役の暫定標的優先、PR #88で移動先選択理由、PR #89で攻撃対象候補の既存評価内訳、PR #90で移動先候補の既存評価内訳を予測／戦闘履歴へ追加した。PR #91では章クリアから次章出撃確定・再読込までの統合E2Eを追加した。
 
 - 勝利／敗北リザルトの「タイトルへ戻る」はタイトル画面の表示状態だけを切り替え、自動セーブを変更しない。タイトルの「つづきから」では同じステージ結果へ再開できる。PR #110で追加。
 - PR #112では、7基本職×3 profileの21ケース昇格試験fixtureに第1章の敵将 `enemy_005` を生存・行動済みで追加する。`defeat_boss` 目標が試験前に勝利へ解決される状態を避け、既存AIによる敵軍phase比較を開始できるようにする。試験用fixtureのみの変更で、ゲーム処理・未承認バランス値・GameState／saveVersion／IndexedDBは変更しない。
@@ -69,7 +69,8 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | ステージ結果詳細表示 | 実装済み（敵配置全体の生存／撃破一覧、生存味方のクラス・Lv・EXP・HPに加え、画面セッション中に確定した味方開始攻撃の実貢献を味方別に表示。攻撃回数、命中／ミス／必殺、実与ダメージ、撃破、獲得EXP、レベルアップ／能力上昇を集計し、敵の反撃は除外。リロード後は集計なしを明示。恒久記録や撃破済みユニットの最終HPは保持せず、saveVersion変更なし） | `src/application/get-battle-result-details.ts`, `src/application/get-battle-contribution-details.ts`, `src/components/battle-contribution-panel.tsx`, `src/App.tsx` | application／component tests、Chromium E2Eでリロード後の履歴欠落表示を検証 |
 | キャンペーン累計戦績 | 実装追加（味方開始攻撃の実strikeのみを累計し、攻撃行動・strike・命中／ミス／必殺・実与ダメージ・撃破・獲得EXP・レベルアップ・能力上昇を味方IDごとに保存。active／reserve／撃破済み名簿から外れた味方の過去記録も保持。出撃候補詳細・戦闘中インスペクター・リザルトに表示。章間引き継ぎ、JSON export/import、バックアップを通じて保持。saveVersion 6） | `src/application/record-player-battle-contribution.ts`, `src/components/campaign-unit-battle-records.tsx`, `src/domain/models/game.ts`, `src/persistence/migrations.ts` | application／validation／migration／save-file／component tests、Chromium E2Eで実攻撃・レベルアップ・リロード後保持を検証 |
 | 戦闘行動のセッション内時系列履歴 | 実装済み（PR #56で味方攻撃・敵軍フェイズを追加、PR #77で味方の移動・武器変更・アイテム使用・クラスチェンジ・待機を追加。確定済み行動だけを発生順に表示し、閲覧／プレビュー／キャンセルは記録しない。リロード・セーブ読込・バックアップ復元・章切替でリセットし、saveVersion 6のセーブ形式には保存しない） | `src/App.tsx`, `src/application/get-player-attack-report.ts`, `src/application/resolve-enemy-phase.ts` | PR #77 CI run #984: typecheck・unit tests・production build・Chromium E2E 46件成功。main CI run #985も成功 |
-| 永続的な戦闘履歴・撃破者別統計・会話／加入イベント・キャンペーン選択／分岐 | 未実装（セッション内履歴とは別の永続ログ・撃破者情報・イベント基盤が必要） | — |
+| マップイベントによる味方加入 | 実装済み（`unit-interacts` の一度限りイベントに `recruit-unit` を定義すると、検証済みCampaignUnitを既存の `reserveUnits` に追加。今の戦闘へは出さず、次章マップのplayerDeploymentにIDが定義された場合に出撃準備から選択可能。saveVersion 6のまま） | `src/domain/models/validate-campaign-unit.ts`, `src/application/resolve-map-events.ts`, `src/application/prepare-next-chapter.ts` | map／save validation、二重加入防止、加入者の次章引き継ぎ・出撃準備までのunit tests |
+| 永続的な戦闘履歴・撃破者別統計・会話選択肢／分岐・キャンペーン選択／分岐 | 未実装（既存の集計戦績・セッション履歴とは別の永続的な撃破者ログ、選択肢と分岐、章解放管理が必要。加入処理の汎用基盤は実装済みだが、正式な人物・会話・章コンテンツは未設定） | — |
 | 経験値・レベルアップ | 実装済み（PR #6） | `src/domain/progression/level-up.ts`, `src/application/perform-attack.ts` |
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
@@ -121,7 +122,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 1. snapshotベンチへ実プレイ由来の有効なセーブを集め、PR #84の21ケース候補matrixで候補・敵・条件を確認して統制した実プレイ試験を行う。その観測結果を [クラスチェンジ・バランス記入表](class-promotion-balance-worksheet.md) に記録し、CP-04／05の7経路ボーナス／14クラス上限を別途承認する（合成fixture・単発seed集計だけでは承認しない）。
 2. 章報酬・イベントの具体的な品目／受取人／数量を決定し、採択済みCP-13に従ってクラスチェンジ証を配布する。
 3. 主人公の正式な人物設定・各章マップの正式コンテンツを作成し、砦回復の端数規則を確定。
-4. タイトル画面からの新規開始／続きから／バックアップ復元を含め、スマートフォン実機で出撃準備・3章キャンペーン・章間引き継ぎ・次章再開までを検証する。加入／離脱と章別編成候補は正式仕様の決定後に実装する。
+4. タイトル画面からの新規開始／続きから／バックアップ復元を含め、スマートフォン実機で出撃準備・3章キャンペーン・章間引き継ぎ・次章再開までを検証する。加入コマンドは実装済みだが、加入人物・条件・会話内容の正式コンテンツは別途定義する。
 
 
 ## 初期キャンペーンの勝敗条件（試作）

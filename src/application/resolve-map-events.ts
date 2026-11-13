@@ -1,7 +1,5 @@
 import { INVENTORY_ITEMS_BY_ID } from "../content/items";
 import { WEAPONS_BY_ID } from "../content/weapons";
-import type { CampaignUnit } from "../domain/models/game";
-import { isValidCampaignUnitData } from "../domain/models/validate-campaign-unit";
 import type {
   GameMapDefinition, GameStateSnapshot, GameUnit, MapEventDefinition, MapEventTrigger
 } from "../domain/models/game";
@@ -83,16 +81,6 @@ function cloneReinforcement(unit: GameUnit): GameUnit {
   };
 }
 
-function cloneCampaignUnit(unit: CampaignUnit): CampaignUnit {
-  return {
-    ...unit,
-    stats: { ...unit.stats },
-    growthRates: { ...unit.growthRates },
-    usableWeaponTypes: [...unit.usableWeaponTypes],
-    inventory: [...unit.inventory]
-  };
-}
-
 function applyMapEventAction(state: GameStateSnapshot, event: MapEventDefinition): GameStateSnapshot {
   const action = event.action;
   if (action.type === "show-message") return state;
@@ -117,20 +105,6 @@ function applyMapEventAction(state: GameStateSnapshot, event: MapEventDefinition
         ...unit,
         inventory: [...unit.inventory, ...Array.from({ length: action.quantity }, () => action.itemId)]
       } : unit)
-    };
-  }
-
-  if (action.type === "recruit-unit") {
-    if (!isValidCampaignUnitData(action.unit)) {
-      throw new Error("The recruited campaign member definition is invalid.");
-    }
-    if (state.units.some((candidate) => candidate.id === action.unit.id) ||
-        state.reserveUnits.some((candidate) => candidate.id === action.unit.id)) {
-      throw new Error(`Map event recruit "${action.unit.id}" already exists in the campaign roster.`);
-    }
-    return {
-      ...state,
-      reserveUnits: [...state.reserveUnits, cloneCampaignUnit(action.unit)]
     };
   }
 

@@ -343,33 +343,4 @@ describe("isValidGameStateSnapshot", () => {
     }, map)).toBe(false);
   });
 
-
-  it("accepts recruited reserve members only after their recruitment event has fired", () => {
-    const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
-    const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
-    const recruit = {
-      ...campaignData,
-      id: "recruit_from_event",
-      name: "加入候補"
-    };
-    const map: GameMapDefinition = {
-      ...CHAPTER_01_MAP,
-      events: [{
-        id: "unit-recruitment",
-        trigger: { type: "unit-interacts", x: 9, y: 8, label: "加入地点" },
-        action: { type: "recruit-unit", unit: recruit, text: "加入しました。" }
-      }]
-    };
-    const stateWithRecruit = {
-      ...INITIAL_GAME_STATE,
-      reserveUnits: [recruit],
-      firedMapEventIds: ["unit-recruitment"]
-    };
-    expect(isValidGameStateSnapshot(stateWithRecruit, map)).toBe(true);
-    expect(isValidGameStateSnapshot({
-      ...stateWithRecruit,
-      firedMapEventIds: []
-    }, map)).toBe(false);
-  });
-
 });
