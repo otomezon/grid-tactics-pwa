@@ -130,7 +130,7 @@ test.describe("campaign title and save hub", () => {
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
     };
-    expect(saved.saveVersion).toBe(6);
+    expect(saved.saveVersion).toBe(7);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
@@ -156,7 +156,7 @@ test.describe("campaign title and save hub", () => {
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
     };
-    expect(acknowledgedSave.saveVersion).toBe(6);
+    expect(acknowledgedSave.saveVersion).toBe(7);
     expect(acknowledgedSave.firedMapEventIds).toEqual(saved.firedMapEventIds);
     expect(acknowledgedSave.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
 
@@ -2605,7 +2605,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 6,
+      saveVersion: 7,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2680,7 +2680,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 6,
+      saveVersion: 7,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1

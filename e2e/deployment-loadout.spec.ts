@@ -72,7 +72,7 @@ test("edits active and reserve weapon loadouts before committing deployment", as
     units: Array<{ id: string; faction: string; equippedWeaponId: string | null }>;
     reserveUnits: Array<{ id: string; equippedWeaponId: string | null }>;
   };
-  expect(saved.saveVersion).toBe(6);
+  expect(saved.saveVersion).toBe(7);
   expect(saved.units.find((unit) => unit.id === "unit_004")).toMatchObject({
     faction: "player",
     equippedWeaponId: "iron_lance"
