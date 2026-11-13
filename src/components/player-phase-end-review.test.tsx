@@ -49,6 +49,8 @@ function renderReview(
     onSelectUnit: () => undefined,
     onReturnToBattle: () => undefined,
     onEndPhase: () => undefined,
+    selectedEnemyActionId: null,
+    onPreviewAction: () => undefined,
     ...overrides
   }));
 }
@@ -58,10 +60,12 @@ describe("PlayerPhaseEndReview", () => {
     const html = renderReview();
 
     expect((html.match(/data-testid="phase-end-review-forecast-unit"/g) ?? [])).toHaveLength(playerUnits.length);
-    expect(html).toContain('data-testid="phase-end-review-attack"');
+    expect(html).toContain('data-testid="phase-end-review-action"');
+    expect(html).toContain('aria-pressed="false"');
+    expect(html).toContain("マップで確認");
     expect(html).toContain('data-enemy-id="enemy_001"');
     expect(html).toContain('data-target-id="unit_001"');
-    expect(html).toContain("予測される敵の攻撃対象");
+    expect(html).toContain("予測される敵の行動");
     expect(html).toContain("敵01");
     expect(html).toContain("味方01");
     expect(html).toContain("HP 20 → 0 / 20");
@@ -69,6 +73,14 @@ describe("PlayerPhaseEndReview", () => {
     expect(html).toContain("行動済み");
     expect(html).toContain("味方全員の予測HP");
     expect(html).toContain("敵軍フェイズ後の予測HP");
+  });
+
+  it("marks the selected enemy action as the one highlighted on the map", () => {
+    const html = renderReview({ selectedEnemyActionId: "enemy_001" });
+
+    expect(html).toContain('data-testid="phase-end-review-action"');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain("マップ表示中");
   });
 
   it("explains when no enemy action is forecast and disables unit selection while locked", () => {
