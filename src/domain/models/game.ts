@@ -92,22 +92,10 @@ export type MapEventTrigger =
     }
   | { type: "boss-defeated" }
   | { type: "victory" }
-  | { type: "defeat" }
-  | { type: "event-choice"; eventId: string; choiceId: string };
-
-export interface MapEventChoiceDefinition {
-  id: string;
-  label: string;
-}
-
-export interface MapEventChoiceSelection {
-  eventId: string;
-  choiceId: string;
-}
+  | { type: "defeat" };
 
 export type MapEventAction =
   | { type: "show-message"; speaker?: string; text: string }
-  | { type: "show-choice"; speaker?: string; text: string; choices: MapEventChoiceDefinition[] }
   | {
       type: "grant-item";
       speaker?: string;
@@ -154,7 +142,7 @@ export interface CampaignUnitBattleRecord {
   statGains: UnitStats;
 }
 
-export const SAVE_VERSION = 7 as const;
+export const SAVE_VERSION = 6 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
@@ -172,6 +160,4 @@ export interface GameStateSnapshot {
   firedMapEventIds: string[];
   /** IDs of fired event messages the player has explicitly acknowledged. */
   acknowledgedMapEventIds: string[];
-  /** Persistent choices made in one-shot dialogue events, keyed by event ID. */
-  mapEventChoices: MapEventChoiceSelection[];
 }

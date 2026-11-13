@@ -247,5 +247,3 @@ export function chooseMapEventOption(
   }
   return { ...branchExecution, selectedChoiceLabel: choice.label };
 }
-
-}

@@ -93,7 +93,6 @@ export function isValidGameStateSnapshot(
     !Array.isArray(value.campaignUnitBattleRecords) ||
     !Array.isArray(value.firedMapEventIds) || value.firedMapEventIds.length > 1000 ||
     !Array.isArray(value.acknowledgedMapEventIds) || value.acknowledgedMapEventIds.length > 1000 ||
-    !Array.isArray(value.mapEventChoices) || value.mapEventChoices.length > 256 ||
     map.terrain.length !== map.height || map.terrain.some((row) => row.length !== map.width)
   ) return false;
 
@@ -167,29 +166,6 @@ export function isValidGameStateSnapshot(
       acknowledgedMapEventIds.has(eventId)
     ) return false;
     acknowledgedMapEventIds.add(eventId);
-  }
-  const choiceEvents = new Map((map.events ?? [])
-    .filter((event) => event.action.type === "show-choice")
-    .map((event) => [event.id, event] as const));
-  const selectedChoiceEventIds = new Set<string>();
-  for (const candidate of value.mapEventChoices) {
-    if (!isRecord(candidate) || !isNonEmptyString(candidate.eventId) ||
-        candidate.eventId.length > 128 || !isNonEmptyString(candidate.choiceId) ||
-        candidate.choiceId.length > 64 || selectedChoiceEventIds.has(candidate.eventId)) return false;
-    const source = choiceEvents.get(candidate.eventId);
-    if (
-      !source ||
-      !firedMapEventIds.has(candidate.eventId) ||
-      !acknowledgedMapEventIds.has(candidate.eventId) ||
-      !source.action.choices.some((choice) => choice.id === candidate.choiceId)
-    ) return false;
-    selectedChoiceEventIds.add(candidate.eventId);
-  }
-  for (const [eventId] of choiceEvents) {
-    if (
-      firedMapEventIds.has(eventId) &&
-      acknowledgedMapEventIds.has(eventId) !== selectedChoiceEventIds.has(eventId)
-    ) return false;
   }
   return true;
 }
