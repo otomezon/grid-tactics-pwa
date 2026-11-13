@@ -1229,6 +1229,12 @@ function CampaignApp() {
     setMessage("新しいキャンペーンです。出撃配置を確定するまでは既存の自動セーブを保持します。");
   }
 
+  function handleReturnToTitle(): void {
+    if (saveStatus !== "saved" || loadBlocked) return;
+    setIsTitleScreenVisible(true);
+    setMessage("タイトル画面へ戻りました。自動セーブは変更していません。");
+  }
+
   function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
     const navigationKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
     if (!navigationKeys.includes(event.key)) return;
@@ -2147,6 +2153,15 @@ function CampaignApp() {
             <div><span>生存味方</span><strong>{gameState.units.filter((unit) => unit.faction === "player").length}</strong></div>
             <div><span>経過ターン</span><strong>{gameState.turn}</strong></div>
           </div>
+          <button
+            className="secondary-button"
+            type="button"
+            data-testid="return-to-campaign-title"
+            disabled={saveStatus !== "saved" || loadBlocked}
+            onClick={handleReturnToTitle}
+          >
+            タイトルへ戻る
+          </button>
           {battleOutcome === "victory" && (
             <>
               <div className="result-units chapter-rewards">
