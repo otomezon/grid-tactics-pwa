@@ -136,6 +136,20 @@ function makePromotionMatrixSnapshotFile(classId: string, profileIndex: number) 
   player.hasActed = false;
   enemy.position = { x: 1, y: classId === "archer" ? 6 : 7 };
 
+  // Chapter 1 now has a defeat_boss objective. Keep the boss alive in every
+  // matrix fixture so enemy-phase samples do not start from an already-cleared battle.
+  const boss = structuredClone(enemy);
+  boss.id = "enemy_005";
+  boss.name = "評価用の敵将";
+  boss.classId = "cavalry";
+  boss.usableWeaponTypes = ["lance"];
+  boss.inventory = ["iron_lance"];
+  boss.equippedWeaponId = "iron_lance";
+  boss.position = { x: 8, y: 4 };
+  boss.hasMoved = true;
+  boss.hasActed = true;
+  snapshot.units.push(boss);
+
   return {
     ...envelope,
     exportedAt: "2026-11-12T00:00:00.000Z",
@@ -156,6 +170,11 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
       buffer: Buffer.from(JSON.stringify(makePromotionMatrixSnapshotFile(classId, index)))
     }))
   );
+
+  const firstMatrixSnapshot = makePromotionMatrixSnapshotFile("swordsman", 0).data;
+  expect(firstMatrixSnapshot.units).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "enemy_005", hasMoved: true, hasActed: true })
+  ]));
 
   await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles(files);
   await expect(bench).toContainText("21候補");
