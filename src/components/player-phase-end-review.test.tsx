@@ -65,7 +65,7 @@ describe("PlayerPhaseEndReview", () => {
     expect(html).toContain("マップで確認");
     expect(html).toContain('data-enemy-id="enemy_001"');
     expect(html).toContain('data-target-id="unit_001"');
-    expect(html).toContain("予測される敵の攻撃対象");
+    expect(html).toContain("予測される敵の行動");
     expect(html).toContain("敵01");
     expect(html).toContain("味方01");
     expect(html).toContain("HP 20 → 0 / 20");
