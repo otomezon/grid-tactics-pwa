@@ -41,11 +41,11 @@
 
 `src/persistence/migrations.ts` は次の移行を行う。
 
-- version 1: 旧所持品・装備・乱数stateを従来どおり変換し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds` を加えてversion 7にする。
-- version 2: 既存の進行データを保持し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds` を加えてversion 7にする。
-- version 3: 既存の進行データと控え名簿を保持し、空の `campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds` を加えてversion 7にする。version 3以前のプレイ履歴・イベント履歴は存在しないため、過去の戦績やイベント発火を推測して作らない。
-- version 4: 既存の進行データとキャンペーン累計戦績を保持し、空の `firedMapEventIds` と `acknowledgedMapEventIds` を加えてversion 7にする。
-- version 5: 既存の発火済みイベントIDを保持し、これまでのイベント表示は一時メッセージのみで確認状態が保存されていないため、既発火IDをすべて `acknowledgedMapEventIds` に複製してversion 7にする。これにより既存イベントを意図せず再表示しない。
+- version 1: 旧所持品・装備・乱数stateを従来どおり変換し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds`、`mapEventChoices` を加えてversion 7にする。
+- version 2: 既存の進行データを保持し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds`、`mapEventChoices` を加えてversion 7にする。
+- version 3: 既存の進行データと控え名簿を保持し、空の `campaignUnitBattleRecords`、`firedMapEventIds`、`acknowledgedMapEventIds`、`mapEventChoices` を加えてversion 7にする。version 3以前のプレイ履歴・イベント履歴は存在しないため、過去の戦績やイベント発火を推測して作らない。
+- version 4: 既存の進行データとキャンペーン累計戦績を保持し、空の `firedMapEventIds` と `acknowledgedMapEventIds`、`mapEventChoices` を加えてversion 7にする。
+- version 5: 既存の発火済みイベントIDを保持し、これまでのイベント表示は一時メッセージのみで確認状態が保存されていないため、既発火IDをすべて `acknowledgedMapEventIds` に複製し、空の `mapEventChoices` を加えてversion 7にする。これにより既存イベントを意図せず再表示しない。
 - version 6: 既存の進行状態・発火済みID・確認済みIDを保持し、空の `mapEventChoices` を加えてversion 7にする。
 - version 7: 現行validatorで検証し、書き換えない。
 
