@@ -54,7 +54,7 @@ export function MapEventDialog({
           disabled={disabled}
           onClick={() => onAcknowledge(event.id)}
         >
-          {currentIndex < total ? "次のイベントへ" : "確認して続ける"}
+          {remainingCount > 1 ? "次のイベントへ" : "確認して続ける"}
         </button>
       </section>
     </div>
