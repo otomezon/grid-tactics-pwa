@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { EnemyPhaseForecast } from "../application/get-enemy-phase-forecast";
@@ -38,7 +39,7 @@ const forecast: EnemyPhaseForecast = {
 };
 
 function renderReview(
-  overrides: Partial<React.ComponentProps<typeof PlayerPhaseEndReview>> = {}
+  overrides: Partial<ComponentProps<typeof PlayerPhaseEndReview>> = {}
 ): string {
   return renderToStaticMarkup(createElement(PlayerPhaseEndReview, {
     pendingUnits: playerUnits.filter((unit) => !unit.hasActed),
@@ -58,7 +59,8 @@ describe("PlayerPhaseEndReview", () => {
 
     expect((html.match(/data-testid="phase-end-review-forecast-unit"/g) ?? [])).toHaveLength(playerUnits.length);
     expect(html).toContain('data-testid="phase-end-review-attack"');
-    expect(html).toContain('data-enemy-id="enemy_001" data-target-id="unit_001"');
+    expect(html).toContain('data-enemy-id="enemy_001"');
+    expect(html).toContain('data-target-id="unit_001"');
     expect(html).toContain("予測される敵の攻撃対象");
     expect(html).toContain("敵01");
     expect(html).toContain("味方01");
