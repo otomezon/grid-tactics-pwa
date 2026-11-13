@@ -92,6 +92,7 @@ describe("migrateGameStateSnapshot", () => {
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.firedMapEventIds).toEqual([]);
+    expect(result?.snapshot.acknowledgedMapEventIds).toEqual([]);
     expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
   });
 
