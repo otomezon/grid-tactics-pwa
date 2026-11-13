@@ -3,6 +3,14 @@ import { expect, test, type Page } from "@playwright/test";
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 const navigationCountKey = "__pwa_e2e_navigation_count";
 
+async function acknowledgePendingMapEvents(page: Page): Promise<void> {
+  const dialog = page.getByTestId("map-event-dialog");
+  while (await dialog.count()) {
+    await dialog.getByRole("button", { name: /次のイベントへ|確認して続ける/ }).click();
+  }
+  await expect(dialog).toHaveCount(0);
+}
+
 async function enterNewCampaign(page: Page): Promise<void> {
   const title = page.getByTestId("campaign-title-screen");
   await expect(title).toBeVisible();
@@ -15,6 +23,7 @@ async function startBattle(page: Page): Promise<void> {
   await enterNewCampaign(page);
   await page.getByRole("button", { name: deploymentStartButton }).click();
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page);
 }
 
 async function readAutoSave(page: Page): Promise<unknown | null> {
@@ -368,6 +377,7 @@ test.describe("production PWA shell", () => {
     await enterNewCampaign(page);
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await acknowledgePendingMapEvents(page);
     await page.locator(".map-grid").getByRole("button", { name: /味方01/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("味方01は待機しました。");
