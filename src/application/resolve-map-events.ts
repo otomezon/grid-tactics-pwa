@@ -48,14 +48,12 @@ export function getPendingMapEventMessages(
     throw new Error("Map events can only run for the snapshot's current chapter.");
   }
 
-  const fired = new Set(state.firedMapEventIds);
+  const eventsById = new Map((map.events ?? []).map((event) => [event.id, event] as const));
   const acknowledged = new Set(state.acknowledgedMapEventIds);
-  return (map.events ?? []).flatMap((event) => {
-    if (
-      !fired.has(event.id) ||
-      acknowledged.has(event.id) ||
-      event.action.type !== "show-message"
-    ) return [];
+  return state.firedMapEventIds.flatMap((eventId) => {
+    if (acknowledged.has(eventId)) return [];
+    const event = eventsById.get(eventId);
+    if (!event || event.action.type !== "show-message") return [];
     return [{
       id: event.id,
       speaker: event.action.speaker ?? null,
