@@ -13,20 +13,20 @@
 | PWA | `vite-plugin-pwa` 2.0.0 |
 | テスト | Vitest 5.0.0、Playwright Test 1.65.0（Chromium E2E） |
 
-直接依存のバージョンは `package.json` に固定している。現時点ではnpm lockfileは未作成。PWA plugin 2.0.0はNode.js 20.19.0以上を要求し、Vitest 5系のNode要件も満たすようNode 26を標準にしている。
+直接依存のバージョンは `package.json` に固定し、依存関係全体をnpm lockfile v3（`package-lock.json`）へ記録している。クリーンな環境とCIでは `npm ci` を使用し、lockfileにない依存解決の更新が起きないようにする。PWA plugin 2.0.0はNode.js 20.19.0以上を要求し、Vitest 5系のNode要件も満たすようNode 26を標準にしている。
 
 ## 2. ローカルセットアップ
 
 Node.js 26系とnpmを用意し、リポジトリのルートで実行する。
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
 Viteが表示するローカルURLをブラウザで開く。スマートフォン実機から確認する場合は、LANからアクセスできるよう開発サーバーのhost設定等を別途調整する。
 
-初回の `npm install` で `package-lock.json` を生成し、再現可能な依存解決のためリポジトリへコミットすること。
+`package-lock.json` はリポジトリで管理する。依存関係を意図的に変更する場合は、対応するNode.js／npm環境で `npm install` を実行し、`package.json` と `package-lock.json` を同じ変更としてレビューする。通常のセットアップ・CIでは `npm ci` を使う。
 
 ## 3. 検証コマンド
 
@@ -47,7 +47,7 @@ npm run preview
 
 ## 4. CI
 
-`.github/workflows/ci.yml` を追加した。Pull Requestと `main`／`feature/**` へのpushでNode.jsを `.nvmrc` からセットアップし、`npm install`、型チェック、Vitest、Vite build、Playwright用Chromiumの導入、ブラウザE2Eテストを実行する。PRのChecksで実行結果を確認すること。ローカル実行・CI実行済みであると推測して報告してはいけない。
+`.github/workflows/ci.yml` を追加した。Pull Requestと `main`／`feature/**` へのpushでNode.jsを `.nvmrc` からセットアップし、`npm ci`、型チェック、Vitest、Vite build、Playwright用Chromiumの導入、ブラウザE2Eテストを実行する。PRのChecksで実行結果を確認すること。ローカル実行・CI実行済みであると推測して報告してはいけない。
 
 ## 5. PWA
 
