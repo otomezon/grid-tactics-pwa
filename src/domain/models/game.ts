@@ -125,7 +125,7 @@ export interface CampaignUnitBattleRecord {
   statGains: UnitStats;
 }
 
-export const SAVE_VERSION = 5 as const;
+export const SAVE_VERSION = 6 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
@@ -141,4 +141,6 @@ export interface GameStateSnapshot {
   campaignUnitBattleRecords: CampaignUnitBattleRecord[];
   /** IDs of one-shot map events that have already fired in this chapter. */
   firedMapEventIds: string[];
+  /** IDs of fired event messages the player has explicitly acknowledged. */
+  acknowledgedMapEventIds: string[];
 }
