@@ -3,7 +3,7 @@ import { WEAPONS_BY_ID } from "../content/weapons";
 import type { CampaignUnit } from "../domain/models/game";
 import { isValidCampaignUnitData } from "../domain/models/validate-campaign-unit";
 import type {
-  GameMapDefinition, GameStateSnapshot, GameUnit, MapEventChoiceDefinition, MapEventDefinition, MapEventTrigger
+  GameMapDefinition, GameStateSnapshot, GameUnit, MapEventDefinition, MapEventTrigger
 } from "../domain/models/game";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 
@@ -13,8 +13,6 @@ export interface MapEventMessage {
   id: string;
   speaker: string | null;
   text: string;
-  choices?: MapEventChoiceDefinition[];
-  selectedChoiceLabel?: string | null;
 }
 export interface MapEventExecution {
   nextState: GameStateSnapshot;
@@ -40,26 +38,10 @@ function matchesTrigger(event: MapEventDefinition, trigger: MapEventTrigger): bo
         expected.x === trigger.x &&
         expected.y === trigger.y &&
         (expected.unitId === undefined || expected.unitId === trigger.unitId);
-    case "event-choice":
-      return trigger.type === "event-choice" &&
-        expected.eventId === trigger.eventId &&
-        expected.choiceId === trigger.choiceId;
   }
 }
 
-function toMapEventMessage(
-  event: MapEventDefinition,
-  selectedChoiceId?: string
-): MapEventMessage {
-  if (event.action.type === "show-choice") {
-    return {
-      id: event.id,
-      speaker: event.action.speaker ?? null,
-      text: event.action.text,
-      choices: event.action.choices.map((choice) => ({ ...choice })),
-      selectedChoiceLabel: event.action.choices.find((choice) => choice.id === selectedChoiceId)?.label ?? null
-    };
-  }
+function toMapEventMessage(event: MapEventDefinition): MapEventMessage {
   return { id: event.id, speaker: event.action.speaker ?? null, text: event.action.text };
 }
 
@@ -70,12 +52,9 @@ export function getMapEventMessageHistory(
 ): MapEventMessage[] {
   if (state.chapterId !== map.id) throw new Error("Map events can only run for the snapshot's current chapter.");
   const byId = new Map((map.events ?? []).map((event) => [event.id, event] as const));
-  const selectedChoiceByEventId = new Map(
-    state.mapEventChoices.map((selection) => [selection.eventId, selection.choiceId] as const)
-  );
   return state.firedMapEventIds.flatMap((id) => {
     const event = byId.get(id);
-    return event ? [toMapEventMessage(event, selectedChoiceByEventId.get(id))] : [];
+    return event ? [toMapEventMessage(event)] : [];
   });
 }
 
@@ -93,8 +72,6 @@ export function acknowledgeMapEvent(
   eventId: string
 ): GameStateSnapshot {
   if (!getPendingMapEventMessages(state, map).some((event) => event.id === eventId)) return state;
-  const event = map.events?.find((candidate) => candidate.id === eventId);
-  if (!event || event.action.type === "show-choice") return state;
   return { ...state, acknowledgedMapEventIds: [...state.acknowledgedMapEventIds, eventId] };
 }
 
@@ -118,7 +95,7 @@ function cloneCampaignUnit(unit: CampaignUnit): CampaignUnit {
 
 function applyMapEventAction(state: GameStateSnapshot, event: MapEventDefinition): GameStateSnapshot {
   const action = event.action;
-  if (action.type === "show-message" || action.type === "show-choice") return state;
+  if (action.type === "show-message") return state;
 
   if (action.type === "grant-item") {
     if (!Number.isInteger(action.quantity) || action.quantity < 1 || action.quantity > MAX_INVENTORY_SIZE) {
@@ -188,18 +165,12 @@ export function resolveMapEvents(
   let hasStateEffects = false;
 
   for (const event of map.events ?? []) {
-    if (
-      fired.has(event.id) ||
-      (event.trigger.type === "event-choice" && !state.mapEventChoices.some((selection) =>
-        selection.eventId === event.trigger.eventId && selection.choiceId === event.trigger.choiceId
-      )) ||
-      !triggers.some((trigger) => matchesTrigger(event, trigger))
-    ) continue;
+    if (fired.has(event.id) || !triggers.some((trigger) => matchesTrigger(event, trigger))) continue;
     nextState = applyMapEventAction(nextState, event);
     ids.push(event.id);
     fired.add(event.id);
-    if (event.action.type !== "show-message" && event.action.type !== "show-choice") hasStateEffects = true;
-    messages.push(toMapEventMessage(event, nextState.mapEventChoices.find((selection) => selection.eventId === event.id)?.choiceId));
+    if (event.action.type !== "show-message") hasStateEffects = true;
+    messages.push(toMapEventMessage(event));
   }
   if (ids.length === 0) return { nextState: state, messages };
 
@@ -211,39 +182,4 @@ export function resolveMapEvents(
     throw new Error("The game state after resolving map event actions is invalid.");
   }
   return { nextState: committed, messages };
-
-export interface MapEventChoiceExecution extends MapEventExecution {
-  selectedChoiceLabel: string;
-}
-
-/** Commits one pending dialogue choice, then resolves only its authored branch events. */
-export function chooseMapEventOption(
-  state: GameStateSnapshot,
-  map: GameMapDefinition,
-  eventId: string,
-  choiceId: string
-): MapEventChoiceExecution {
-  const pending = getPendingMapEventMessages(state, map).find((event) => event.id === eventId);
-  const definition = map.events?.find((event) => event.id === eventId);
-  if (!pending || !definition || definition.action.type !== "show-choice") {
-    throw new Error("The requested dialogue choice is not pending.");
-  }
-  const choice = definition.action.choices.find((candidate) => candidate.id === choiceId);
-  if (!choice) throw new Error("The selected dialogue choice is not available.");
-  if (state.mapEventChoices.some((selection) => selection.eventId === eventId)) {
-    throw new Error("A choice has already been recorded for this dialogue event.");
-  }
-
-  const chosenState: GameStateSnapshot = {
-    ...state,
-    mapEventChoices: [...state.mapEventChoices, { eventId, choiceId }],
-    acknowledgedMapEventIds: [...state.acknowledgedMapEventIds, eventId]
-  };
-  const branchExecution = resolveMapEvents(chosenState, map, {
-    type: "event-choice", eventId, choiceId
-  });
-  if (!isValidGameStateSnapshot(branchExecution.nextState, map)) {
-    throw new Error("The game state after resolving the selected dialogue branch is invalid.");
-  }
-  return { ...branchExecution, selectedChoiceLabel: choice.label };
 }

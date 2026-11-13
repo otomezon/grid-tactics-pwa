@@ -372,4 +372,50 @@ describe("isValidGameStateSnapshot", () => {
     }, map)).toBe(false);
   });
 
+
+  it("accepts only fired and acknowledged dialogue choices that exist in the map", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "dialogue",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "show-choice",
+          text: "どちらへ進みますか？",
+          choices: [{ id: "left", label: "左へ進む" }, { id: "right", label: "右へ進む" }]
+        }
+      }]
+    };
+    const selected = {
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["dialogue"],
+      acknowledgedMapEventIds: ["dialogue"],
+      mapEventChoices: [{ eventId: "dialogue", choiceId: "left" }]
+    };
+    expect(isValidGameStateSnapshot(selected, map)).toBe(true);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      acknowledgedMapEventIds: []
+    }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      firedMapEventIds: []
+    }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      mapEventChoices: [{ eventId: "dialogue", choiceId: "unknown" }]
+    }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      mapEventChoices: [
+        { eventId: "dialogue", choiceId: "left" },
+        { eventId: "dialogue", choiceId: "right" }
+      ]
+    }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      mapEventChoices: []
+    }, map)).toBe(false);
+  });
+
 });

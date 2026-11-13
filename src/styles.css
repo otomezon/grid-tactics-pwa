@@ -2244,29 +2244,6 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   min-height: 48px;
   margin-top: 5px;
 }
-.map-event-choice-list {
-  display: grid;
-  gap: 9px;
-  margin-top: 5px;
-}
-.map-event-choice-button {
-  min-height: 48px;
-  justify-content: flex-start;
-  text-align: left;
-  white-space: normal;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-.map-event-history-choice {
-  margin: 0;
-  padding: 8px 10px;
-  border-left: 3px solid #83bdbb;
-  border-radius: 4px;
-  background: rgba(131, 189, 187, .1);
-  color: #d7ecec;
-  font-size: .84rem;
-  font-weight: 800;
-}
 @media (max-width: 420px) {
   .map-event-dialog-backdrop { padding: 12px; }
   .map-event-dialog { gap: 12px; padding: 18px 16px; border-radius: 13px; }

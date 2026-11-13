@@ -4,6 +4,7 @@ import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import type { GameMapDefinition, MapEventTrigger } from "../domain/models/game";
 import {
   acknowledgeMapEvent,
+  chooseMapEventOption,
   getMapEventMessageHistory,
   getPendingMapEventMessages,
   resolveMapEvents
@@ -394,6 +395,140 @@ describe("resolveMapEvents", () => {
     })).toThrow(/already exists in the campaign roster/);
     expect(INITIAL_GAME_STATE).toEqual(original);
     expect(INITIAL_GAME_STATE.firedMapEventIds).toEqual([]);
+  });
+
+
+  it("records a dialogue choice, fires only its matching branch, and rebuilds the selected label", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [
+        {
+          id: "opening-choice",
+          trigger: { type: "stage-start" },
+          action: {
+            type: "show-choice",
+            speaker: "案内人",
+            text: "どちらの道へ進みますか？",
+            choices: [
+              { id: "forest", label: "森の道へ進む" },
+              { id: "road", label: "街道を進む" }
+            ]
+          }
+        },
+        {
+          id: "forest-branch",
+          trigger: { type: "event-choice", eventId: "opening-choice", choiceId: "forest" },
+          action: { type: "show-message", speaker: "案内人", text: "森の道を選びました。" }
+        },
+        {
+          id: "road-branch",
+          trigger: { type: "event-choice", eventId: "opening-choice", choiceId: "road" },
+          action: { type: "show-message", speaker: "案内人", text: "街道を選びました。" }
+        }
+      ]
+    };
+    const opened = resolveMapEvents(INITIAL_GAME_STATE, map, { type: "stage-start" });
+    expect(opened.messages[0]).toMatchObject({
+      id: "opening-choice",
+      choices: [
+        { id: "forest", label: "森の道へ進む" },
+        { id: "road", label: "街道を進む" }
+      ],
+      selectedChoiceLabel: null
+    });
+    expect(getPendingMapEventMessages(opened.nextState, map).map((message) => message.id))
+      .toEqual(["opening-choice"]);
+    expect(acknowledgeMapEvent(opened.nextState, map, "opening-choice")).toBe(opened.nextState);
+
+    const bypass = resolveMapEvents(opened.nextState, map, {
+      type: "event-choice", eventId: "opening-choice", choiceId: "road"
+    });
+    expect(bypass.nextState).toBe(opened.nextState);
+    expect(bypass.messages).toEqual([]);
+
+    const selected = chooseMapEventOption(opened.nextState, map, "opening-choice", "forest");
+    expect(selected.selectedChoiceLabel).toBe("森の道へ進む");
+    expect(selected.nextState.mapEventChoices).toEqual([
+      { eventId: "opening-choice", choiceId: "forest" }
+    ]);
+    expect(selected.nextState.acknowledgedMapEventIds).toContain("opening-choice");
+    expect(selected.nextState.firedMapEventIds).toEqual(["opening-choice", "forest-branch"]);
+    expect(selected.messages.map((message) => message.text)).toEqual(["森の道を選びました。"]);
+    expect(getPendingMapEventMessages(selected.nextState, map).map((message) => message.id))
+      .toEqual(["forest-branch"]);
+    expect(getMapEventMessageHistory(selected.nextState, map)[0]?.selectedChoiceLabel)
+      .toBe("森の道へ進む");
+    expect(isValidGameStateSnapshot(selected.nextState, map)).toBe(true);
+    expect(() => chooseMapEventOption(selected.nextState, map, "opening-choice", "road"))
+      .toThrow(/not pending/);
+    expect(INITIAL_GAME_STATE.firedMapEventIds).toEqual([]);
+    expect(INITIAL_GAME_STATE.mapEventChoices).toEqual([]);
+  });
+
+  it("does not persist a choice when its selected branch action fails", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [
+        {
+          id: "inventory-choice",
+          trigger: { type: "stage-start" },
+          action: {
+            type: "show-choice",
+            text: "報酬を受け取りますか？",
+            choices: [
+              { id: "take", label: "受け取る" },
+              { id: "leave", label: "受け取らない" }
+            ]
+          }
+        },
+        {
+          id: "take-reward",
+          trigger: { type: "event-choice", eventId: "inventory-choice", choiceId: "take" },
+          action: {
+            type: "grant-item",
+            recipientUnitId: "unit_001",
+            itemId: "healing_potion",
+            quantity: 1,
+            text: "回復薬を受け取りました。"
+          }
+        }
+      ]
+    };
+    const opened = resolveMapEvents(INITIAL_GAME_STATE, map, { type: "stage-start" });
+    const fullInventoryState = {
+      ...opened.nextState,
+      units: opened.nextState.units.map((unit) => unit.id === "unit_001"
+        ? { ...unit, inventory: ["iron_sword", "healing_potion", "promotion_seal", "iron_sword", "healing_potion"] }
+        : unit)
+    };
+    const original = structuredClone(fullInventoryState);
+    expect(() => chooseMapEventOption(fullInventoryState, map, "inventory-choice", "take"))
+      .toThrow(/inventory does not have enough free slots/);
+    expect(fullInventoryState).toEqual(original);
+    expect(fullInventoryState.mapEventChoices).toEqual([]);
+    expect(fullInventoryState.acknowledgedMapEventIds).toEqual([]);
+    expect(getPendingMapEventMessages(fullInventoryState, map).map((event) => event.id))
+      .toEqual(["inventory-choice"]);
+  });
+
+  it("rejects unknown dialogue choice IDs without changing the pending event", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "small-choice",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "show-choice",
+          text: "選択してください。",
+          choices: [{ id: "left", label: "左" }, { id: "right", label: "右" }]
+        }
+      }]
+    };
+    const opened = resolveMapEvents(INITIAL_GAME_STATE, map, { type: "stage-start" });
+    expect(() => chooseMapEventOption(opened.nextState, map, "small-choice", "unknown"))
+      .toThrow(/not available/);
+    expect(opened.nextState.mapEventChoices).toEqual([]);
+    expect(opened.nextState.acknowledgedMapEventIds).toEqual([]);
   });
 
 });

@@ -6,33 +6,19 @@ export interface MapEventDialogProps {
   remainingCount: number;
   disabled?: boolean;
   onAcknowledge: (eventId: string) => void;
-  onChooseChoice: (eventId: string, choiceId: string) => void;
 }
 
 export function MapEventDialog({
   event,
   remainingCount,
   disabled = false,
-  onAcknowledge,
-  onChooseChoice
+  onAcknowledge
 }: MapEventDialogProps) {
   const continueButtonRef = useRef<HTMLButtonElement>(null);
-  const choiceButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const hasChoices = (event.choices?.length ?? 0) > 0;
 
   useEffect(() => {
-    if (hasChoices) choiceButtonRefs.current[0]?.focus();
-    else continueButtonRef.current?.focus();
-  }, [event.id, hasChoices]);
-
-  function focusableActions(): HTMLButtonElement[] {
-    if (hasChoices) {
-      return choiceButtonRefs.current
-        .slice(0, event.choices?.length ?? 0)
-        .filter((button): button is HTMLButtonElement => button !== null);
-    }
-    return continueButtonRef.current ? [continueButtonRef.current] : [];
-  }
+    continueButtonRef.current?.focus();
+  }, [event.id]);
 
   return (
     <div className="map-event-dialog-backdrop" data-testid="map-event-dialog-backdrop">
@@ -48,15 +34,8 @@ export function MapEventDialog({
           if (keyboardEvent.key === "Escape") {
             keyboardEvent.preventDefault();
           } else if (keyboardEvent.key === "Tab") {
-            const actions = focusableActions();
-            if (actions.length === 0) return;
             keyboardEvent.preventDefault();
-            const activeIndex = actions.indexOf(document.activeElement as HTMLButtonElement);
-            const lastIndex = actions.length - 1;
-            const nextIndex = keyboardEvent.shiftKey
-              ? activeIndex <= 0 ? lastIndex : activeIndex - 1
-              : activeIndex < 0 || activeIndex === lastIndex ? 0 : activeIndex + 1;
-            actions[nextIndex]?.focus();
+            continueButtonRef.current?.focus();
           }
         }}
       >
@@ -68,33 +47,15 @@ export function MapEventDialog({
         <p id="map-event-dialog-message" className="map-event-dialog-message">
           {event.text}
         </p>
-        {hasChoices ? (
-          <div className="map-event-choice-list" role="group" aria-label="会話の選択肢">
-            {event.choices!.map((choice, index) => (
-              <button
-                key={choice.id}
-                ref={(button) => { choiceButtonRefs.current[index] = button; }}
-                className="secondary-button block-button map-event-choice-button"
-                type="button"
-                data-testid="map-event-choice"
-                disabled={disabled}
-                onClick={() => onChooseChoice(event.id, choice.id)}
-              >
-                {choice.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <button
-            ref={continueButtonRef}
-            className="primary-button block-button map-event-dialog-continue"
-            type="button"
-            disabled={disabled}
-            onClick={() => onAcknowledge(event.id)}
-          >
-            {remainingCount > 1 ? "次のイベントへ" : "確認して続ける"}
-          </button>
-        )}
+        <button
+          ref={continueButtonRef}
+          className="primary-button block-button map-event-dialog-continue"
+          type="button"
+          disabled={disabled}
+          onClick={() => onAcknowledge(event.id)}
+        >
+          {remainingCount > 1 ? "次のイベントへ" : "確認して続ける"}
+        </button>
       </section>
     </div>
   );

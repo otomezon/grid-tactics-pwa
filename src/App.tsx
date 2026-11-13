@@ -47,7 +47,6 @@ import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phas
 import type { EnemyActionLog } from "./application/resolve-enemy-phase";
 import {
   acknowledgeMapEvent,
-  chooseMapEventOption,
   getMapEventMessageHistory,
   getPendingMapEventMessages,
   resolveMapEvents
@@ -882,44 +881,6 @@ function CampaignApp() {
       evaluateBattleOutcome(acknowledgedState, currentMap) === "playing"
     ) {
       await resolveEnemyPhaseAndPersist(acknowledgedState);
-    }
-  }
-
-
-  async function handleChooseMapEventOption(eventId: string, choiceId: string): Promise<void> {
-    if (saveStatus === "loading" || saveStatus === "saving" || backupActionPending) return;
-    try {
-      const execution = chooseMapEventOption(gameState, currentMap, eventId, choiceId);
-      const chosenState = execution.nextState;
-      const selectedMessage = `「${execution.selectedChoiceLabel}」を選びました。`;
-
-      if (saveStatus === "unavailable") {
-        setGameState(chosenState);
-        setMessage(selectedMessage + " IndexedDBを利用できないため、選択状態はこの画面内だけに保持されます。");
-      } else {
-        setSaveStatus("saving");
-        try {
-          await saveGameState(chosenState);
-          setGameState(chosenState);
-          setSaveStatus("saved");
-          setMessage(selectedMessage);
-        } catch {
-          setGameState(chosenState);
-          setSaveStatus("failed");
-          setMessage("選択結果を保存できませんでした。再読み込み後は選択前に戻る場合があります。");
-          return;
-        }
-      }
-
-      if (
-        getPendingMapEventMessages(chosenState, currentMap).length === 0 &&
-        chosenState.phase === "enemy" &&
-        evaluateBattleOutcome(chosenState, currentMap) === "playing"
-      ) {
-        await resolveEnemyPhaseAndPersist(chosenState);
-      }
-    } catch (error) {
-      setMessage(getErrorMessage(error));
     }
   }
 
@@ -3033,7 +2994,6 @@ function CampaignApp() {
           remainingCount={pendingMapEventMessages.length}
           disabled={saveStatus === "saving" || backupActionPending}
           onAcknowledge={(eventId) => void handleAcknowledgeMapEvent(eventId)}
-          onChooseChoice={(eventId, choiceId) => void handleChooseMapEventOption(eventId, choiceId)}
         />
       )}
 
