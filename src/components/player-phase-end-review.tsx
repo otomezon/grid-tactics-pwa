@@ -33,7 +33,7 @@ export function PlayerPhaseEndReview({
   onEndPhase
 }: PlayerPhaseEndReviewProps) {
   const reviewRef = useRef<HTMLElement | null>(null);
-  const playerUnitsById = new Map(playerUnits.map((unit) => [unit.id, unit]));
+  const playerUnitsById = new Map(playerUnits.map((unit) => [unit.id, unit] as const));
   const attackActions = forecast?.actions.filter((action) => action.targetId && action.targetName) ?? [];
   const unitsWithPredictedDamage = forecast?.playerUnitOutcomes.filter(
     (unit) => unit.incomingDamage > 0
