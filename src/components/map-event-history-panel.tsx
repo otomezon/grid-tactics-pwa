@@ -45,6 +45,11 @@ export function MapEventHistoryPanel({ events, onClose }: MapEventHistoryPanelPr
               <p className="map-event-history-sequence">イベント {index + 1}</p>
               <h3>{event.speaker ?? "イベント"}</h3>
               <p className="map-event-history-message">{event.text}</p>
+              {event.choices?.length ? (
+                <p className="map-event-history-choice">
+                  選択: {event.selectedChoiceLabel ?? "未選択"}
+                </p>
+              ) : null}
             </article>
           </li>
         ))}
