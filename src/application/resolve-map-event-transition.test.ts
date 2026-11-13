@@ -89,6 +89,32 @@ describe("resolveMapEventTransition", () => {
     expect(result.messages.some((message) => message.id === "win")).toBe(false);
   });
 
+  it("fires the configured chapter-one boss message when the boss is defeated", () => {
+    const next = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "enemy_005")
+    };
+    const result = resolveMapEventTransition(INITIAL_GAME_STATE, next, CHAPTER_01_MAP);
+
+    expect(next.units.some((unit) => unit.faction === "enemy")).toBe(true);
+    expect(result.nextState.firedMapEventIds).toContain("chapter-01-boss-defeated");
+    expect(result.messages.map((message) => message.text)).toContain("敵将を撃破しました。作戦成功です。");
+  });
+
+  it("fires the prototype protagonist defeat message when allies remain", () => {
+    const next = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) =>
+        unit.id === "unit_001" ? { ...unit, currentHp: 0 } : unit
+      )
+    };
+    const result = resolveMapEventTransition(INITIAL_GAME_STATE, next, CHAPTER_01_MAP);
+
+    expect(next.units.filter((unit) => unit.faction === "player" && unit.currentHp > 0)).toHaveLength(3);
+    expect(result.nextState.firedMapEventIds).toContain("chapter-01-main-character-defeat");
+    expect(result.messages.map((message) => message.text)).toContain("主人公が倒されました。作戦失敗です。");
+  });
+
   it("rejects transitions crossing chapter boundaries", () => {
     const next = { ...INITIAL_GAME_STATE, chapterId: "other_chapter" };
     expect(() => resolveMapEventTransition(INITIAL_GAME_STATE, next, EVENT_MAP))
