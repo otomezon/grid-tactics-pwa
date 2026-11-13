@@ -169,3 +169,80 @@ test("keeps movement preview read-only until the second tap confirms on WebKit t
     return moved ? { position: moved.position, hasMoved: moved.hasMoved } : null;
   }).toEqual({ position: { x: 1, y: 4 }, hasMoved: true });
 });
+
+test("scrolls the narrow battle map and selects a right-side unit with WebKit touch", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await startWebKitBattle(page);
+
+  const savedBeforeSelection = await readAutoSave(page);
+  const viewport = page.getByRole("region", {
+    name: "戦闘マップ。狭い画面では左右にスクロールできます"
+  });
+  await expect(viewport).toBeVisible();
+
+  const dimensions = await page.evaluate(() => {
+    const mapViewport = document.querySelector(".map-viewport");
+    const grid = document.querySelector(".map-grid");
+    const firstTile = document.querySelector(".map-grid .map-tile");
+    if (
+      !(mapViewport instanceof HTMLElement) ||
+      !(grid instanceof HTMLElement) ||
+      !(firstTile instanceof HTMLElement)
+    ) {
+      throw new Error("The narrow map viewport, grid, or first tile is missing.");
+    }
+
+    const tileBounds = firstTile.getBoundingClientRect();
+    return {
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      clientWidth: mapViewport.clientWidth,
+      scrollWidth: mapViewport.scrollWidth,
+      gridWidth: grid.scrollWidth,
+      tileWidth: tileBounds.width,
+      tileHeight: tileBounds.height
+    };
+  });
+
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(320);
+  expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
+  expect(dimensions.gridWidth).toBeGreaterThan(dimensions.clientWidth);
+  expect(dimensions.tileWidth).toBeGreaterThanOrEqual(40);
+  expect(dimensions.tileHeight).toBeGreaterThanOrEqual(40);
+
+  // Move only the map's scroll container, not the page, to expose the last columns.
+  await viewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth - element.clientWidth;
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+
+  const rightSideUnit = page.locator(".map-grid").getByRole("button", { name: /味方04/ });
+  await expect(rightSideUnit).toBeVisible();
+  const [viewportBounds, unitBounds] = await Promise.all([
+    viewport.boundingBox(),
+    rightSideUnit.boundingBox()
+  ]);
+  if (!viewportBounds || !unitBounds) {
+    throw new Error("The map viewport or right-side unit has no visible bounds.");
+  }
+  expect(unitBounds.x).toBeGreaterThanOrEqual(viewportBounds.x);
+  expect(unitBounds.x + unitBounds.width).toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width);
+  expect(unitBounds.y).toBeGreaterThanOrEqual(0);
+  expect(unitBounds.y + unitBounds.height).toBeLessThanOrEqual(720);
+
+  const tapPoint = {
+    x: unitBounds.x + unitBounds.width / 2,
+    y: unitBounds.y + unitBounds.height / 2
+  };
+  const hitTarget = await page.evaluate(({ x, y }) => {
+    return document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label") ?? null;
+  }, tapPoint);
+  expect(hitTarget).toContain("味方04");
+
+  await page.touchscreen.tap(tapPoint.x, tapPoint.y);
+  await expect(rightSideUnit).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".unit-heading")).toContainText("味方04");
+  expect(await readAutoSave(page)).toEqual(savedBeforeSelection);
+});
+
