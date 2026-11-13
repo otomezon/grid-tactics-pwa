@@ -2199,6 +2199,9 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(review).toContainText("敵の行動");
     await expect(review).toContainText("被ダメージ見込み");
     await expect(review.getByTestId("phase-end-review-defeated")).toBeVisible();
+    await expect(review.getByRole("heading", { name: "味方全員の予測HP" })).toBeVisible();
+    await expect(review.getByRole("heading", { name: "予測される敵の攻撃対象" })).toBeVisible();
+    await expect(review.getByTestId("phase-end-review-forecast-unit")).toHaveCount(allies.length);
     const reviewDimensions = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,
@@ -2227,6 +2230,20 @@ test("shows candidate details and persists the selected deployment roster", asyn
     );
     await expect(selectedTile).toHaveClass(/is-selected/);
     await expect(selectedTile).toBeFocused();
+    expect(await readAutoSave(page)).toEqual(savedBeforeReview);
+
+    const alreadyActedAlly = allies.find((unit) => unit.hasActed);
+    if (!alreadyActedAlly) throw new Error("The phase review fixture requires an already-acted ally.");
+    await phaseEndButton.click();
+    await expect(review).toBeVisible();
+    const forecastRow = review.locator('[data-unit-id="' + alreadyActedAlly.id + '"]');
+    await forecastRow.getByRole("button", { name: alreadyActedAlly.name + "の予測HPを確認" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(page.locator(".unit-heading h3")).toHaveText(alreadyActedAlly.name);
+    const alreadyActedTile = page.locator(
+      '.map-grid [data-map-position="' + alreadyActedAlly.position.x + "," + alreadyActedAlly.position.y + '"]'
+    );
+    await expect(alreadyActedTile).toBeFocused();
     expect(await readAutoSave(page)).toEqual(savedBeforeReview);
   });
 
