@@ -34,7 +34,7 @@
 - vite-plugin-pwa 2.0.0
 - Vitest 5.0.0
 - Playwright Test 1.65.0（Chromium E2E）
-- IndexedDB（ブラウザ内の自動保存、JSON export/import、最大3世代の手動ローカルバックアップ／確認付き復元、saveVersion 6／v1〜v4セーブ移行）
+- IndexedDB（ブラウザ内の自動保存、JSON export/import、最大3世代の手動ローカルバックアップ／確認付き復元、saveVersion 6／v1〜v5セーブ移行）
 
 ## セットアップ
 
