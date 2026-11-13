@@ -508,7 +508,7 @@ test.describe("production PWA shell", () => {
       acknowledgedMapEventIds: string[];
     };
     expect(migratedAutoSave.turn).toBe(4);
-    expect(migratedAutoSave.saveVersion).toBe(6);
+    expect(migratedAutoSave.saveVersion).toBe(7);
     expect(migratedAutoSave.reserveUnits).toEqual([]);
     expect(migratedAutoSave.firedMapEventIds).toEqual([]);
     expect(migratedAutoSave.acknowledgedMapEventIds).toEqual([]);
