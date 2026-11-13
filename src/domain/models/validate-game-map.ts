@@ -96,11 +96,11 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
         const unit = candidate.action.unit;
         if (!isReinforcementUnitShape(unit, width as number, height as number, terrain as TerrainType[][])) return false;
         const unitId = (unit as Record<string, unknown>).id as string;
-        if (ids.has(unitId) || reinforcementIds.has(unitId)) return false;
+        if (ids.has(unitId) || reinforcementIds.has(unitId) || recruitmentIds.has(unitId)) return false;
         reinforcementIds.add(unitId);
       } else if (candidate.action.type === "recruit-unit") {
         const unit = candidate.action.unit;
-        if (!isValidCampaignUnitData(unit) || ids.has(unit.id) || recruitmentIds.has(unit.id)) return false;
+        if (!isValidCampaignUnitData(unit) || ids.has(unit.id) || reinforcementIds.has(unit.id) || recruitmentIds.has(unit.id)) return false;
         recruitmentIds.add(unit.id);
       }
     }

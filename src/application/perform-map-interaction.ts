@@ -18,7 +18,7 @@ export interface MapInteractionExecution {
   actorName: string;
 }
 
-/** Projects untriggered, map-authored investigation points for their map markers. */
+/** Projects untriggered, map-authored interaction points for their map markers. */
 export function getMapInteractionPoints(
   state: GameStateSnapshot,
   map: GameMapDefinition

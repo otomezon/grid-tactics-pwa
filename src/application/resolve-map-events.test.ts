@@ -373,4 +373,27 @@ describe("resolveMapEvents", () => {
     expect(INITIAL_GAME_STATE).toEqual(original);
   });
 
+  it("rejects a recruited ID already present in the active roster without committing the event", () => {
+    const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "duplicate-recruitment",
+        trigger: { type: "unit-interacts", x: 9, y: 8, label: "加入地点" },
+        action: {
+          type: "recruit-unit",
+          unit: { ...campaignData, name: "重複候補" },
+          text: "加入イベント"
+        }
+      }]
+    };
+    const original = structuredClone(INITIAL_GAME_STATE);
+    expect(() => resolveMapEvents(INITIAL_GAME_STATE, map, {
+      type: "unit-interacts", x: 9, y: 8, label: "加入地点", unitId: "unit_004"
+    })).toThrow(/already exists in the campaign roster/);
+    expect(INITIAL_GAME_STATE).toEqual(original);
+    expect(INITIAL_GAME_STATE.firedMapEventIds).toEqual([]);
+  });
+
 });
