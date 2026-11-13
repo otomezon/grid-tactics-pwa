@@ -108,6 +108,7 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 - `class-promotion.md`: class-promotion design basis, unresolved decisions, save compatibility, and implementation plan.
 - `class-promotion-balance-worksheet.md`: unapproved class stat-cap / promotion-bonus / movement / weapon worksheet and playtest record.
 - `development.md`: confirmed commands and CI.
+- `smartphone-verification.md`: manual smartphone/PWA verification scenarios and evidence record.
 - `database.md`: IndexedDB schema and migrations.
 - `current-state.md`: feature/test status.
 - `design-reconciliation.md`: proposal/implementation differences.
