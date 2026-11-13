@@ -1886,7 +1886,6 @@ function CampaignApp() {
 
       {isMapEventHistoryOpen && mapEventMessageHistory.length > 0 && (
         <MapEventHistoryPanel
-          id="map-event-history-panel"
           events={mapEventMessageHistory}
           onClose={closeMapEventHistory}
         />
