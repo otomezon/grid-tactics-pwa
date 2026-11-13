@@ -62,6 +62,30 @@ describe("isValidGameStateSnapshot", () => {
     }, CHAPTER_01_MAP)).toBe(false);
   });
 
+  it("requires acknowledged event IDs to be unique members of the fired event list", () => {
+    const fired = ["opening", "enemy-defeated"];
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: fired,
+      acknowledgedMapEventIds: ["opening"]
+    }, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: fired,
+      acknowledgedMapEventIds: ["unknown"]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: fired,
+      acknowledgedMapEventIds: ["opening", "opening"]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: [],
+      acknowledgedMapEventIds: ["opening"]
+    }, CHAPTER_01_MAP)).toBe(false);
+  });
+
   it("accepts the initial prototype state", () => {
     expect(isValidGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP)).toBe(true);
   });
