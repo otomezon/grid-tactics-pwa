@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { acknowledgePendingMapEvents } from "./helpers/map-events";
 
 test("opens deployment details with iPhone-sized WebKit touch input without horizontal overflow", async ({ page }) => {
   await page.goto("/");
@@ -111,23 +112,7 @@ async function startWebKitBattle(page: Page): Promise<void> {
   await page.getByRole("button", { name: "出撃メンバーと配置を確定して戦闘開始" }).tap();
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
-  const dialog = page.getByTestId("map-event-dialog");
-  while (await dialog.count()) {
-    const eventId = await dialog.getAttribute("data-event-id");
-    if (!eventId) throw new Error("A pending map event is missing its event ID.");
-    if (await dialog.getByTestId("map-event-choice").count()) {
-      throw new Error(`Map event "${eventId}" requires an explicit dialogue choice.`);
-    }
-    const acknowledge = dialog.getByRole("button", { name: /次のイベントへ|確認して続ける/ });
-    await expect(acknowledge).toBeVisible();
-    await expect(acknowledge).toBeEnabled();
-    await acknowledge.tap();
-    await expect.poll(async () => {
-      if (!(await dialog.count())) return null;
-      return dialog.getAttribute("data-event-id");
-    }).not.toBe(eventId);
-  }
-  await expect(dialog).toHaveCount(0);
+  await acknowledgePendingMapEvents(page, { input: "tap" });
 }
 
 test("keeps movement preview read-only until the second tap confirms on WebKit touch", async ({ page }) => {
@@ -219,6 +204,8 @@ test("scrolls the narrow battle map and selects a right-side unit with WebKit to
 
   const rightSideUnit = page.locator(".map-grid").getByRole("button", { name: /味方04/ });
   await expect(rightSideUnit).toBeVisible();
+  // The map sits below the battle panels on a tall page; bring the selected tile into view vertically.
+  await rightSideUnit.scrollIntoViewIfNeeded();
   const [viewportBounds, unitBounds] = await Promise.all([
     viewport.boundingBox(),
     rightSideUnit.boundingBox()
