@@ -10,6 +10,14 @@ async function startNewCampaign(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
 }
 
+async function acknowledgePendingMapEvents(page: Page): Promise<void> {
+  const dialog = page.getByTestId("map-event-dialog");
+  while (await dialog.count()) {
+    await dialog.getByRole("button", { name: /次のイベントへ|確認して続ける/ }).click();
+  }
+  await expect(dialog).toHaveCount(0);
+}
+
 async function continueSavedCampaign(page: Page): Promise<void> {
   const title = page.getByTestId("campaign-title-screen");
   await expect(title).toBeVisible();
@@ -26,6 +34,7 @@ async function startBattle(page: Page): Promise<void> {
   await startNewCampaign(page);
   await page.getByRole("button", { name: deploymentStartButton }).click();
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page);
 }
 
 async function readAutoSave(page: Page) {
@@ -365,6 +374,7 @@ test.describe("browser campaign flow", () => {
 
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await acknowledgePendingMapEvents(page);
     const committedState = await readAutoSave(page) as {
       units: Array<{ id: string; faction: string; position: { x: number; y: number } }>;
       reserveUnits: Array<{ id: string }>;
@@ -459,6 +469,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
 
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await acknowledgePendingMapEvents(page);
 
     const savedState = await readAutoSave(page) as {
       units: Array<{ id: string; faction: string }>;
@@ -2362,6 +2373,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     expect(await readAutoSave(page)).toEqual(clearedChapterState);
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await acknowledgePendingMapEvents(page);
     await expect(page.locator(".deployment-panel")).toHaveCount(0);
 
     const nextChapterState = await readAutoSave(page) as {
@@ -2457,6 +2469,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
 
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await acknowledgePendingMapEvents(page);
     const chapterThreeState = await readAutoSave(page) as {
       saveVersion: number;
       chapterId: string;
