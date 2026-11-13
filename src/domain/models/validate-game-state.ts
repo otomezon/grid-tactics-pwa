@@ -159,6 +159,14 @@ export function isValidGameStateSnapshot(
     playerRosterIds.add(deployment.unitId);
   }
   for (const deployment of map.enemyDeployment) deployedFactionByUnitId.set(deployment.unitId, "enemy");
+  const reinforcementEventByUnitId = new Map<string, string>();
+  for (const event of map.events ?? []) {
+    if (event.action.type === "spawn-reinforcement") {
+      deployedFactionByUnitId.set(event.action.unit.id, "enemy");
+      reinforcementEventByUnitId.set(event.action.unit.id, event.id);
+    }
+  }
+  const firedEventIdsForUnitValidation = new Set(value.firedMapEventIds as string[]);
 
   const ids = new Set<string>();
   const occupied = new Set<string>();
@@ -166,6 +174,8 @@ export function isValidGameStateSnapshot(
     if (!isGameUnit(candidate, map) || deployedFactionByUnitId.get(candidate.id) !== candidate.faction) {
       return false;
     }
+    const reinforcementEventId = reinforcementEventByUnitId.get(candidate.id);
+    if (reinforcementEventId && !firedEventIdsForUnitValidation.has(reinforcementEventId)) return false;
     const positionKey = candidate.position.x + "," + candidate.position.y;
     if (ids.has(candidate.id) || occupied.has(positionKey)) return false;
     ids.add(candidate.id);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHAPTER_01_MAP } from "../../content/maps/chapter-01";
+import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
 import { CHAPTER_02_MAP } from "../../content/maps/chapter-02";
 import type { GameMapDefinition } from "./game";
 import { isValidGameMapDefinition } from "./validate-game-map";
@@ -128,4 +128,61 @@ describe("isValidGameMapDefinition", () => {
     expect(isValidGameMapDefinition(badDimensions)).toBe(false);
     expect(isValidGameMapDefinition(badTerrain)).toBe(false);
   });
+  it("validates item rewards and predeclared enemy reinforcement actions", () => {
+    const enemy = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const reinforcement = {
+      ...enemy,
+      id: "enemy_reinforcement_01",
+      name: "増援01",
+      position: { x: 9, y: 7 },
+      hasMoved: false,
+      hasActed: false
+    };
+    const valid: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "village-supply",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "grant-item",
+          recipientUnitId: "unit_001",
+          itemId: "healing_potion",
+          quantity: 1,
+          text: "補給品を受け取りました。"
+        }
+      }, {
+        id: "enemy-reinforcement",
+        trigger: { type: "turn-start", turn: 2, phase: "enemy" },
+        action: {
+          type: "spawn-reinforcement",
+          unit: reinforcement,
+          text: "敵の増援が現れました。"
+        }
+      }, {
+        id: "reinforcement-defeated",
+        trigger: { type: "unit-defeated", unitId: reinforcement.id },
+        action: { type: "show-message", text: "増援を撃破しました。" }
+      }]
+    };
+    expect(isValidGameMapDefinition(valid)).toBe(true);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event, index) => index === 0
+        ? { ...event, action: { ...event.action, itemId: "unknown_item" } }
+        : event)
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event, index) => index === 0
+        ? { ...event, action: { ...event.action, recipientUnitId: "enemy_001" } }
+        : event)
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event, index) => index === 1
+        ? { ...event, action: { ...event.action, unit: { ...reinforcement, faction: "player" } } }
+        : event)
+    })).toBe(false);
+  });
+
 });

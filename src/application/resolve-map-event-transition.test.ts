@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import type { GameMapDefinition } from "../domain/models/game";
+import { resolveMapEvents } from "./resolve-map-events";
 import { resolveMapEventTransition } from "./resolve-map-event-transition";
 
 const EVENT_MAP: GameMapDefinition = {
@@ -120,4 +121,38 @@ describe("resolveMapEventTransition", () => {
     expect(() => resolveMapEventTransition(INITIAL_GAME_STATE, next, EVENT_MAP))
       .toThrow(/active chapter/);
   });
+  it("fires unit-defeated events after a registered reinforcement is defeated", () => {
+    const enemy = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const reinforcement = {
+      ...enemy,
+      id: "enemy_reinforcement_01",
+      name: "増援01",
+      position: { x: 9, y: 7 },
+      hasMoved: false,
+      hasActed: false
+    };
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "reinforcement-wave-1",
+        trigger: { type: "turn-start", turn: 2, phase: "enemy" },
+        action: { type: "spawn-reinforcement", unit: reinforcement, text: "増援が現れました。" }
+      }, {
+        id: "reinforcement-defeated",
+        trigger: { type: "unit-defeated", unitId: reinforcement.id },
+        action: { type: "show-message", text: "増援を撃破しました。" }
+      }]
+    };
+    const spawned = resolveMapEvents(INITIAL_GAME_STATE, map, {
+      type: "turn-start", turn: 2, phase: "enemy"
+    }).nextState;
+    const defeated = {
+      ...spawned,
+      units: spawned.units.filter((unit) => unit.id !== reinforcement.id)
+    };
+    const result = resolveMapEventTransition(spawned, defeated, map);
+    expect(result.nextState.firedMapEventIds).toContain("reinforcement-defeated");
+    expect(result.messages.map((message) => message.text)).toContain("増援を撃破しました。");
+  });
+
 });

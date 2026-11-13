@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
+import type { GameMapDefinition } from "./game";
 import { isValidGameStateSnapshot } from "./validate-game-state";
 
 describe("isValidGameStateSnapshot", () => {
@@ -306,4 +307,40 @@ describe("isValidGameStateSnapshot", () => {
     };
     expect(isValidGameStateSnapshot(invalid, CHAPTER_01_MAP)).toBe(false);
   });
+  it("accepts a spawned reinforcement only after its corresponding event has fired", () => {
+    const enemy = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const reinforcement = {
+      ...enemy,
+      id: "enemy_reinforcement_01",
+      name: "増援01",
+      position: { x: 9, y: 7 },
+      hasMoved: false,
+      hasActed: false
+    };
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "reinforcement-wave-1",
+        trigger: { type: "turn-start", turn: 2, phase: "enemy" },
+        action: {
+          type: "spawn-reinforcement",
+          unit: reinforcement,
+          text: "敵の増援が現れました。"
+        }
+      }]
+    };
+    const spawned = {
+      ...INITIAL_GAME_STATE,
+      units: [...INITIAL_GAME_STATE.units, reinforcement],
+      firedMapEventIds: ["reinforcement-wave-1"]
+    };
+
+    expect(isValidGameStateSnapshot(spawned, map)).toBe(true);
+    expect(isValidGameStateSnapshot({ ...spawned, firedMapEventIds: [] }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...spawned,
+      units: [...INITIAL_GAME_STATE.units, { ...reinforcement, id: "unregistered_enemy" }]
+    }, map)).toBe(false);
+  });
+
 });

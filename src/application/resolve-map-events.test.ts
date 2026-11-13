@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
+import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import type { GameMapDefinition, MapEventTrigger } from "../domain/models/game";
 import {
   acknowledgeMapEvent,
@@ -173,4 +174,128 @@ describe("resolveMapEvents", () => {
       { type: "stage-start" }
     )).toThrow(/current chapter/);
   });
+  it("grants a configured item once and reconstructs its event message", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "supply-cache",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "grant-item",
+          recipientUnitId: "unit_001",
+          itemId: "healing_potion",
+          quantity: 1,
+          speaker: "補給係",
+          text: "回復薬を受け取りました。"
+        }
+      }]
+    };
+    const originalInventory = [...INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!.inventory];
+    const result = resolveMapEvents(INITIAL_GAME_STATE, map, { type: "stage-start" });
+    expect(result.nextState.units.find((unit) => unit.id === "unit_001")!.inventory)
+      .toEqual([...originalInventory, "healing_potion"]);
+    expect(result.nextState.firedMapEventIds).toEqual(["supply-cache"]);
+    expect(getMapEventMessageHistory(result.nextState, map)).toEqual([{
+      id: "supply-cache", speaker: "補給係", text: "回復薬を受け取りました。"
+    }]);
+    expect(INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!.inventory).toEqual(originalInventory);
+    const reloaded = resolveMapEvents(result.nextState, map, { type: "stage-start" });
+    expect(reloaded.nextState).toBe(result.nextState);
+    expect(reloaded.messages).toEqual([]);
+  });
+
+  it("rejects a full inventory atomically without firing the reward event", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "supply-cache",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "grant-item",
+          recipientUnitId: "unit_001",
+          itemId: "healing_potion",
+          quantity: 1,
+          text: "回復薬を受け取りました。"
+        }
+      }]
+    };
+    const state = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.map((unit) => unit.id === "unit_001"
+        ? { ...unit, inventory: ["iron_sword", "healing_potion", "promotion_seal", "iron_sword", "healing_potion"] }
+        : unit)
+    };
+    const original = structuredClone(state);
+    expect(() => resolveMapEvents(state, map, { type: "stage-start" }))
+      .toThrow(/inventory does not have enough free slots/);
+    expect(state).toEqual(original);
+  });
+
+  it("spawns a predeclared enemy once and validates the resulting save state", () => {
+    const base = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const reinforcement = {
+      ...base,
+      id: "enemy_reinforcement_01",
+      name: "増援01",
+      position: { x: 9, y: 7 },
+      hasMoved: false,
+      hasActed: false
+    };
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "reinforcement-wave-1",
+        trigger: { type: "turn-start", turn: 2, phase: "enemy" },
+        action: {
+          type: "spawn-reinforcement",
+          unit: reinforcement,
+          speaker: "敵軍",
+          text: "敵の増援が現れました。"
+        }
+      }]
+    };
+    const result = resolveMapEvents(INITIAL_GAME_STATE, map, {
+      type: "turn-start", turn: 2, phase: "enemy"
+    });
+    expect(result.nextState.units.find((unit) => unit.id === reinforcement.id)).toMatchObject({
+      faction: "enemy", position: { x: 9, y: 7 }, hasMoved: false, hasActed: false
+    });
+    expect(isValidGameStateSnapshot(result.nextState, map)).toBe(true);
+    expect(getPendingMapEventMessages(result.nextState, map).map((message) => message.id))
+      .toEqual(["reinforcement-wave-1"]);
+    const reloaded = resolveMapEvents(result.nextState, map, {
+      type: "turn-start", turn: 2, phase: "enemy"
+    });
+    expect(reloaded.nextState).toBe(result.nextState);
+    expect(reloaded.nextState.units.filter((unit) => unit.id === reinforcement.id)).toHaveLength(1);
+  });
+
+  it("rejects a reinforcement on an occupied tile without partially changing state", () => {
+    const base = INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!;
+    const reinforcement = {
+      ...base,
+      id: "enemy_reinforcement_02",
+      name: "増援02",
+      position: { ...INITIAL_GAME_STATE.units[0]!.position },
+      hasMoved: false,
+      hasActed: false
+    };
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "blocked-reinforcement",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "spawn-reinforcement",
+          unit: reinforcement,
+          text: "敵の増援が現れました。"
+        }
+      }]
+    };
+    const original = structuredClone(INITIAL_GAME_STATE);
+    expect(() => resolveMapEvents(INITIAL_GAME_STATE, map, { type: "stage-start" }))
+      .toThrow(/occupied tile/);
+    expect(INITIAL_GAME_STATE).toEqual(original);
+  });
+
 });
