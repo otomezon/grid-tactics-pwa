@@ -79,6 +79,7 @@ PR #40で自軍フェイズ中の表示切替を追加した。`src/domain/comba
 `src/application/get-enemy-phase-forecast.ts` と `src/components/enemy-phase-forecast.tsx` が、自軍フェイズ中に次の敵軍フェイズを読み取り専用でプレビューする。
 
 - 現在の `GameStateSnapshot` とマップに対し、実際の処理と同じ `beginEnemyPhase` → `runEnemyPhase` を呼び出す。AIのコピーや別の評価スコアを持たず、敵の処理順、移動先、攻撃対象、既存の戦闘resolverによる命中／ダメージ結果を表示する。
+- 敵が攻撃を選んだ場合は、その行動で実際に使う `AttackPlan.forecast` を `EnemyActionLog` に含める。初撃／反撃／追撃ごとの攻撃力、通常／必殺ダメージ、命中率、必殺率、武器相性を展開表示する。予測パネル・ターン終了レビュー・実行後の一時戦闘履歴で同じ値を再利用し、UI側で戦闘計算をやり直さない。実際の命中・ダメージは行動メッセージに表示する。
 - 敵軍フェイズ開始時の砦回復と、敵軍フェイズを最後まで解決した場合の勝敗見込みも表示する。
 - 予測は現在状態からのprojectionであり、味方が移動・攻撃・装備変更・アイテム使用などで状態を変えると再計算される。敵軍フェイズ／勝敗確定後／出撃準備中は表示しない。
 - `runEnemyPhase` が返す予測後stateは公開・保存しない。projectionは入力snapshotを書き換えず、乱数stateもIndexedDBも変更しない。実際のフェイズ終了では同じコマンドを現状態に対して通常どおり実行する。
