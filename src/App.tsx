@@ -79,10 +79,16 @@ import { CampaignUnitBattleRecordPanel, CampaignUnitBattleRecordsSummary } from 
 import { DeploymentUnitComparison } from "./components/deployment-unit-comparison";
 import { MapEventDialog } from "./components/map-event-dialog";
 import { MapEventHistoryPanel } from "./components/map-event-history-panel";
+import { MapInteractionPanel } from "./components/map-interaction-panel";
+import {
+  getAvailableMapInteraction,
+  getMapInteractionPoints,
+  performMapInteraction
+} from "./application/perform-map-interaction";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
-type PlayerActionHistoryKind = "movement" | "weapon-change" | "item-use" | "class-change" | "wait";
+type PlayerActionHistoryKind = "movement" | "weapon-change" | "item-use" | "class-change" | "map-interaction" | "wait";
 
 type BattleHistoryEntry =
   | { sequence: number; turn: number; kind: "player-action"; action: PlayerActionHistoryKind; unitName: string; detail: string }
@@ -150,6 +156,7 @@ const PLAYER_ACTION_HISTORY_LABELS: Record<PlayerActionHistoryKind, string> = {
   "weapon-change": "武器変更",
   "item-use": "アイテム使用",
   "class-change": "クラスチェンジ",
+  "map-interaction": "マップ調査",
   wait: "待機"
 };
 
@@ -611,6 +618,20 @@ function CampaignApp() {
   const selectedWeapon = selectedUnit?.equippedWeaponId
     ? WEAPONS_BY_ID[selectedUnit.equippedWeaponId] ?? null
     : null;
+  const mapInteractionPoints = useMemo(
+    () => getMapInteractionPoints(gameState, currentMap),
+    [currentMap, gameState]
+  );
+  const mapInteractionPointByPosition = useMemo(
+    () => new Map(mapInteractionPoints.map((point) => [
+      String(point.position.x) + "," + String(point.position.y), point
+    ] as const)),
+    [mapInteractionPoints]
+  );
+  const availableMapInteraction = useMemo(
+    () => selectedUnit ? getAvailableMapInteraction(gameState, currentMap, selectedUnit.id) : null,
+    [currentMap, gameState, selectedUnit]
+  );
 
   const movementReachabilityInput = useMemo(() => {
     if (!selectedUnit || selectedUnit.faction !== "player" || selectedUnit.hasMoved || selectedUnit.hasActed) {
@@ -1335,6 +1356,26 @@ function CampaignApp() {
     );
     await persist(nextState, selectedUnit.name + "が" + positionLabel(position) + "へ移動しました。攻撃または待機を選択してください。");
   }
+
+  async function handleMapInteraction(): Promise<void> {
+    if (!selectedUnit || !availableMapInteraction || !interactive) return;
+    try {
+      const execution = performMapInteraction(gameState, currentMap, selectedUnit.id);
+      setGameState(execution.nextState);
+      setCombatTargetId(null);
+      setEnemyActionMapPreview(null);
+      setPromotionConfirmUnitId(null);
+      recordPlayerAction("map-interaction", selectedUnit.name, execution.interaction.label);
+      await persist(
+        execution.nextState,
+        selectedUnit.name + "は「" + execution.interaction.label + "」を調べました。このフェイズの行動を消費しました。"
+      );
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+    }
+  }
+
+
 
   async function handleWeaponChange(weaponId: string): Promise<void> {
     if (!selectedUnit || selectedUnit.hasActed || !interactive) return;
@@ -2373,6 +2414,8 @@ function CampaignApp() {
                 const isAttackableAfterMove = newlyAttackableKeys.has(tileKey);
                 const isEnemyThreatened = enemyThreatenedKeys.has(tileKey);
                 const isTargeted = unit?.id === combatTargetId;
+                const mapInteraction = mapInteractionPointByPosition.get(tileKey);
+                const isMapInteraction = mapInteraction !== undefined;
                 const isEnemyActionSource = Boolean(
                   enemyActionMapPreview && samePosition(enemyActionMapPreview.sourcePosition, position)
                 );
@@ -2396,6 +2439,7 @@ function CampaignApp() {
                   isAttackableAfterMove ? "is-attackable-after-move" : "",
                   isEnemyThreatened ? "is-enemy-threatened" : "",
                   isTargeted ? "is-targeted" : "",
+                  isMapInteraction ? "is-map-interaction" : "",
                   isEnemyActionSource ? "is-enemy-action-source" : "",
                   isEnemyActionDestination ? "is-enemy-action-destination" : "",
                   isEnemyActionTarget ? "is-enemy-action-target" : ""
@@ -2410,6 +2454,7 @@ function CampaignApp() {
                   (isMovementPath ? "、移動経路 " + String(pathStep) + "番" : "") +
                   (isAttackable ? "、攻撃可能" : "") +
                   (isAttackableAfterMove ? "、移動プレビュー先から攻撃可能" : "") +
+                  (isMapInteraction ? "、調査地点: " + mapInteraction.label : "") +
                   (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "") +
                   (isEnemyActionSource ? "、敵の予測行動の開始位置" : "") +
                   (isEnemyActionDestination ? "、敵の予測移動先" : "") +
@@ -2468,6 +2513,7 @@ function CampaignApp() {
                       {isEnemyActionSource && <span className="enemy-action-map-marker is-source" aria-hidden="true">出</span>}
                       {isEnemyActionDestination && <span className="enemy-action-map-marker is-destination" aria-hidden="true">着</span>}
                       {isEnemyActionTarget && <span className="enemy-action-map-marker is-target" aria-hidden="true">標</span>}
+                      {isMapInteraction && <span className="map-interaction-marker" aria-hidden="true">調</span>}
                       {isReachable && <span className="move-marker" aria-hidden="true" />}
                       {isReachable && reachableCost !== undefined && (
                         <span className="move-cost-marker" aria-hidden="true">{reachableCost}</span>
@@ -2494,6 +2540,7 @@ function CampaignApp() {
             <span><i className="legend-swatch move" />移動可能（数字は累計コスト）</span>
             <span><i className="legend-swatch movement-path" />移動経路（数字は順番）</span>
             <span><i className="legend-swatch attack" />現在位置から攻撃可能</span>
+            {mapInteractionPoints.length > 0 && <span><i className="legend-swatch map-interaction" />調査地点</span>}
             {movementPreviewPath && newlyAttackableKeys.size > 0 && (
               <span><i className="legend-swatch attack-after-move" />移動プレビュー先から攻撃可能</span>
             )}
@@ -2518,6 +2565,14 @@ function CampaignApp() {
             onSelect={handleRosterUnitSelect}
           />
           {inspectedPlayerDetails && <PlayerInspector details={inspectedPlayerDetails} />}
+          {selectedUnit?.faction === "player" && availableMapInteraction && (
+            <MapInteractionPanel
+              interaction={availableMapInteraction}
+              unitName={selectedUnit.name}
+              disabled={!interactive}
+              onInteract={() => void handleMapInteraction()}
+            />
+          )}
           <EnemyRoster
             units={gameState.units.filter((unit) => unit.faction === "enemy")}
             totalEnemyCount={currentMap.enemyDeployment.length}

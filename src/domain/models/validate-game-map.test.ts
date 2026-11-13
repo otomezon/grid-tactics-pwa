@@ -185,4 +185,59 @@ describe("isValidGameMapDefinition", () => {
     })).toBe(false);
   });
 
+
+  it("validates reachable one-shot unit-interaction locations and unit restrictions", () => {
+    const interaction: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "prototype-investigation",
+        trigger: {
+          type: "unit-interacts",
+          x: 9,
+          y: 8,
+          label: "試作調査地点",
+          description: "操作確認用の地点です。"
+        },
+        action: {
+          type: "show-message",
+          speaker: "操作確認",
+          text: "調査イベントを確認しました。"
+        }
+      }]
+    };
+    expect(isValidGameMapDefinition(interaction)).toBe(true);
+    expect(isValidGameMapDefinition({
+      ...interaction,
+      events: interaction.events!.map((event) => ({
+        ...event,
+        trigger: { ...event.trigger, x: CHAPTER_01_MAP.width }
+      }))
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...interaction,
+      events: interaction.events!.map((event) => ({
+        ...event,
+        trigger: { ...event.trigger, label: "" }
+      }))
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...interaction,
+      events: interaction.events!.map((event) => ({
+        ...event,
+        trigger: { ...event.trigger, unitId: "enemy_001" }
+      }))
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...interaction,
+      events: [...interaction.events!, { ...interaction.events![0]!, id: "duplicate-location" }]
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...interaction,
+      events: interaction.events!.map((event) => ({
+        ...event,
+        trigger: { ...event.trigger, x: 8, y: 8 }
+      }))
+    })).toBe(false);
+  });
+
 });

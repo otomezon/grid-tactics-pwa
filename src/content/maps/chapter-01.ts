@@ -68,6 +68,21 @@ export const CHAPTER_01_MAP: GameMapDefinition = {
       }
     },
     {
+      id: "chapter-01-prototype-investigation",
+      trigger: {
+        type: "unit-interacts",
+        x: 9,
+        y: 8,
+        label: "試作調査地点",
+        description: "探索コマンドの動作確認用地点です。"
+      },
+      action: {
+        type: "show-message",
+        speaker: "操作確認",
+        text: "調査地点を確認しました。調査イベントはこの章で一度だけ実行されます。"
+      }
+    },
+    {
       id: "chapter-01-boss-defeated",
       trigger: { type: "boss-defeated" },
       action: {

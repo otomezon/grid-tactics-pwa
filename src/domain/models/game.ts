@@ -82,6 +82,14 @@ export type MapEventTrigger =
   | { type: "stage-start" }
   | { type: "turn-start"; turn: number; phase: BattlePhase }
   | { type: "unit-defeated"; unitId: string }
+  | {
+      type: "unit-interacts";
+      x: number;
+      y: number;
+      label: string;
+      description?: string;
+      unitId?: string;
+    }
   | { type: "boss-defeated" }
   | { type: "victory" }
   | { type: "defeat" };
