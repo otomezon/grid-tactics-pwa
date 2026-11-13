@@ -46,6 +46,7 @@ import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phas
 import type { EnemyActionLog } from "./application/resolve-enemy-phase";
 import {
   acknowledgeMapEvent,
+  getMapEventMessageHistory,
   getPendingMapEventMessages,
   resolveMapEvents
 } from "./application/resolve-map-events";
@@ -76,6 +77,7 @@ import { BattleContributionPanel } from "./components/battle-contribution-panel"
 import { CampaignUnitBattleRecordPanel, CampaignUnitBattleRecordsSummary } from "./components/campaign-unit-battle-records";
 import { DeploymentUnitComparison } from "./components/deployment-unit-comparison";
 import { MapEventDialog } from "./components/map-event-dialog";
+import { MapEventHistoryPanel } from "./components/map-event-history-panel";
 
 type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
 
@@ -368,6 +370,7 @@ function CampaignApp() {
   const [combatTargetId, setCombatTargetId] = useState<string | null>(null);
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
   const [isOperationGuideOpen, setIsOperationGuideOpen] = useState(false);
+  const [isMapEventHistoryOpen, setIsMapEventHistoryOpen] = useState(false);
   const [isPhaseEndReviewOpen, setIsPhaseEndReviewOpen] = useState(false);
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
   const [mapFocusPosition, setMapFocusPosition] = useState<Position>({ x: 0, y: 0 });
@@ -394,9 +397,14 @@ function CampaignApp() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalledApp, setIsInstalledApp] = useState(isStandaloneDisplayMode);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
+  const mapEventHistoryToggleRef = useRef<HTMLButtonElement>(null);
   const phaseEndButtonRef = useRef<HTMLButtonElement>(null);
   const lastMapInputWasTouchRef = useRef(false);
   const touchMoveConfirmationPositionRef = useRef<Position | null>(null);
+
+  useEffect(() => {
+    setIsMapEventHistoryOpen(false);
+  }, [gameState.chapterId, gameState.firedMapEventIds.length]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
@@ -656,6 +664,12 @@ function CampaignApp() {
     () => gameState.units.filter((unit) => unit.faction === "player" && !unit.hasActed),
     [gameState.units]
   );
+  const mapEventMessageHistory = useMemo(
+    () => gameState.chapterId === currentMap.id
+      ? getMapEventMessageHistory(gameState, currentMap)
+      : [],
+    [currentMap, gameState]
+  );
   const pendingMapEventMessages = useMemo(
     () => gameState.chapterId === currentMap.id
       ? getPendingMapEventMessages(gameState, currentMap)
@@ -797,6 +811,11 @@ function CampaignApp() {
     } catch (error) {
       setMessage(getErrorMessage(error));
     }
+  }
+
+  function closeMapEventHistory(): void {
+    setIsMapEventHistoryOpen(false);
+    mapEventHistoryToggleRef.current?.focus();
   }
 
   async function handleAcknowledgeMapEvent(eventId: string): Promise<void> {
@@ -1765,6 +1784,20 @@ function CampaignApp() {
         <div className="header-status">
           <span className="phase-badge">{deploymentPending ? "出撃準備" : battleOutcome === "victory" ? "勝利" : battleOutcome === "defeat" ? "敗北" : "第" + gameState.turn + "ターン · " + (gameState.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ")}</span>
           <span className={"save-badge save-" + saveStatus}>{SAVE_STATUS_LABELS[saveStatus]}</span>
+          {!deploymentPending && mapEventMessageHistory.length > 0 && (
+            <button
+              ref={mapEventHistoryToggleRef}
+              className="secondary-button save-file-button map-event-history-toggle"
+              type="button"
+              aria-label={"イベント履歴 " + mapEventMessageHistory.length + "件"}
+              aria-expanded={isMapEventHistoryOpen}
+              aria-controls={isMapEventHistoryOpen ? "map-event-history-panel" : undefined}
+              disabled={pendingMapEventMessages.length > 0}
+              onClick={() => setIsMapEventHistoryOpen((open) => !open)}
+            >
+              イベント履歴 <span>（{mapEventMessageHistory.length}件）</span>
+            </button>
+          )}
           <button
             className="secondary-button save-file-button operation-guide-toggle"
             type="button"
@@ -1849,6 +1882,14 @@ function CampaignApp() {
 
       {isOperationGuideOpen && (
         <OperationGuide onClose={() => setIsOperationGuideOpen(false)} />
+      )}
+
+      {isMapEventHistoryOpen && mapEventMessageHistory.length > 0 && (
+        <MapEventHistoryPanel
+          id="map-event-history-panel"
+          events={mapEventMessageHistory}
+          onClose={closeMapEventHistory}
+        />
       )}
 
       {!isInstalledApp && (
