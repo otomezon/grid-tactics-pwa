@@ -99,6 +99,7 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
     }
 
     const eventIds = new Set<string>();
+    const interactionPositions = new Set<string>();
     const validDefeatTargetIds = new Set([...ids, ...reinforcementIds]);
     for (const candidate of value.events) {
       if (!isRecord(candidate) || !isNonEmptyString(candidate.id) ||
@@ -120,6 +121,27 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
         case "unit-defeated":
           if (!isNonEmptyString(trigger.unitId) || !validDefeatTargetIds.has(trigger.unitId)) return false;
           break;
+        case "unit-interacts": {
+          if (
+            !Number.isInteger(trigger.x) || (trigger.x as number) < 0 || (trigger.x as number) >= (width as number) ||
+            !Number.isInteger(trigger.y) || (trigger.y as number) < 0 || (trigger.y as number) >= (height as number) ||
+            !isNonEmptyString(trigger.label) || trigger.label.length > 60 ||
+            (trigger.description !== undefined &&
+              (typeof trigger.description !== "string" || trigger.description.length > 240)) ||
+            (trigger.unitId !== undefined &&
+              (!isNonEmptyString(trigger.unitId) || !playerIds.has(trigger.unitId)))
+          ) return false;
+          const positionKey = String(trigger.x) + "," + String(trigger.y);
+          if (interactionPositions.has(positionKey) || occupied.has(positionKey)) return false;
+          interactionPositions.add(positionKey);
+          const interactionTerrain = (terrain as TerrainType[][])[trigger.y as number]?.[trigger.x as number];
+          if (
+            !interactionTerrain ||
+            (TERRAIN_DEFINITIONS[interactionTerrain].movementCost.infantry === null &&
+             TERRAIN_DEFINITIONS[interactionTerrain].movementCost.cavalry === null)
+          ) return false;
+          break;
+        }
         default:
           return false;
       }

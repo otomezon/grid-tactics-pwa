@@ -2631,3 +2631,22 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .enemy-action-map-preview { align-items: stretch; flex-direction: column; }
   .enemy-action-map-preview-clear { align-self: flex-start; }
 }
+
+
+.map-tile.is-map-interaction:not(.is-selected) {
+  outline: 2px dashed #e5c77f;
+  outline-offset: -4px;
+}
+.map-interaction-marker {
+  position: absolute; z-index: 4; top: 2px; left: 2px;
+  display: grid; width: 19px; height: 19px; place-items: center;
+  border: 1px solid #fff1c7; border-radius: 50%;
+  color: #2c281c; background: #efcf83;
+  box-shadow: 0 1px 4px rgba(0,0,0,.45);
+  font-size: .68rem; font-weight: 900; line-height: 1; pointer-events: none;
+}
+.map-interaction-panel { border-color: rgba(229, 199, 127, .65); }
+.map-interaction-panel .map-interaction-label { margin: 0; color: #f1dca8; font-size: .8rem; font-weight: 800; }
+.map-interaction-panel .map-interaction-description { margin: 6px 0 0; color: var(--text-muted); font-size: .72rem; line-height: 1.5; }
+.map-interaction-panel .map-interaction-action { margin-top: 10px; }
+.legend-swatch.map-interaction { border: 2px dashed #e5c77f; background: #b8954e; }

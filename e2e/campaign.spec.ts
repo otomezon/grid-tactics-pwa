@@ -184,6 +184,57 @@ test.describe("campaign title and save hub", () => {
     await expect(page.getByTestId("map-event-history")).toContainText("敵将を撃破すると勝利です。主人公が倒されると敗北です。");
   });
 
+  test("lets a moved ally investigate a map location once and restores the pending result after reload", async ({ page }) => {
+    await startBattle(page);
+
+    const start = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean; hasActed: boolean }>;
+    };
+    expect(start.units.find((unit) => unit.id === "unit_004")).toMatchObject({
+      position: { x: 8, y: 8 }, hasMoved: false, hasActed: false
+    });
+
+    await page.locator('[data-map-position="8,8"]').click();
+    await page.locator('[data-map-position="9,8"]').click();
+    const interactionPanel = page.getByTestId("map-interaction-panel");
+    await expect(interactionPanel).toBeVisible();
+    await expect(interactionPanel).toContainText("試作調査地点");
+    await interactionPanel.getByRole("button", { name: "調べる" }).click();
+
+    const dialog = page.getByTestId("map-event-dialog");
+    await expect(dialog).toHaveAttribute("data-event-id", "chapter-01-prototype-investigation");
+    await expect(dialog).toContainText("調査地点を確認しました。");
+    const used = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean; hasActed: boolean }>;
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+    };
+    expect(used.units.find((unit) => unit.id === "unit_004")).toMatchObject({
+      position: { x: 9, y: 8 }, hasMoved: true, hasActed: true
+    });
+    expect(used.firedMapEventIds).toContain("chapter-01-prototype-investigation");
+    expect(used.acknowledgedMapEventIds).not.toContain("chapter-01-prototype-investigation");
+
+    await page.reload();
+    await continueSavedCampaign(page);
+    await expect(page.getByTestId("map-event-dialog")).toContainText("調査地点を確認しました。");
+    await expect(page.getByTestId("map-interaction-panel")).toHaveCount(0);
+    await page.getByRole("button", { name: "確認して続ける" }).click();
+    await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "イベント履歴 2件" })).toBeEnabled();
+
+    const acknowledged = await readAutoSave(page) as {
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+      units: Array<{ id: string; hasActed: boolean }>;
+    };
+    expect(acknowledged.firedMapEventIds).toContain("chapter-01-prototype-investigation");
+    expect(acknowledged.acknowledgedMapEventIds).toContain("chapter-01-prototype-investigation");
+    expect(acknowledged.units.find((unit) => unit.id === "unit_004")?.hasActed).toBe(true);
+  });
+
+
+
   test("pauses a restored enemy phase until its pending map event is acknowledged", async ({ page }) => {
     await startBattle(page);
 

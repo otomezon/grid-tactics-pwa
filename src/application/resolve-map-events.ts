@@ -31,6 +31,11 @@ function matchesTrigger(event: MapEventDefinition, trigger: MapEventTrigger): bo
         expected.turn === trigger.turn && expected.phase === trigger.phase;
     case "unit-defeated":
       return trigger.type === "unit-defeated" && expected.unitId === trigger.unitId;
+    case "unit-interacts":
+      return trigger.type === "unit-interacts" &&
+        expected.x === trigger.x &&
+        expected.y === trigger.y &&
+        (expected.unitId === undefined || expected.unitId === trigger.unitId);
   }
 }
 
