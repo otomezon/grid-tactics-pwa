@@ -1678,6 +1678,15 @@ test("shows candidate details and persists the selected deployment roster", asyn
 
     const actions = forecast.getByTestId("enemy-phase-forecast-action");
     await expect(actions).toHaveCount(1);
+    const mapPreviewButton = actions.first().getByRole("button", { name: "マップで確認" });
+    await mapPreviewButton.click();
+    await expect(page.getByTestId("enemy-action-map-preview")).toBeVisible();
+    await expect(mapPreviewButton).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".map-tile.is-enemy-action-source"))
+      .toHaveAttribute("data-map-position", "4,5");
+    await expect(page.locator(".map-tile.is-enemy-action-target")).toHaveCount(1);
+    await page.getByRole("button", { name: "マップ表示を解除" }).click();
+    await expect(page.getByTestId("enemy-action-map-preview")).toHaveCount(0);
     await expect(actions.first()).toContainText("遠距離攻撃役を優先 +35点");
     await expect(actions.first()).toContainText("味方02");
     const attackForecast = actions.first().getByTestId("enemy-attack-forecast");
@@ -1708,12 +1717,20 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
     const review = page.getByTestId("phase-end-review");
     await expect(review).toBeVisible();
-    const reviewAttack = review.getByTestId("phase-end-review-attack").first();
+    const reviewAttack = review.getByTestId("phase-end-review-action").first();
     const reviewAttackForecast = reviewAttack.getByTestId("enemy-attack-forecast");
     await expect(reviewAttackForecast).toBeVisible();
     await reviewAttackForecast.locator(":scope > summary").click();
     await expect(reviewAttackForecast.getByTestId("enemy-attack-forecast-strike")).toHaveCount(forecastStrikeDetails.length);
     expect(await reviewAttackForecast.getByTestId("enemy-attack-forecast-strike").allTextContents()).toEqual(forecastStrikeDetails);
+    await reviewAttack.getByRole("button", { name: "マップで確認" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(page.getByTestId("enemy-action-map-preview")).toBeVisible();
+    await expect(page.locator(".map-tile.is-enemy-action-source")).toHaveCount(1);
+    await expect(page.locator(".map-tile.is-enemy-action-target")).toHaveCount(1);
+    await page.getByRole("button", { name: "マップ表示を解除" }).click();
+    await page.getByRole("button", { name: "自軍フェイズ終了" }).click();
+    await expect(review).toBeVisible();
     await review.getByRole("button", { name: "未行動の味方を残して敵軍フェイズへ" }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
     const historyAction = page.getByTestId("battle-history").getByTestId("enemy-phase-action").first();
@@ -1796,6 +1813,15 @@ test("shows candidate details and persists the selected deployment roster", asyn
         .toBeGreaterThanOrEqual(forecastMovementScores[index]!.score);
     }
     await expect(movementCandidates.first()).toContainText("距離ペナルティ");
+    const movementMapPreviewButton = actions.first().getByRole("button", { name: "マップで確認" });
+    await movementMapPreviewButton.click();
+    await expect(page.getByTestId("enemy-action-map-preview")).toBeVisible();
+    await expect(page.locator(".map-tile.is-enemy-action-source"))
+      .toHaveAttribute("data-map-position", "1,2");
+    await expect(page.locator(".map-tile.is-enemy-action-destination"))
+      .toHaveAttribute("data-map-position", chosenPosition!);
+    await expect(page.locator(".map-tile.is-enemy-action-target")).toHaveCount(0);
+    await page.getByRole("button", { name: "マップ表示を解除" }).click();
     const forecastMessage = await actions.first().locator(":scope > p").textContent();
     expect(await readAutoSave(page)).toEqual(savedBeforeForecast);
 

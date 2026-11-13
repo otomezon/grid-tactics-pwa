@@ -1,5 +1,5 @@
 import type { EnemyPhaseForecast } from "../application/get-enemy-phase-forecast";
-import type { EnemyActionKind } from "../application/resolve-enemy-phase";
+import type { EnemyActionKind, EnemyActionLog } from "../application/resolve-enemy-phase";
 import { EnemyTargetEvaluations } from "./enemy-target-evaluations";
 import { EnemyMovementEvaluations } from "./enemy-movement-evaluations";
 import { EnemyAttackForecastDetails } from "./enemy-attack-forecast-details";
@@ -16,7 +16,19 @@ const OUTCOME_LABELS: Record<EnemyPhaseForecast["outcome"], string> = {
   defeat: "敵軍フェイズ中に敗北条件成立"
 };
 
-export function EnemyPhaseForecastPanel({ forecast }: { forecast: EnemyPhaseForecast | null }) {
+interface EnemyPhaseForecastPanelProps {
+  forecast: EnemyPhaseForecast | null;
+  selectedEnemyActionId: string | null;
+  disabled: boolean;
+  onPreviewAction: (action: EnemyActionLog) => void;
+}
+
+export function EnemyPhaseForecastPanel({
+  forecast,
+  selectedEnemyActionId,
+  disabled,
+  onPreviewAction
+}: EnemyPhaseForecastPanelProps) {
   if (!forecast) return null;
   return (
     <section className="info-card enemy-phase-forecast-card" aria-labelledby="enemy-phase-forecast-heading" data-testid="enemy-phase-forecast">
@@ -63,13 +75,23 @@ export function EnemyPhaseForecastPanel({ forecast }: { forecast: EnemyPhaseFore
           <ol className="enemy-phase-action-list">
             {forecast.actions.map((action, index) => (
               <li className="enemy-phase-action enemy-phase-forecast-action" key={action.enemyId} data-testid="enemy-phase-forecast-action"
-                data-destination-position={action.destination ? action.destination.x + "," + action.destination.y : undefined}>
+                data-destination-position={action.destination ? action.destination.x + "," + action.destination.y : undefined}
+                data-target-id={action.targetId}>
                 <div className="enemy-phase-action-heading">
                   <span className="enemy-phase-action-number">{index + 1}</span>
                   <strong>{action.enemyName}</strong>
                   <span className="enemy-phase-action-kind">{ACTION_KIND_LABELS[action.kind]}</span>
                 </div>
                 <p>{action.message}</p>
+                <button
+                  className="enemy-action-map-preview-button"
+                  type="button"
+                  aria-pressed={selectedEnemyActionId === action.enemyId}
+                  disabled={disabled}
+                  onClick={() => onPreviewAction(action)}
+                >
+                  {selectedEnemyActionId === action.enemyId ? "マップ表示中" : "マップで確認"}
+                </button>
                 <EnemyAttackForecastDetails
                   forecast={action.attackForecast}
                   attackerName={action.enemyName}

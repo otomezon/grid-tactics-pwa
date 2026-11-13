@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { EnemyPhaseForecast } from "../application/get-enemy-phase-forecast";
 import { getClassDisplayName } from "../content/classes";
 import type { GameUnit } from "../domain/models/game";
+import type { EnemyActionLog } from "../application/resolve-enemy-phase";
 import { EnemyAttackForecastDetails } from "./enemy-attack-forecast-details";
 
 interface PlayerPhaseEndReviewProps {
@@ -12,7 +13,16 @@ interface PlayerPhaseEndReviewProps {
   onSelectUnit: (unit: GameUnit) => void;
   onReturnToBattle: () => void;
   onEndPhase: () => void;
+  selectedEnemyActionId: string | null;
+  onPreviewAction: (action: EnemyActionLog) => void;
 }
+
+const ENEMY_ACTION_KIND_LABELS: Record<EnemyActionLog["kind"], string> = {
+  attacked: "攻撃",
+  "moved-and-attacked": "移動後に攻撃",
+  moved: "移動",
+  waited: "待機"
+};
 
 function getActionStatus(unit: GameUnit): string {
   if (unit.hasActed) return "行動済み";
@@ -31,11 +41,13 @@ export function PlayerPhaseEndReview({
   disabled,
   onSelectUnit,
   onReturnToBattle,
-  onEndPhase
+  onEndPhase,
+  selectedEnemyActionId,
+  onPreviewAction
 }: PlayerPhaseEndReviewProps) {
   const reviewRef = useRef<HTMLElement | null>(null);
   const playerUnitsById = new Map(playerUnits.map((unit) => [unit.id, unit] as const));
-  const attackActions = forecast?.actions.filter((action) => action.targetId && action.targetName) ?? [];
+  const enemyActions = forecast?.actions ?? [];
   const unitsWithPredictedDamage = forecast?.playerUnitOutcomes.filter(
     (unit) => unit.incomingDamage > 0
   ) ?? [];
@@ -163,27 +175,41 @@ export function PlayerPhaseEndReview({
                 </ul>
               </section>
 
-              <section className="phase-end-review-forecast-section" aria-labelledby="phase-end-review-attacks-heading">
-                <h3 id="phase-end-review-attacks-heading">予測される敵の攻撃対象</h3>
-                {attackActions.length > 0 ? (
+              <section className="phase-end-review-forecast-section" aria-labelledby="phase-end-review-actions-heading">
+                <h3 id="phase-end-review-actions-heading">予測される敵の行動</h3>
+                {enemyActions.length > 0 ? (
                   <ol className="phase-end-review-attack-list">
-                    {attackActions.map((action) => (
+                    {enemyActions.map((action) => (
                       <li
-                        className="phase-end-review-attack"
+                        className="phase-end-review-enemy-action"
                         key={action.enemyId}
-                        data-testid="phase-end-review-attack"
+                        data-testid="phase-end-review-action"
                         data-enemy-id={action.enemyId}
                         data-target-id={action.targetId}
+                        data-destination-position={action.destination ? action.destination.x + "," + action.destination.y : undefined}
                       >
-                        <div className="phase-end-review-attack-heading">
+                        <div className="phase-end-review-enemy-action-heading">
                           <strong>{action.enemyName}</strong>
-                          <span aria-hidden="true">→</span>
-                          <strong>{action.targetName}</strong>
-                          <span className="phase-end-review-attack-kind">
-                            {action.kind === "moved-and-attacked" ? "移動後攻撃" : "攻撃"}
+                          {action.targetName && (
+                            <>
+                              <span aria-hidden="true">→</span>
+                              <strong>{action.targetName}</strong>
+                            </>
+                          )}
+                          <span className="phase-end-review-enemy-action-kind">
+                            {ENEMY_ACTION_KIND_LABELS[action.kind]}
                           </span>
                         </div>
                         <p>{action.message}</p>
+                        <button
+                          className="enemy-action-map-preview-button"
+                          type="button"
+                          aria-pressed={selectedEnemyActionId === action.enemyId}
+                          disabled={disabled}
+                          onClick={() => onPreviewAction(action)}
+                        >
+                          {selectedEnemyActionId === action.enemyId ? "マップ表示中" : "マップで確認"}
+                        </button>
                         <EnemyAttackForecastDetails
                           forecast={action.attackForecast}
                           attackerName={action.enemyName}

@@ -89,6 +89,13 @@ type BattleHistoryEntry =
   | { sequence: number; turn: number; kind: "player-attack"; report: PlayerAttackReport }
   | { sequence: number; turn: number; kind: "enemy-phase"; actions: EnemyActionLog[] };
 
+interface EnemyActionMapPreview {
+  action: EnemyActionLog;
+  sourcePosition: Position;
+  destinationPosition: Position | null;
+  targetPosition: Position | null;
+}
+
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -376,6 +383,7 @@ function CampaignApp() {
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
   const [mapFocusPosition, setMapFocusPosition] = useState<Position>({ x: 0, y: 0 });
   const [movementPreviewPosition, setMovementPreviewPosition] = useState<Position | null>(null);
+  const [enemyActionMapPreview, setEnemyActionMapPreview] = useState<EnemyActionMapPreview | null>(null);
   const [battleHistory, setBattleHistory] = useState<BattleHistoryEntry[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [isTitleScreenVisible, setIsTitleScreenVisible] = useState(true);
@@ -406,6 +414,10 @@ function CampaignApp() {
   useEffect(() => {
     setIsMapEventHistoryOpen(false);
   }, [gameState.chapterId, gameState.firedMapEventIds.length]);
+
+  useEffect(() => {
+    setEnemyActionMapPreview(null);
+  }, [gameState]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
@@ -661,6 +673,7 @@ function CampaignApp() {
     () => deploymentPending ? null : getEnemyPhaseForecast(gameState, currentMap),
     [currentMap, deploymentPending, gameState]
   );
+  const selectedEnemyActionId = enemyActionMapPreview?.action.enemyId ?? null;
   const pendingPlayerUnits = useMemo(
     () => gameState.units.filter((unit) => unit.faction === "player" && !unit.hasActed),
     [gameState.units]
@@ -1080,6 +1093,7 @@ function CampaignApp() {
 
   function handleRosterUnitSelect(unit: GameUnit): void {
     if (!interactive) return;
+    setEnemyActionMapPreview(null);
     touchMoveConfirmationPositionRef.current = null;
     setSelectedUnitId(unit.id);
     setCombatTargetId(null);
@@ -1123,6 +1137,7 @@ function CampaignApp() {
 
   function handleEnemyRosterSelect(unit: GameUnit): void {
     if (!interactive) return;
+    setEnemyActionMapPreview(null);
     touchMoveConfirmationPositionRef.current = null;
     setCombatTargetId(null);
     setInspectedPosition(unit.position);
@@ -1147,6 +1162,38 @@ function CampaignApp() {
     const roster = document.querySelector<HTMLElement>("#enemy-roster");
     roster?.focus();
     roster?.scrollIntoView({ block: "nearest" });
+  }
+
+  function handlePreviewEnemyAction(action: EnemyActionLog): void {
+    const enemy = gameState.units.find((unit) => unit.id === action.enemyId);
+    if (!enemy) return;
+    const target = action.targetId
+      ? gameState.units.find((unit) => unit.id === action.targetId)
+      : undefined;
+    setEnemyActionMapPreview({
+      action,
+      sourcePosition: enemy.position,
+      destinationPosition: action.destination ?? null,
+      targetPosition: target?.position ?? null
+    });
+    setIsPhaseEndReviewOpen(false);
+    setSelectedUnitId(null);
+    setCombatTargetId(null);
+    setInspectedPosition(enemy.position);
+    setMovementPreviewPosition(null);
+    setPromotionConfirmUnitId(null);
+    setMessage(enemy.name + "の予測行動位置をマップに表示しています。強調表示は実際の移動・攻撃を実行しません。");
+    window.requestAnimationFrame(() => {
+      const tile = document.querySelector<HTMLButtonElement>(
+        `.map-grid [data-map-position="${enemy.position.x},${enemy.position.y}"]`
+      );
+      tile?.focus();
+      tile?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+  }
+
+  function handleClearEnemyActionMapPreview(): void {
+    setEnemyActionMapPreview(null);
   }
 
   function handleContinueCampaign(): void {
@@ -1200,6 +1247,7 @@ function CampaignApp() {
     const isTouchTap = lastMapInputWasTouchRef.current;
     lastMapInputWasTouchRef.current = false;
     if (!interactive) return;
+    setEnemyActionMapPreview(null);
     setInspectedPosition(position);
     setPromotionConfirmUnitId(null);
 
@@ -1875,10 +1923,12 @@ function CampaignApp() {
           pendingUnits={pendingPlayerUnits}
           playerUnits={gameState.units.filter((unit) => unit.faction === "player")}
           forecast={enemyPhaseForecast}
-          disabled={!interactive}
           onSelectUnit={handleSelectUnitFromPhaseReview}
           onReturnToBattle={handleClosePhaseEndReview}
           onEndPhase={handleConfirmPhaseEndReview}
+          selectedEnemyActionId={selectedEnemyActionId}
+          disabled={!interactive}
+          onPreviewAction={handlePreviewEnemyAction}
         />
       )}
 
@@ -2225,6 +2275,31 @@ function CampaignApp() {
             {enemyThreatInspectionDetails && <EnemyThreatInspector details={enemyThreatInspectionDetails} />}
           </div>
 
+          {enemyActionMapPreview && (
+            <section className="enemy-action-map-preview" data-testid="enemy-action-map-preview" aria-live="polite">
+              <div className="enemy-action-map-preview-copy">
+                <strong>{enemyActionMapPreview.action.enemyName}の予測行動位置</strong>
+                <p>{enemyActionMapPreview.action.message}</p>
+                <div className="enemy-action-map-legend" aria-label="マップ強調表示の凡例">
+                  <span><b className="enemy-action-map-legend-marker is-source">出</b>開始位置</span>
+                  {enemyActionMapPreview.destinationPosition && (
+                    <span><b className="enemy-action-map-legend-marker is-destination">着</b>移動先</span>
+                  )}
+                  {enemyActionMapPreview.targetPosition && (
+                    <span><b className="enemy-action-map-legend-marker is-target">標</b>攻撃対象</span>
+                  )}
+                </div>
+              </div>
+              <button
+                className="enemy-action-map-preview-clear"
+                type="button"
+                onClick={handleClearEnemyActionMapPreview}
+              >
+                マップ表示を解除
+              </button>
+            </section>
+          )}
+
           {gameState.phase === "player" && battleOutcome === "playing" && (
             <div className="map-controls">
               <button
@@ -2283,6 +2358,17 @@ function CampaignApp() {
                 const isAttackableAfterMove = newlyAttackableKeys.has(tileKey);
                 const isEnemyThreatened = enemyThreatenedKeys.has(tileKey);
                 const isTargeted = unit?.id === combatTargetId;
+                const isEnemyActionSource = Boolean(
+                  enemyActionMapPreview && samePosition(enemyActionMapPreview.sourcePosition, position)
+                );
+                const isEnemyActionDestination = Boolean(
+                  enemyActionMapPreview?.destinationPosition &&
+                  samePosition(enemyActionMapPreview.destinationPosition, position)
+                );
+                const isEnemyActionTarget = Boolean(
+                  enemyActionMapPreview?.targetPosition &&
+                  samePosition(enemyActionMapPreview.targetPosition, position)
+                );
                 const classes = [
                   "map-tile",
                   "terrain-" + terrain,
@@ -2294,7 +2380,10 @@ function CampaignApp() {
                   isAttackable ? "is-attackable" : "",
                   isAttackableAfterMove ? "is-attackable-after-move" : "",
                   isEnemyThreatened ? "is-enemy-threatened" : "",
-                  isTargeted ? "is-targeted" : ""
+                  isTargeted ? "is-targeted" : "",
+                  isEnemyActionSource ? "is-enemy-action-source" : "",
+                  isEnemyActionDestination ? "is-enemy-action-destination" : "",
+                  isEnemyActionTarget ? "is-enemy-action-target" : ""
                 ].filter(Boolean).join(" ");
                 const ariaLabel = positionLabel(position) + "、" + TERRAIN_DEFINITIONS[terrain].label +
                   (unit ? "、" + unit.name : "") +
@@ -2306,7 +2395,10 @@ function CampaignApp() {
                   (isMovementPath ? "、移動経路 " + String(pathStep) + "番" : "") +
                   (isAttackable ? "、攻撃可能" : "") +
                   (isAttackableAfterMove ? "、移動プレビュー先から攻撃可能" : "") +
-                  (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "");
+                  (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "") +
+                  (isEnemyActionSource ? "、敵の予測行動の開始位置" : "") +
+                  (isEnemyActionDestination ? "、敵の予測移動先" : "") +
+                  (isEnemyActionTarget ? "、敵の予測攻撃対象" : "");
 
                 return (
                   <div className="map-grid-cell" role="gridcell" aria-colindex={x + 1}
@@ -2358,6 +2450,9 @@ function CampaignApp() {
                           {unit.faction === "player" ? "味" : "敵"}
                         </span>
                       )}
+                      {isEnemyActionSource && <span className="enemy-action-map-marker is-source" aria-hidden="true">出</span>}
+                      {isEnemyActionDestination && <span className="enemy-action-map-marker is-destination" aria-hidden="true">着</span>}
+                      {isEnemyActionTarget && <span className="enemy-action-map-marker is-target" aria-hidden="true">標</span>}
                       {isReachable && <span className="move-marker" aria-hidden="true" />}
                       {isReachable && reachableCost !== undefined && (
                         <span className="move-cost-marker" aria-hidden="true">{reachableCost}</span>
@@ -2416,7 +2511,12 @@ function CampaignApp() {
             onSelect={handleEnemyRosterSelect}
           />
           {inspectedEnemyDetails && <EnemyInspector details={inspectedEnemyDetails} />}
-          <EnemyPhaseForecastPanel forecast={enemyPhaseForecast} />
+          <EnemyPhaseForecastPanel
+            forecast={enemyPhaseForecast}
+            selectedEnemyActionId={selectedEnemyActionId}
+            disabled={!interactive}
+            onPreviewAction={handlePreviewEnemyAction}
+          />
           <section className="info-card">
             <p className="eyebrow">COMMAND</p>
             <h2>ユニット情報</h2>
