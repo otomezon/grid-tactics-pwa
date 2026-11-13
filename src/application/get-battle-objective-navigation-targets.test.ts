@@ -5,7 +5,12 @@ import { getBattleObjectiveNavigationTargets } from "./get-battle-objective-navi
 
 describe("getBattleObjectiveNavigationTargets", () => {
   it("counts living enemies for a defeat-all objective without inventing a single target", () => {
-    expect(getBattleObjectiveNavigationTargets(INITIAL_GAME_STATE, CHAPTER_01_MAP)).toEqual({
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      objective: { type: "defeat_all" },
+      defeatCondition: undefined
+    };
+    expect(getBattleObjectiveNavigationTargets(INITIAL_GAME_STATE, map)).toEqual({
       victoryTarget: null,
       defeatTarget: null,
       remainingEnemyCount: 5
@@ -59,6 +64,11 @@ describe("getBattleObjectiveNavigationTargets", () => {
       ...INITIAL_GAME_STATE,
       units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "enemy_001" && unit.id !== "enemy_003")
     };
-    expect(getBattleObjectiveNavigationTargets(state, CHAPTER_01_MAP).remainingEnemyCount).toBe(3);
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      objective: { type: "defeat_all" },
+      defeatCondition: undefined
+    };
+    expect(getBattleObjectiveNavigationTargets(state, map).remainingEnemyCount).toBe(3);
   });
 });
