@@ -4,6 +4,7 @@ import type { AttackPlan } from "./perform-attack";
 import { calculateManhattanDistance } from "../domain/combat/grid-distance";
 import { calculateReachableTiles } from "../domain/movement/calculate-reachable-tiles";
 import type { GameMapDefinition, GameStateSnapshot, GameUnit, Position } from "../domain/models/game";
+import type { CombatForecast } from "../domain/combat/types";
 import { evaluateBattleOutcome, type BattleOutcome } from "../domain/rules/evaluate-battle-outcome";
 import { applyFortRecovery } from "../domain/rules/apply-fort-recovery";
 import { getClassTacticalRoles, getTacticalRoleLabel, getTacticalRolePriorityBonus } from "../content/tactical-roles";
@@ -65,6 +66,7 @@ export interface EnemyActionLog {
   targetRoles?: readonly TacticalRole[];
   targetRolePriorityBonus?: number;
   targetEvaluations?: readonly EnemyTargetEvaluation[];
+  attackForecast?: CombatForecast;
   movementReason?: EnemyMovementReason;
   movementEvaluations?: readonly EnemyMovementEvaluation[];
   message: string;
@@ -356,6 +358,7 @@ function executeEnemyAction(
           targetRolePriorityBonus: currentAttack.targetRolePriorityBonus
         } : {}),
         targetEvaluations: toTargetEvaluations(currentAttackCandidates),
+        attackForecast: result.plan.forecast,
         message: `${currentEnemy.name}は${currentAttack.target.name}に攻撃（${logs}）${formatTargetPriorityReason(currentAttack)}`
       }
     };
@@ -399,6 +402,7 @@ function executeEnemyAction(
               targetRolePriorityBonus: postMoveAttack.targetRolePriorityBonus
             } : {}),
             targetEvaluations: toTargetEvaluations(postMoveAttackCandidates),
+            attackForecast: result.plan.forecast,
             message: `${currentEnemy.name}は${positionText(destination.position)}へ移動し、${postMoveAttack.target.name}に攻撃（${logs}）${formatMovementReason(destination.movementReason)}${formatTargetPriorityReason(postMoveAttack)}`
           }
         };
