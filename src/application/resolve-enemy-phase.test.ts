@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
 import { beginEnemyPhase, runEnemyPhase } from "./resolve-enemy-phase";
+import { createAttackPlanForFaction } from "./perform-attack";
 
 function openMap(): GameMapDefinition {
   return {
@@ -107,11 +108,17 @@ describe("enemy phase controller", () => {
       { ...initialPlayer, position: { x: 1, y: 8 }, currentHp: 20 },
       { ...initialEnemy, position: { x: 1, y: 7 } }
     ]);
-    const result = runEnemyPhase(state, openMap());
+    const map = openMap();
+    const expectedAttackForecast = createAttackPlanForFaction(
+      state, map, "enemy_001", "unit_001", "enemy"
+    ).forecast;
+    const result = runEnemyPhase(state, map);
 
     expect(result.actions).toHaveLength(1);
     expect(result.actions[0]?.kind).toBe("attacked");
     expect(result.actions[0]?.targetId).toBe("unit_001");
+    expect(result.actions[0]?.attackForecast).toEqual(expectedAttackForecast);
+    expect(result.actions[0]?.attackForecast?.strikes.length).toBeGreaterThan(0);
     expect(result.nextState.phase).toBe("player");
     expect(result.nextState.turn).toBe(2);
     expect(result.nextState.rngState).not.toBe(state.rngState);
@@ -129,10 +136,19 @@ describe("enemy phase controller", () => {
       ...INITIAL_GAME_STATE.units.find((unit) => unit.id === "enemy_001")!,
       position: { x: 1, y: 2 }
     };
-    const result = runEnemyPhase(battleState([player, enemy]), openMap());
+    const map = openMap();
+    const postMoveState: GameStateSnapshot = {
+      ...battleState([player, enemy]),
+      units: [player, { ...enemy, position: { x: 1, y: 7 }, hasMoved: true }]
+    };
+    const expectedAttackForecast = createAttackPlanForFaction(
+      postMoveState, map, enemy.id, player.id, "enemy"
+    ).forecast;
+    const result = runEnemyPhase(battleState([player, enemy]), map);
 
     expect(result.actions[0]?.kind).toBe("moved-and-attacked");
     expect(result.actions[0]?.destination).toEqual({ x: 1, y: 7 });
+    expect(result.actions[0]?.attackForecast).toEqual(expectedAttackForecast);
     expect(result.actions[0]?.movementReason).toEqual({
       kind: "attack-after-move",
       targetId: player.id,

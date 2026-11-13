@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { EnemyPhaseForecast } from "../application/get-enemy-phase-forecast";
 import { getClassDisplayName } from "../content/classes";
 import type { GameUnit } from "../domain/models/game";
+import { EnemyAttackForecastDetails } from "./enemy-attack-forecast-details";
 
 interface PlayerPhaseEndReviewProps {
   pendingUnits: GameUnit[];
@@ -183,6 +184,11 @@ export function PlayerPhaseEndReview({
                           </span>
                         </div>
                         <p>{action.message}</p>
+                        <EnemyAttackForecastDetails
+                          forecast={action.attackForecast}
+                          attackerName={action.enemyName}
+                          defenderName={action.targetName ?? "対象ユニット"}
+                        />
                       </li>
                     ))}
                   </ol>
