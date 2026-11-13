@@ -22,14 +22,14 @@ describe("getCombatForecastDetails", () => {
       createAttackPlan(state, CHAPTER_01_MAP, "unit_001", "enemy_001")
     );
 
-    expect(details.attacker).toMatchObject({ name: "味方01", currentHp: 20, maxHp: 20 });
+    expect(details.attacker).toMatchObject({ name: "主人公", currentHp: 20, maxHp: 20 });
     expect(details.defender).toMatchObject({ name: "敵01", currentHp: 20, maxHp: 20 });
     expect(details.distance).toBe(1);
     expect(details.counterAvailability).toBe("available");
     expect(details.strikes).toHaveLength(2);
     expect(details.strikes[0]).toMatchObject({
       kindLabel: "先制攻撃",
-      actorName: "味方01",
+      actorName: "主人公",
       targetName: "敵01",
       weaponName: "試作の鉄の剣",
       weaponTypeLabel: "剣",
@@ -43,7 +43,7 @@ describe("getCombatForecastDetails", () => {
     expect(details.strikes[1]).toMatchObject({
       kindLabel: "反撃",
       actorName: "敵01",
-      targetName: "味方01",
+      targetName: "主人公",
       weaponName: "試作の鉄の斧",
       weaponTriangleModifier: -20,
       targetTerrainName: "平地"
