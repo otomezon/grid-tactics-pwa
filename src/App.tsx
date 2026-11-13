@@ -1230,9 +1230,9 @@ function CampaignApp() {
   }
 
   function handleReturnToTitle(): void {
-    if (saveStatus === "loading" || saveStatus === "saving") return;
+    if (saveStatus !== "saved" || loadBlocked) return;
     setIsTitleScreenVisible(true);
-    setMessage("タイトル画面へ戻りました。現在のキャンペーンの自動セーブは保持されています。");
+    setMessage("タイトル画面へ戻りました。自動セーブは変更していません。");
   }
 
   function handleMapTileKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, position: Position): void {
@@ -2157,7 +2157,7 @@ function CampaignApp() {
             className="secondary-button"
             type="button"
             data-testid="return-to-campaign-title"
-            disabled={saveStatus === "loading" || saveStatus === "saving"}
+            disabled={saveStatus !== "saved" || loadBlocked}
             onClick={handleReturnToTitle}
           >
             タイトルへ戻る
