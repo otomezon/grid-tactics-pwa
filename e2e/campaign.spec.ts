@@ -2331,29 +2331,37 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ", { timeout: 15_000 });
   });
 
-  test("navigates from a defeat-all objective to the living enemy roster without changing the save", async ({ page }) => {
+  test("navigates to the chapter boss and protected protagonist without changing the save", async ({ page }) => {
     await startBattle(page);
     await page.setViewportSize({ width: 320, height: 720 });
     const savedBeforeNavigation = await readAutoSave(page);
     const objective = page.getByTestId("battle-objective");
-    const navigationButton = objective.getByRole("button", {
-      name: "残りの敵を一覧で確認、5体"
-    });
-    await expect(navigationButton).toBeVisible();
-    await navigationButton.click();
+    await expect(objective).toContainText("ボスを撃破する");
+    await expect(objective).toContainText("敵将 · HP 20 / 20");
+    await expect(objective).toContainText("主人公を撃破させない");
 
-    const enemyRoster = page.locator("#enemy-roster");
-    await expect(enemyRoster).toBeFocused();
-    await expect(enemyRoster).toContainText("敵ユニット一覧");
-    await expect(enemyRoster.getByRole("button", { name: /敵01/ })).toBeVisible();
+    const bossNavigation = objective.getByRole("button", { name: "敵将をマップで確認" });
+    await expect(bossNavigation).toBeVisible();
+    await bossNavigation.click();
+    const bossInspector = page.getByTestId("enemy-inspector");
+    await expect(bossInspector).toBeVisible();
+    await expect(bossInspector.getByRole("heading", { name: "敵将" })).toBeVisible();
+
+    const protagonistNavigation = objective.getByRole("button", { name: "主人公をマップで確認" });
+    await expect(protagonistNavigation).toBeVisible();
+    await protagonistNavigation.click();
+    const protagonistInspector = page.getByTestId("player-inspector");
+    await expect(protagonistInspector).toBeVisible();
+    await expect(protagonistInspector.getByRole("heading", { name: "主人公" })).toBeVisible();
+
     const dimensions = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,
-      rosterWidth: document.querySelector("#enemy-roster")?.getBoundingClientRect().width ?? 0
+      objectiveWidth: document.querySelector('[data-testid="battle-objective"]')?.getBoundingClientRect().width ?? 0
     }));
-    expect(dimensions.rosterWidth).toBeGreaterThan(0);
+    expect(dimensions.objectiveWidth).toBeGreaterThan(0);
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
-    expect(dimensions.rosterWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.objectiveWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
     expect(await readAutoSave(page)).toEqual(savedBeforeNavigation);
   });
 
