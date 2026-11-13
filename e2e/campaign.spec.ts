@@ -1678,7 +1678,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
 
     const actions = forecast.getByTestId("enemy-phase-forecast-action");
     await expect(actions).toHaveCount(1);
-    const mapPreviewButton = actions.first().getByRole("button", { name: "マップで確認" });
+    const mapPreviewButton = actions.first().locator(".enemy-action-map-preview-button");
     await mapPreviewButton.click();
     await expect(page.getByTestId("enemy-action-map-preview")).toBeVisible();
     await expect(mapPreviewButton).toHaveAttribute("aria-pressed", "true");
@@ -2245,7 +2245,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(review).toContainText("被ダメージ見込み");
     await expect(review.getByTestId("phase-end-review-defeated")).toBeVisible();
     await expect(review.getByRole("heading", { name: "味方全員の予測HP" })).toBeVisible();
-    await expect(review.getByRole("heading", { name: "予測される敵の攻撃対象" })).toBeVisible();
+    await expect(review.getByRole("heading", { name: "予測される敵の行動" })).toBeVisible();
     await expect(review.getByTestId("phase-end-review-forecast-unit")).toHaveCount(allies.length);
     const reviewDimensions = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
