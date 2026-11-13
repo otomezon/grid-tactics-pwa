@@ -1,15 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { acknowledgePendingMapEvents } from "./helpers/map-events";
 
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
 const navigationCountKey = "__pwa_e2e_navigation_count";
-
-async function acknowledgePendingMapEvents(page: Page): Promise<void> {
-  const dialog = page.getByTestId("map-event-dialog");
-  while (await dialog.count()) {
-    await dialog.getByRole("button", { name: /次のイベントへ|確認して続ける/ }).click();
-  }
-  await expect(dialog).toHaveCount(0);
-}
 
 async function enterNewCampaign(page: Page): Promise<void> {
   const title = page.getByTestId("campaign-title-screen");
