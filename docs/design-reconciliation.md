@@ -33,7 +33,7 @@
 | 味方全滅時の敗北 | §3.2 | player rosterが0なら敗北 | 同上 |
 | 自動保存 | §10.3 | enemy phase開始状態と終了状態を保存 | App、IndexedDB |
 | 砦のフェイズ開始回復 | §4.2 | フェイズ開始時に該当陣営の生存ユニットを最大HPの10%回復 | `apply-fort-recovery.ts`、`resolve-enemy-phase.ts` |
-| マップイベント基盤 | §8.3 | ステージ開始・指定ターン／フェイズ開始・ユニット撃破・ボス撃破・勝利／敗北のトリガーをマップ定義から一度だけ解決。初期アクションはメッセージ表示 | `GameMapDefinition.events`, `resolve-map-events.ts`, `resolve-map-event-transition.ts` | 発火済みIDをsaveVersion 5へ保存。村／宝箱／扉／増援／加入／会話選択肢は未実装 |
+| マップイベント基盤・永続確認 | §8.3 | ステージ開始・指定ターン／フェイズ開始・ユニット撃破・ボス撃破・勝利／敗北を一度だけ発火。メッセージ確認状態を保存し、未確認イベントは再読み込み後もモーダルで再表示。敵軍フェイズ開始イベントの確認前は敵AIを停止 | `GameMapDefinition.events`, `resolve-map-events.ts`, `resolve-map-event-transition.ts`, `map-event-dialog.tsx` | `firedMapEventIds`／`acknowledgedMapEventIds` をsaveVersion 6へ保存。v5の既発火IDは確認済みとして移行。村／宝箱／扉／増援／加入／会話選択肢は未実装 |
 
 | 章クリアから次章準備・保存再開 | 実装済み（勝利後の明示操作で報酬適用と次章snapshotを準備し、出撃配置確定後にのみ保存。既存のHP／EXP／能力／所持品／控え／RNGを引き継ぐ） | `src/application/prepare-next-chapter.ts`, `src/application/apply-chapter-rewards.ts`, `src/App.tsx` | Chromium E2Eで第1章クリアfixture→第2章準備→未確定中の旧セーブ維持→配置確定→saveVersion 3再読込を検証 |
 
