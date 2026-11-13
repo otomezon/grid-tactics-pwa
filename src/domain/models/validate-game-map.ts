@@ -25,6 +25,38 @@ function isEventMessage(action: Record<string, unknown>): boolean {
     (action.speaker === undefined ||
       (isNonEmptyString(action.speaker) && action.speaker.length <= 80));
 }
+function isEventChoiceList(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length < 2 || value.length > 4) return false;
+  const ids = new Set<string>();
+  for (const candidate of value) {
+    if (
+      !isRecord(candidate) ||
+      !isNonEmptyString(candidate.id) ||
+      candidate.id.length > 64 ||
+      !isNonEmptyString(candidate.label) ||
+      candidate.label.length > 80 ||
+      ids.has(candidate.id)
+    ) return false;
+    ids.add(candidate.id);
+    const eventsById = new Map(
+      (value.events as Record<string, unknown>[]).map((event) => [event.id as string, event] as const)
+    );
+    for (const candidate of value.events) {
+      const trigger = (candidate as Record<string, unknown>).trigger as Record<string, unknown>;
+      if (trigger.type !== "event-choice") continue;
+      const source = eventsById.get(trigger.eventId as string);
+      if (
+        !source ||
+        !isRecord(source.action) ||
+        source.action.type !== "show-choice" ||
+        !isEventChoiceList(source.action.choices) ||
+        !(source.action.choices as Array<Record<string, unknown>>)
+          .some((choice) => choice.id === trigger.choiceId)
+      ) return false;
+    }
+  }
+  return true;
+}
 function isReinforcementUnitShape(
   value: unknown,
   width: number,
@@ -121,6 +153,12 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
         case "victory":
         case "defeat":
           break;
+        case "event-choice":
+          if (
+            !isNonEmptyString(trigger.eventId) || trigger.eventId.length > 128 ||
+            !isNonEmptyString(trigger.choiceId) || trigger.choiceId.length > 64
+          ) return false;
+          break;
         case "turn-start":
           if (!Number.isInteger(trigger.turn) || (trigger.turn as number) < 1 ||
               (trigger.phase !== "player" && trigger.phase !== "enemy")) return false;
@@ -156,6 +194,10 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
       const action = candidate.action;
       if (!isEventMessage(action)) return false;
       if (action.type === "show-message") continue;
+      if (action.type === "show-choice") {
+        if (!isEventChoiceList(action.choices)) return false;
+        continue;
+      }
       if (action.type === "grant-item") {
         const itemId = action.itemId;
         if (

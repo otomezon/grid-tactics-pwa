@@ -8,6 +8,7 @@ const VERSION_TWO_SAVE_VERSION = 2;
 const PREVIOUS_SAVE_VERSION = 3;
 const VERSION_FOUR_SAVE_VERSION = 4;
 const VERSION_FIVE_SAVE_VERSION = 5;
+const VERSION_SIX_SAVE_VERSION = 6;
 const FALLBACK_RNG_STATE = 0x6d2b79f5;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -60,7 +61,7 @@ export interface GameStateMigrationResult {
   snapshot: GameStateSnapshot;
   migrated: boolean;
 }
-/** Adds durable map event acknowledgements in v6 while preserving earlier save migrations. */
+/** Adds durable dialogue choice selections in v7 while preserving previous migration behavior. */
 export function migrateGameStateSnapshot(
   value: unknown,
   map: GameMapDefinition
@@ -69,7 +70,9 @@ export function migrateGameStateSnapshot(
   if (!isRecord(value)) return null;
 
   let candidate: unknown;
-  if (value.saveVersion === VERSION_FIVE_SAVE_VERSION) {
+  if (value.saveVersion === VERSION_SIX_SAVE_VERSION) {
+    candidate = { ...value, saveVersion: SAVE_VERSION, mapEventChoices: [] };
+  } else if (value.saveVersion === VERSION_FIVE_SAVE_VERSION) {
     candidate = {
       ...value,
       saveVersion: SAVE_VERSION,
@@ -77,14 +80,16 @@ export function migrateGameStateSnapshot(
       // Treat every event already marked as fired as acknowledged to avoid replaying old content.
       acknowledgedMapEventIds: Array.isArray(value.firedMapEventIds)
         ? [...value.firedMapEventIds]
-        : []
+        : [],
+      mapEventChoices: []
     };
   } else if (value.saveVersion === VERSION_FOUR_SAVE_VERSION) {
     candidate = {
       ...value,
       saveVersion: SAVE_VERSION,
       firedMapEventIds: [],
-      acknowledgedMapEventIds: []
+      acknowledgedMapEventIds: [],
+      mapEventChoices: []
     };
   } else if (value.saveVersion === PREVIOUS_SAVE_VERSION) {
     candidate = {
@@ -92,7 +97,8 @@ export function migrateGameStateSnapshot(
       saveVersion: SAVE_VERSION,
       campaignUnitBattleRecords: [],
       firedMapEventIds: [],
-      acknowledgedMapEventIds: []
+      acknowledgedMapEventIds: [],
+      mapEventChoices: []
     };
   } else if (value.saveVersion === VERSION_TWO_SAVE_VERSION) {
     candidate = {
@@ -101,7 +107,8 @@ export function migrateGameStateSnapshot(
       reserveUnits: [],
       campaignUnitBattleRecords: [],
       firedMapEventIds: [],
-      acknowledgedMapEventIds: []
+      acknowledgedMapEventIds: [],
+      mapEventChoices: []
     };
   } else if (value.saveVersion === LEGACY_SAVE_VERSION) {
     const units = Array.isArray(value.units) ? value.units.map(migrateLegacyUnit) : value.units;
@@ -113,7 +120,8 @@ export function migrateGameStateSnapshot(
       reserveUnits: [],
       campaignUnitBattleRecords: [],
       firedMapEventIds: [],
-      acknowledgedMapEventIds: []
+      acknowledgedMapEventIds: [],
+      mapEventChoices: []
     };
   } else {
     return null;
