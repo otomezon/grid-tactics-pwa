@@ -8,6 +8,7 @@ export interface MapEventHistoryPanelProps {
 export function MapEventHistoryPanel({ events, onClose }: MapEventHistoryPanelProps) {
   return (
     <section
+      id="map-event-history-panel"
       className="map-event-history-panel"
       role="region"
       aria-labelledby="map-event-history-title"
