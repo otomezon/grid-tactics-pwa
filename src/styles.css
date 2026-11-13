@@ -2424,3 +2424,101 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   font-size: .68rem;
   overflow-wrap: anywhere;
 }
+
+
+/* Strike-by-strike theoretical details from the selected enemy attack plan. */
+.enemy-attack-forecast-details {
+  margin-top: 9px;
+  padding: 8px 9px;
+  border: 1px solid rgba(132, 151, 166, .28);
+  border-radius: 9px;
+  background: rgba(8, 18, 27, .24);
+}
+
+.enemy-attack-forecast-details > summary {
+  color: #dce8ed;
+  font-size: .7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.enemy-attack-forecast-details > summary:focus-visible {
+  outline: 2px solid #f1c879;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.enemy-attack-forecast-list {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.enemy-attack-forecast-strike {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(132, 84, 79, .55);
+  border-radius: 8px;
+  background: rgba(115, 61, 57, .12);
+}
+
+.enemy-attack-forecast-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  font-size: .72rem;
+}
+
+.enemy-attack-forecast-title span {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.enemy-attack-forecast-weapon {
+  margin: 4px 0 7px;
+  color: #e3c8be;
+  font-size: .68rem;
+  overflow-wrap: anywhere;
+}
+
+.enemy-attack-forecast-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 9px;
+  margin: 0;
+}
+
+.enemy-attack-forecast-stats > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(132, 84, 79, .28);
+  font-size: .66rem;
+}
+
+.enemy-attack-forecast-stats dt {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.enemy-attack-forecast-stats dd {
+  margin: 0;
+  color: #f2f5f7;
+  font-weight: 800;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.enemy-attack-forecast-note {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: .66rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
