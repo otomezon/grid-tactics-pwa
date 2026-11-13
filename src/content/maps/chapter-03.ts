@@ -36,7 +36,8 @@ export const CHAPTER_03_MAP: GameMapDefinition = {
     { unitId: "enemy_004", x: 2, y: 5 },
     { unitId: "enemy_005", x: 8, y: 5 }
   ],
-  objective: { type: "defeat_all" }
+  objective: { type: "defeat_all" },
+  events: []
 };
 
 // Prototype layout only: reuses the existing cast and rules without defining story or rewards.

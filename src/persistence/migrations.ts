@@ -6,6 +6,7 @@ import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 const LEGACY_SAVE_VERSION = 1;
 const VERSION_TWO_SAVE_VERSION = 2;
 const PREVIOUS_SAVE_VERSION = 3;
+const VERSION_FOUR_SAVE_VERSION = 4;
 const FALLBACK_RNG_STATE = 0x6d2b79f5;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,7 +59,7 @@ export interface GameStateMigrationResult {
   snapshot: GameStateSnapshot;
   migrated: boolean;
 }
-/** Adds persistent campaign battle records in v4 while preserving earlier migrations. */
+/** Adds one-shot map event progress in v5 while preserving earlier save migrations. */
 export function migrateGameStateSnapshot(
   value: unknown,
   map: GameMapDefinition
@@ -67,14 +68,22 @@ export function migrateGameStateSnapshot(
   if (!isRecord(value)) return null;
 
   let candidate: unknown;
-  if (value.saveVersion === PREVIOUS_SAVE_VERSION) {
-    candidate = { ...value, saveVersion: SAVE_VERSION, campaignUnitBattleRecords: [] };
+  if (value.saveVersion === VERSION_FOUR_SAVE_VERSION) {
+    candidate = { ...value, saveVersion: SAVE_VERSION, firedMapEventIds: [] };
+  } else if (value.saveVersion === PREVIOUS_SAVE_VERSION) {
+    candidate = {
+      ...value,
+      saveVersion: SAVE_VERSION,
+      campaignUnitBattleRecords: [],
+      firedMapEventIds: []
+    };
   } else if (value.saveVersion === VERSION_TWO_SAVE_VERSION) {
     candidate = {
       ...value,
       saveVersion: SAVE_VERSION,
       reserveUnits: [],
-      campaignUnitBattleRecords: []
+      campaignUnitBattleRecords: [],
+      firedMapEventIds: []
     };
   } else if (value.saveVersion === LEGACY_SAVE_VERSION) {
     const units = Array.isArray(value.units) ? value.units.map(migrateLegacyUnit) : value.units;
@@ -84,7 +93,8 @@ export function migrateGameStateSnapshot(
       rngState: legacyRngState(value),
       units,
       reserveUnits: [],
-      campaignUnitBattleRecords: []
+      campaignUnitBattleRecords: [],
+      firedMapEventIds: []
     };
   } else {
     return null;

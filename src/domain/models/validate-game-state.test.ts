@@ -43,6 +43,25 @@ describe("isValidGameStateSnapshot", () => {
     }, CHAPTER_01_MAP)).toBe(false);
   });
 
+  it("validates persisted one-shot map event IDs", () => {
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["opening", "enemy-one-defeated"]
+    }, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["opening", "opening"]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: [""]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: Array.from({ length: 1001 }, (_, index) => "event-" + index)
+    }, CHAPTER_01_MAP)).toBe(false);
+  });
+
   it("accepts the initial prototype state", () => {
     expect(isValidGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP)).toBe(true);
   });

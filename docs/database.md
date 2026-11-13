@@ -12,11 +12,11 @@
 | Key path | `slotId` |
 | 自動保存slot | `auto` |
 | 手動バックアップslot | `backup-1`（最新）〜`backup-3`（最古） |
-| Game save schema | `saveVersion: 4` |
+| Game save schema | `saveVersion: 5` |
 
-## 2. SaveVersion 4
+## 2. SaveVersion 5
 
-`GameStateSnapshot` は `saveVersion`、`chapterId`、`phase`、`turn`、`rngState`、戦闘中の `units`、控えの `reserveUnits`、およびキャンペーン累計の `campaignUnitBattleRecords` を保持する。`reserveUnits` は座標・陣営・行動フラグを持たない `CampaignUnit` 配列で、レベル・EXP・能力・成長率・HP・クラス・移動特性・武器適性・所持品・装備を保持する。戦闘中の `units` はマップに配置された味方／敵だけを保持するため、控えは敵AI・勝敗判定・マップ占有に影響しない。
+`GameStateSnapshot` は `saveVersion`、`chapterId`、`phase`、`turn`、`rngState`、戦闘中の `units`、控えの `reserveUnits`、およびキャンペーン累計の `campaignUnitBattleRecords` と `firedMapEventIds` を保持する。`firedMapEventIds` は現在の章で一度だけ発火したマップイベントIDの配列で、同じイベントの二重実行を防ぐ。`reserveUnits` は座標・陣営・行動フラグを持たない `CampaignUnit` 配列で、レベル・EXP・能力・成長率・HP・クラス・移動特性・武器適性・所持品・装備を保持する。戦闘中の `units` はマップに配置された味方／敵だけを保持するため、控えは敵AI・勝敗判定・マップ占有に影響しない。
 
 ### 2.1 キャンペーン累計戦績
 
@@ -24,16 +24,26 @@
 
 この記録はJSON export/import、IndexedDB auto slot、手動バックアップにもsnapshotの一部として含まれる。1回ごとのstrike履歴、時系列ログ、敵軍の与ダメージは含まず、セーブサイズはユニットIDごとの小さな集計値に限定する。
 
-`GameUnit.inventory` は既存の最大5枠のID配列を維持し、クラスチェンジアイテムもアイテムIDとして保持できる。昇格コマンドは指定アイテムIDを1つだけ消費し、他の所持品と装備武器IDを保持する。試作では `promotion_seal` をchapter-01の新規初期状態にある味方01へ1個配布する。正式な章報酬による配布は未実装。
+### 2.2 マップイベント進行
+
+- イベント定義は各 `GameMapDefinition.events` に置き、発火条件はステージ開始、指定ターン／フェイズ開始、特定ユニット撃破、ボス撃破、勝利、敗北をサポートする。
+- 初期アクションは `show-message` のみ。メッセージ本文はマップcontent側に保持し、snapshotには実行済みIDだけを保存する。加入、増援、村・宝箱・扉、選択肢付き会話はこの基盤の後続機能であり、現時点では実行しない。
+- `firedMapEventIds` は同じsnapshot内で重複しない。発火順はマップ定義順で決まり、一度発火したイベントは同じ章のリロード・JSON復元・バックアップ復元後も再実行しない。
+- 新規章は章テンプレートの空配列から始まる。旧セーブに存在しない過去イベントの発火履歴を推測したり、移行時にイベントを遡及発火させたりしない。
+- ステージ開始／初回ターン開始は出撃配置の確定後に処理する。以降のターン／フェイズ開始、ユニット撃破、ボス撃破、勝敗の遷移は、確定済み状態変更後に解決する。イベント解決と対象のGameStateは同じsave操作で保存する。
+
+
+`GameUnit.inventory` は既存の最大5枠のID配列を維持し、クラスチェンジアイテムもアイテムIDとして保持できる。昇格コマンドは指定アイテムIDを1つだけ消費し、他の所持品と装備武器IDを保持する。新規初期状態へ昇格アイテムを自動付与しない。CP-13に従い、具体的な章報酬／イベントの受取人・数量は正式決定後にcontentへ明示する。
 
 ## 3. Save migrations
 
 `src/persistence/migrations.ts` は次の移行を行う。
 
-- version 1: 旧所持品・装備・乱数stateを従来どおり変換し、空の `reserveUnits` と `campaignUnitBattleRecords` を加えてversion 4にする。
-- version 2: 既存の進行データを保持し、空の `reserveUnits` と `campaignUnitBattleRecords` を加えてversion 4にする。
-- version 3: 既存の進行データと控え名簿を保持し、空の `campaignUnitBattleRecords` を加えてversion 4にする。version 3以前のプレイ履歴は存在しないため、過去の戦績を推測して作らない。
-- version 4: 現行validatorで検証し、書き換えない。
+- version 1: 旧所持品・装備・乱数stateを従来どおり変換し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds` を加えてversion 5にする。
+- version 2: 既存の進行データを保持し、空の `reserveUnits`、`campaignUnitBattleRecords`、`firedMapEventIds` を加えてversion 5にする。
+- version 3: 既存の進行データと控え名簿を保持し、空の `campaignUnitBattleRecords` と `firedMapEventIds` を加えてversion 5にする。version 3以前のプレイ履歴・イベント履歴は存在しないため、過去の戦績やイベント発火を推測して作らない。
+- version 4: 既存の進行データとキャンペーン累計戦績を保持し、空の `firedMapEventIds` を加えてversion 5にする。
+- version 5: 現行validatorで検証し、書き換えない。
 
 不正／未対応データは自動初期化・上書きしない。移行後の保存に失敗した場合も、ロードしたデータを画面上で扱い続けることと保存成功を混同しない。
 
@@ -50,7 +60,7 @@
 
 敵軍フェイズのAI解決は同期的に状態を作成してから保存する。PlaywrightのブラウザE2Eでは、行動確定後のIndexedDB保存と再読み込み後の復元、Service Worker更新時の自動再読み込み後の復元を確認する。
 
-味方の攻撃結果表示と敵軍フェイズの行動記録は、各処理の実行結果から生成する画面内の一時表示であり、snapshotには保存しない。これとは別に、味方開始攻撃から算出する `campaignUnitBattleRecords` の集計値だけをsaveVersion 4へ保存する。完了済みの状態を再読み込みすると両方の表示は消える。`phase: enemy` のcheckpointから再開した場合のみ、敵軍フェイズを再解決し、その実行結果から敵行動記録を再生成する。
+味方の攻撃結果表示と敵軍フェイズの行動記録は、各処理の実行結果から生成する画面内の一時表示であり、snapshotには保存しない。これとは別に、味方開始攻撃から算出する `campaignUnitBattleRecords` の集計値だけをsaveVersion 5へ保存する。完了済みの状態を再読み込みすると両方の表示は消える。`phase: enemy` のcheckpointから再開した場合のみ、敵軍フェイズを再解決し、その実行結果から敵行動記録を再生成する。
 
 ## 5. 検証
 
@@ -73,7 +83,7 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 ## 9. セーブファイル
 
 - 自動セーブslotのスナップショットを、形式識別子 `grid-tactics-pwa-save` とファイル形式version 1を持つJSONファイルとして書き出す。
-- 読み込み時はJSON envelope、形式version、exportedAt、章ID、既存のsaveVersion 1／2／3から4へのmigrationと、現行saveVersion 4の章マップに対するsnapshot validatorを順に検証する。
+- 読み込み時はJSON envelope、形式version、exportedAt、章ID、既存のsaveVersion 1／2／3／4から5へのmigrationと、現行saveVersion 5の章マップに対するsnapshot validatorを順に検証する。
 - 未対応形式・不正JSON・不正snapshot・未知の章IDは拒否し、確認ダイアログおよび検証が完了するまで既存auto slotを変更しない。
 - 読み込み確定後にだけauto slotを置き換える。IndexedDBのschemaとGameStateSnapshot saveVersionは変更しない。
 - JSONファイルは平文であり暗号化されない。共有・保管先に注意する。
@@ -85,4 +95,4 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 - 世代の削除・移動・新規書き込みは単一のIndexedDB `readwrite` transactionで行う。transactionがabortした場合は全変更がロールバックされる。auto slotは書き換えない。読み込み・検証したsnapshotとtransaction内のauto dataが一致しない場合は作成を中止する。
 - 一覧には世代番号、作成日時、章名、章IDを表示する。バックアップを復元する前に章IDを解決し、既存のsaveVersion migrationとsnapshot／map validatorを通す。不正形式や未知versionは拒否する。
 - 復元は確認後にだけauto slotを置き換える。書き込みtransaction内でも選択されたバックアップレコードの内容を再確認し、変更・削除されていれば中止する。確認キャンセルでは保存データも画面状態も変更しない。`phase: enemy` のデータは既存の敵軍フェイズ復旧処理に従う。
-- IndexedDB versionは1、GameStateSnapshot `saveVersion`は4。JSON export/import envelopeとも独立し、追加依存はない。バックアップは同じブラウザ内のローカル保存であり、暗号化・改ざん防止・クラウド同期を提供しない。
+- IndexedDB versionは1、GameStateSnapshot `saveVersion`は5。JSON export/import envelopeとも独立し、追加依存はない。バックアップは同じブラウザ内のローカル保存であり、暗号化・改ざん防止・クラウド同期を提供しない。

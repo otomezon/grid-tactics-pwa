@@ -494,10 +494,12 @@ test.describe("production PWA shell", () => {
       turn: number;
       saveVersion: number;
       reserveUnits: unknown[];
+      firedMapEventIds: string[];
     };
     expect(migratedAutoSave.turn).toBe(4);
-    expect(migratedAutoSave.saveVersion).toBe(4);
+    expect(migratedAutoSave.saveVersion).toBe(5);
     expect(migratedAutoSave.reserveUnits).toEqual([]);
+    expect(migratedAutoSave.firedMapEventIds).toEqual([]);
     await expect(page.locator(".phase-badge")).toHaveText("第4ターン · 自軍フェイズ");
 
     await page.evaluate(async () => {

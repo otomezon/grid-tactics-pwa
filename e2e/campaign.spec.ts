@@ -105,11 +105,31 @@ test.describe("campaign title and save hub", () => {
 
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-    const saved = await readAutoSave(page) as { chapterId: string; turn: number; phase: string; saveVersion: number };
-    expect(saved.saveVersion).toBe(4);
+    const saved = await readAutoSave(page) as {
+      chapterId: string;
+      turn: number;
+      phase: string;
+      saveVersion: number;
+      firedMapEventIds: string[];
+    };
+    expect(saved.saveVersion).toBe(5);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
+    expect(saved.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+    await expect(
+      page.locator(".message-text").filter({ hasText: "【作戦メモ】" })
+    ).toContainText("敵軍を全滅させると勝利です。");
+
+    await page.reload();
+    const titleAfterReload = page.getByTestId("campaign-title-screen");
+    await expect(titleAfterReload).toBeVisible();
+    await titleAfterReload.getByRole("button", { name: "つづきから" }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    expect(await readAutoSave(page)).toEqual(saved);
+    await expect(
+      page.locator(".message-text").filter({ hasText: "【作戦メモ】" })
+    ).toHaveCount(0);
   });
 
   test("shows a saved campaign on launch and continues without changing the auto save", async ({ page }) => {
@@ -2309,7 +2329,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 4,
+      saveVersion: 5,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2383,7 +2403,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 4,
+      saveVersion: 5,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1

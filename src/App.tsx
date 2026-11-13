@@ -27,6 +27,9 @@ import { applyChapterRewards } from "./application/apply-chapter-rewards";
 import { prepareNextChapter } from "./application/prepare-next-chapter";
 import { preparePlayerDeployment } from "./application/prepare-player-deployment";
 import { performDeploymentWeaponChange } from "./application/perform-deployment-weapon-change";
+import { performPlayerMove } from "./application/perform-player-move";
+import { performPlayerWait } from "./application/perform-player-wait";
+import { performPlayerWeaponChange } from "./application/perform-player-weapon-change";
 import { getDeploymentUnitDetails } from "./application/get-deployment-unit-details";
 import { getEnemyInspectionDetails } from "./application/get-enemy-inspection-details";
 import { getPlayerInspectionDetails } from "./application/get-player-inspection-details";
@@ -41,11 +44,12 @@ import type { PlayerAttackReport } from "./application/get-player-attack-report"
 import { performAttack, createAttackPlan } from "./application/perform-attack";
 import { beginEnemyPhase, runEnemyPhase } from "./application/resolve-enemy-phase";
 import type { EnemyActionLog } from "./application/resolve-enemy-phase";
+import { resolveMapEvents, type MapEventMessage } from "./application/resolve-map-events";
+import { resolveMapEventTransition } from "./application/resolve-map-event-transition";
 import { evaluateBattleOutcome } from "./domain/rules/evaluate-battle-outcome";
 import type { FortRecoveryRecord } from "./domain/rules/apply-fort-recovery";
 import { calculateMovementPath, calculateReachableTiles } from "./domain/movement/calculate-reachable-tiles";
 import { calculateEnemyThreatenedTiles } from "./domain/combat/calculate-enemy-threatened-tiles";
-import { canUnitUseWeapon } from "./domain/combat/combat";
 import { calculateAttackableEnemyPositions } from "./domain/combat/calculate-attackable-enemy-positions";
 import type { CampaignUnit, GameMapDefinition, GameStateSnapshot, GameUnit, Position, UnitStats, WeaponType } from "./domain/models/game";
 import type { AttackPlan } from "./application/perform-attack";
@@ -266,6 +270,13 @@ function strikeKindLabel(kind: AttackPlan["forecast"]["strikes"][number]["kind"]
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "戦闘操作に失敗しました。";
+}
+
+function formatMapEventMessages(messages: readonly MapEventMessage[]): string {
+  if (messages.length === 0) return "";
+  return " " + messages.map((event) =>
+    event.speaker ? "【" + event.speaker + "】" + event.text : event.text
+  ).join(" ");
 }
 
 function formatFortRecoverySummary(recoveries: FortRecoveryRecord[]): string {
@@ -737,16 +748,20 @@ function CampaignApp() {
 
   async function persist(
     nextState: GameStateSnapshot,
-    successMessage = "行動をIndexedDBに自動保存しました。"
+    successMessage = "行動をIndexedDBに自動保存しました。",
+    previousState: GameStateSnapshot = gameState
   ): Promise<void> {
     touchMoveConfirmationPositionRef.current = null;
     setMovementPreviewPosition(null);
     setSaveStatus("saving");
 
     try {
-      await saveGameState(nextState);
+      const eventExecution = resolveMapEventTransition(previousState, nextState, currentMap);
+      const stateToSave = eventExecution.nextState;
+      setGameState(stateToSave);
+      await saveGameState(stateToSave);
       setSaveStatus("saved");
-      setMessage(successMessage);
+      setMessage(successMessage + formatMapEventMessages(eventExecution.messages));
     } catch {
       setSaveStatus("failed");
       setMessage("行動は画面に反映されましたが、セーブに失敗しました。ストレージ設定を確認してください。");
@@ -1166,19 +1181,21 @@ function CampaignApp() {
     touchMoveConfirmationPositionRef.current = null;
     setMovementPreviewPosition(null);
 
-    const nextState: GameStateSnapshot = {
-      ...gameState,
-      units: gameState.units.map((unit) =>
-        unit.id === selectedUnit.id ? { ...unit, position, hasMoved: true } : unit
-      )
-    };
+    let movementExecution: ReturnType<typeof performPlayerMove>;
+    try {
+      movementExecution = performPlayerMove(gameState, currentMap, selectedUnit.id, position);
+    } catch (error) {
+      setMessage(getErrorMessage(error));
+      return;
+    }
 
+    const nextState = movementExecution.nextState;
     setGameState(nextState);
     setCombatTargetId(null);
     recordPlayerAction(
       "movement",
-      selectedUnit.name,
-      positionLabel(selectedUnit.position) + " → " + positionLabel(position)
+      movementExecution.movedUnit.name,
+      positionLabel(selectedUnit.position) + " → " + positionLabel(movementExecution.movedUnit.position)
     );
     await persist(nextState, selectedUnit.name + "が" + positionLabel(position) + "へ移動しました。攻撃または待機を選択してください。");
   }
@@ -1186,23 +1203,18 @@ function CampaignApp() {
   async function handleWeaponChange(weaponId: string): Promise<void> {
     if (!selectedUnit || selectedUnit.hasActed || !interactive) return;
 
-    const weapon = WEAPONS_BY_ID[weaponId];
-    if (!weapon || !selectedUnit.inventory.includes(weaponId) || !canUnitUseWeapon(selectedUnit, weapon)) {
-      setMessage("このユニットはその武器を装備できません。");
+    let execution: ReturnType<typeof performPlayerWeaponChange>;
+    try {
+      execution = performPlayerWeaponChange(gameState, selectedUnit.id, weaponId);
+    } catch (error) {
+      setMessage(getErrorMessage(error));
       return;
     }
 
-    const nextState: GameStateSnapshot = {
-      ...gameState,
-      units: gameState.units.map((unit) =>
-        unit.id === selectedUnit.id ? { ...unit, equippedWeaponId: weaponId } : unit
-      )
-    };
-
-    setGameState(nextState);
+    setGameState(execution.nextState);
     setCombatTargetId(null);
-    recordPlayerAction("weapon-change", selectedUnit.name, weapon.name + "を装備");
-    await persist(nextState, selectedUnit.name + "は" + weapon.name + "を装備しました。");
+    recordPlayerAction("weapon-change", execution.updatedUnit.name, execution.equippedWeaponName + "を装備");
+    await persist(execution.nextState, selectedUnit.name + "は" + execution.equippedWeaponName + "を装備しました。");
   }
 
   async function handleInstallApp(): Promise<void> {
@@ -1348,17 +1360,11 @@ function CampaignApp() {
   async function handleWait(): Promise<void> {
     if (!selectedUnit || !interactive || selectedUnit.hasActed) return;
 
-    const nextState: GameStateSnapshot = {
-      ...gameState,
-      units: gameState.units.map((unit) =>
-        unit.id === selectedUnit.id ? { ...unit, hasActed: true } : unit
-      )
-    };
-
-    setGameState(nextState);
+    const execution = performPlayerWait(gameState, selectedUnit.id);
+    setGameState(execution.nextState);
     setCombatTargetId(null);
-    recordPlayerAction("wait", selectedUnit.name, "このフェイズの行動を終了");
-    await persist(nextState, selectedUnit.name + "は待機しました。");
+    recordPlayerAction("wait", execution.waitedUnit.name, "このフェイズの行動を終了");
+    await persist(execution.nextState, selectedUnit.name + "は待機しました。");
   }
 
   function handleDeploymentPreviewSelect(unitId: string): void {
@@ -1458,18 +1464,28 @@ function CampaignApp() {
       const nextState = preparePlayerDeployment(
         gameState, currentMap, assignments, deploymentSelectedUnitIds
       );
+      const stageStartExecution = resolveMapEvents(nextState, currentMap, [
+        { type: "stage-start" },
+        {
+          type: "turn-start",
+          turn: nextState.turn,
+          phase: nextState.phase
+        }
+      ]);
+      const stateToSave = stageStartExecution.nextState;
+      const mapEventMessages = stageStartExecution.messages;
 
-      setGameState(nextState);
+      setGameState(stateToSave);
       setSelectedUnitId(null);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
       setSaveStatus("saving");
 
       try {
-        await saveGameState(nextState);
+        await saveGameState(stateToSave);
         setSaveStatus("saved");
         setHasSavedCampaign(true);
-        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。");
+        setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。" + formatMapEventMessages(mapEventMessages));
       } catch {
         setSaveStatus("failed");
         setMessage("出撃配置は確定しましたが、自動保存に失敗しました。次の行動時に再保存します。");
@@ -1506,7 +1522,11 @@ function CampaignApp() {
         { sequence: entries.length, turn: enemyPhaseState.turn, kind: "enemy-phase", actions: execution.actions }
       ]);
       setGameState(execution.nextState);
-      await persist(execution.nextState, formatEnemyPhaseSummary(execution, currentMap));
+      await persist(
+        execution.nextState,
+        formatEnemyPhaseSummary(execution, currentMap),
+        enemyPhaseState
+      );
     } catch (error) {
       setMessage(getErrorMessage(error));
     }
