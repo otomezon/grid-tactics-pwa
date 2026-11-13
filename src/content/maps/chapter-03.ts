@@ -1,5 +1,5 @@
 import type { GameMapDefinition, GameStateSnapshot } from "../../domain/models/game";
-import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "./chapter-01";
+import { CHAPTER_01_MAP, createMainCharacterDefeatEvent, INITIAL_GAME_STATE, MAIN_CHARACTER_UNIT_ID } from "./chapter-01";
 
 const terrain = CHAPTER_01_MAP.terrain.map((row) => [...row]);
 terrain[1]![2] = "forest";
@@ -37,7 +37,8 @@ export const CHAPTER_03_MAP: GameMapDefinition = {
     { unitId: "enemy_005", x: 8, y: 5 }
   ],
   objective: { type: "defeat_all" },
-  events: []
+  defeatCondition: { type: "unit_defeated", targetUnitId: MAIN_CHARACTER_UNIT_ID },
+  events: [createMainCharacterDefeatEvent(3)]
 };
 
 // Prototype layout only: reuses the existing cast and rules without defining story or rewards.
