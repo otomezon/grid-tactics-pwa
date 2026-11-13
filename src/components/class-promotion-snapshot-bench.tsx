@@ -10,7 +10,7 @@ import { getPromotionEnemyPhaseSampleSummary, type PromotionEnemyPhaseSampleSumm
 import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../application/build-promotion-playtest-matrix";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
-import type { GameStateSnapshot, GameUnit, UnitStats } from "../domain/models/game";
+import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
 import { parseSaveFileContent } from "../persistence/save-file";
 
 const STAT_ROWS: readonly { key: keyof UnitStats; label: string }[] = [
@@ -133,7 +133,7 @@ function getCandidatesFromSnapshot(
     return { candidates: [], error: "未登録の章IDです: " + value.chapterId };
   }
   if (!isValidGameStateSnapshot(value, chapter.map)) {
-    return { candidates: [], error: "saveVersion 6または章マップ整合性の検証に失敗しました。" };
+    return { candidates: [], error: `saveVersion ${SAVE_VERSION}または章マップ整合性の検証に失敗しました。` };
   }
 
   const snapshot = value;
@@ -607,7 +607,7 @@ export function ClassPromotionSnapshotBench() {
           />
         </label>
         <p className="helper-text">
-          現在のJSON書き出し形式（envelope v1／GameState saveVersion 6）のみ対応します。読み込んだ内容はメモリ上だけに保持し、ページ再読み込みで消えます。
+          現在のJSON書き出し形式（envelope v1／GameState saveVersion {SAVE_VERSION}）のみ対応します。読み込んだ内容はメモリ上だけに保持し、ページ再読み込みで消えます。
         </p>
         {errors.length > 0 && (
           <div className="promotion-snapshot-errors" role="alert">
@@ -1164,7 +1164,7 @@ export function ClassPromotionSnapshotBench() {
           <li>射程内に生存敵がいる場合は、既存performAttackを使った単一seedの比較と、20／100／250個の同一seedペアによる独立1戦闘反復を表示します。集計は命中率・必殺率・平均ダメージ・対象撃破率・反撃被ダメージ・生存率です。HPや撃破を試行間で持ち越さず、複数ターンの攻略率・敵AI・移動・21ケースの実プレイを代替しません。</li>
           <li>21ケースマトリクスでは、各基本職3件以上の候補からlow／median／upper相当を参考選出し、利用者が候補・敵・条件を確認した後に一括反復・CSV出力できます。実プレイ由来かどうかは利用者申告として保存し、自動判定しません。</li>
           <li>21ケースの集計には既存の敵軍フェイズ解決を使った1 phase比較も含みます。control／promotionの双方で選択ユニットは行動済みにしてphaseを進め、敵AIの移動・攻撃・生存・被ダメージを集計します。複数turnの戦闘やキャンペーン勝率ではありません。</li>
-          <li>読み込みはsaveVersion 6のJSON exportだけです。旧版の自動migration、IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
+          <li>読み込みはsaveVersion {SAVE_VERSION}のJSON exportだけです。旧版の自動migration、IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
           <li>現行クラス上限・ボーナスは仮値のままです。実データの比較はできてもCP-04／05の承認にはなりません。</li>
         </ul>
       </section>
