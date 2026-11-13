@@ -20,11 +20,6 @@ function isDeployment(value: unknown, width: number, height: number): value is M
     Number.isInteger(value.x) && (value.x as number) >= 0 && (value.x as number) < width &&
     Number.isInteger(value.y) && (value.y as number) >= 0 && (value.y as number) < height;
 }
-function isEventMessage(action: Record<string, unknown>): boolean {
-  return isNonEmptyString(action.text) && action.text.length <= 2000 &&
-    (action.speaker === undefined ||
-      (isNonEmptyString(action.speaker) && action.speaker.length <= 80));
-}
 function isEventChoiceList(value: unknown): boolean {
   if (!Array.isArray(value) || value.length < 2 || value.length > 4) return false;
   const ids = new Set<string>();
@@ -38,24 +33,13 @@ function isEventChoiceList(value: unknown): boolean {
       ids.has(candidate.id)
     ) return false;
     ids.add(candidate.id);
-    const eventsById = new Map(
-      (value.events as Record<string, unknown>[]).map((event) => [event.id as string, event] as const)
-    );
-    for (const candidate of value.events) {
-      const trigger = (candidate as Record<string, unknown>).trigger as Record<string, unknown>;
-      if (trigger.type !== "event-choice") continue;
-      const source = eventsById.get(trigger.eventId as string);
-      if (
-        !source ||
-        !isRecord(source.action) ||
-        source.action.type !== "show-choice" ||
-        !isEventChoiceList(source.action.choices) ||
-        !(source.action.choices as Array<Record<string, unknown>>)
-          .some((choice) => choice.id === trigger.choiceId)
-      ) return false;
-    }
   }
   return true;
+}
+function isEventMessage(action: Record<string, unknown>): boolean {
+  return isNonEmptyString(action.text) && action.text.length <= 2000 &&
+    (action.speaker === undefined ||
+      (isNonEmptyString(action.speaker) && action.speaker.length <= 80));
 }
 function isReinforcementUnitShape(
   value: unknown,
@@ -211,11 +195,32 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
       }
       if (action.type === "spawn-reinforcement") continue;
       if (action.type === "recruit-unit") {
-        if (trigger.type !== "unit-interacts" || !isValidCampaignUnitData(action.unit)) return false;
+        if ((trigger.type !== "unit-interacts" && trigger.type !== "event-choice") || !isValidCampaignUnitData(action.unit)) return false;
         continue;
       }
       return false;
     }
   }
+
+  if (value.events !== undefined) {
+    const eventsById = new Map(
+      (value.events as Record<string, unknown>[]).map((event) => [event.id as string, event] as const)
+    );
+    for (const candidate of value.events as Record<string, unknown>[]) {
+      if (!isRecord(candidate.trigger)) return false;
+      const trigger = candidate.trigger;
+      if (trigger.type !== "event-choice") continue;
+      const source = eventsById.get(trigger.eventId as string);
+      if (
+        !source ||
+        !isRecord(source.action) ||
+        source.action.type !== "show-choice" ||
+        !isEventChoiceList(source.action.choices) ||
+        !(source.action.choices as Array<Record<string, unknown>>)
+          .some((choice) => choice.id === trigger.choiceId)
+      ) return false;
+    }
+  }
+
   return true;
 }
