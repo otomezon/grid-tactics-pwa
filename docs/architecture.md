@@ -192,3 +192,7 @@ saveVersion 1〜4は既存履歴を捏造せず空の発火／確認ID配列を�
 ## マップ地点の調査操作（PR #114）
 
 `MapEventTrigger` の `unit-interacts` はマップ座標、UIラベル／説明、任意の対象player IDを持つ。map validatorは座標範囲、進入可能地形、初期配置との重複、同一地点イベントの座標重複、対象味方IDを検証する。`getMapInteractionPoints` は未発火地点だけをマップに投影し、`getAvailableMapInteraction` はplayer phaseで生存・未行動の味方が地点上にいる場合だけ操作対象を返す。`performMapInteraction` は実行時にも章・フェイズ・勝敗・位置・陣営・生存・行動状態を検証し、既存の `resolveMapEvents` でアクションを解決した後に調査ユニットの `hasActed` を立てる。イベント効果が失敗した場合は行動フラグも発火IDも更新しない。成功時は既存の確認ダイアログとイベント履歴で再読み込み後も確認できる。既存GameState fieldだけを利用し、saveVersion 6／IndexedDB schema 1を維持する。
+
+## Map-event recruitment
+
+A map event may use the `recruit-unit` action only with a `unit-interacts` trigger. The action contains a validated `CampaignUnit` definition and adds a detached copy to the existing `GameStateSnapshot.reserveUnits`; it never deploys the recruit into the current battle. The event ID is committed only after the action succeeds, so duplicate recruitment and invalid candidate data cannot partially update the roster. The validator accepts a recruited reserve only when its matching event ID is present in `firedMapEventIds`. No save field or migration is added: saveVersion 6 already persists both reserve members and fired event IDs. For later deployment, a subsequent chapter map must explicitly list the recruit ID in `playerDeployment`; the existing next-chapter and deployment commands then carry and select the reserve member. Concrete characters, dialogue, recruitment conditions, and chapter placement remain authored content decisions.

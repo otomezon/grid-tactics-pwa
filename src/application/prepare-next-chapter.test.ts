@@ -3,6 +3,8 @@ import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import { prepareNextChapter } from "./prepare-next-chapter";
+import { preparePlayerDeployment } from "./prepare-player-deployment";
+import { resolveMapEvents } from "./resolve-map-events";
 
 function nextChapterFixture(): { map: GameMapDefinition; state: GameStateSnapshot } {
   const map: GameMapDefinition = {
@@ -227,4 +229,62 @@ describe("prepareNextChapter", () => {
       currentHpPolicy: "preserve"
     })).toThrow(/player-phase turn 1/);
   });
+
+  it("carries an event-recruited reserve into the next chapter and allows deployment", () => {
+    const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
+    const recruit = {
+      ...campaignData,
+      id: "recruit_001",
+      name: "加入候補"
+    };
+    const previousMap: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "unit-recruitment",
+        trigger: { type: "unit-interacts", x: 9, y: 8, label: "加入地点" },
+        action: { type: "recruit-unit", unit: recruit, text: "加入しました。" }
+      }]
+    };
+    const joined = resolveMapEvents(INITIAL_GAME_STATE, previousMap, {
+      type: "unit-interacts", x: 9, y: 8, label: "加入地点", unitId: "unit_004"
+    }).nextState;
+    const afterVictory: GameStateSnapshot = {
+      ...joined,
+      units: joined.units.filter((unit) => unit.faction === "player")
+    };
+    const next = nextChapterFixture();
+    const nextMap: GameMapDefinition = {
+      ...next.map,
+      playerDeployment: [...next.map.playerDeployment, { unitId: recruit.id, x: 4, y: 9 }]
+    };
+    const carried = prepareNextChapter({
+      previousState: afterVictory,
+      previousMap,
+      nextChapterInitialState: next.state,
+      nextMap,
+      currentHpPolicy: "preserve"
+    });
+    expect(carried.reserveUnits.find((unit) => unit.id === recruit.id)?.name).toBe("加入候補");
+    expect(isValidGameStateSnapshot(carried, nextMap)).toBe(true);
+
+    const deployed = preparePlayerDeployment(
+      carried,
+      nextMap,
+      [
+        { unitId: "unit_001", position: { x: 0, y: 9 } },
+        { unitId: recruit.id, position: { x: 4, y: 9 } }
+      ],
+      ["unit_001", recruit.id]
+    );
+    expect(deployed.reserveUnits.some((unit) => unit.id === recruit.id)).toBe(false);
+    expect(deployed.units.find((unit) => unit.id === recruit.id)).toMatchObject({
+      faction: "player",
+      name: "加入候補",
+      hasMoved: false,
+      hasActed: false
+    });
+    expect(isValidGameStateSnapshot(deployed, nextMap)).toBe(true);
+  });
+
 });

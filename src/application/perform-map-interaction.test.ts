@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
-import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
+import type { CampaignUnit, GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
+import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import {
   getAvailableMapInteraction,
   getMapInteractionPoints,
@@ -45,7 +46,8 @@ describe("map interactions", () => {
       label: "試作調査地点",
       description: "操作確認用の地点です。",
       position: { x: 9, y: 8 },
-      unitId: null
+      unitId: null,
+      recruitName: null
     }]);
     expect(getAvailableMapInteraction(state, INTERACTION_MAP, "unit_004")?.id)
       .toBe("prototype-investigation");
@@ -147,4 +149,44 @@ describe("map interactions", () => {
     expect(state.firedMapEventIds).toEqual([]);
     expect(state.units.find((unit) => unit.id === "unit_004")?.hasActed).toBe(false);
   });
+
+  it("adds a map-authored recruit to reserves and consumes the investigator's action", () => {
+    const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
+    const recruit: CampaignUnit = {
+      ...campaignData,
+      id: "recruit_001",
+      name: "加入候補",
+      stats: { ...campaignData.stats },
+      growthRates: { ...campaignData.growthRates },
+      usableWeaponTypes: [...campaignData.usableWeaponTypes],
+      inventory: [...campaignData.inventory]
+    };
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "unit-recruitment",
+        trigger: {
+          type: "unit-interacts",
+          x: 9,
+          y: 8,
+          label: "加入地点",
+          description: "加入処理のテスト地点です。"
+        },
+        action: {
+          type: "recruit-unit",
+          unit: recruit,
+          speaker: "加入候補",
+          text: "加入候補が控えに加わりました。"
+        }
+      }]
+    };
+    const result = performMapInteraction(movedInvestigator(), map, "unit_004");
+    expect(result.interaction.recruitName).toBe("加入候補");
+    expect(result.nextState.reserveUnits).toEqual([recruit]);
+    expect(result.nextState.units.find((unit) => unit.id === "unit_004")?.hasActed).toBe(true);
+    expect(result.nextState.firedMapEventIds).toContain("unit-recruitment");
+    expect(isValidGameStateSnapshot(result.nextState, map)).toBe(true);
+  });
+
 });

@@ -9,7 +9,8 @@ const interaction: MapInteractionPoint = {
   label: "試作調査地点",
   description: "探索コマンドの動作確認用地点です。",
   position: { x: 9, y: 8 },
-  unitId: null
+  unitId: null,
+  recruitName: null
 };
 
 describe("MapInteractionPanel", () => {
@@ -36,4 +37,18 @@ describe("MapInteractionPanel", () => {
     }));
     expect(html).toContain("disabled=\"\"");
   });
+
+  it("explains a recruitment event and uses an explicit join action", () => {
+    const html = renderToStaticMarkup(createElement(MapInteractionPanel, {
+      interaction: { ...interaction, recruitName: "加入候補" },
+      unitName: "味方04",
+      onInteract: () => undefined
+    }));
+    expect(html).toContain("加入イベント");
+    expect(html).toContain("加入候補");
+    expect(html).toContain("控え名簿に加入します");
+    expect(html).toContain("加入する");
+    expect(html).not.toContain(">調べる</button>");
+  });
+
 });
