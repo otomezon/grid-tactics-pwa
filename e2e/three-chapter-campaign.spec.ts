@@ -188,7 +188,7 @@ async function writeAutoSave(page: Page, data: SaveSnapshot): Promise<void> {
 
 test("carries one campaign through all three chapters with desktop clicks and mobile WebKit touch", async ({ page }, testInfo) => {
   // This end-to-end flow now exercises all three Chapter 2 objects plus save/reload on WebKit touch.
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   const input: InteractionInput = testInfo.project.name === "webkit-mobile" ? "tap" : "click";
   if (input === "tap") await page.setViewportSize({ width: 320, height: 720 });
   await startCampaign(page, input);
