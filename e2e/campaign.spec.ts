@@ -195,6 +195,10 @@ test.describe("campaign title and save hub", () => {
     expect(pendingSave.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(pendingSave.acknowledgedMapEventIds).toEqual([]);
 
+    await page.getByTestId("map-event-dialog-backdrop").click({ position: { x: 2, y: 2 } });
+    await expect(dialog).toBeVisible();
+    await expect(acknowledgeButton).toBeFocused();
+
     await page.keyboard.press("Escape");
     await expect(dialog).toBeVisible();
     await expect(acknowledgeButton).toBeFocused();
