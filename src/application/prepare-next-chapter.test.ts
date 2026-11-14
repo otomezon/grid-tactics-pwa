@@ -33,6 +33,16 @@ function clearedState(overrides: Partial<GameStateSnapshot> = {}): GameStateSnap
 describe("prepareNextChapter", () => {
   it("carries player progression and inventory into the next map deployment", () => {
     const previousState = clearedState({
+      campaignBattleLog: [{
+        sequence: 1,
+        chapterId: CHAPTER_01_MAP.id,
+        turn: 1,
+        kind: "player-action" as const,
+        action: "wait" as const,
+        actorId: "unit_001",
+        actorName: "主人公",
+        detail: "待機"
+      }],
       campaignUnitBattleRecords: [{
         unitId: "unit_001",
         unitName: "主人公",
@@ -84,6 +94,9 @@ describe("prepareNextChapter", () => {
     expect(carried.hasActed).toBe(false);
     expect(result.campaignUnitBattleRecords).toEqual(previousState.campaignUnitBattleRecords);
     expect(result.campaignUnitBattleRecords).not.toBe(previousState.campaignUnitBattleRecords);
+    expect(result.campaignBattleLog).toEqual(previousState.campaignBattleLog);
+    expect(result.campaignBattleLog).not.toBe(previousState.campaignBattleLog);
+    expect(result.campaignBattleLog[0]).not.toBe(previousState.campaignBattleLog[0]);
     expect(isValidGameStateSnapshot(result, next.map)).toBe(true);
   });
 

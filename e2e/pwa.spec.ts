@@ -501,8 +501,9 @@ test.describe("production PWA shell", () => {
       acknowledgedMapEventIds: string[];
     };
     expect(migratedAutoSave.turn).toBe(4);
-    expect(migratedAutoSave.saveVersion).toBe(8);
+    expect(migratedAutoSave.saveVersion).toBe(9);
     expect(migratedAutoSave.reserveUnits).toEqual([]);
+    expect(migratedAutoSave.campaignBattleLog).toEqual([]);
     expect(migratedAutoSave.firedMapEventIds).toEqual([]);
     expect(migratedAutoSave.acknowledgedMapEventIds).toEqual([]);
     await expect(page.locator(".phase-badge")).toHaveText("第4ターン · 自軍フェイズ");

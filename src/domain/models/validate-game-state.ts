@@ -3,6 +3,9 @@ import { isValidGameMapDefinition } from "./validate-game-map";
 import { isValidCampaignUnitData } from "./validate-campaign-unit";
 import {
   SAVE_VERSION,
+  MAX_CAMPAIGN_BATTLE_LOG_ENTRIES,
+  type CampaignBattleLogEntry,
+  type CampaignBattleStrikeRecord,
   type CampaignUnitBattleRecord,
   type GameMapDefinition,
   type GameStateSnapshot,
@@ -59,6 +62,96 @@ function isCampaignUnitBattleRecord(value: unknown): value is CampaignUnitBattle
     enemiesDefeated <= attacks;
 }
 
+function isBoundedString(value: unknown, maxLength: number): value is string {
+  return isNonEmptyString(value) && value.length <= maxLength;
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+
+function isCampaignBattleStrikeRecord(value: unknown): value is CampaignBattleStrikeRecord {
+  if (!isRecord(value)) return false;
+  if (!hasOnlyKeys(value, [
+    "actorId", "actorName", "targetId", "targetName", "kind",
+    "weaponName", "outcome", "damage", "targetHpBefore", "targetHpAfter"
+  ])) return false;
+  if (
+    !isBoundedString(value.actorId, 128) ||
+    !isBoundedString(value.actorName, 128) ||
+    !isBoundedString(value.targetId, 128) ||
+    !isBoundedString(value.targetName, 128) ||
+    !isBoundedString(value.weaponName, 128) ||
+    (value.kind !== "initial" && value.kind !== "counter" && value.kind !== "follow-up") ||
+    (value.outcome !== "miss" && value.outcome !== "hit" && value.outcome !== "critical") ||
+    !isNonNegativeInteger(value.damage) ||
+    !isNonNegativeInteger(value.targetHpBefore) ||
+    !isNonNegativeInteger(value.targetHpAfter) ||
+    value.targetHpAfter > value.targetHpBefore ||
+    value.targetHpBefore - value.targetHpAfter !== value.damage
+  ) return false;
+  return value.outcome !== "miss" || value.damage === 0;
+}
+
+function isCampaignBattleLogEntry(value: unknown): value is CampaignBattleLogEntry {
+  if (!isRecord(value)) return false;
+  if (
+    !isNonNegativeInteger(value.sequence) || value.sequence < 1 ||
+    !isBoundedString(value.chapterId, 128) ||
+    !isNonNegativeInteger(value.turn) || value.turn < 1
+  ) return false;
+
+  if (value.kind === "player-action") {
+    if (!hasOnlyKeys(value, ["sequence", "chapterId", "turn", "kind", "action", "actorId", "actorName", "detail"])) return false;
+    return (
+      ["movement", "weapon-change", "item-use", "class-change", "map-interaction", "wait"].includes(String(value.action)) &&
+      isBoundedString(value.actorId, 128) &&
+      isBoundedString(value.actorName, 128) &&
+      isBoundedString(value.detail, 512)
+    );
+  }
+
+  if (value.kind === "player-attack") {
+    if (!hasOnlyKeys(value, ["sequence", "chapterId", "turn", "kind", "attackerId", "attackerName", "defenderId", "defenderName", "defenderRemainingHp", "experienceAwarded", "strikes"])) return false;
+    return (
+      isBoundedString(value.attackerId, 128) &&
+      isBoundedString(value.attackerName, 128) &&
+      isBoundedString(value.defenderId, 128) &&
+      isBoundedString(value.defenderName, 128) &&
+      isNonNegativeInteger(value.defenderRemainingHp) &&
+      isNonNegativeInteger(value.experienceAwarded) &&
+      Array.isArray(value.strikes) &&
+      value.strikes.length >= 1 &&
+      value.strikes.length <= 8 &&
+      value.strikes.every(isCampaignBattleStrikeRecord)
+    );
+  }
+
+  if (value.kind === "enemy-action") {
+    if (!hasOnlyKeys(value, ["sequence", "chapterId", "turn", "kind", "enemyId", "enemyName", "actionKind", "targetId", "targetName", "destination", "strikes"])) return false;
+    const hasTarget = value.targetId === undefined && value.targetName === undefined
+      ? true
+      : isBoundedString(value.targetId, 128) && isBoundedString(value.targetName, 128);
+    const hasDestination = value.destination === undefined ||
+      (isRecord(value.destination) &&
+        hasOnlyKeys(value.destination, ["x", "y"]) &&
+        isNonNegativeInteger(value.destination.x) &&
+        isNonNegativeInteger(value.destination.y));
+    return (
+      isBoundedString(value.enemyId, 128) &&
+      isBoundedString(value.enemyName, 128) &&
+      ["attacked", "moved-and-attacked", "moved", "waited"].includes(String(value.actionKind)) &&
+      hasTarget &&
+      hasDestination &&
+      Array.isArray(value.strikes) &&
+      value.strikes.length <= 8 &&
+      value.strikes.every(isCampaignBattleStrikeRecord)
+    );
+  }
+
+  return false;
+}
+
 function isGameUnit(value: unknown, map: GameMapDefinition): value is GameUnit {
   if (!isRecord(value)) return false;
   const fields = value;
@@ -95,6 +188,7 @@ export function isValidGameStateSnapshot(
     !Array.isArray(value.acknowledgedMapEventIds) || value.acknowledgedMapEventIds.length > 1000 ||
     !Array.isArray(value.mapEventChoices) || value.mapEventChoices.length > 256 ||
     !Array.isArray(value.campaignChoices) || value.campaignChoices.length > 256 ||
+    !Array.isArray(value.campaignBattleLog) || value.campaignBattleLog.length > MAX_CAMPAIGN_BATTLE_LOG_ENTRIES ||
     map.terrain.length !== map.height || map.terrain.some((row) => row.length !== map.width)
   ) return false;
 
@@ -147,6 +241,12 @@ export function isValidGameStateSnapshot(
   for (const record of value.campaignUnitBattleRecords) {
     if (!isCampaignUnitBattleRecord(record) || battleRecordIds.has(record.unitId)) return false;
     battleRecordIds.add(record.unitId);
+  }
+
+  let previousBattleLogSequence = 0;
+  for (const entry of value.campaignBattleLog) {
+    if (!isCampaignBattleLogEntry(entry) || entry.sequence <= previousBattleLogSequence) return false;
+    previousBattleLogSequence = entry.sequence;
   }
 
   const firedMapEventIds = new Set<string>();

@@ -42,6 +42,38 @@ describe("save file export and import format", () => {
     expect(parseSaveFileContent(content)).toEqual(snapshot);
   });
 
+  it("round-trips persistent campaign battle actions and actual strike outcomes", () => {
+    const snapshot = {
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [{
+        sequence: 1,
+        chapterId: CHAPTER_01_MAP.id,
+        turn: 1,
+        kind: "player-attack" as const,
+        attackerId: "unit_001",
+        attackerName: "主人公",
+        defenderId: "enemy_001",
+        defenderName: "敵01",
+        defenderRemainingHp: 0,
+        experienceAwarded: 30,
+        strikes: [{
+          actorId: "unit_001",
+          actorName: "主人公",
+          targetId: "enemy_001",
+          targetName: "敵01",
+          kind: "initial" as const,
+          weaponName: "試作の鉄の剣",
+          outcome: "hit" as const,
+          damage: 20,
+          targetHpBefore: 20,
+          targetHpAfter: 0
+        }]
+      }]
+    };
+    expect(isValidGameStateSnapshot(snapshot, CHAPTER_01_MAP)).toBe(true);
+    expect(parseSaveFileContent(createSaveFileContent(snapshot))).toEqual(snapshot);
+  });
+
   it("round-trips fired and acknowledged event progress", () => {
     const snapshot = {
       ...INITIAL_GAME_STATE,
@@ -117,6 +149,6 @@ describe("save file export and import format", () => {
   it("does not assume the enclosed snapshot is valid", () => {
     const content = createSaveFileContent(INITIAL_GAME_STATE);
     const result = parseSaveFileContent(content) as { saveVersion: number };
-    expect(result.saveVersion).toBe(8);
+    expect(result.saveVersion).toBe(9);
   });
 });

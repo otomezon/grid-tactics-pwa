@@ -178,5 +178,6 @@ export const INITIAL_GAME_STATE: GameStateSnapshot = {
   firedMapEventIds: [],
   acknowledgedMapEventIds: [],
   mapEventChoices: [],
-  campaignChoices: []
+  campaignChoices: [],
+  campaignBattleLog: []
 };
