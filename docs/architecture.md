@@ -252,3 +252,8 @@ The chapter-local `mapEventChoices` list was added in `saveVersion: 7`; `saveVer
 src/application/export-campaign-archive-csv.ts は、キャンペーン記録の表示用projectionをCSVへ直列化する純粋関数を提供する。時系列ログでは保存済みの実strikeを1件1行へ展開し、strikeのない行動・章結果も欠落させない。味方別累計は呼び出し側から渡された表示順と8能力上昇値を保持する。どちらも予測値や敵AI候補評価を出力しない。
 
 src/components/download-csv.ts はユーザーが明示的に押したボタンからのみBlobダウンロードを開始する。CSV生成はブラウザ内で完結し、GameState、RNG、IndexedDB、自動保存、saveVersion、外部通信に触れない。CSVセルの引用・改行・数式文字列対策はapplicationのserializer側で行う。
+
+
+## バックアップ復元前の自動退避
+
+`restoreGameStateBackup` は選択されたバックアップのslot ID・savedAt・dataをreadwrite transaction内で再確認する。同じtransaction内で現在のauto slotのdataを `backup-1` に退避し、選択元と最も新しい別世代を `backup-2`／`backup-3` に再配置した後、復元snapshotをautoへ書き込む。3世代を超える場合は選択元を必ず保持し、それ以外の最古世代を整理する。退避と復元は同じtransactionに属するため、どちらかの書き込みが失敗した場合に片方だけが確定することはない。GameStateSnapshot／saveVersion／IndexedDB schemaは変更しない。
