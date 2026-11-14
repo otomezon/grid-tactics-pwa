@@ -2191,7 +2191,7 @@ function CampaignApp() {
       )}
 
       {isOperationGuideOpen && (
-        <OperationGuide onClose={() => setIsOperationGuideOpen(false)} />
+        <OperationGuide battleGuide={battleGuideDetails} onClose={() => setIsOperationGuideOpen(false)} />
       )}
 
       {isMapEventHistoryOpen && mapEventMessageHistory.length > 0 && (
