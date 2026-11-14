@@ -369,7 +369,7 @@ describe("isValidGameMapDefinition", () => {
       ...CHAPTER_01_MAP,
       events: [sourceEvent, {
         ...conditionEvent,
-        condition: { ...conditionEvent.condition, choiceId: "missing" }
+        condition: { ...conditionEvent.condition, choiceId: "" }
       }]
     })).toBe(false);
     expect(isValidGameMapDefinition({
