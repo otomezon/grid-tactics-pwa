@@ -185,6 +185,7 @@ test.describe("campaign title and save hub", () => {
     const dialog = page.getByTestId("map-event-dialog");
     const acknowledgeButton = dialog.getByRole("button", { name: "確認して続ける" });
     await expect(dialog).toBeVisible();
+    await expect(acknowledgeButton).toBeEnabled();
     await expect(acknowledgeButton).toBeFocused();
 
     const pendingSave = await readAutoSave(page) as {
