@@ -331,7 +331,9 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   expect(await readAutoSave(page)).toEqual(chapterTwoState);
 
   await activate(page.locator('[data-map-position="5,8"]'), input);
-  await activate(page.locator('[data-map-position="9,8"]'), input);
+  const villageTile = page.locator('[data-map-position="9,8"]');
+  await activate(villageTile, input);
+  if (input === "tap") await activate(villageTile, input);
   await expect(page.locator('[data-testid="map-object-marker"]')).toHaveCount(3);
   const villageMarker = page.locator('[data-map-position="9,8"]').getByTestId("map-object-marker");
   await expect(villageMarker).toHaveAttribute("data-object-kind", "village");
@@ -350,7 +352,12 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_003")).toMatchObject({
     position: { x: 9, y: 8 }, hasMoved: true, hasActed: true
   });
-  expect((await readAutoSave(page) as SaveSnapshot).campaignBattleLog).toEqual(chapterTwoState.campaignBattleLog);
+  const battleLogAfterObjectInteraction = (await readAutoSave(page) as SaveSnapshot).campaignBattleLog;
+  expect(battleLogAfterObjectInteraction.slice(0, chapterTwoState.campaignBattleLog.length)).toEqual(chapterTwoState.campaignBattleLog);
+  expect(battleLogAfterObjectInteraction.slice(chapterTwoState.campaignBattleLog.length)).toMatchObject([
+    { kind: "player-action", action: "movement", actorId: "unit_003" },
+    { kind: "player-action", action: "map-interaction", actorId: "unit_003", detail: "試作村" }
+  ]);
 
   const clearedChapterTwo: SaveSnapshot = {
     ...chapterTwoAfterObjectInteraction,
