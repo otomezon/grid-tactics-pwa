@@ -74,7 +74,7 @@ export function CampaignUnitBattleRecordsSummary({ records }: CampaignUnitBattle
           {records.map((record) => (
             <article className="campaign-unit-record-card" key={record.unitId} data-testid={"campaign-unit-record-" + record.unitId}>
               <h3>{record.unitName}</h3>
-              <Metrics record={record} />
+              <CampaignUnitBattleRecordMetrics record={record} />
             </article>
           ))}
         </div>
