@@ -2836,6 +2836,65 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   line-height: 1.5;
 }
 .campaign-battle-history-note { margin: 5px 0 0; }
+.campaign-battle-history-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(180px, 1.35fr) auto;
+  align-items: end;
+  gap: 9px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(104, 137, 155, .4);
+  border-radius: 9px;
+  background: rgba(11, 23, 33, .52);
+}
+.campaign-battle-history-filter {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 700;
+}
+.campaign-battle-history-filter select,
+.campaign-battle-history-filter input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 9px;
+  border: 1px solid rgba(132, 158, 174, .58);
+  border-radius: 7px;
+  background: #101f2a;
+  color: #edf3f7;
+  font: inherit;
+  font-size: .76rem;
+}
+.campaign-battle-history-filter input::placeholder { color: #9eb0bc; }
+.campaign-battle-history-filter select:focus-visible,
+.campaign-battle-history-filter input:focus-visible,
+.campaign-battle-history-reset:focus-visible {
+  outline: 2px solid #9eddd1;
+  outline-offset: 2px;
+}
+.campaign-battle-history-reset {
+  min-width: 0;
+  min-height: 42px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+.campaign-battle-history-reset:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.campaign-battle-history-empty {
+  margin: 0;
+  padding: 18px 12px;
+  border: 1px dashed rgba(132, 158, 174, .5);
+  border-radius: 9px;
+  color: var(--text-muted);
+  font-size: .8rem;
+  text-align: center;
+}
 .campaign-battle-history-close { flex: 0 0 auto; min-height: 40px; }
 .campaign-battle-defeats {
   display: grid;
@@ -2921,11 +2980,19 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   padding-top: 8px;
   border-top: 1px solid rgba(104, 137, 155, .35);
 }
+@media (max-width: 640px) {
+  .campaign-battle-history-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .campaign-battle-history-search { grid-column: 1 / -1; }
+  .campaign-battle-history-reset { justify-self: start; }
+}
 @media (max-width: 420px) {
   .campaign-battle-history-panel { padding: 10px; gap: 10px; }
   .campaign-battle-history-header { align-items: flex-start; }
   .campaign-battle-history-close { padding-inline: 10px; }
   .campaign-battle-history-entry { padding: 8px; }
+  .campaign-battle-history-filters { grid-template-columns: minmax(0, 1fr); padding: 9px; }
+  .campaign-battle-history-search { grid-column: auto; }
+  .campaign-battle-history-reset { width: 100%; }
   .campaign-battle-history-entry-heading { font-size: .64rem; }
   .campaign-battle-strikes { font-size: .66rem; }
 }
