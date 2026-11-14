@@ -233,3 +233,70 @@ test("scrolls the narrow battle map and selects a right-side unit with WebKit to
   expect(await readAutoSave(page)).toEqual(savedBeforeSelection);
 });
 
+test("keeps a right-edge movement preview read-only at 320px until the second WebKit touch", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await startWebKitBattle(page);
+
+  const preparedState = await readAutoSave(page) as {
+    units: Array<{ id: string; position: { x: number; y: number } }>;
+  };
+  const protagonist = preparedState.units.find((unit) => unit.id === "unit_001");
+  if (!protagonist) throw new Error("The protagonist is missing from the narrow WebKit auto save.");
+  protagonist.position = { x: 8, y: 9 };
+  await writeAutoSave(page, preparedState);
+
+  await page.reload();
+  const title = page.getByTestId("campaign-title-screen");
+  await expect(title).toBeVisible();
+  await title.getByRole("button", { name: "つづきから" }).tap();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+  const viewport = page.getByRole("region", {
+    name: "戦闘マップ。狭い画面では左右にスクロールできます"
+  });
+  await viewport.scrollIntoViewIfNeeded();
+  await viewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth - element.clientWidth;
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+
+  const source = page.locator('.map-grid [data-map-position="8,9"]');
+  const destination = page.locator('.map-grid [data-map-position="9,9"]');
+  await expect(source).toBeVisible();
+  await expect(destination).toBeVisible();
+
+  const [viewportBounds, sourceBounds, destinationBounds] = await Promise.all([
+    viewport.boundingBox(),
+    source.boundingBox(),
+    destination.boundingBox()
+  ]);
+  if (!viewportBounds || !sourceBounds || !destinationBounds) {
+    throw new Error("The scrolled map viewport or right-edge movement tiles are not visible.");
+  }
+  expect(sourceBounds.x).toBeGreaterThanOrEqual(viewportBounds.x);
+  expect(destinationBounds.x + destinationBounds.width)
+    .toBeLessThanOrEqual(viewportBounds.x + viewportBounds.width);
+  expect(destinationBounds.y + destinationBounds.height).toBeLessThanOrEqual(720);
+
+  const savedBeforePreview = await readAutoSave(page);
+  await source.tap();
+  await destination.tap();
+
+  await expect(destination).toHaveClass(/is-movement-path/);
+  await expect(destination).toHaveAttribute("aria-label", /移動経路 2番/);
+  await expect(page.getByRole("status")).toContainText("同じマスをもう一度タップすると移動します。");
+  expect(await readAutoSave(page)).toEqual(savedBeforePreview);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+
+  await destination.tap();
+  await expect(page.getByRole("status")).toContainText("主人公が10列・10行へ移動しました。");
+  await expect(page.locator(".map-grid .movement-path-step")).toHaveCount(0);
+  await expect.poll(async () => {
+    const saved = await readAutoSave(page) as {
+      units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean }>;
+    };
+    const moved = saved.units.find((unit) => unit.id === "unit_001");
+    return moved ? { position: moved.position, hasMoved: moved.hasMoved } : null;
+  }).toEqual({ position: { x: 9, y: 9 }, hasMoved: true });
+});
+
