@@ -61,3 +61,45 @@ export function getNextChapter(chapterId: string): ChapterDefinition | undefined
   const index = CHAPTERS.findIndex((chapter) => chapter.id === chapterId);
   return index >= 0 ? CHAPTERS[index + 1] : undefined;
 }
+
+
+/**
+ * Checks that every cross-chapter campaign-choice condition references a
+ * uniquely-authored choice from an earlier chapter.
+ */
+export function isValidCampaignChoiceLinks(
+  chapters: readonly ChapterDefinition[] = CHAPTERS
+): boolean {
+  const sources = new Map<string, { chapterNumber: number; choiceIds: ReadonlySet<string> }>();
+  const chapterNumbers = new Set<number>();
+
+  for (const chapter of chapters) {
+    if (!Number.isInteger(chapter.number) || chapter.number < 1 || chapterNumbers.has(chapter.number)) {
+      return false;
+    }
+    chapterNumbers.add(chapter.number);
+    for (const event of chapter.map.events ?? []) {
+      if (event.action.type !== "show-choice" || event.action.campaignChoiceKey === undefined) continue;
+      const key = event.action.campaignChoiceKey;
+      if (sources.has(key)) return false;
+      sources.set(key, {
+        chapterNumber: chapter.number,
+        choiceIds: new Set(event.action.choices.map((choice) => choice.id))
+      });
+    }
+  }
+
+  for (const chapter of chapters) {
+    for (const event of chapter.map.events ?? []) {
+      const condition = event.condition;
+      if (!condition) continue;
+      const source = sources.get(condition.key);
+      if (
+        !source ||
+        source.chapterNumber >= chapter.number ||
+        !source.choiceIds.has(condition.choiceId)
+      ) return false;
+    }
+  }
+  return true;
+}
