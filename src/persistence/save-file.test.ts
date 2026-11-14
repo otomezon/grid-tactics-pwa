@@ -1,9 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
-import { createSaveFileContent, parseSaveFileContent } from "./save-file";
+import { createSaveBackupFileName, createSaveFileContent, parseSaveFileContent } from "./save-file";
 
 describe("save file export and import format", () => {
+  it("creates a portable backup filename with its generation and export date", () => {
+    const exportedAt = new Date("2026-11-10T12:34:56.000Z");
+    expect(createSaveBackupFileName("chapter_01_map", 2, exportedAt))
+      .toBe("grid-tactics-chapter-01-map-backup-2-2026-11-10.json");
+  });
+
+  it.each([0, 4, 1.5])("rejects an invalid backup generation %s", (generation) => {
+    expect(() => createSaveBackupFileName("chapter_01_map", generation, new Date("2026-11-10T12:34:56.000Z")))
+      .toThrow("backup generation is invalid");
+  });
+
+  it("rejects an invalid chapter ID or export timestamp for a backup filename", () => {
+    expect(() => createSaveBackupFileName(" ", 1, new Date("2026-11-10T12:34:56.000Z")))
+      .toThrow("backup chapter ID is invalid");
+    expect(() => createSaveBackupFileName("chapter_01_map", 1, new Date(Number.NaN)))
+      .toThrow("export timestamp is invalid");
+  });
+
   it("round-trips a complete game snapshot in a versioned envelope", () => {
     const exportedAt = new Date("2026-11-10T12:34:56.000Z");
     const content = createSaveFileContent(INITIAL_GAME_STATE, exportedAt);

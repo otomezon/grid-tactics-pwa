@@ -389,6 +389,54 @@ test.describe("production PWA shell", () => {
     }
   });
 
+  test("exports an individual local backup as a portable save without mutating local data", async ({ page, browser }) => {
+    await startBattle(page);
+    const firstAutoSave = await readAutoSave(page);
+    expect(firstAutoSave).not.toBeNull();
+
+    await page.getByTestId("create-save-backup").click();
+    await expect(page.getByRole("status")).toContainText("バックアップを作成しました。");
+    await setAutoSaveTurn(page, 2);
+    await page.getByTestId("create-save-backup").click();
+    await expect(page.getByRole("status")).toContainText("バックアップを作成しました。");
+
+    const selectedBackup = await readBackupData(page, "backup-2");
+    expect(selectedBackup).toEqual(firstAutoSave);
+    const autoSaveBeforeExport = await readAutoSave(page);
+    const backupsBeforeExport = await readBackupRecords(page);
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("export-backup-2").click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^grid-tactics-chapter-01-.*-backup-2-\d{4}-\d{2}-\d{2}\.json$/);
+    const filePath = await download.path();
+    expect(filePath).toBeTruthy();
+    expect(await readAutoSave(page)).toEqual(autoSaveBeforeExport);
+    expect(await readBackupRecords(page)).toEqual(backupsBeforeExport);
+
+    const freshContext = await browser.newContext({ baseURL: "http://127.0.0.1:4173" });
+    try {
+      const importPage = await freshContext.newPage();
+      await importPage.goto("/");
+      const title = importPage.getByTestId("campaign-title-screen");
+      await expect(title).toBeVisible();
+
+      const importDialogPromise = importPage.waitForEvent("dialog");
+      await title.locator('[data-testid="title-save-import-input"]').setInputFiles(filePath!);
+      const importDialog = await importDialogPromise;
+      expect(importDialog.message()).toContain("第1世代バックアップへ退避");
+      await importDialog.accept();
+
+      await expect(title).toContainText("セーブファイルからゲーム状態を復元しました。");
+      expect(await readAutoSave(importPage)).toEqual(selectedBackup);
+      await expect(title.getByRole("button", { name: "つづきから" })).toBeEnabled();
+      await title.getByRole("button", { name: "つづきから" }).click();
+      await expect(importPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    } finally {
+      await freshContext.close();
+    }
+  });
+
   test("rejects an invalid save file without overwriting the current autosave", async ({ page }) => {
     await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");

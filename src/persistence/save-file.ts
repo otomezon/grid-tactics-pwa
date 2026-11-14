@@ -32,6 +32,28 @@ export function createSaveFileContent(
   return JSON.stringify(envelope, null, 2);
 }
 
+
+/** Builds a stable, generation-specific filename for an exported local backup. */
+export function createSaveBackupFileName(
+  chapterId: string,
+  generation: number,
+  exportedAt: Date = new Date()
+): string {
+  if (!chapterId.trim()) {
+    throw new Error("The backup chapter ID is invalid.");
+  }
+  if (!Number.isInteger(generation) || generation < 1 || generation > 3) {
+    throw new Error("The backup generation is invalid.");
+  }
+  if (Number.isNaN(exportedAt.getTime())) {
+    throw new Error("The export timestamp is invalid.");
+  }
+
+  const safeChapterId = chapterId.replace(/[^a-z0-9-]/gi, "-");
+  const date = exportedAt.toISOString().slice(0, 10);
+  return "grid-tactics-" + safeChapterId + "-backup-" + generation + "-" + date + ".json";
+}
+
 /** Reads the portable envelope. Game-state validation and migration happen separately. */
 export function parseSaveFileContent(content: string): unknown {
   let parsed: unknown;

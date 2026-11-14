@@ -2857,6 +2857,10 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(title).toBeVisible();
     await title.getByTestId("title-create-save-backup").click();
     await expect(title.getByTestId("title-backup-entry-backup-1")).toBeVisible();
+    const downloadPromise = page.waitForEvent("download");
+    await title.getByTestId("title-export-backup-1").click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^grid-tactics-chapter-01-.*-backup-1-\d{4}-\d{2}-\d{2}\.json$/);
     expect(await readAutoSave(page)).toEqual(saved);
   });
 

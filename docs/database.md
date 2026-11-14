@@ -118,3 +118,10 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 - autoの読込、既存バックアップの読込、世代削除・移動、安全バックアップの作成、新しいautoの書込はすべて単一IndexedDB `readwrite` transactionで行う。transaction完了前に成功表示やReact上のゲーム状態更新を行わず、途中で失敗した場合は安全バックアップとimport後autoの両方をrollbackする。
 - 確認キャンセル・ファイル検証エラーではautoとバックアップのどちらも変更しない。auto recordにdataがない場合はバックアップを作らず、既存のバックアップ世代もそのまま保持して新しいautoだけを保存する。
 - JSON envelope format version 1、GameStateSnapshot `saveVersion: 10`、IndexedDB schema version 1は変更しない。
+
+## 12. ローカルバックアップの個別JSON書き出し
+
+- 対象slotを `loadGameStateBackup` で再読込し、章ID、現在のchapter registry、save migration／snapshot validatorを通過させてから書き出す。
+- 書き出すデータは選択したバックアップのsnapshotだけとし、現在のauto slotや他世代の内容で補完・置換しない。
+- 現行の `createSaveFileContent` が使うformat version 1のenvelopeに包むため、通常のJSONセーブ読み込みと同じ検証／migration／安全退避経路で別ブラウザへ取り込める。
+- 書き出しはauto slot、backup slot、GameState、RNG、saveVersionを変更しない。ダウンロードは押下操作に限定する。
