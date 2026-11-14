@@ -336,7 +336,12 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   const villageTile = page.locator('[data-map-position="9,8"]');
   await activate(villageTile, input);
   if (input === "tap") await activate(villageTile, input);
-  await expect(page.locator('[data-testid="map-object-marker"]')).toHaveCount(3);
+  // Chapter 2 has three map objects plus the event-only scout interaction point.
+  await expect(page.locator('[data-testid="map-object-marker"]')).toHaveCount(4);
+  await expect(page.locator('[data-testid="map-object-marker"][data-object-kind="location"]')).toHaveCount(1);
+  const scoutMarker = page.locator('[data-map-position="5,7"]').getByTestId("map-object-marker");
+  await expect(scoutMarker).toHaveAttribute("data-object-kind", "location");
+  await expect(scoutMarker).toHaveText("調");
   const villageMarker = page.locator('[data-map-position="9,8"]').getByTestId("map-object-marker");
   await expect(villageMarker).toHaveAttribute("data-object-kind", "village");
   await expect(villageMarker).toHaveText("村");
