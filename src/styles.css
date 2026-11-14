@@ -1402,6 +1402,22 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   font-size: clamp(.7rem, 2vw, .95rem);
   font-weight: 700;
 }
+.deployment-preview-optional-label {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  overflow: hidden;
+  padding: 1px 0;
+  color: #fff1ce;
+  background: rgba(71, 53, 27, .94);
+  font-size: clamp(.28rem, .7vw, .4rem);
+  line-height: 1.1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
 .deployment-preview-legend {
   display: flex;
   flex-wrap: wrap;

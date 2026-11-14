@@ -77,6 +77,20 @@ describe("DeploymentPreview", () => {
     expect(html).toContain('aria-label="味方03、2列・9行に配置済み。詳細を表示"');
   });
 
+  it("clearly labels optional deployment positions that are reserved for conditional recruits", () => {
+    const optionalMap = {
+      ...CHAPTER_01_MAP,
+      playerDeployment: [
+        ...CHAPTER_01_MAP.playerDeployment,
+        { unitId: "recruit_scout", x: 7, y: 8, optional: true }
+      ]
+    };
+    const html = renderPreview(candidates.map((unit) => unit.id), assignments, optionalMap);
+    expect(html).toContain('data-optional="true"');
+    expect(html).toContain('aria-label="任意の空き出撃位置 5、8列・9行の地形を確認"');
+    expect(html).toContain("任意枠");
+  });
+
   it("marks vacated slots when a candidate is kept in reserve", () => {
     const html = renderPreview(["unit_001", "unit_002", "unit_003"]);
     expect(html).toContain("3 / 4か所");

@@ -113,6 +113,7 @@ export function prepareNextChapter({
       reserveUnits.push(placeReserve(templateReserve, "preserve"));
       continue;
     }
+    if (deployment.optional) continue;
     throw new Error(`Player deployment "${deployment.unitId}" has no matching player unit.`);
   }
 

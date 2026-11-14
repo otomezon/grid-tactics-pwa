@@ -1,5 +1,6 @@
 import type { GameMapDefinition, GameStateSnapshot } from "../../domain/models/game";
 import { CHAPTER_01_MAP, createMainCharacterDefeatEvent, INITIAL_GAME_STATE, MAIN_CHARACTER_UNIT_ID } from "./chapter-01";
+import { CHAPTER_02_SCOUT_RECRUIT } from "../campaign-recruits";
 
 const terrain = CHAPTER_01_MAP.terrain.map((row) => [...row]);
 terrain[1]![2] = "forest";
@@ -27,7 +28,8 @@ export const CHAPTER_03_MAP: GameMapDefinition = {
     { unitId: "unit_001", x: 1, y: 8 },
     { unitId: "unit_002", x: 3, y: 8 },
     { unitId: "unit_003", x: 5, y: 8 },
-    { unitId: "unit_004", x: 8, y: 8 }
+    { unitId: "unit_004", x: 8, y: 8 },
+    { unitId: CHAPTER_02_SCOUT_RECRUIT.id, x: 7, y: 8, optional: true }
   ],
   enemyDeployment: [
     { unitId: "enemy_001", x: 1, y: 1 },
@@ -52,6 +54,20 @@ export const CHAPTER_03_MAP: GameMapDefinition = {
         type: "show-message",
         speaker: "旅の記録",
         text: "第2章の村で聞いた森の小道を思い出した。険しい地形を避けるときに役立ちそうだ。"
+      }
+    },
+    {
+      id: "chapter-03-scout-joins-expedition",
+      trigger: { type: "stage-start" },
+      condition: {
+        type: "campaign-choice",
+        key: "chapter-02.scout-recruitment",
+        choiceId: "join-scout"
+      },
+      action: {
+        type: "show-message",
+        speaker: "斥候ミナ",
+        text: "同行を認めてくれてありがとう。出撃準備で選んでもらえれば、前衛の支援に回るよ。"
       }
     },
     {

@@ -18,7 +18,8 @@ function isDeployment(value: unknown, width: number, height: number): value is M
   if (!isRecord(value)) return false;
   return isNonEmptyString(value.unitId) &&
     Number.isInteger(value.x) && (value.x as number) >= 0 && (value.x as number) < width &&
-    Number.isInteger(value.y) && (value.y as number) >= 0 && (value.y as number) < height;
+    Number.isInteger(value.y) && (value.y as number) >= 0 && (value.y as number) < height &&
+    (value.optional === undefined || typeof value.optional === "boolean");
 }
 function isEventChoiceList(value: unknown): boolean {
   if (!Array.isArray(value) || value.length < 2 || value.length > 4) return false;
@@ -75,6 +76,8 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
       row.every((cell) => typeof cell === "string" && TERRAIN_TYPES.has(cell))) ||
     !Array.isArray(playerDeployment) || !Array.isArray(enemyDeployment) || !isRecord(objective)
   ) return false;
+
+  if (enemyDeployment.some((candidate) => isRecord(candidate) && candidate.optional === true)) return false;
 
   const ids = new Set<string>();
   const occupied = new Set<string>();
@@ -214,7 +217,10 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
       }
       if (action.type === "spawn-reinforcement") continue;
       if (action.type === "recruit-unit") {
-        if (trigger.type !== "unit-interacts" || !isValidCampaignUnitData(action.unit)) return false;
+        if (
+          (trigger.type !== "unit-interacts" && trigger.type !== "event-choice") ||
+          !isValidCampaignUnitData(action.unit)
+        ) return false;
         continue;
       }
       return false;
@@ -233,6 +239,8 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
       if (
         !source ||
         source.id === candidate.id ||
+        !isRecord(source.trigger) ||
+        (isRecord(candidate.action) && candidate.action.type === "recruit-unit" && source.trigger.type !== "unit-interacts") ||
         !isRecord(source.action) ||
         source.action.type !== "show-choice" ||
         !isEventChoiceList(source.action.choices) ||
