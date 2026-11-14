@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { BattleGuideDetails } from "../application/get-battle-guide-details";
 
 interface OperationGuideStep {
   title: string;
@@ -75,9 +76,10 @@ const GUIDE_STEPS: readonly OperationGuideStep[] = [
 
 interface OperationGuideProps {
   onClose: () => void;
+  battleGuide: BattleGuideDetails;
 }
 
-export function OperationGuide({ onClose }: OperationGuideProps) {
+export function OperationGuide({ onClose, battleGuide }: OperationGuideProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const step = GUIDE_STEPS[stepIndex] ?? GUIDE_STEPS[0]!;
   const isLastStep = stepIndex === GUIDE_STEPS.length - 1;
@@ -112,6 +114,29 @@ export function OperationGuide({ onClose }: OperationGuideProps) {
         <span style={{ width: ((stepIndex + 1) / GUIDE_STEPS.length * 100) + "%" }} />
       </div>
 
+      <section className="operation-guide-live" data-testid="battle-guide" aria-labelledby="battle-guide-heading">
+        <div className="operation-guide-live-heading">
+          <p className="eyebrow">NEXT ACTION</p>
+          <span data-testid="battle-guide-count">{battleGuide.completedCount} / {battleGuide.totalCount}項目完了</span>
+        </div>
+        <h3 id="battle-guide-heading">{battleGuide.headline}</h3>
+        <p className="operation-guide-live-description">{battleGuide.description}</p>
+        <ol className="operation-guide-live-steps" aria-label="この章での実戦チェックリスト">
+          {battleGuide.steps.map((guideStep) => (
+            <li
+              key={guideStep.id}
+              className={guideStep.complete ? "is-complete" : ""}
+              data-testid="battle-guide-step"
+              data-step-id={guideStep.id}
+              data-complete={String(guideStep.complete)}
+            >
+              <span className="operation-guide-live-step-state">{guideStep.complete ? "完了" : "未完了"}</span>
+              <span>{guideStep.label}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <div className="operation-guide-content" aria-live="polite" aria-atomic="true">
         <p className="operation-guide-step-number">STEP {String(stepIndex + 1).padStart(2, "0")} / {String(GUIDE_STEPS.length).padStart(2, "0")}</p>
         <h3>{step.title}</h3>
@@ -141,7 +166,7 @@ export function OperationGuide({ onClose }: OperationGuideProps) {
         </button>
       </div>
 
-      <p className="operation-guide-note">このガイドは説明専用です。ゲーム状態やセーブデータは変更しません。</p>
+      <p className="operation-guide-note">上の実戦案内は現在の味方の状態と確定済みの行動記録から更新されます。案内・チェックリストの閲覧は読み取り専用で、ゲーム状態やセーブデータを変更しません。</p>
     </section>
   );
 }
