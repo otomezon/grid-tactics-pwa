@@ -2088,12 +2088,14 @@ function CampaignApp() {
               選択記録 <span>（{campaignChoiceHistory.length}件）</span>
             </button>
           )}
-          {campaignBattleHistory.length > 0 && (
+          {(campaignBattleHistory.length > 0 || gameState.campaignUnitBattleRecords.length > 0) && (
             <button
               ref={campaignBattleHistoryToggleRef}
               className="secondary-button save-file-button campaign-battle-history-toggle"
               type="button"
-              aria-label={"キャンペーン戦闘記録 " + campaignBattleHistory.length + "件"}
+              aria-label={campaignBattleHistory.length > 0
+                ? "キャンペーン戦闘記録 " + campaignBattleHistory.length + "件"
+                : "キャンペーン戦闘記録 味方累計 " + gameState.campaignUnitBattleRecords.length + "名"}
               aria-expanded={isCampaignBattleHistoryOpen}
               aria-controls={isCampaignBattleHistoryOpen ? "campaign-battle-history-panel" : undefined}
               onClick={() => {
@@ -2102,7 +2104,9 @@ function CampaignApp() {
                 setIsCampaignBattleHistoryOpen((open) => !open);
               }}
             >
-              戦闘記録 <span>（{campaignBattleHistory.length}件）</span>
+              戦闘記録 <span>{campaignBattleHistory.length > 0
+                ? "（" + campaignBattleHistory.length + "件）"
+                : "（味方累計 " + gameState.campaignUnitBattleRecords.length + "名）"}</span>
             </button>
           )}
           <button
@@ -2208,7 +2212,7 @@ function CampaignApp() {
         />
       )}
 
-      {isCampaignBattleHistoryOpen && campaignBattleHistory.length > 0 && (
+      {isCampaignBattleHistoryOpen && (campaignBattleHistory.length > 0 || gameState.campaignUnitBattleRecords.length > 0) && (
         <CampaignBattleHistoryPanel
           entries={campaignBattleHistory}
           unitRecords={gameState.campaignUnitBattleRecords}
