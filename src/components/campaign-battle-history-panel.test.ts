@@ -55,6 +55,7 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("撃破者別記録（表示中）");
     expect(html).toContain("時系列ログ");
     expect(html).toContain("味方別累計");
+    expect(html).toContain('aria-label="時系列ログをCSV出力"');
   });
 
   it("renders an empty defeat summary", () => {

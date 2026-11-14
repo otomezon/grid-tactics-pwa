@@ -3171,3 +3171,26 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .operation-guide-live { padding: 10px; }
   .operation-guide-live-description { font-size: .74rem; }
 }
+
+
+/* Campaign archive CSV downloads are available in both responsive archive views. */
+.campaign-battle-history-export,
+.campaign-unit-record-archive-export {
+  min-height: 40px;
+  flex: 0 0 auto;
+}
+
+.campaign-unit-record-archive-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+@media (max-width: 380px) {
+  .campaign-unit-record-archive-header > div,
+  .campaign-unit-record-archive-export {
+    width: 100%;
+  }
+}
