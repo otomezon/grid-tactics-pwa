@@ -50,6 +50,8 @@ type SaveSnapshot = {
     sourceChapterId: string;
     sourceEventId: string;
   }[];
+  firedMapEventIds: string[];
+  acknowledgedMapEventIds: string[];
   campaignBattleLog: Array<Record<string, unknown>>;
 };
 
