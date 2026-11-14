@@ -1,7 +1,18 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { acknowledgePendingMapEvents } from "./helpers/map-events";
 
 const deploymentStartButton = "出撃メンバーと配置を確定して戦闘開始";
+type InteractionInput = "click" | "tap";
+
+async function activate(locator: Locator, input: InteractionInput): Promise<void> {
+  if (input === "tap") await locator.tap();
+  else await locator.click();
+}
+
+async function expectMobileViewport(page: Page, input: InteractionInput): Promise<void> {
+  if (input !== "tap") return;
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+}
 
 type SavedUnit = {
   id: string;
@@ -35,22 +46,24 @@ type SaveSnapshot = {
   reserveUnits: ReserveUnit[];
 };
 
-async function startCampaign(page: Page): Promise<void> {
+async function startCampaign(page: Page, input: InteractionInput): Promise<void> {
   await page.goto("/");
   const title = page.getByTestId("campaign-title-screen");
   await expect(title).toBeVisible();
-  await title.getByRole("button", { name: "はじめから" }).click();
+  await activate(title.getByRole("button", { name: "はじめから" }), input);
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
-  await page.getByRole("button", { name: deploymentStartButton }).click();
+  await activate(page.getByRole("button", { name: deploymentStartButton }), input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-  await acknowledgePendingMapEvents(page);
+  await expectMobileViewport(page, input);
+  await acknowledgePendingMapEvents(page, { input });
 }
 
-async function continueCampaign(page: Page): Promise<void> {
+async function continueCampaign(page: Page, input: InteractionInput): Promise<void> {
   const title = page.getByTestId("campaign-title-screen");
   await expect(title).toBeVisible();
   await expect(title.getByRole("button", { name: "つづきから" })).toBeEnabled();
-  await title.getByRole("button", { name: "つづきから" }).click();
+  await activate(title.getByRole("button", { name: "つづきから" }), input);
+  await expectMobileViewport(page, input);
 }
 
 async function readAutoSave(page: Page): Promise<unknown> {
@@ -112,8 +125,10 @@ async function writeAutoSave(page: Page, data: SaveSnapshot): Promise<void> {
   }, data);
 }
 
-test("carries one campaign through all three registered chapters and reloads each committed chapter", async ({ page }) => {
-  await startCampaign(page);
+test("carries one campaign through all three chapters with desktop clicks and mobile WebKit touch", async ({ page }, testInfo) => {
+  const input: InteractionInput = testInfo.project.name === "webkit-mobile" ? "tap" : "click";
+  if (input === "tap") await page.setViewportSize({ width: 320, height: 720 });
+  await startCampaign(page, input);
   const initialState = await readAutoSave(page) as SaveSnapshot;
   const carriedCandidate = initialState.units.find((unit) => unit.id === "unit_001" && unit.faction === "player");
   const reserveCandidate = initialState.units.find((unit) => unit.id === "unit_004" && unit.faction === "player");
@@ -158,17 +173,18 @@ test("carries one campaign through all three registered chapters and reloads eac
   };
   await writeAutoSave(page, clearedChapterOne);
   await page.reload();
-  await continueCampaign(page);
+  await continueCampaign(page, input);
   await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "第2章・試作マップを開始" }).click();
+  await activate(page.getByRole("button", { name: "第2章・試作マップを開始" }), input);
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
   await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
   expect(await readAutoSave(page)).toEqual(clearedChapterOne);
 
-  await page.getByRole("button", { name: deploymentStartButton }).click();
+  await activate(page.getByRole("button", { name: deploymentStartButton }), input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-  await acknowledgePendingMapEvents(page);
+  await expectMobileViewport(page, input);
+  await acknowledgePendingMapEvents(page, { input });
   const chapterTwoState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterTwoState).toMatchObject({
     saveVersion: 7,
@@ -197,7 +213,7 @@ test("carries one campaign through all three registered chapters and reloads eac
   });
 
   await page.reload();
-  await continueCampaign(page);
+  await continueCampaign(page, input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   expect(await readAutoSave(page)).toEqual(chapterTwoState);
 
@@ -208,17 +224,18 @@ test("carries one campaign through all three registered chapters and reloads eac
   };
   await writeAutoSave(page, clearedChapterTwo);
   await page.reload();
-  await continueCampaign(page);
+  await continueCampaign(page, input);
   await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "第3章・試作マップを開始" }).click();
+  await activate(page.getByRole("button", { name: "第3章・試作マップを開始" }), input);
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
   await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
   expect(await readAutoSave(page)).toEqual(clearedChapterTwo);
 
-  await page.getByRole("button", { name: deploymentStartButton }).click();
+  await activate(page.getByRole("button", { name: deploymentStartButton }), input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
-  await acknowledgePendingMapEvents(page);
+  await expectMobileViewport(page, input);
+  await acknowledgePendingMapEvents(page, { input });
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterThreeState).toMatchObject({
     saveVersion: 7,
@@ -249,7 +266,7 @@ test("carries one campaign through all three registered chapters and reloads eac
     .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
 
   await page.reload();
-  await continueCampaign(page);
+  await continueCampaign(page, input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   expect(await readAutoSave(page)).toEqual(chapterThreeState);
 });
