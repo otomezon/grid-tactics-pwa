@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
+import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import type { CampaignBattleLogEntry } from "../domain/models/game";
 import { performAttack } from "./perform-attack";
 import { getPlayerAttackReport } from "./get-player-attack-report";
@@ -13,7 +14,7 @@ function adjacentBattleState() {
   return {
     ...INITIAL_GAME_STATE,
     units: INITIAL_GAME_STATE.units.map((unit) =>
-      unit.id === "enemy_001" ? { ...unit, position: { x: 1, y: 7 } } : unit
+      unit.id === "enemy_001" ? { ...unit, position: { x: 1, y: 7 }, currentHp: 1 } : unit
     )
   };
 }
@@ -90,10 +91,13 @@ describe("campaign battle log recording", () => {
       actorId: "unit_001",
       targetId: "enemy_001",
       weaponName: "試作の鉄の剣",
-      damage: execution.result.events[0]?.damage,
+      damage: Math.max(0, (execution.result.events[0]?.defenderHpBefore ?? 0) - (execution.result.events[0]?.defenderHpAfter ?? 0)),
       targetHpBefore: execution.result.events[0]?.defenderHpBefore,
       targetHpAfter: execution.result.events[0]?.defenderHpAfter
     });
+    expect(entry.strikes[0]?.damage).toBe(1);
+    const stateWithLog = appendCampaignBattleLogEntries(execution.nextState, [entry]);
+    expect(isValidGameStateSnapshot(stateWithLog, CHAPTER_01_MAP)).toBe(true);
     expect(entry).not.toHaveProperty("forecast");
     expect(entry).not.toHaveProperty("hitRate");
   });

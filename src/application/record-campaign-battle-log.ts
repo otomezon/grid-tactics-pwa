@@ -27,7 +27,7 @@ function toCampaignStrike(
     kind: strike.kind,
     weaponName: strike.weaponName,
     outcome: strike.outcome,
-    damage: strike.damage,
+    damage: Math.max(0, strike.targetHpBefore - strike.targetHpAfter),
     targetHpBefore: strike.targetHpBefore,
     targetHpAfter: strike.targetHpAfter
   };
@@ -73,7 +73,7 @@ export function createEnemyBattleLogEntries(
       kind: event.kind,
       weaponName: WEAPONS_BY_ID[event.weaponId]?.name ?? event.weaponId,
       outcome: !event.hit ? "miss" : event.critical ? "critical" : "hit",
-      damage: event.damage,
+      damage: Math.max(0, event.defenderHpBefore - event.defenderHpAfter),
       targetHpBefore: event.defenderHpBefore,
       targetHpAfter: event.defenderHpAfter
     }))
