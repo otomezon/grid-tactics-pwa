@@ -48,7 +48,7 @@
 - version 5: 既存の発火済みイベントIDを保持し、これまでのイベント表示は一時メッセージのみで確認状態が保存されていないため、既発火IDをすべて `acknowledgedMapEventIds` に複製し、空の `mapEventChoices` を加えてversion 8にする。これにより既存イベントを意図せず再表示しない。
 - version 6: 既存の進行状態・発火済みID・確認済みIDを保持し、空の `mapEventChoices`／`campaignChoices` を加えてversion 8にする。
 - version 7: 既存の進行状態・発火済みID・確認済みID・現章 `mapEventChoices` を保持し、空の `campaignChoices` を加えてversion 8にする。既存セーブの過去のキャンペーン選択は推測・生成しない。
-- version 7: 現行validatorで検証し、書き換えない。
+- version 7: 既存validatorで検証し、章内`mapEventChoices`を保持して空の`campaignChoices`を加えversion 8へ移行する。
 
 不正／未対応データは自動初期化・上書きしない。移行後の保存に失敗した場合も、ロードしたデータを画面上で扱い続けることと保存成功を混同しない。
 
