@@ -381,8 +381,14 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await acknowledgePendingMapEvents(page, { input });
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterThreeState.campaignBattleLog.slice(0, chapterTwoState.campaignBattleLog.length)).toEqual(chapterTwoState.campaignBattleLog);
+  const lastChapterTwoBattleLogEntry = chapterTwoAfterObjectInteraction.campaignBattleLog.at(-1);
+  const nextCampaignBattleSequence = (
+    typeof lastChapterTwoBattleLogEntry?.sequence === "number"
+      ? lastChapterTwoBattleLogEntry.sequence
+      : 0
+  ) + 1;
   expect(chapterThreeState.campaignBattleLog.at(-1)).toMatchObject({
-    sequence: (chapterTwoAfterObjectInteraction.campaignBattleLog.at(-1)?.sequence ?? 0) + 1,
+    sequence: nextCampaignBattleSequence,
     chapterId: "chapter_02_map",
     kind: "chapter-result",
     outcome: "victory",
