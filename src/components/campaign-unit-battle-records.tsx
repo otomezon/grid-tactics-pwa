@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { getCampaignUnitBattleRecordsArchive, type CampaignUnitBattleRecordSort } from "../application/get-campaign-unit-battle-records-archive";
 import type { CampaignUnitBattleRecord, UnitStats } from "../domain/models/game";
+import { buildCampaignUnitBattleRecordsCsv } from "../application/export-campaign-archive-csv";
+import { downloadCsv } from "./download-csv";
 
 interface CampaignUnitBattleRecordPanelProps {
   record: CampaignUnitBattleRecord | null | undefined;
@@ -110,6 +112,18 @@ export function CampaignUnitBattleRecordsArchive({
           <h3 id="campaign-unit-record-archive-title">味方別の累計戦績</h3>
           <p className="helper-text">{visibleRecords.length} / {records.length}名を表示</p>
         </div>
+        <button
+          className="secondary-button campaign-unit-record-archive-export"
+          type="button"
+          aria-label="味方別累計をCSV出力"
+          disabled={visibleRecords.length === 0}
+          onClick={() => downloadCsv(
+            buildCampaignUnitBattleRecordsCsv(visibleRecords),
+            "campaign-unit-records-" + new Date().toISOString().slice(0, 10) + ".csv"
+          )}
+        >
+          CSV出力
+        </button>
       </header>
 
       <div className="campaign-battle-history-filters campaign-unit-record-archive-filters" role="group" aria-label="味方戦績の絞り込み">

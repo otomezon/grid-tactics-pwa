@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import type { CampaignBattleHistoryEntry } from "../application/get-campaign-battle-history";
 import type { CampaignUnitBattleRecord } from "../domain/models/game";
 import { CampaignUnitBattleRecordsArchive } from "./campaign-unit-battle-records";
+import { buildCampaignBattleHistoryCsv } from "../application/export-campaign-archive-csv";
+import { downloadCsv } from "./download-csv";
 import {
   filterCampaignBattleHistory,
   type CampaignBattleHistoryCategory
@@ -186,6 +188,18 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
           disabled={!hasActiveFilter}
         >
           絞り込みを解除
+        </button>
+        <button
+          className="secondary-button campaign-battle-history-reset campaign-battle-history-export"
+          type="button"
+          aria-label="時系列ログをCSV出力"
+          disabled={filteredEntries.length === 0}
+          onClick={() => downloadCsv(
+            buildCampaignBattleHistoryCsv(filteredEntries),
+            "campaign-battle-history-" + new Date().toISOString().slice(0, 10) + ".csv"
+          )}
+        >
+          CSV出力
         </button>
       </div>
 
