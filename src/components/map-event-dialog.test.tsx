@@ -28,6 +28,10 @@ describe("MapEventDialog", () => {
     expect(html).toContain("どちらへ進みますか？");
     expect(html).toContain("左へ進む");
     expect(html).toContain("右へ進む");
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('aria-modal="true"');
+    expect(html).toContain('aria-labelledby="map-event-dialog-title"');
+    expect(html).toContain('aria-describedby="map-event-dialog-message"');
     expect(html).toContain('role="group"');
     expect(html).toContain('aria-label="会話の選択肢"');
     expect(html).toContain('data-testid="map-event-choice"');

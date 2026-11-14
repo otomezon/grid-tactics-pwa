@@ -415,6 +415,8 @@ function CampaignApp() {
   const [isInstalledApp, setIsInstalledApp] = useState(isStandaloneDisplayMode);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
   const mapEventHistoryToggleRef = useRef<HTMLButtonElement>(null);
+  const mapViewportRef = useRef<HTMLDivElement>(null);
+  const hadPendingMapEventRef = useRef(false);
   const phaseEndButtonRef = useRef<HTMLButtonElement>(null);
   const lastMapInputWasTouchRef = useRef(false);
   const touchMoveConfirmationPositionRef = useRef<Position | null>(null);
@@ -712,6 +714,19 @@ function CampaignApp() {
       : [],
     [currentMap, gameState]
   );
+
+  useEffect(() => {
+    const hasPendingMapEvent = pendingMapEventMessages.length > 0;
+    const previouslyHadPendingMapEvent = hadPendingMapEventRef.current;
+    hadPendingMapEventRef.current = hasPendingMapEvent;
+
+    if (!previouslyHadPendingMapEvent || hasPendingMapEvent) return;
+    const frame = window.requestAnimationFrame(() => {
+      mapViewportRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingMapEventMessages.length]);
+
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
     pendingMapEventMessages.length === 0 && !deploymentPending &&
     gameState.phase === "player" && battleOutcome === "playing";
@@ -2415,6 +2430,7 @@ function CampaignApp() {
             </div>
           )}
           <div
+            ref={mapViewportRef}
             className="map-viewport"
             role="region"
             aria-label="戦闘マップ。狭い画面では左右にスクロールできます"

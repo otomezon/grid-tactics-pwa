@@ -185,6 +185,7 @@ test.describe("campaign title and save hub", () => {
     const dialog = page.getByTestId("map-event-dialog");
     const acknowledgeButton = dialog.getByRole("button", { name: "確認して続ける" });
     await expect(dialog).toBeVisible();
+    await expect(acknowledgeButton).toBeEnabled();
     await expect(acknowledgeButton).toBeFocused();
 
     const pendingSave = await readAutoSave(page) as {
@@ -193,6 +194,10 @@ test.describe("campaign title and save hub", () => {
     };
     expect(pendingSave.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(pendingSave.acknowledgedMapEventIds).toEqual([]);
+
+    await page.getByTestId("map-event-dialog-backdrop").click({ position: { x: 2, y: 2 } });
+    await expect(dialog).toBeVisible();
+    await expect(acknowledgeButton).toBeFocused();
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeVisible();
@@ -204,14 +209,33 @@ test.describe("campaign title and save hub", () => {
     await expect(acknowledgeButton).toBeFocused();
     expect(await readAutoSave(page)).toEqual(pendingSave);
 
+    await expect(acknowledgeButton).toBeEnabled();
     await acknowledgeButton.click();
     await expect(dialog).toHaveCount(0);
+    const mapViewport = page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    });
+    await expect(mapViewport).toBeFocused();
+
     const acknowledgedSave = await readAutoSave(page) as {
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
     };
     expect(acknowledgedSave.firedMapEventIds).toEqual(pendingSave.firedMapEventIds);
     expect(acknowledgedSave.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+
+    const historyToggle = page.getByRole("button", { name: /イベント履歴/ });
+    await historyToggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(historyToggle).toHaveAttribute("aria-expanded", "true");
+    const historyPanel = page.getByTestId("map-event-history");
+    await expect(historyPanel).toBeVisible();
+    await historyPanel.getByRole("button", { name: "閉じる" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(historyPanel).toHaveCount(0);
+    await expect(historyToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(historyToggle).toBeFocused();
+    expect(await readAutoSave(page)).toEqual(acknowledgedSave);
   });
 
   test("lets a moved ally investigate a map location once and restores the pending result after reload", async ({ page }) => {
@@ -1563,7 +1587,16 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.locator(".map-grid").getByRole("button", { name: /敵将/ }).click();
     await page.getByRole("button", { name: "攻撃を確定" }).click();
-    await acknowledgePendingMapEvents(page);
+    const victoryEventDialog = page.getByTestId("map-event-dialog");
+    const acknowledgeVictoryEvent = victoryEventDialog.getByRole("button", { name: "確認して続ける" });
+    await expect(victoryEventDialog).toBeVisible();
+    await expect(acknowledgeVictoryEvent).toBeEnabled();
+    await expect(acknowledgeVictoryEvent).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(victoryEventDialog).toHaveCount(0);
+    await expect(page.getByRole("region", {
+      name: "戦闘マップ。狭い画面では左右にスクロールできます"
+    })).toBeFocused();
 
     await expect(page.locator(".battle-outcome")).toContainText("ステージクリア");
     const contribution = page.getByTestId("battle-contribution-unit_001");
