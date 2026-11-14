@@ -35,6 +35,7 @@ describe("CampaignBattleHistoryPanel", () => {
   it("shows actual outcomes and derives killer counts from lethal strikes", () => {
     const html = renderToStaticMarkup(createElement(CampaignBattleHistoryPanel, {
       entries,
+      unitRecords: [],
       onClose: vi.fn()
     }));
     expect(html).toContain("キャンペーン戦闘記録");
@@ -52,11 +53,14 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("味方の行動・攻撃");
     expect(html).toContain("1 / 1件を表示");
     expect(html).toContain("撃破者別記録（表示中）");
+    expect(html).toContain("時系列ログ");
+    expect(html).toContain("味方別累計");
   });
 
   it("renders an empty defeat summary", () => {
     const html = renderToStaticMarkup(createElement(CampaignBattleHistoryPanel, {
       entries: [],
+      unitRecords: [],
       onClose: vi.fn()
     }));
     expect(html).toContain("0 / 0件を表示");
@@ -96,6 +100,7 @@ describe("CampaignBattleHistoryPanel", () => {
     ];
     const html = renderToStaticMarkup(createElement(CampaignBattleHistoryPanel, {
       entries: resultEntries,
+      unitRecords: [],
       onClose: vi.fn()
     }));
     expect(html).toContain("ステージクリア");
