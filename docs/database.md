@@ -110,3 +110,11 @@ Playwrightは本番ビルドを配信するPreviewサーバーに対して実行
 - 一覧には世代番号、作成日時、章名、章IDを表示する。バックアップを復元する前に章IDを解決し、既存のsaveVersion migrationとsnapshot／map validatorを通す。不正形式や未知versionは拒否する。
 - 復元は確認後にだけauto slotを置き換える。書き込みtransaction内でも選択されたバックアップレコードの内容を再確認し、変更・削除されていれば中止する。現在のauto slotにdataがあれば、その内容を同じtransactionで新しい`backup-1`へ退避し、選択した復元元と最も新しい別世代を残して`backup-2`／`backup-3`へ再配置する。3世代を超える場合は選択元を保持し、他の最古世代を整理する。退避とauto復元を単一transactionで行うため、失敗時は両方ロールバックされる。確認キャンセルでは保存データも画面状態も変更しない。`phase: enemy` のデータは既存の敵軍フェイズ復旧処理に従う。
 - IndexedDB versionは1、GameStateSnapshot `saveVersion`は10。JSON export/import envelopeとも独立し、追加依存はない。バックアップは同じブラウザ内のローカル保存であり、暗号化・改ざん防止・クラウド同期を提供しない。
+
+## 11. JSONインポート時の安全退避
+
+- JSON envelope、ファイル形式version、saveVersion migration、章ID、snapshot／map validatorをすべて通過し、ユーザーが確認した後にだけauto slotを置き換える。
+- 現在のauto recordにdataがある場合、そのdataを新しい `backup-1` とし、従来の `backup-1` と `backup-2` をそれぞれ `backup-2` と `backup-3` へ繰り下げる。最古の第3世代だけを破棄する。
+- autoの読込、既存バックアップの読込、世代削除・移動、安全バックアップの作成、新しいautoの書込はすべて単一IndexedDB `readwrite` transactionで行う。transaction完了前に成功表示やReact上のゲーム状態更新を行わず、途中で失敗した場合は安全バックアップとimport後autoの両方をrollbackする。
+- 確認キャンセル・ファイル検証エラーではautoとバックアップのどちらも変更しない。auto recordにdataがない場合はバックアップを作らず、既存のバックアップ世代もそのまま保持して新しいautoだけを保存する。
+- JSON envelope format version 1、GameStateSnapshot `saveVersion: 10`、IndexedDB schema version 1は変更しない。

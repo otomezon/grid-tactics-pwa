@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SaveBackupRecord } from "./save-repository";
-import { getBackupRecordsToPreserveAfterRestore } from "./save-repository";
+import {
+  getBackupRecordsToPreserveAfterReplacement,
+  getBackupRecordsToPreserveAfterRestore
+} from "./save-repository";
 
 function createBackups(): SaveBackupRecord[] {
   return [1, 2, 3].map((generation) => ({
@@ -35,6 +38,37 @@ describe("getBackupRecordsToPreserveAfterRestore", () => {
     const backups = createBackups();
     const before = JSON.stringify(backups);
     getBackupRecordsToPreserveAfterRestore(backups, "backup-2");
+    expect(JSON.stringify(backups)).toBe(before);
+  });
+});
+
+describe("getBackupRecordsToPreserveAfterReplacement", () => {
+  it("keeps the newest two backup generations in their existing order", () => {
+    const backups = createBackups();
+    expect(getBackupRecordsToPreserveAfterReplacement(backups).map((backup) => backup.slotId))
+      .toEqual(["backup-1", "backup-2"]);
+  });
+
+  it("keeps all available generations when fewer than two exist", () => {
+    const backups = createBackups().slice(2);
+    expect(getBackupRecordsToPreserveAfterReplacement(backups)).toEqual(backups);
+    expect(getBackupRecordsToPreserveAfterReplacement([])).toEqual([]);
+  });
+
+  it("ignores records outside the three backup slots", () => {
+    const backups = [
+      ...createBackups(),
+      { slotId: "auto", savedAt: 2_000, data: { generation: 0 } },
+      { slotId: "backup-4", savedAt: 1_500, data: { generation: 4 } }
+    ];
+    expect(getBackupRecordsToPreserveAfterReplacement(backups).map((backup) => backup.slotId))
+      .toEqual(["backup-1", "backup-2"]);
+  });
+
+  it("does not mutate the source collection", () => {
+    const backups = createBackups();
+    const before = JSON.stringify(backups);
+    getBackupRecordsToPreserveAfterReplacement(backups);
     expect(JSON.stringify(backups)).toBe(before);
   });
 });

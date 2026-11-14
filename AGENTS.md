@@ -186,3 +186,5 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 
 
 - Restoring a local backup must copy the current auto-save into a safety generation in the same IndexedDB readwrite transaction that replaces auto. Keep the selected restore source and the newest other backup within the three-generation limit. Re-check the selected backup inside the transaction; a transaction failure must roll back both the safety copy and restored auto slot. Do not claim the restore saved successfully before transaction completion.
+
+- Importing a validated JSON save must preserve the current auto-save as `backup-1` in the same IndexedDB `readwrite` transaction that replaces `auto`. Rotate the previous `backup-1` and `backup-2` into `backup-2` and `backup-3`, discarding only the oldest generation. A cancelled confirmation or invalid file must not modify auto-save or backup records. If the transaction fails, both the safety backup and imported auto slot must roll back together. Keep saveVersion 10 and IndexedDB schema 1 unchanged.

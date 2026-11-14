@@ -2879,12 +2879,11 @@ test("shows candidate details and persists the selected deployment roster", asyn
     const restoreTitle = page.getByTestId("campaign-title-screen");
     await expect(restoreTitle).toBeVisible();
 
-    let cancelMessage = "";
-    page.once("dialog", async (dialog) => {
-      cancelMessage = dialog.message();
-      await dialog.dismiss();
-    });
+    const cancelDialogPromise = page.waitForEvent("dialog");
     await restoreTitle.getByTestId("title-restore-backup-1").click();
+    const cancelDialog = await cancelDialogPromise;
+    const cancelMessage = cancelDialog.message();
+    await cancelDialog.dismiss();
     expect(cancelMessage).toContain("第1世代へ退避");
     expect(await readAutoSave(page)).toEqual(changedSave);
     await expect(restoreTitle).toBeVisible();

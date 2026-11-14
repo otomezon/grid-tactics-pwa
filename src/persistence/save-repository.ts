@@ -156,6 +156,20 @@ export function getBackupRecordsToPreserveAfterRestore(
     );
 }
 
+/** Keeps the two newest stored generations when an operation replaces the auto-save. */
+export function getBackupRecordsToPreserveAfterReplacement(
+  backups: readonly SaveBackupRecord[]
+): SaveBackupRecord[] {
+  return backups
+    .filter((backup) => isBackupSlotId(backup.slotId))
+    .slice()
+    .sort((left, right) =>
+      Number(left.slotId.slice(BACKUP_SLOT_PREFIX.length)) -
+      Number(right.slotId.slice(BACKUP_SLOT_PREFIX.length))
+    )
+    .slice(0, BACKUP_GENERATION_COUNT - 1);
+}
+
 function isStoredRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -393,6 +407,91 @@ export async function restoreGameStateBackup(
 
     request.onerror = () => {
       operationError = request.error instanceof Error ? request.error : new Error("Failed to read save records for restore.");
+      reject(operationError);
+    };
+  });
+
+  try {
+    const [safetyBackup] = await Promise.all([operation, completed]);
+    return safetyBackup;
+  } catch (error) {
+    throw operationError ?? error;
+  }
+}
+
+/**
+ * Atomically keeps the current auto-save as backup-1 before importing a new snapshot.
+ * Existing backup generations shift back by one slot; the oldest is discarded.
+ */
+export async function replaceGameStateWithBackup(
+  data: GameStateSnapshot
+): Promise<SaveBackupRecord | null> {
+  const database = await openDatabase();
+  const transaction = database.transaction(SAVE_STORE, "readwrite");
+  const completed = transactionCompleted(transaction);
+  const store = transaction.objectStore(SAVE_STORE);
+  const request = store.getAll();
+  let operationError: Error | undefined;
+
+  const operation = new Promise<SaveBackupRecord | null>((resolve, reject) => {
+    request.onsuccess = () => {
+      try {
+        const records = request.result as unknown[];
+        const currentAutoSave = records.find((record) =>
+          isStoredRecord(record) && record.slotId === AUTO_SAVE_SLOT
+        );
+        let safetyBackup: SaveBackupRecord | null = null;
+
+        if (isStoredRecord(currentAutoSave) && Object.hasOwn(currentAutoSave, "data")) {
+          const existingBackups = records
+            .filter((record): record is Record<string, unknown> =>
+              isStoredRecord(record) &&
+              typeof record.slotId === "string" &&
+              isBackupSlotId(record.slotId) &&
+              typeof record.savedAt === "number" &&
+              Number.isFinite(record.savedAt)
+            )
+            .map((record) => ({
+              slotId: record.slotId as string,
+              savedAt: record.savedAt as number,
+              data: record.data
+            }));
+          const preservedBackups = getBackupRecordsToPreserveAfterReplacement(existingBackups);
+
+          safetyBackup = {
+            slotId: BACKUP_SLOT_PREFIX + "1",
+            savedAt: Date.now(),
+            data: currentAutoSave.data
+          };
+
+          for (let generation = 1; generation <= BACKUP_GENERATION_COUNT; generation += 1) {
+            store.delete(BACKUP_SLOT_PREFIX + String(generation));
+          }
+          store.put(safetyBackup);
+          preservedBackups.forEach((backup, index) => {
+            store.put({
+              slotId: BACKUP_SLOT_PREFIX + String(index + 2),
+              savedAt: backup.savedAt,
+              data: backup.data
+            });
+          });
+        }
+
+        store.put({ slotId: AUTO_SAVE_SLOT, savedAt: Date.now(), data });
+        resolve(safetyBackup);
+      } catch (error) {
+        operationError = error instanceof Error
+          ? error
+          : new Error("Failed to preserve the auto-save before importing.");
+        try { transaction.abort(); } catch { /* The transaction may already have aborted. */ }
+        reject(operationError);
+      }
+    };
+
+    request.onerror = () => {
+      operationError = request.error instanceof Error
+        ? request.error
+        : new Error("Failed to read save records before importing.");
       reject(operationError);
     };
   });

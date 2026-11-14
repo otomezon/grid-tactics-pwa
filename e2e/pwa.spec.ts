@@ -76,6 +76,29 @@ async function readBackupRecords(page: Page): Promise<Array<{
   });
 }
 
+async function readBackupData(page: Page, slotId: string): Promise<unknown | null> {
+  return page.evaluate(async (backupSlotId) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("grid-tactics-pwa", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error("Could not open save database."));
+    });
+    try {
+      return await new Promise<unknown | null>((resolve, reject) => {
+        const transaction = database.transaction("game-saves", "readonly");
+        const request = transaction.objectStore("game-saves").get(backupSlotId);
+        request.onsuccess = () => {
+          const record = request.result as { data?: unknown } | undefined;
+          resolve(record?.data ?? null);
+        };
+        request.onerror = () => reject(request.error ?? new Error("Could not read backup data."));
+      });
+    } finally {
+      database.close();
+    }
+  }, slotId);
+}
+
 async function setAutoSaveTurn(page: Page, turn: number): Promise<void> {
   await page.evaluate(async (nextTurn) => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -322,12 +345,37 @@ test.describe("production PWA shell", () => {
     const freshContext = await browser.newContext({ baseURL: "http://127.0.0.1:4173" });
     try {
       const importPage = await freshContext.newPage();
-      await importPage.goto("/");
-      await enterNewCampaign(importPage);
-      importPage.on("dialog", (dialog) => dialog.accept());
+      await startBattle(importPage);
+      await importPage.getByTestId("create-save-backup").click();
+      await expect(importPage.getByRole("status")).toContainText("バックアップを作成しました。");
+      await setAutoSaveTurn(importPage, 2);
+      await importPage.getByTestId("create-save-backup").click();
+      await expect(importPage.getByRole("status")).toContainText("バックアップを作成しました。");
+      await setAutoSaveTurn(importPage, 3);
+      const preImportSave = await readAutoSave(importPage);
+      expect(preImportSave).not.toBeNull();
+      const preExistingBackups = await readBackupRecords(importPage);
+      expect(preExistingBackups.map((backup) => backup.data.turn)).toEqual([2, 1]);
 
+      const cancelledImportDialog = importPage.waitForEvent("dialog");
       await importPage.locator('[data-testid="save-import-input"]').setInputFiles(filePath!);
+      const cancelDialog = await cancelledImportDialog;
+      expect(cancelDialog.message()).toContain("第1世代バックアップへ退避");
+      await cancelDialog.dismiss();
+      await expect(importPage.getByRole("status")).toContainText("読み込みをキャンセルしました");
+      expect(await readAutoSave(importPage)).toEqual(preImportSave);
+      expect(await readBackupRecords(importPage)).toEqual(preExistingBackups);
+
+      const acceptedImportDialog = importPage.waitForEvent("dialog");
+      await importPage.locator('[data-testid="save-import-input"]').setInputFiles(filePath!);
+      const acceptDialog = await acceptedImportDialog;
+      expect(acceptDialog.message()).toContain("第1世代バックアップへ退避");
+      await acceptDialog.accept();
       await expect(importPage.getByRole("status")).toContainText("セーブファイルからゲーム状態を復元しました。");
+      await expect(importPage.getByRole("status")).toContainText("第1世代バックアップへ退避しました。");
+      expect(await readBackupData(importPage, "backup-1")).toEqual(preImportSave);
+      expect((await readBackupData(importPage, "backup-2") as { turn: number }).turn).toBe(2);
+      expect((await readBackupData(importPage, "backup-3") as { turn: number }).turn).toBe(1);
       await expect(importPage.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
       await importPage.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
       await expect(importPage.locator(".unit-details")).toContainText("行動済み");
@@ -520,12 +568,12 @@ test.describe("production PWA shell", () => {
     expect((await readAutoSave(page) as { turn: number }).turn).toBe(4);
     await expect(page.getByTestId("save-backup-entry-backup-1")).toContainText("chapter_01_map");
 
-    page.once("dialog", async (dialog) => {
-      expect(dialog.message()).toContain("現在の自動セーブを置き換えます");
-      expect(dialog.message()).toContain("現在の進行状態は失われます");
-      await dialog.accept();
-    });
+    const restoreDialogPromise = page.waitForEvent("dialog");
     await page.getByTestId("restore-backup-3").click();
+    const restoreDialog = await restoreDialogPromise;
+    expect(restoreDialog.message()).toContain("第1世代へ退避");
+    expect(restoreDialog.message()).toContain("選択した復元元も残します");
+    await restoreDialog.accept();
     await expect(page.getByRole("status")).toContainText("バックアップからゲーム状態を復元しました。");
     expect((await readAutoSave(page) as { turn: number }).turn).toBe(2);
     await expect(page.locator(".phase-badge")).toHaveText("第2ターン · 自軍フェイズ");
