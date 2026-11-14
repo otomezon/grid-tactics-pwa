@@ -613,7 +613,7 @@ test.describe("browser campaign flow", () => {
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
     await acknowledgePendingMapEvents(page);
     const committedState = await readAutoSave(page) as {
-      units: Array<{ id: string; faction: string; position: { x: number; y: number } }>;
+      units: Array<{ id: string; faction: string; currentHp: number; position: { x: number; y: number } }>;
       reserveUnits: Array<{ id: string }>;
     };
     expect(committedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
@@ -2636,6 +2636,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     const startedState = await readAutoSave(page) as {
       saveVersion: number;
       chapterId: string;
+      turn: number;
       rngState: number;
       units: Array<{
         id: string;
