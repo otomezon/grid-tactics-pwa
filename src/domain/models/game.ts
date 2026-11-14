@@ -142,6 +142,15 @@ export interface MapEventDefinition {
   action: MapEventAction;
 }
 
+export type MapObjectKind = "village" | "treasure-chest" | "door";
+
+/** A visible map object linked to an existing one-shot unit-interaction event. */
+export interface MapObjectDefinition {
+  id: string;
+  kind: MapObjectKind;
+  eventId: string;
+}
+
 export interface GameMapDefinition {
   id: string;
   width: number;
@@ -152,6 +161,8 @@ export interface GameMapDefinition {
   objective: MapObjective;
   /** Optional map-local events. Event execution progress is persisted in the snapshot. */
   events?: readonly MapEventDefinition[];
+  /** Optional first-class objects linked one-to-one with unit-interacts events. */
+  objects?: readonly MapObjectDefinition[];
   /** Optional critical-unit defeat rule. Omit to use the party-wipe rule only. */
   defeatCondition?: MapDefeatCondition;
 }

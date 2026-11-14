@@ -5,6 +5,7 @@ import { resolveMapEvents } from "./resolve-map-events";
 
 export interface MapInteractionPoint {
   id: string;
+  kind: "village" | "treasure-chest" | "door" | "location";
   label: string;
   description: string | null;
   position: Position;
@@ -27,10 +28,14 @@ export function getMapInteractionPoints(
     throw new Error("Map interactions can only be read for the snapshot's current chapter.");
   }
   const fired = new Set(state.firedMapEventIds);
+  const objectKindByEventId = new Map(
+    (map.objects ?? []).map((object) => [object.eventId, object.kind] as const)
+  );
   return (map.events ?? []).flatMap((event) => {
     if (event.trigger.type !== "unit-interacts" || fired.has(event.id)) return [];
     return [{
       id: event.id,
+      kind: objectKindByEventId.get(event.id) ?? "location",
       label: event.trigger.label,
       description: event.trigger.description ?? null,
       position: { x: event.trigger.x, y: event.trigger.y },

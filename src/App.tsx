@@ -2658,6 +2658,7 @@ function CampaignApp() {
                   isEnemyThreatened ? "is-enemy-threatened" : "",
                   isTargeted ? "is-targeted" : "",
                   isMapInteraction ? "is-map-interaction" : "",
+                  isMapInteraction ? "is-map-object-" + mapInteraction.kind : "",
                   isEnemyActionSource ? "is-enemy-action-source" : "",
                   isEnemyActionDestination ? "is-enemy-action-destination" : "",
                   isEnemyActionTarget ? "is-enemy-action-target" : ""
@@ -2672,7 +2673,11 @@ function CampaignApp() {
                   (isMovementPath ? "、移動経路 " + String(pathStep) + "番" : "") +
                   (isAttackable ? "、攻撃可能" : "") +
                   (isAttackableAfterMove ? "、移動プレビュー先から攻撃可能" : "") +
-                  (isMapInteraction ? "、調査地点: " + mapInteraction.label : "") +
+                  (isMapInteraction
+                     ? "、" + (mapInteraction.kind === "village" ? "村"
+                       : mapInteraction.kind === "treasure-chest" ? "宝箱"
+                         : mapInteraction.kind === "door" ? "扉" : "調査地点") + ": " + mapInteraction.label
+                     : "") +
                   (isEnemyThreatened ? "、敵攻撃範囲（移動後を含む予測）" : "") +
                   (isEnemyActionSource ? "、敵の予測行動の開始位置" : "") +
                   (isEnemyActionDestination ? "、敵の予測移動先" : "") +
@@ -2731,7 +2736,18 @@ function CampaignApp() {
                       {isEnemyActionSource && <span className="enemy-action-map-marker is-source" aria-hidden="true">出</span>}
                       {isEnemyActionDestination && <span className="enemy-action-map-marker is-destination" aria-hidden="true">着</span>}
                       {isEnemyActionTarget && <span className="enemy-action-map-marker is-target" aria-hidden="true">標</span>}
-                      {isMapInteraction && <span className="map-interaction-marker" aria-hidden="true">調</span>}
+                      {isMapInteraction && (
+                        <span
+                          className={"map-interaction-marker is-" + mapInteraction.kind}
+                          data-testid="map-object-marker"
+                          data-object-kind={mapInteraction.kind}
+                          aria-hidden="true"
+                        >
+                          {mapInteraction.kind === "village" ? "村"
+                            : mapInteraction.kind === "treasure-chest" ? "宝"
+                              : mapInteraction.kind === "door" ? "扉" : "調"}
+                        </span>
+                      )}
                       {isReachable && <span className="move-marker" aria-hidden="true" />}
                       {isReachable && reachableCost !== undefined && (
                         <span className="move-cost-marker" aria-hidden="true">{reachableCost}</span>
@@ -2758,7 +2774,10 @@ function CampaignApp() {
             <span><i className="legend-swatch move" />移動可能（数字は累計コスト）</span>
             <span><i className="legend-swatch movement-path" />移動経路（数字は順番）</span>
             <span><i className="legend-swatch attack" />現在位置から攻撃可能</span>
-            {mapInteractionPoints.length > 0 && <span><i className="legend-swatch map-interaction" />調査地点</span>}
+            {mapInteractionPoints.some((point) => point.kind === "village") && <span><i className="legend-swatch map-object-village" />村</span>}
+            {mapInteractionPoints.some((point) => point.kind === "treasure-chest") && <span><i className="legend-swatch map-object-chest" />宝箱</span>}
+            {mapInteractionPoints.some((point) => point.kind === "door") && <span><i className="legend-swatch map-object-door" />扉</span>}
+            {mapInteractionPoints.some((point) => point.kind === "location") && <span><i className="legend-swatch map-interaction" />調査地点</span>
             {movementPreviewPath && newlyAttackableKeys.size > 0 && (
               <span><i className="legend-swatch attack-after-move" />移動プレビュー先から攻撃可能</span>
             )}

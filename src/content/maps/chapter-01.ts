@@ -57,6 +57,11 @@ export const CHAPTER_01_MAP: GameMapDefinition = {
   ],
   objective: { type: "defeat_boss", targetUnitId: "enemy_005" },
   defeatCondition: { type: "unit_defeated", targetUnitId: MAIN_CHARACTER_UNIT_ID },
+  objects: [
+    { id: "chapter-01-prototype-village", kind: "village", eventId: "chapter-01-prototype-investigation" },
+    { id: "chapter-01-prototype-chest", kind: "treasure-chest", eventId: "chapter-01-prototype-chest-open" },
+    { id: "chapter-01-prototype-door", kind: "door", eventId: "chapter-01-prototype-door-inspect" }
+  ],
   events: [
     {
       id: "chapter-01-opening-briefing",
@@ -73,13 +78,43 @@ export const CHAPTER_01_MAP: GameMapDefinition = {
         type: "unit-interacts",
         x: 9,
         y: 8,
-        label: "試作調査地点",
-        description: "探索コマンドの動作確認用地点です。"
+        label: "試作村",
+        description: "村オブジェクトの操作確認用です。正式な村人・会話・報酬はありません。"
       },
       action: {
         type: "show-message",
         speaker: "操作確認",
-        text: "調査地点を確認しました。調査イベントはこの章で一度だけ実行されます。"
+        text: "村イベントの動作確認です。正式な村人・会話・報酬は未設定です。"
+      }
+    },
+    {
+      id: "chapter-01-prototype-chest-open",
+      trigger: {
+        type: "unit-interacts",
+        x: 7,
+        y: 8,
+        label: "試作宝箱",
+        description: "宝箱オブジェクトの操作確認用です。報酬内容は未設定です。"
+      },
+      action: {
+        type: "show-message",
+        speaker: "操作確認",
+        text: "宝箱を開けました。正式な報酬は未設定です。"
+      }
+    },
+    {
+      id: "chapter-01-prototype-door-inspect",
+      trigger: {
+        type: "unit-interacts",
+        x: 9,
+        y: 7,
+        label: "試作扉",
+        description: "扉オブジェクトの操作確認用です。鍵・通行効果は未設定です。"
+      },
+      action: {
+        type: "show-message",
+        speaker: "操作確認",
+        text: "扉を調べました。通行可否はマップの地形定義のままです。"
       }
     },
     {

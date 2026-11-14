@@ -29,6 +29,11 @@ describe("chapter content registry", () => {
     expect(MAIN_CHARACTER_UNIT_ID).toBe("unit_001");
     expect(CHAPTER_01_MAP.objective).toEqual({ type: "defeat_boss", targetUnitId: "enemy_005" });
     expect(CHAPTER_01_MAP.enemyDeployment.some((deployment) => deployment.unitId === "enemy_005")).toBe(true);
+    expect(CHAPTER_01_MAP.objects).toEqual([
+      { id: "chapter-01-prototype-village", kind: "village", eventId: "chapter-01-prototype-investigation" },
+      { id: "chapter-01-prototype-chest", kind: "treasure-chest", eventId: "chapter-01-prototype-chest-open" },
+      { id: "chapter-01-prototype-door", kind: "door", eventId: "chapter-01-prototype-door-inspect" }
+    ]);
   });
 
   it("provides deterministic next-chapter lookup", () => {

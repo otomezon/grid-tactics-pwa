@@ -274,7 +274,7 @@ test.describe("campaign title and save hub", () => {
     expect(await readAutoSave(page)).toEqual(acknowledgedSave);
   });
 
-  test("lets a moved ally investigate a map location once and restores the pending result after reload", async ({ page }) => {
+  test("lets a moved ally visit a prototype village once and restores the pending result after reload", async ({ page }) => {
     await startBattle(page);
 
     const start = await readAutoSave(page) as {
@@ -286,14 +286,20 @@ test.describe("campaign title and save hub", () => {
 
     await page.locator('[data-map-position="8,8"]').click();
     await page.locator('[data-map-position="9,8"]').click();
+    await expect(page.locator('[data-testid="map-object-marker"]')).toHaveCount(3);
+    const villageMarker = page.locator('[data-map-position="9,8"]').getByTestId("map-object-marker");
+    await expect(villageMarker).toHaveAttribute("data-object-kind", "village");
+    await expect(villageMarker).toHaveText("村");
+    await expect(page.locator('[data-testid="map-object-marker"][data-object-kind="treasure-chest"]')).toHaveText("宝");
+    await expect(page.locator('[data-testid="map-object-marker"][data-object-kind="door"]')).toHaveText("扉");
     const interactionPanel = page.getByTestId("map-interaction-panel");
     await expect(interactionPanel).toBeVisible();
-    await expect(interactionPanel).toContainText("試作調査地点");
-    await interactionPanel.getByRole("button", { name: "調べる" }).click();
+    await expect(interactionPanel).toContainText("試作村");
+    await interactionPanel.getByRole("button", { name: "村を訪問する" }).click();
 
     const dialog = page.getByTestId("map-event-dialog");
     await expect(dialog).toHaveAttribute("data-event-id", "chapter-01-prototype-investigation");
-    await expect(dialog).toContainText("調査地点を確認しました。");
+    await expect(dialog).toContainText("村イベントの動作確認です。正式な村人・会話・報酬は未設定です。");
     const used = await readAutoSave(page) as {
       units: Array<{ id: string; position: { x: number; y: number }; hasMoved: boolean; hasActed: boolean }>;
       firedMapEventIds: string[];
@@ -302,12 +308,13 @@ test.describe("campaign title and save hub", () => {
     expect(used.units.find((unit) => unit.id === "unit_004")).toMatchObject({
       position: { x: 9, y: 8 }, hasMoved: true, hasActed: true
     });
+    await expect(page.locator('[data-object-kind="village"]')).toHaveCount(0);
     expect(used.firedMapEventIds).toContain("chapter-01-prototype-investigation");
     expect(used.acknowledgedMapEventIds).not.toContain("chapter-01-prototype-investigation");
 
     await page.reload();
     await continueSavedCampaign(page);
-    await expect(page.getByTestId("map-event-dialog")).toContainText("調査地点を確認しました。");
+    await expect(page.getByTestId("map-event-dialog")).toContainText("村イベントの動作確認です。正式な村人・会話・報酬は未設定です。");
     await expect(page.getByTestId("map-interaction-panel")).toHaveCount(0);
     await page.getByRole("button", { name: "確認して続ける" }).click();
     await expect(page.getByTestId("map-event-dialog")).toHaveCount(0);
