@@ -22,6 +22,7 @@ describe("migrateGameStateSnapshot", () => {
       firedMapEventIds: _firedMapEventIds,
       acknowledgedMapEventIds: _acknowledgedMapEventIds,
       mapEventChoices: _mapEventChoices,
+      campaignChoices: _campaignChoices,
       saveVersion: _saveVersion,
       ...legacy
     } = INITIAL_GAME_STATE;
@@ -33,6 +34,7 @@ describe("migrateGameStateSnapshot", () => {
       firedMapEventIds: _firedMapEventIds,
       acknowledgedMapEventIds: _acknowledgedMapEventIds,
       mapEventChoices: _mapEventChoices,
+      campaignChoices: _campaignChoices,
       saveVersion: _saveVersion,
       ...legacy
     } = INITIAL_GAME_STATE;
@@ -43,6 +45,7 @@ describe("migrateGameStateSnapshot", () => {
       firedMapEventIds: _firedMapEventIds,
       acknowledgedMapEventIds: _acknowledgedMapEventIds,
       mapEventChoices: _mapEventChoices,
+      campaignChoices: _campaignChoices,
       saveVersion: _saveVersion,
       ...legacy
     } = INITIAL_GAME_STATE;
@@ -52,6 +55,7 @@ describe("migrateGameStateSnapshot", () => {
     const {
       acknowledgedMapEventIds: _acknowledgedMapEventIds,
       mapEventChoices: _mapEventChoices,
+      campaignChoices: _campaignChoices,
       saveVersion: _saveVersion,
       ...previous
     } = INITIAL_GAME_STATE;
@@ -62,15 +66,26 @@ describe("migrateGameStateSnapshot", () => {
     };
   }
 
-  it("migrates a version 1 save through v6 and maps prototype weapons", () => {
+
+  function createVersionSevenSnapshot() {
+    const {
+      campaignChoices: _campaignChoices,
+      saveVersion: _saveVersion,
+      ...previous
+    } = INITIAL_GAME_STATE;
+    return { ...previous, saveVersion: 7 };
+  }
+
+  it("migrates a version 1 save through v8 and maps prototype weapons", () => {
     const result = migrateGameStateSnapshot(createLegacySnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(7);
+    expect(result?.snapshot.saveVersion).toBe(8);
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.firedMapEventIds).toEqual([]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual([]);
     expect(result?.snapshot.mapEventChoices).toEqual([]);
+    expect(result?.snapshot.campaignChoices).toEqual([]);
     expect(result?.snapshot.rngState).toBeGreaterThan(0);
     expect(result?.snapshot.units[0]?.inventory).toEqual(["iron_sword"]);
     expect(result?.snapshot.units[0]?.equippedWeaponId).toBe("iron_sword");
@@ -87,6 +102,7 @@ describe("migrateGameStateSnapshot", () => {
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.firedMapEventIds).toEqual([]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual([]);
+    expect(result?.snapshot.campaignChoices).toEqual([]);
     expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
   });
 
@@ -116,11 +132,13 @@ describe("migrateGameStateSnapshot", () => {
     expect(result?.snapshot.saveVersion).toBe(7);
     expect(result?.snapshot.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+    expect(result?.snapshot.campaignChoices).toEqual([]);
   });
 
   it("adds an empty choice list when migrating a valid version 6 save and preserves event progress", () => {
     const {
       mapEventChoices: _mapEventChoices,
+      campaignChoices: _campaignChoices,
       saveVersion: _saveVersion,
       ...versionSix
     } = INITIAL_GAME_STATE;
@@ -136,9 +154,37 @@ describe("migrateGameStateSnapshot", () => {
     expect(result?.snapshot.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(result?.snapshot.mapEventChoices).toEqual([]);
+    expect(result?.snapshot.campaignChoices).toEqual([]);
   });
 
-  it("does not rewrite a valid version 7 save", () => {
+
+  it("adds an empty campaign choice ledger when migrating a v7 save and preserves local choices", () => {
+    const map = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "migration-choice",
+        trigger: { type: "stage-start" as const },
+        action: {
+          type: "show-choice" as const,
+          text: "進路を選んでください。",
+          choices: [{ id: "north", label: "北" }, { id: "south", label: "南" }]
+        }
+      }]
+    };
+    const legacy = {
+      ...createVersionSevenSnapshot(),
+      firedMapEventIds: ["migration-choice"],
+      acknowledgedMapEventIds: ["migration-choice"],
+      mapEventChoices: [{ eventId: "migration-choice", choiceId: "north" }]
+    };
+    const result = migrateGameStateSnapshot(legacy, map);
+    expect(result?.migrated).toBe(true);
+    expect(result?.snapshot.saveVersion).toBe(8);
+    expect(result?.snapshot.mapEventChoices).toEqual([{ eventId: "migration-choice", choiceId: "north" }]);
+    expect(result?.snapshot.campaignChoices).toEqual([]);
+  });
+
+  it("does not rewrite a valid version 8 save", () => {
     expect(migrateGameStateSnapshot(INITIAL_GAME_STATE, CHAPTER_01_MAP))
       .toEqual({ snapshot: INITIAL_GAME_STATE, migrated: false });
   });
