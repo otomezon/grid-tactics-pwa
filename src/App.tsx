@@ -2211,6 +2211,7 @@ function CampaignApp() {
       {isCampaignBattleHistoryOpen && campaignBattleHistory.length > 0 && (
         <CampaignBattleHistoryPanel
           entries={campaignBattleHistory}
+          unitRecords={gameState.campaignUnitBattleRecords}
           onClose={closeCampaignBattleHistory}
         />
       )}
