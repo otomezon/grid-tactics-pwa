@@ -328,7 +328,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   expect(await readAutoSave(page)).toEqual(chapterTwoState);
 
-  await activate(page.locator('[data-map-position="8,8"]'), input);
+  await activate(page.locator('[data-map-position="5,8"]'), input);
   await activate(page.locator('[data-map-position="9,8"]'), input);
   await expect(page.locator('[data-testid="map-object-marker"]')).toHaveCount(3);
   const villageMarker = page.locator('[data-map-position="9,8"]').getByTestId("map-object-marker");
@@ -345,7 +345,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(page.locator('[data-object-kind="village"]')).toHaveCount(0);
   const chapterTwoAfterObjectInteraction = await readAutoSave(page) as SaveSnapshot;
   expect(chapterTwoAfterObjectInteraction.firedMapEventIds).toContain("chapter-02-prototype-village-visit");
-  expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_004")).toMatchObject({
+  expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_003")).toMatchObject({
     position: { x: 9, y: 8 }, hasMoved: true, hasActed: true
   });
   expect((await readAutoSave(page) as SaveSnapshot).campaignBattleLog).toEqual(chapterTwoState.campaignBattleLog);
@@ -353,7 +353,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   const clearedChapterTwo: SaveSnapshot = {
     ...chapterTwoAfterObjectInteraction,
     rngState: 0x23456789,
-    units: chapterTwoState.units.filter((unit) => unit.faction === "player")
+    units: chapterTwoAfterObjectInteraction.units.filter((unit) => unit.faction === "player")
   };
   await writeAutoSave(page, clearedChapterTwo);
   await page.reload();
