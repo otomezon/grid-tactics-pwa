@@ -727,6 +727,31 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toHaveCount(0);
   await expect(battleHistoryToggle).toBeFocused();
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
+
+  // saveVersion 8 has campaign totals but predates the persistent timeline.
+  // The archive entry point must remain available after that save migrates.
+  const legacySnapshot = { ...historyState, saveVersion: 8 } as unknown as Record<string, unknown>;
+  delete legacySnapshot.campaignBattleLog;
+  await writeAutoSave(page, legacySnapshot as unknown as SaveSnapshot);
+  await page.reload();
+  await continueCampaign(page, input);
+  const migratedLegacySave = await readAutoSave(page) as SaveSnapshot;
+  expect(migratedLegacySave.saveVersion).toBe(10);
+  expect(migratedLegacySave.campaignBattleLog).toEqual([]);
+  expect(migratedLegacySave.campaignUnitBattleRecords).toEqual(historyState.campaignUnitBattleRecords);
+
+  const legacyHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 味方累計 2名" });
+  await expect(legacyHistoryToggle).toBeVisible();
+  await activate(legacyHistoryToggle, input);
+  const legacyHistoryPanel = page.getByTestId("campaign-battle-history");
+  await expect(legacyHistoryPanel).toContainText("0 / 0件を表示");
+  await activate(legacyHistoryPanel.getByRole("button", { name: "味方別累計" }), input);
+  await expect(legacyHistoryPanel.getByTestId("campaign-unit-record-entry")).toHaveCount(2);
+  await expectMobileViewport(page, input);
+  expect(await readAutoSave(page)).toEqual(migratedLegacySave);
+  await activate(legacyHistoryPanel.getByRole("button", { name: "閉じる" }), input);
+  await expect(legacyHistoryToggle).toBeFocused();
+  expect(await readAutoSave(page)).toEqual(migratedLegacySave);
 });
 
 test("recruits the optional Chapter 2 scout and deploys her in Chapter 3", async ({ page }, testInfo) => {
