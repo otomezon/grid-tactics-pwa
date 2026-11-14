@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import { CHAPTER_02_MAP, CHAPTER_02_INITIAL_STATE } from "../content/maps/chapter-02";
+import { chooseMapEventOption, getPendingMapEventMessages } from "./resolve-map-events";
 import type { CampaignUnit, GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import {
@@ -80,12 +81,13 @@ describe("map interactions", () => {
     ]);
   });
 
-  it("keeps the new village and chest available in saves that fired the old prototype event IDs", () => {
+  it("keeps the new village, chest, and door available in saves that fired the old prototype event IDs", () => {
     const legacySnapshot = {
       ...CHAPTER_02_INITIAL_STATE,
       firedMapEventIds: [
         "chapter-02-prototype-village-visit",
-        "chapter-02-prototype-chest-open"
+        "chapter-02-prototype-chest-open",
+        "chapter-02-prototype-door-inspect"
       ]
     };
 
@@ -98,6 +100,52 @@ describe("map interactions", () => {
       id: "chapter-02-prototype-chest-reward",
       kind: "treasure-chest"
     });
+    expect(pending.map((point) => ({ id: point.id, kind: point.kind }))).toContainEqual({
+      id: "chapter-02-door-inspection-choice",
+      kind: "door"
+    });
+  });
+
+  it("performs a one-time door inspection with a choice and leaves terrain unchanged", () => {
+    const originalTerrain = CHAPTER_02_MAP.terrain.map((row) => [...row]);
+    const state: GameStateSnapshot = {
+      ...CHAPTER_02_INITIAL_STATE,
+      units: CHAPTER_02_INITIAL_STATE.units.map((unit) => unit.id === "unit_001"
+        ? { ...unit, position: { x: 2, y: 8 }, hasMoved: true }
+        : unit)
+    };
+
+    const interaction = performMapInteraction(state, CHAPTER_02_MAP, "unit_001");
+    expect(interaction.interaction).toMatchObject({
+      id: "chapter-02-door-inspection-choice",
+      kind: "door",
+      label: "試作扉",
+      position: { x: 2, y: 8 }
+    });
+    expect(interaction.nextState.units.find((unit) => unit.id === "unit_001"))
+      .toMatchObject({ position: { x: 2, y: 8 }, hasMoved: true, hasActed: true });
+    expect(interaction.nextState.firedMapEventIds).toContain("chapter-02-door-inspection-choice");
+    expect(getPendingMapEventMessages(interaction.nextState, CHAPTER_02_MAP)[0]).toMatchObject({
+      id: "chapter-02-door-inspection-choice",
+      choices: [
+        { id: "door-markings", label: "扉の表面を調べる" },
+        { id: "door-surroundings", label: "扉の周囲を調べる" }
+      ]
+    });
+
+    const choice = chooseMapEventOption(
+      interaction.nextState,
+      CHAPTER_02_MAP,
+      "chapter-02-door-inspection-choice",
+      "door-markings"
+    );
+    expect(choice.nextState.firedMapEventIds).toContain("chapter-02-door-markings");
+    expect(choice.nextState.firedMapEventIds).not.toContain("chapter-02-door-surroundings");
+    expect(choice.nextState.campaignChoices).toEqual(state.campaignChoices);
+    expect(getMapInteractionPoints(choice.nextState, CHAPTER_02_MAP).some((point) =>
+      point.id === "chapter-02-door-inspection-choice"
+    )).toBe(false);
+    expect(CHAPTER_02_MAP.terrain).toEqual(originalTerrain);
   });
 
   it("allows investigation after movement, fires the event once, and consumes the action", () => {

@@ -569,6 +569,49 @@ describe("resolveMapEvents", () => {
     expect(INITIAL_GAME_STATE.campaignChoices).toEqual([]);
   });
 
+  it("resolves both door inspection choices without opening the door or changing campaign route", () => {
+    const originalTerrain = CHAPTER_02_MAP.terrain.map((row) => [...row]);
+    const opened = resolveMapEvents(CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP, {
+      type: "unit-interacts",
+      x: 2,
+      y: 8,
+      label: "試作扉",
+      unitId: "unit_001"
+    });
+    expect(opened.messages[0]).toMatchObject({
+      id: "chapter-02-door-inspection-choice",
+      choices: [
+        { id: "door-markings", label: "扉の表面を調べる" },
+        { id: "door-surroundings", label: "扉の周囲を調べる" }
+      ]
+    });
+
+    const markings = chooseMapEventOption(
+      opened.nextState,
+      CHAPTER_02_MAP,
+      "chapter-02-door-inspection-choice",
+      "door-markings"
+    );
+    expect(markings.messages.map((message) => message.id)).toEqual(["chapter-02-door-markings"]);
+    expect(markings.messages[0]?.text).toContain("古い紋様");
+    expect(markings.nextState.firedMapEventIds).not.toContain("chapter-02-door-surroundings");
+    expect(markings.nextState.campaignChoices).toEqual(CHAPTER_02_INITIAL_STATE.campaignChoices);
+
+    const surroundingsOpen = resolveMapEvents(CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP, {
+      type: "unit-interacts", x: 2, y: 8, label: "試作扉", unitId: "unit_001"
+    });
+    const surroundings = chooseMapEventOption(
+      surroundingsOpen.nextState,
+      CHAPTER_02_MAP,
+      "chapter-02-door-inspection-choice",
+      "door-surroundings"
+    );
+    expect(surroundings.messages.map((message) => message.id)).toEqual(["chapter-02-door-surroundings"]);
+    expect(surroundings.messages[0]?.text).toContain("通行条件は未設定");
+    expect(surroundings.nextState.firedMapEventIds).not.toContain("chapter-02-door-markings");
+    expect(CHAPTER_02_MAP.terrain).toEqual(originalTerrain);
+  });
+
   it("uses the Chapter 2 village decision in Chapter 3 and grants the chest potion once", () => {
     const villageOpened = resolveMapEvents(CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP, {
       type: "unit-interacts",

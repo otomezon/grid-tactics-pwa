@@ -71,9 +71,9 @@ src/
 
 ## マップオブジェクトと既存イベントの関連付け
 
-`GameMapDefinition.objects`はオブジェクト種別と既存イベントIDだけを持つcontent定義で、座標・表示名・説明・効果を重複管理しない。map validatorは各オブジェクトが一意な`unit-interacts`イベントを参照することを検証する。実行は既存の`getAvailableMapInteraction`／`performMapInteraction`／`resolveMapEvents`へ委譲し、完了状態は`firedMapEventIds`から復元する。JSON export/import、ローカルbackup、章内再開は既存IDを保持するためsaveVersion 10／IndexedDB schema 1を変更しない。扉はこの基盤ではイベントのみで、地形や経路探索を変更しない。
+`GameMapDefinition.objects`はオブジェクト種別と既存イベントIDだけを持つcontent定義で、座標・表示名・説明・効果を重複管理しない。map validatorは各オブジェクトが一意な`unit-interacts`イベントを参照することを検証する。実行は既存の`getAvailableMapInteraction`／`performMapInteraction`／`resolveMapEvents`へ委譲し、完了状態は`firedMapEventIds`から復元する。JSON export/import、ローカルbackup、章内再開は既存IDを保持するためsaveVersion 10／IndexedDB schema 1を変更しない。扉の操作も既存イベント基盤を使い、イベント選択は`mapEventChoices`／`firedMapEventIds`へ記録する。鍵消費・扉の開閉・地形や経路探索の変更は行わない。
 
-第2章の村は`show-choice`で選択を表示し、`chooseMapEventOption`が`campaignChoices`へ保存する。後続章の`campaign-choice` conditionが選択IDに対応したメッセージだけを発火する。宝箱は既存の`grant-item`処理を通じて主人公の所持品へ試作回復薬1個を追加する。所持品スロット検証・原子的失敗・既存イベントの一度限り実行を再利用する。これらは既存のセーブ項目とイベントIDで実現し、saveVersion 10／IndexedDB schema 1を変更しない。扉はこの基盤ではイベントのみで、地形や経路探索を変更しない。
+第2章の村は`show-choice`で選択を表示し、`chooseMapEventOption`が`campaignChoices`へ保存する。後続章の`campaign-choice` conditionが選択IDに対応したメッセージだけを発火する。宝箱は既存の`grant-item`処理を通じて主人公の所持品へ試作回復薬1個を追加する。所持品スロット検証・原子的失敗・既存イベントの一度限り実行を再利用する。扉では`show-choice`／`event-choice`で表面または周囲を調べる分岐を表示するが、選択はキャンペーン横断の`campaignChoices`には加えない。全て既存のセーブ項目とイベントIDで実現し、saveVersion 10／IndexedDB schema 1を変更しない。扉の開閉・鍵消費・地形や経路探索は変更しない。
 
 ## 3. 現在のデータフロー
 

@@ -30,7 +30,7 @@ export const CHAPTER_02_MAP: GameMapDefinition = {
   objects: [
     { id: "chapter-02-prototype-village", kind: "village", eventId: "chapter-02-village-route-choice" },
     { id: "chapter-02-prototype-chest", kind: "treasure-chest", eventId: "chapter-02-prototype-chest-reward" },
-    { id: "chapter-02-prototype-door", kind: "door", eventId: "chapter-02-prototype-door-inspect" }
+    { id: "chapter-02-prototype-door", kind: "door", eventId: "chapter-02-door-inspection-choice" }
   ],
   events: [
     createMainCharacterDefeatEvent(2),
@@ -99,18 +99,48 @@ export const CHAPTER_02_MAP: GameMapDefinition = {
       }
     },
     {
-      id: "chapter-02-prototype-door-inspect",
+      id: "chapter-02-door-inspection-choice",
       trigger: {
         type: "unit-interacts",
-        x: 9,
-        y: 7,
+        x: 2,
+        y: 8,
         label: "試作扉",
-        description: "扉オブジェクトの操作確認用です。鍵・通行効果は未設定です。"
+        description: "表面または周囲を調べられます。鍵・開閉・通行効果は未設定です。"
+      },
+      action: {
+        type: "show-choice",
+        speaker: "閉ざされた扉",
+        text: "扉は閉じたままです。表面と周囲のどちらを調べますか？",
+        choices: [
+          { id: "door-markings", label: "扉の表面を調べる" },
+          { id: "door-surroundings", label: "扉の周囲を調べる" }
+        ]
+      }
+    },
+    {
+      id: "chapter-02-door-markings",
+      trigger: {
+        type: "event-choice",
+        eventId: "chapter-02-door-inspection-choice",
+        choiceId: "door-markings"
       },
       action: {
         type: "show-message",
-        speaker: "操作確認",
-        text: "扉を調べました。通行可否はマップの地形定義のままです。"
+        speaker: "調査メモ",
+        text: "表面には古い紋様が刻まれています。意味は分からず、扉は開かないままです。"
+      }
+    },
+    {
+      id: "chapter-02-door-surroundings",
+      trigger: {
+        type: "event-choice",
+        eventId: "chapter-02-door-inspection-choice",
+        choiceId: "door-surroundings"
+      },
+      action: {
+        type: "show-message",
+        speaker: "調査メモ",
+        text: "周囲を調べましたが、開閉の手掛かりは見つかりません。鍵や通行条件は未設定のままです。"
       }
     }
   ]
