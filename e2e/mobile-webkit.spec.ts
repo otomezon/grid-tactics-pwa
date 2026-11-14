@@ -142,6 +142,7 @@ test("keeps a pending map-event dialog open until explicit WebKit touch acknowle
   // A touch outside the modal and Escape must not dismiss or acknowledge the event.
   await page.getByTestId("map-event-dialog-backdrop").tap({ position: { x: 2, y: 2 } });
   await expect(dialog).toBeVisible();
+  await expect(acknowledgement).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeVisible();
   await expect(acknowledgement).toBeFocused();
