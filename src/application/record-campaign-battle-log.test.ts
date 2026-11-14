@@ -104,6 +104,7 @@ describe("campaign battle log recording", () => {
       enemyId: "enemy_001",
       enemyName: "敵01",
       kind: "moved-and-attacked" as const,
+      message: "敵01は主人公へ移動して攻撃",
       targetId: "unit_001",
       targetName: "主人公",
       destination: { x: 1, y: 7 },

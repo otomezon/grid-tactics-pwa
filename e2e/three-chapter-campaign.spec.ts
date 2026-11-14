@@ -51,12 +51,6 @@ type SaveSnapshot = {
     sourceEventId: string;
   }[];
   campaignBattleLog: Array<Record<string, unknown>>;
-  campaignChoices: {
-    key: string;
-    choiceId: string;
-    sourceChapterId: string;
-    sourceEventId: string;
-  }[];
 };
 
 async function startCampaign(page: Page, input: InteractionInput): Promise<void> {

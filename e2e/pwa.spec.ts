@@ -499,6 +499,7 @@ test.describe("production PWA shell", () => {
       reserveUnits: unknown[];
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
+      campaignBattleLog: unknown[];
     };
     expect(migratedAutoSave.turn).toBe(4);
     expect(migratedAutoSave.saveVersion).toBe(9);
