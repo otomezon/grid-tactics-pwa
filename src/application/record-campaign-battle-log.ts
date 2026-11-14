@@ -3,6 +3,7 @@ import {
   MAX_CAMPAIGN_BATTLE_LOG_ENTRIES,
   type CampaignBattleLogEntry,
   type CampaignBattleStrikeRecord,
+  type GameMapDefinition,
   type GameStateSnapshot,
   type GameUnit
 } from "../domain/models/game";

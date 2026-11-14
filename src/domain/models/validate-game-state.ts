@@ -113,10 +113,7 @@ function isCampaignBattleLogEntry(value: unknown): value is CampaignBattleLogEnt
       !isNonNegativeInteger(value.livingEnemyCount)
     ) return false;
     if (value.outcome === "victory") {
-      if (value.reason !== "objective-cleared" || value.livingPlayerCount === 0) return false;
-      return value.chapterId !== map.id ||
-        value.objective !== "defeat_all" ||
-        value.livingEnemyCount === 0;
+      return value.reason === "objective-cleared" && value.livingPlayerCount > 0;
     }
     if (value.reason === "party-wiped") return value.livingPlayerCount === 0;
     return value.reason === "protected-unit-defeated" && value.livingPlayerCount > 0;
@@ -273,7 +270,14 @@ export function isValidGameStateSnapshot(
       chapterResultIds.has(entry.chapterId)
     ) return false;
     previousBattleLogSequence = entry.sequence;
-    if (entry.kind === "chapter-result") chapterResultIds.add(entry.chapterId);
+    if (entry.kind === "chapter-result") {
+      if (
+        entry.chapterId === map.id &&
+        (entry.objective !== map.objective.type ||
+          (entry.outcome === "victory" && map.objective.type === "defeat_all" && entry.livingEnemyCount !== 0))
+      ) return false;
+      chapterResultIds.add(entry.chapterId);
+    }
   }
 
   const firedMapEventIds = new Set<string>();

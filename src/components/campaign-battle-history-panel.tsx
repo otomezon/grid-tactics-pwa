@@ -107,7 +107,7 @@ export function CampaignBattleHistoryPanel({ entries, onClose }: CampaignBattleH
                     {entry.strikes.map((strike, index) => <li key={index}>{strikeLabel(strike)}</li>)}
                   </ul>
                 </>
-              ) : (
+              ) : entry.kind === "enemy-action" ? (
                 <>
                   <h4>{entry.enemyName} · 敵軍行動（{ENEMY_ACTION_LABELS[entry.actionKind]}）</h4>
                   {entry.targetName && <p>対象: {entry.targetName}</p>}
@@ -117,6 +117,11 @@ export function CampaignBattleHistoryPanel({ entries, onClose }: CampaignBattleH
                       {entry.strikes.map((strike, index) => <li key={index}>{strikeLabel(strike)}</li>)}
                     </ul>
                   )}
+                </>
+              ) : (
+                <>
+                  <h4>{entry.outcome === "victory" ? "ステージクリア" : "敗北"} · {entry.reason === "objective-cleared" ? "勝利条件達成" : entry.reason === "party-wiped" ? "味方全滅" : "保護対象の敗北"}</h4>
+                  <p>{entry.objective === "defeat_boss" ? "敵将撃破目標" : "敵全滅目標"} · 生存味方 {entry.livingPlayerCount}名 · 生存敵 {entry.livingEnemyCount}体</p>
                 </>
               )}
             </article>
