@@ -115,6 +115,52 @@ async function startWebKitBattle(page: Page): Promise<void> {
   await acknowledgePendingMapEvents(page, { input: "tap" });
 }
 
+test("keeps a pending map-event dialog open until explicit WebKit touch acknowledgement", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const title = page.getByTestId("campaign-title-screen");
+  await expect(title).toBeVisible();
+  await title.getByRole("button", { name: "はじめから" }).tap();
+  await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+  await page.getByRole("button", { name: "出撃メンバーと配置を確定して戦闘開始" }).tap();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+  const dialog = page.getByTestId("map-event-dialog");
+  const acknowledgement = dialog.getByRole("button", { name: "確認して続ける" });
+  await expect(dialog).toBeVisible();
+  await expect(acknowledgement).toBeFocused();
+
+  const pendingSave = await readAutoSave(page) as {
+    firedMapEventIds: string[];
+    acknowledgedMapEventIds: string[];
+  };
+  expect(pendingSave.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+  expect(pendingSave.acknowledgedMapEventIds).toEqual([]);
+
+  // A touch outside the modal and Escape must not dismiss or acknowledge the event.
+  await page.getByTestId("map-event-dialog-backdrop").tap({ position: { x: 2, y: 2 } });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await expect(acknowledgement).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(acknowledgement).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(acknowledgement).toBeFocused();
+  expect(await readAutoSave(page)).toEqual(pendingSave);
+
+  await acknowledgement.tap();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(async () => {
+    const saved = await readAutoSave(page) as {
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+    };
+    return saved.acknowledgedMapEventIds;
+  }).toEqual(["chapter-01-opening-briefing"]);
+});
+
 test("keeps movement preview read-only until the second tap confirms on WebKit touch", async ({ page }) => {
   await startWebKitBattle(page);
 
