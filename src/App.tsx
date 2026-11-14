@@ -75,6 +75,7 @@ import {
   loadGameStateBackup,
   loadGameStateBackups,
   restoreGameStateBackup,
+  replaceGameStateWithBackup,
   saveGameState,
   type SaveBackupRecord
 } from "./persistence/save-repository";
@@ -1195,7 +1196,7 @@ function CampaignApp() {
   }
 
   async function handleImportSaveFile(file: File | null): Promise<void> {
-    if (!file) return;
+    if (!file || backupActionPending) return;
 
     if (file.size > MAX_SAVE_FILE_BYTES) {
       setMessage("セーブファイルが大きすぎます。1 MiB以下のJSONファイルを選択してください。");
@@ -1225,10 +1226,14 @@ function CampaignApp() {
     }
 
     const confirmed = window.confirm(
-      chapter.title + "のセーブデータで、現在の自動セーブを上書きします。先に現在のセーブを書き出しましたか？"
+      "「" + chapter.title + "」のセーブを読み込みます。現在の自動セーブがあれば第1世代バックアップへ退避し、既存の第1・第2世代は第2・第3世代へ繰り下げます。続行しますか？"
     );
-    if (!confirmed) return;
+    if (!confirmed) {
+      setMessage("セーブファイルの読み込みをキャンセルしました。保存データは変更していません。");
+      return;
+    }
 
+    setBackupActionPending(true);
     setIsPhaseEndReviewOpen(false);
     setSaveStatus("saving");
     try {
@@ -1262,7 +1267,14 @@ function CampaignApp() {
         }
       }
 
-      await saveGameState(importedState);
+      const safetyBackup = await replaceGameStateWithBackup(importedState);
+      let backupRefreshNotice = "";
+      try {
+        setSaveBackups(await loadGameStateBackups());
+      } catch {
+        backupRefreshNotice = " バックアップ一覧を更新できませんでした。タイトル画面を開き直して確認してください。";
+      }
+
       setActiveChapter(chapter);
       setGameState(importedState);
       setBattleHistory(
@@ -1280,10 +1292,15 @@ function CampaignApp() {
       setLoadBlocked(false);
       setSaveStatus("saved");
       setHasSavedCampaign(true);
-      setMessage(importMessage);
+      importMessage += safetyBackup
+        ? " インポート前の自動セーブを第1世代バックアップへ退避しました。"
+        : " 退避できる自動セーブはありませんでした。";
+      setMessage(importMessage + backupRefreshNotice);
     } catch (error) {
       setSaveStatus("failed");
-      setMessage("セーブファイルの保存に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
+      setMessage("セーブファイルの保存に失敗しました。既存の自動セーブとバックアップは変更されていません。" + getErrorMessage(error));
+    } finally {
+      setBackupActionPending(false);
     }
   }
 

@@ -2879,21 +2879,22 @@ test("shows candidate details and persists the selected deployment roster", asyn
     const restoreTitle = page.getByTestId("campaign-title-screen");
     await expect(restoreTitle).toBeVisible();
 
-    let cancelMessage = "";
-    page.once("dialog", async (dialog) => {
-      cancelMessage = dialog.message();
-      await dialog.dismiss();
-    });
+    const cancelDialogPromise = page.waitForEvent("dialog");
     await restoreTitle.getByTestId("title-restore-backup-1").click();
+    const cancelDialog = await cancelDialogPromise;
+    const cancelMessage = cancelDialog.message();
+    await cancelDialog.dismiss();
     expect(cancelMessage).toContain("第1世代へ退避");
     expect(await readAutoSave(page)).toEqual(changedSave);
     await expect(restoreTitle).toBeVisible();
 
-    page.once("dialog", async (dialog) => {
-      await dialog.accept();
-    });
+    const acceptedRestoreDialogPromise = page.waitForEvent("dialog");
     await restoreTitle.getByTestId("title-restore-backup-1").click();
-    await expect(page.getByTestId("campaign-title-screen")).toHaveCount(0);
+    const acceptedRestoreDialog = await acceptedRestoreDialogPromise;
+    await acceptedRestoreDialog.accept();
+    await expect(restoreTitle).toBeVisible();
+    await expect(restoreTitle.getByRole("button", { name: "つづきから" })).toBeEnabled();
+    await expect(restoreTitle).toContainText("バックアップからゲーム状態を復元しました。");
     expect(await readAutoSave(page)).toEqual(currentSave);
 
     await page.reload();
