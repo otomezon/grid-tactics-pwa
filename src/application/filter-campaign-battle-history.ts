@@ -40,7 +40,7 @@ export function filterCampaignBattleHistory(
   entries: readonly CampaignBattleHistoryEntry[],
   filter: CampaignBattleHistoryFilter
 ): CampaignBattleHistoryEntry[] {
-  const terms = filter.query.trim().toLocaleLowerCase().split(/\\s+/).filter(Boolean);
+  const terms = filter.query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   return entries.filter((entry) => {
     if (filter.chapterId !== "all" && entry.chapterId !== filter.chapterId) return false;
     if (!matchesCategory(entry, filter.category)) return false;
