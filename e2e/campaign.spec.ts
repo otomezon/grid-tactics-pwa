@@ -540,7 +540,8 @@ test.describe("browser campaign flow", () => {
     expect(await readAutoSave(page)).toEqual(savedBeforeGuide);
     await toggle.click();
     await expect(page.getByRole("region", { name: "操作ガイド" })
-      .getByRole("heading", { level: 3 })).toHaveText("出撃準備を整える");
+      .locator(".operation-guide-content").getByRole("heading", { level: 3 }))
+      .toHaveText("出撃準備を整える");
   });
 
   test("previews deployment positions, swaps assignments, and saves only after confirmation", async ({ page }) => {
