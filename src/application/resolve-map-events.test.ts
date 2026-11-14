@@ -531,4 +531,39 @@ describe("resolveMapEvents", () => {
     expect(opened.nextState.acknowledgedMapEventIds).toEqual([]);
   });
 
+  it("records a named dialogue decision once for use by later chapters", () => {
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "route-decision",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "show-choice",
+          campaignChoiceKey: "chapter-01.route",
+          text: "どちらの道へ進みますか？",
+          choices: [
+            { id: "forest", label: "森の道" },
+            { id: "road", label: "街道" }
+          ]
+        }
+      }, {
+        id: "local-forest-branch",
+        trigger: { type: "event-choice", eventId: "route-decision", choiceId: "forest" },
+        action: { type: "show-message", text: "森の道を選びました。" }
+      }]
+    };
+    const opened = resolveMapEvents(INITIAL_GAME_STATE, map, { type: "stage-start" });
+    const selected = chooseMapEventOption(opened.nextState, map, "route-decision", "forest");
+
+    expect(selected.nextState.campaignChoices).toEqual([{
+      key: "chapter-01.route",
+      choiceId: "forest",
+      sourceChapterId: CHAPTER_01_MAP.id,
+      sourceEventId: "route-decision"
+    }]);
+    expect(selected.nextState.firedMapEventIds).toEqual(["route-decision", "local-forest-branch"]);
+    expect(isValidGameStateSnapshot(selected.nextState, map)).toBe(true);
+    expect(INITIAL_GAME_STATE.campaignChoices).toEqual([]);
+  });
+
 });
