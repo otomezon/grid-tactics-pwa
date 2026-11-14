@@ -16,8 +16,11 @@ export function canApplyPwaUpdate(input: PwaUpdateSafetyInput): boolean {
   const stableScreen = input.isTitleScreenVisible ||
     (!input.deploymentPending && input.battleOutcome !== "playing");
 
+  const saveIsStable = input.saveStatus === "saved" ||
+    (input.isTitleScreenVisible && input.saveStatus === "ready");
+
   return stableScreen &&
-    input.saveStatus === "saved" &&
+    saveIsStable &&
     !input.loadBlocked &&
     !input.backupActionPending &&
     !input.isStartingNextChapter &&

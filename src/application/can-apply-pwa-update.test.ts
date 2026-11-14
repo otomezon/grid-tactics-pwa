@@ -31,7 +31,17 @@ describe("canApplyPwaUpdate", () => {
     expect(canApplyPwaUpdate({ ...safeTitleScreen, isTitleScreenVisible: false, battleOutcome })).toBe(true);
   });
 
-  it.each(["loading", "ready", "saving", "unavailable", "failed", "invalid"] as const)(
+  it("allows the first-launch title screen when there is no autosave yet", () => {
+    expect(canApplyPwaUpdate({ ...safeTitleScreen, saveStatus: "ready" })).toBe(true);
+  });
+
+  it("does not allow a ready status outside the title screen", () => {
+    expect(canApplyPwaUpdate({
+      ...safeTitleScreen, isTitleScreenVisible: false, saveStatus: "ready"
+    })).toBe(false);
+  });
+
+  it.each(["loading", "saving", "unavailable", "failed", "invalid"] as const)(
     "waits while save status is %s",
     (saveStatus) => expect(canApplyPwaUpdate({ ...safeTitleScreen, saveStatus })).toBe(false)
   );
