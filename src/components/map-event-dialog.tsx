@@ -54,7 +54,8 @@ export function MapEventDialog({
       data-testid="map-event-dialog-backdrop"
       onClick={(clickEvent) => {
         if (clickEvent.target === clickEvent.currentTarget) {
-          focusFirstAvailableAction();
+          // Safari may clear focus as part of the tap's default action; restore it after that.
+          window.requestAnimationFrame(focusFirstAvailableAction);
         }
       }}
     >
