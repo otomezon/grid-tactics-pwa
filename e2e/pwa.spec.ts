@@ -615,11 +615,12 @@ test.describe("production PWA shell", () => {
       }
     });
 
-    page.once("dialog", async (dialog) => {
-      expect(dialog.message()).toContain("現在の自動セーブを置き換えます");
-      await dialog.accept();
-    });
+    const legacyRestoreDialogPromise = page.waitForEvent("dialog");
     await page.getByTestId("restore-backup-1").click();
+    const legacyRestoreDialog = await legacyRestoreDialogPromise;
+    expect(legacyRestoreDialog.message()).toContain("第1世代へ退避");
+    expect(legacyRestoreDialog.message()).toContain("選択した復元元も残します");
+    await legacyRestoreDialog.accept();
     await expect(page.getByRole("status")).toContainText("旧形式のバックアップを変換して復元しました。");
     const migratedAutoSave = await readAutoSave(page) as {
       turn: number;

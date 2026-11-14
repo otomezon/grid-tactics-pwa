@@ -2888,11 +2888,13 @@ test("shows candidate details and persists the selected deployment roster", asyn
     expect(await readAutoSave(page)).toEqual(changedSave);
     await expect(restoreTitle).toBeVisible();
 
-    page.once("dialog", async (dialog) => {
-      await dialog.accept();
-    });
+    const acceptedRestoreDialogPromise = page.waitForEvent("dialog");
     await restoreTitle.getByTestId("title-restore-backup-1").click();
-    await expect(page.getByTestId("campaign-title-screen")).toHaveCount(0);
+    const acceptedRestoreDialog = await acceptedRestoreDialogPromise;
+    await acceptedRestoreDialog.accept();
+    await expect(restoreTitle).toBeVisible();
+    await expect(restoreTitle.getByRole("button", { name: "つづきから" })).toBeEnabled();
+    await expect(restoreTitle).toContainText("バックアップからゲーム状態を復元しました。");
     expect(await readAutoSave(page)).toEqual(currentSave);
 
     await page.reload();
