@@ -128,6 +128,34 @@ function isBackupSlotId(slotId: string): boolean {
   return /^backup-[1-3]$/.test(slotId);
 }
 
+/**
+ * Keeps the selected restore source and the newest other generation.
+ * The current auto-save will occupy generation 1 after a safe restore.
+ */
+export function getBackupRecordsToPreserveAfterRestore(
+  backups: readonly SaveBackupRecord[],
+  selectedSlotId: string
+): SaveBackupRecord[] {
+  const selected = backups.find((backup) => backup.slotId === selectedSlotId);
+  if (!selected) {
+    throw new Error("The selected backup is no longer available.");
+  }
+
+  const newestOther = backups
+    .filter((backup) => backup.slotId !== selectedSlotId)
+    .slice()
+    .sort((left, right) =>
+      Number(left.slotId.slice(BACKUP_SLOT_PREFIX.length)) -
+      Number(right.slotId.slice(BACKUP_SLOT_PREFIX.length))
+    )[0];
+
+  return [selected, ...(newestOther ? [newestOther] : [])]
+    .sort((left, right) =>
+      Number(left.slotId.slice(BACKUP_SLOT_PREFIX.length)) -
+      Number(right.slotId.slice(BACKUP_SLOT_PREFIX.length))
+    );
+}
+
 function isStoredRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -276,14 +304,14 @@ export async function createGameStateBackup(expectedSnapshot: GameStateSnapshot)
 }
 
 /**
- * Restores a previously validated snapshot to auto. The selected backup is
- * re-read in the same transaction so a changed/deleted record cannot silently
- * replace the current auto-save.
+ * Atomically preserves the current auto-save, then restores a validated backup.
+ * The selected restore source and newest other generation remain within the 3-slot limit.
+ * Both records are read and written in the same IndexedDB readwrite transaction.
  */
 export async function restoreGameStateBackup(
   expectedBackup: SaveBackupRecord,
   data: GameStateSnapshot
-): Promise<void> {
+): Promise<SaveBackupRecord | null> {
   if (!isBackupSlotId(expectedBackup.slotId)) {
     throw new Error("The requested save backup slot is invalid.");
   }
@@ -292,24 +320,70 @@ export async function restoreGameStateBackup(
   const transaction = database.transaction(SAVE_STORE, "readwrite");
   const completed = transactionCompleted(transaction);
   const store = transaction.objectStore(SAVE_STORE);
-  const request = store.get(expectedBackup.slotId);
+  const request = store.getAll();
   let operationError: Error | undefined;
 
-  const operation = new Promise<void>((resolve, reject) => {
+  const operation = new Promise<SaveBackupRecord | null>((resolve, reject) => {
     request.onsuccess = () => {
       try {
-        const current = request.result;
+        const records = request.result as unknown[];
+        const currentBackup = records.find((record) =>
+          isStoredRecord(record) && record.slotId === expectedBackup.slotId
+        );
         if (
-          !isStoredRecord(current) ||
-          current.slotId !== expectedBackup.slotId ||
-          current.savedAt !== expectedBackup.savedAt ||
-          JSON.stringify(current.data) !== JSON.stringify(expectedBackup.data)
+          !isStoredRecord(currentBackup) ||
+          currentBackup.slotId !== expectedBackup.slotId ||
+          currentBackup.savedAt !== expectedBackup.savedAt ||
+          JSON.stringify(currentBackup.data) !== JSON.stringify(expectedBackup.data)
         ) {
           throw new Error("選択したバックアップが変更または削除されています。一覧を更新してから再試行してください。");
         }
 
+        const currentAutoSave = records.find((record) =>
+          isStoredRecord(record) && record.slotId === AUTO_SAVE_SLOT
+        );
+        let safetyBackup: SaveBackupRecord | null = null;
+
+        if (isStoredRecord(currentAutoSave) && Object.hasOwn(currentAutoSave, "data")) {
+          const existingBackups = records
+            .filter((record): record is Record<string, unknown> =>
+              isStoredRecord(record) &&
+              typeof record.slotId === "string" &&
+              isBackupSlotId(record.slotId) &&
+              typeof record.savedAt === "number" &&
+              Number.isFinite(record.savedAt)
+            )
+            .map((record) => ({
+              slotId: record.slotId as string,
+              savedAt: record.savedAt as number,
+              data: record.data
+            }));
+          const preservedBackups = getBackupRecordsToPreserveAfterRestore(
+            existingBackups,
+            expectedBackup.slotId
+          );
+
+          safetyBackup = {
+            slotId: BACKUP_SLOT_PREFIX + "1",
+            savedAt: Date.now(),
+            data: currentAutoSave.data
+          };
+
+          for (let generation = 1; generation <= BACKUP_GENERATION_COUNT; generation += 1) {
+            store.delete(BACKUP_SLOT_PREFIX + String(generation));
+          }
+          store.put(safetyBackup);
+          preservedBackups.forEach((backup, index) => {
+            store.put({
+              slotId: BACKUP_SLOT_PREFIX + String(index + 2),
+              savedAt: backup.savedAt,
+              data: backup.data
+            });
+          });
+        }
+
         store.put({ slotId: AUTO_SAVE_SLOT, savedAt: Date.now(), data });
-        resolve();
+        resolve(safetyBackup);
       } catch (error) {
         operationError = error instanceof Error ? error : new Error("Failed to restore the selected save backup.");
         try { transaction.abort(); } catch { /* The transaction may already have aborted. */ }
@@ -318,13 +392,14 @@ export async function restoreGameStateBackup(
     };
 
     request.onerror = () => {
-      operationError = request.error instanceof Error ? request.error : new Error("Failed to read the selected save backup.");
+      operationError = request.error instanceof Error ? request.error : new Error("Failed to read save records for restore.");
       reject(operationError);
     };
   });
 
   try {
-    await Promise.all([operation, completed]);
+    const [safetyBackup] = await Promise.all([operation, completed]);
+    return safetyBackup;
   } catch (error) {
     throw operationError ?? error;
   }

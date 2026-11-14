@@ -181,7 +181,7 @@ export function CampaignTitleScreen({
                 <h3>ローカルバックアップ</h3>
                 <span>最大3世代</span>
               </div>
-              <p>現在の自動セーブを別世代として保管できます。作成しても自動セーブは変更しません。</p>
+              <p>現在の自動セーブを別世代として保管できます。復元時も、復元前の自動セーブがあれば第1世代へ自動退避し、選択した復元元を残します。</p>
               <button
                 className="campaign-secondary-button"
                 type="button"

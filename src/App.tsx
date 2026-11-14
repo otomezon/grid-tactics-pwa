@@ -1120,7 +1120,7 @@ function CampaignApp() {
 
     const confirmed = window.confirm(
       "「" + chapter.title + "」の第" + slotId.slice("backup-".length) +
-      "世代バックアップで、現在の自動セーブを置き換えます。現在の進行状態は失われます。続行しますか？"
+      "世代バックアップを復元します。復元前に現在の自動セーブがあれば新しい第1世代へ退避し、選択した復元元も残します。3世代を超える場合は、ほかの古い世代を整理します。続行しますか？"
     );
     if (!confirmed) return;
 
@@ -1157,7 +1157,17 @@ function CampaignApp() {
         }
       }
 
-      await restoreGameStateBackup(backup, restoredState);
+      const safetyBackup = await restoreGameStateBackup(backup, restoredState);
+      let backupRefreshNotice = "";
+      try {
+        setSaveBackups(await loadGameStateBackups());
+      } catch {
+        backupRefreshNotice = " バックアップ一覧を更新できませんでした。タイトル画面を開き直して確認してください。";
+      }
+      restoreMessage += safetyBackup
+        ? " 復元前の自動セーブを第1世代バックアップに退避しました。"
+        : " 退避できる自動セーブはありませんでした。";
+      restoreMessage += backupRefreshNotice;
       setActiveChapter(chapter);
       setGameState(restoredState);
       setBattleHistory(
