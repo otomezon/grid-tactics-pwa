@@ -7,6 +7,7 @@ import { CHAPTER_01_MAP, MAIN_CHARACTER_UNIT_ID } from "./maps/chapter-01";
 describe("chapter content registry", () => {
   it("registers unique chapters with valid initial snapshots", () => {
     expect(new Set(CHAPTERS.map((chapter) => chapter.id)).size).toBe(CHAPTERS.length);
+    expect(isValidCampaignChoiceLinks()).toBe(true);
     for (const chapter of CHAPTERS) {
       expect(isValidGameMapDefinition(chapter.map)).toBe(true);
       expect(chapter.initialState.chapterId).toBe(chapter.map.id);
