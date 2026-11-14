@@ -44,6 +44,12 @@ type SaveSnapshot = {
   rngState: number;
   units: SavedUnit[];
   reserveUnits: ReserveUnit[];
+  campaignChoices: {
+    key: string;
+    choiceId: string;
+    sourceChapterId: string;
+    sourceEventId: string;
+  }[];
 };
 
 async function startCampaign(page: Page, input: InteractionInput): Promise<void> {
@@ -269,4 +275,40 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await continueCampaign(page, input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   expect(await readAutoSave(page)).toEqual(chapterThreeState);
+
+  // Exercise the campaign-history UI with a historical source event that is no
+  // longer registered. This deliberately uses IDs only and must not invent text.
+  const historyState: SaveSnapshot = {
+    ...chapterThreeState,
+    campaignChoices: [{
+      key: "campaign.retired-route",
+      choiceId: "retired-option",
+      sourceChapterId: "chapter_02_map",
+      sourceEventId: "retired-choice-event"
+    }]
+  };
+  await writeAutoSave(page, historyState);
+  await page.reload();
+  await continueCampaign(page, input);
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+  const historyToggle = page.getByRole("button", { name: "キャンペーン選択履歴 1件" });
+  await expect(historyToggle).toBeVisible();
+  await expect(historyToggle).toHaveAttribute("aria-expanded", "false");
+  await activate(historyToggle, input);
+  const historyPanel = page.getByTestId("campaign-choice-history");
+  await expect(historyPanel).toBeVisible();
+  await expect(historyPanel).toContainText("選択肢ID retired-option");
+  await expect(historyPanel).toContainText("元イベントID: retired-choice-event");
+  await expect(historyPanel).not.toContainText("どちらの道へ進みますか？");
+  await expect(historyToggle).toHaveAttribute("aria-expanded", "true");
+  await expectMobileViewport(page, input);
+  expect(await readAutoSave(page)).toEqual(historyState);
+
+  await activate(historyPanel.getByRole("button", { name: "閉じる" }), input);
+  await expect(historyPanel).toHaveCount(0);
+  await expect(historyToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(historyToggle).toBeFocused();
+  await expectMobileViewport(page, input);
+  expect(await readAutoSave(page)).toEqual(historyState);
 });

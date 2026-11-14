@@ -213,3 +213,10 @@ The chapter-local `mapEventChoices` list was added in `saveVersion: 7`; `saveVer
 - `MapEventDefinition.condition` は任意のcampaign-choice条件で、通常triggerが一致した場合に選択記録も一致するイベントだけを解決する。コンテンツ検証はキーの重複、source chapterの前後、choice IDを検証する。
 - `prepareNextChapter` はcampaignChoicesを複製して次章へ渡し、chapter-localのイベント進行は引き継がない。
 - saveVersion 8で導入。v7の現在章選択履歴は保持し、campaignChoicesを空配列で初期化する。IndexedDB schema 1は変更しない。
+
+
+## キャンペーン選択履歴の読み取り専用表示
+
+- `src/application/get-campaign-choice-history.ts` は `GameStateSnapshot.campaignChoices` を選択順に読み、`CHAPTERS` 内の元章・元イベントの `show-choice` 定義から章番号／章名／話者／会話文／選択ラベルを投影する。
+- 元章または選択肢が現在のcontent registryに存在しない場合、投影は本文／ラベルを作らず、保存済みのsource ID／choice IDをfallbackとして残す。
+- `CampaignChoiceHistoryPanel` は現章だけを扱う `MapEventHistoryPanel` とは別のヘッダーボタン／領域で開閉する。どちらも読み取り専用で、履歴本文・タイムスタンプ・追加のGameState／saveVersion fieldを作らない。

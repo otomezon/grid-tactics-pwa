@@ -37,6 +37,7 @@ import { getPlayerInspectionDetails } from "./application/get-player-inspection-
 import { getEnemyThreatInspectionDetails } from "./application/get-enemy-threat-inspection-details";
 import { getEnemyPhaseForecast } from "./application/get-enemy-phase-forecast";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
+import { getCampaignChoiceHistory } from "./application/get-campaign-choice-history";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
 import { getBattleObjectiveNavigationTargets } from "./application/get-battle-objective-navigation-targets";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
@@ -80,6 +81,7 @@ import { CampaignUnitBattleRecordPanel, CampaignUnitBattleRecordsSummary } from 
 import { DeploymentUnitComparison } from "./components/deployment-unit-comparison";
 import { MapEventDialog } from "./components/map-event-dialog";
 import { MapEventHistoryPanel } from "./components/map-event-history-panel";
+import { CampaignChoiceHistoryPanel } from "./components/campaign-choice-history-panel";
 import { MapInteractionPanel } from "./components/map-interaction-panel";
 import {
   getAvailableMapInteraction,
@@ -387,6 +389,7 @@ function CampaignApp() {
   const [showEnemyThreatRange, setShowEnemyThreatRange] = useState(false);
   const [isOperationGuideOpen, setIsOperationGuideOpen] = useState(false);
   const [isMapEventHistoryOpen, setIsMapEventHistoryOpen] = useState(false);
+  const [isCampaignChoiceHistoryOpen, setIsCampaignChoiceHistoryOpen] = useState(false);
   const [isPhaseEndReviewOpen, setIsPhaseEndReviewOpen] = useState(false);
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
   const [mapFocusPosition, setMapFocusPosition] = useState<Position>({ x: 0, y: 0 });
@@ -415,6 +418,7 @@ function CampaignApp() {
   const [isInstalledApp, setIsInstalledApp] = useState(isStandaloneDisplayMode);
   const importSaveFileInput = useRef<HTMLInputElement>(null);
   const mapEventHistoryToggleRef = useRef<HTMLButtonElement>(null);
+  const campaignChoiceHistoryToggleRef = useRef<HTMLButtonElement>(null);
   const mapViewportRef = useRef<HTMLDivElement>(null);
   const hadPendingMapEventRef = useRef(false);
   const phaseEndButtonRef = useRef<HTMLButtonElement>(null);
@@ -423,7 +427,8 @@ function CampaignApp() {
 
   useEffect(() => {
     setIsMapEventHistoryOpen(false);
-  }, [gameState.chapterId, gameState.firedMapEventIds.length]);
+    setIsCampaignChoiceHistoryOpen(false);
+  }, [gameState.chapterId, gameState.firedMapEventIds.length, gameState.campaignChoices.length]);
 
   useEffect(() => {
     setEnemyActionMapPreview(null);
@@ -708,6 +713,10 @@ function CampaignApp() {
       : [],
     [currentMap, gameState]
   );
+  const campaignChoiceHistory = useMemo(
+    () => getCampaignChoiceHistory(gameState.campaignChoices),
+    [gameState.campaignChoices]
+  );
   const pendingMapEventMessages = useMemo(
     () => gameState.chapterId === currentMap.id
       ? getPendingMapEventMessages(gameState, currentMap)
@@ -867,6 +876,11 @@ function CampaignApp() {
   function closeMapEventHistory(): void {
     setIsMapEventHistoryOpen(false);
     mapEventHistoryToggleRef.current?.focus();
+  }
+
+  function closeCampaignChoiceHistory(): void {
+    setIsCampaignChoiceHistoryOpen(false);
+    campaignChoiceHistoryToggleRef.current?.focus();
   }
 
   async function handleAcknowledgeMapEvent(eventId: string): Promise<void> {
@@ -1943,9 +1957,28 @@ function CampaignApp() {
               aria-expanded={isMapEventHistoryOpen}
               aria-controls={isMapEventHistoryOpen ? "map-event-history-panel" : undefined}
               disabled={pendingMapEventMessages.length > 0}
-              onClick={() => setIsMapEventHistoryOpen((open) => !open)}
+              onClick={() => {
+                setIsCampaignChoiceHistoryOpen(false);
+                setIsMapEventHistoryOpen((open) => !open);
+              }}
             >
               イベント履歴 <span>（{mapEventMessageHistory.length}件）</span>
+            </button>
+          )}
+          {campaignChoiceHistory.length > 0 && (
+            <button
+              ref={campaignChoiceHistoryToggleRef}
+              className="secondary-button save-file-button campaign-choice-history-toggle"
+              type="button"
+              aria-label={"キャンペーン選択履歴 " + campaignChoiceHistory.length + "件"}
+              aria-expanded={isCampaignChoiceHistoryOpen}
+              aria-controls={isCampaignChoiceHistoryOpen ? "campaign-choice-history-panel" : undefined}
+              onClick={() => {
+                setIsMapEventHistoryOpen(false);
+                setIsCampaignChoiceHistoryOpen((open) => !open);
+              }}
+            >
+              選択記録 <span>（{campaignChoiceHistory.length}件）</span>
             </button>
           )}
           <button
@@ -2041,6 +2074,13 @@ function CampaignApp() {
         <MapEventHistoryPanel
           events={mapEventMessageHistory}
           onClose={closeMapEventHistory}
+        />
+      )}
+
+      {isCampaignChoiceHistoryOpen && campaignChoiceHistory.length > 0 && (
+        <CampaignChoiceHistoryPanel
+          entries={campaignChoiceHistory}
+          onClose={closeCampaignChoiceHistory}
         />
       )}
 
