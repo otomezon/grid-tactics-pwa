@@ -2907,11 +2907,12 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(restoredTitle.getByTestId("title-backup-entry-backup-1")).toBeVisible();
     await expect(restoredTitle.getByTestId("title-backup-entry-backup-2")).toBeVisible();
 
-    page.once("dialog", async (dialog) => {
-      await dialog.accept();
-    });
+    const finalRestoreDialogPromise = page.waitForEvent("dialog");
     await restoredTitle.getByTestId("title-restore-backup-1").click();
-    await expect(page.getByTestId("campaign-title-screen")).toHaveCount(0);
+    const finalRestoreDialog = await finalRestoreDialogPromise;
+    await finalRestoreDialog.accept();
+    await expect(restoredTitle).toBeVisible();
+    await expect(restoredTitle).toContainText("バックアップからゲーム状態を復元しました。");
     expect(await readAutoSave(page)).toEqual(changedSave);
   });
 
