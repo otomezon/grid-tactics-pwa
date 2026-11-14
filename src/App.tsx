@@ -43,6 +43,7 @@ import { getCampaignChoiceHistory } from "./application/get-campaign-choice-hist
 import { getCampaignBattleHistory } from "./application/get-campaign-battle-history";
 import { appendCampaignBattleLogEntries, appendCampaignChapterResultIfMissing, createEnemyBattleLogEntries, createPlayerAttackBattleLogEntry } from "./application/record-campaign-battle-log";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
+import { getBattleGuideDetails } from "./application/get-battle-guide-details";
 import { getBattleObjectiveNavigationTargets } from "./application/get-battle-objective-navigation-targets";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
 import { getBattleContributionDetails } from "./application/get-battle-contribution-details";
@@ -755,6 +756,13 @@ function CampaignApp() {
       : [],
     [currentMap, gameState]
   );
+  const battleGuideDetails = useMemo(() => getBattleGuideDetails({
+    state: gameState,
+    selectedUnitId,
+    deploymentPending,
+    pendingMapEventCount: pendingMapEventMessages.length,
+    battleOutcome
+  }), [battleOutcome, deploymentPending, gameState, pendingMapEventMessages.length, selectedUnitId]);
 
   useEffect(() => {
     const hasPendingMapEvent = pendingMapEventMessages.length > 0;
@@ -2183,7 +2191,7 @@ function CampaignApp() {
       )}
 
       {isOperationGuideOpen && (
-        <OperationGuide onClose={() => setIsOperationGuideOpen(false)} />
+        <OperationGuide battleGuide={battleGuideDetails} onClose={() => setIsOperationGuideOpen(false)} />
       )}
 
       {isMapEventHistoryOpen && mapEventMessageHistory.length > 0 && (

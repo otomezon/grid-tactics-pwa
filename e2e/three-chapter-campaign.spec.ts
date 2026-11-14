@@ -753,3 +753,41 @@ test("recruits the optional Chapter 2 scout and deploys her in Chapter 3", async
   await expect(page.locator(".map-grid").getByRole("button", { name: /斥候ミナ/ })).toBeVisible();
   await expectMobileViewport(page, input);
 });
+
+test("updates the operation guide with the current tactical situation", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const input: InteractionInput = testInfo.project.name === "webkit-mobile" ? "tap" : "click";
+  if (input === "tap") await page.setViewportSize({ width: 320, height: 720 });
+
+  await startCampaign(page, input);
+  const guideToggle = page.getByRole("button", { name: "操作ガイド" });
+  const stateBeforeGuide = await readAutoSave(page);
+  await activate(guideToggle, input);
+  const guide = page.getByTestId("battle-guide");
+  await expect(guide).toBeVisible();
+  await expect(guide).toContainText("行動可能な味方を選びましょう");
+  await expect(page.getByTestId("battle-guide-count")).toHaveText("0 / 3項目完了");
+  expect(await readAutoSave(page)).toEqual(stateBeforeGuide);
+
+  const protagonistTile = page.locator('[data-map-position="1,8"]');
+  await activate(protagonistTile, input);
+  await expect(guide).toContainText("青いマスから移動先を選びましょう");
+  const destination = page.locator('[data-map-position="2,8"]');
+  await activate(destination, input);
+  if (input === "tap") await activate(destination, input);
+
+  await expect(page.getByTestId("battle-guide-count")).toHaveText("1 / 3項目完了");
+  await expect(guide).toContainText("この味方の行動を選びましょう");
+  const movedState = await readAutoSave(page) as SaveSnapshot;
+  expect(movedState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+    position: { x: 2, y: 8 },
+    hasMoved: true,
+    hasActed: false
+  });
+  expect(movedState.campaignBattleLog.at(-1)).toMatchObject({
+    kind: "player-action",
+    action: "movement",
+    actorId: "unit_001"
+  });
+  await expectMobileViewport(page, input);
+});

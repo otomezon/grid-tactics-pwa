@@ -2987,3 +2987,73 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .campaign-storage-durability { padding: 10px; }
   .campaign-storage-durability-heading { align-items: flex-start; }
 }
+
+
+/* Context-aware battle coach embedded in the operation guide. */
+.operation-guide-live {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(131, 189, 187, .56);
+  border-radius: 11px;
+  background: rgba(8, 22, 31, .58);
+}
+.operation-guide-live-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.operation-guide-live-heading .eyebrow { margin: 0; }
+.operation-guide-live-heading > span {
+  color: #a9d9d1;
+  font-size: .68rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.operation-guide-live h3 {
+  margin: 0;
+  color: #f1f5f7;
+  font-size: .92rem;
+  line-height: 1.4;
+}
+.operation-guide-live-description {
+  margin: 0;
+  color: #c7d7df;
+  font-size: .76rem;
+  line-height: 1.55;
+}
+.operation-guide-live-steps {
+  display: grid;
+  gap: 5px;
+  margin: 3px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.operation-guide-live-steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  color: #c1cdd5;
+  font-size: .7rem;
+  line-height: 1.45;
+}
+.operation-guide-live-step-state {
+  flex: 0 0 3.8em;
+  color: #d8c39b;
+  font-size: .64rem;
+  font-weight: 800;
+}
+.operation-guide-live-steps li.is-complete .operation-guide-live-step-state { color: #9bd2bd; }
+.operation-guide-live-steps li.is-complete > span:last-child {
+  color: #a9b9bf;
+  text-decoration: line-through;
+  text-decoration-color: rgba(169, 185, 191, .5);
+}
+@media (max-width: 480px) {
+  .operation-guide-live { padding: 10px; }
+  .operation-guide-live-description { font-size: .74rem; }
+}
