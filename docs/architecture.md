@@ -244,4 +244,4 @@ The chapter-local `mapEventChoices` list was added in `saveVersion: 7`; `saveVer
 
 ## 味方別キャンペーン累計戦績アーカイブ
 
-`src/application/get-campaign-unit-battle-records-archive.ts` は、保存済みの `campaignUnitBattleRecords` を名前検索・項目別ソートする純粋なprojectionである。与ダメージ、撃破数、獲得EXP、攻撃行動回数は既存の累計記録をそのまま使用し、名前順は昇順、数値項目は降順とする。同値の場合は名前とunit IDで順序を安定させる。コンポーネントは時系列ログと味方別累計をローカルUI状態で切り替え、累計側も検索・並べ替え条件をコンポーネント内に保持する。味方別の累計は確定した味方開始攻撃のみを対象とし、敵の反撃を加算せず、過去記録がないユニットの統計を推測で補わない。閲覧・切替・検索・並べ替えは `GameState`、RNG、IndexedDB、`saveVersion` に影響しない。saveVersion 10／IndexedDB schema 1を維持する。
+`src/application/get-campaign-unit-battle-records-archive.ts` は、保存済みの `campaignUnitBattleRecords` を名前検索・項目別ソートする純粋なprojectionである。与ダメージ、撃破数、獲得EXP、攻撃行動回数は既存の累計記録をそのまま使用し、名前順は昇順、数値項目は降順とする。同値の場合は名前とunit IDで順序を安定させる。コンポーネントは時系列ログと味方別累計をローカルUI状態で切り替え、累計側も検索・並べ替え条件をコンポーネント内に保持する。味方別の累計は確定した味方開始攻撃のみを対象とし、敵の反撃を加算せず、過去記録がないユニットの統計を推測で補わない。移行済みの旧セーブで `campaignBattleLog` が空でも、`campaignUnitBattleRecords` が残っていればキャンペーン記録パネルを開いて累計を参照できる。閲覧・切替・検索・並べ替えは `GameState`、RNG、IndexedDB、`saveVersion` に影響しない。saveVersion 10／IndexedDB schema 1を維持する。
