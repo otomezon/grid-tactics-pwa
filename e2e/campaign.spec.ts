@@ -177,6 +177,43 @@ test.describe("campaign title and save hub", () => {
     await expect(page.getByTestId("map-event-history")).toContainText("敵将を撃破すると勝利です。主人公が倒されると敗北です。");
   });
 
+  test("keeps a pending map-event dialog keyboard-accessible until acknowledged", async ({ page }) => {
+    await startNewCampaign(page);
+    await page.getByRole("button", { name: deploymentStartButton }).click();
+    await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    const dialog = page.getByTestId("map-event-dialog");
+    const acknowledgeButton = dialog.getByRole("button", { name: "確認して続ける" });
+    await expect(dialog).toBeVisible();
+    await expect(acknowledgeButton).toBeFocused();
+
+    const pendingSave = await readAutoSave(page) as {
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+    };
+    expect(pendingSave.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+    expect(pendingSave.acknowledgedMapEventIds).toEqual([]);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+    await expect(acknowledgeButton).toBeFocused();
+
+    await page.keyboard.press("Tab");
+    await expect(acknowledgeButton).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(acknowledgeButton).toBeFocused();
+    expect(await readAutoSave(page)).toEqual(pendingSave);
+
+    await acknowledgeButton.click();
+    await expect(dialog).toHaveCount(0);
+    const acknowledgedSave = await readAutoSave(page) as {
+      firedMapEventIds: string[];
+      acknowledgedMapEventIds: string[];
+    };
+    expect(acknowledgedSave.firedMapEventIds).toEqual(pendingSave.firedMapEventIds);
+    expect(acknowledgedSave.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
+  });
+
   test("lets a moved ally investigate a map location once and restores the pending result after reload", async ({ page }) => {
     await startBattle(page);
 
