@@ -505,4 +505,61 @@ describe("isValidGameStateSnapshot", () => {
   });
 
 
+
+  it("validates unique chapter-result records and rejects actions after a terminal chapter result", () => {
+    const result = {
+      sequence: 1,
+      chapterId: CHAPTER_01_MAP.id,
+      turn: 8,
+      kind: "chapter-result" as const,
+      outcome: "victory" as const,
+      objective: "defeat_boss" as const,
+      reason: "objective-cleared" as const,
+      livingPlayerCount: 4,
+      livingEnemyCount: 1
+    };
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [result]
+    }, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [result, { ...result, sequence: 2 }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [
+        result,
+        {
+          sequence: 2,
+          chapterId: CHAPTER_01_MAP.id,
+          turn: 8,
+          kind: "player-action",
+          action: "wait",
+          actorId: "unit_002",
+          actorName: "味方02",
+          detail: "終了後の不正な行動"
+        }
+      ]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [{
+        ...result,
+        outcome: "defeat",
+        reason: "party-wiped",
+        livingPlayerCount: 1
+      }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [{
+        ...result,
+        outcome: "defeat",
+        reason: "protected-unit-defeated",
+        livingPlayerCount: 0
+      }]
+    }, CHAPTER_01_MAP)).toBe(false);
+  });
+
 });

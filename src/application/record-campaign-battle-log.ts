@@ -3,11 +3,13 @@ import {
   MAX_CAMPAIGN_BATTLE_LOG_ENTRIES,
   type CampaignBattleLogEntry,
   type CampaignBattleStrikeRecord,
+  type GameMapDefinition,
   type GameStateSnapshot,
   type GameUnit
 } from "../domain/models/game";
 import type { EnemyActionLog } from "./resolve-enemy-phase";
 import type { PlayerAttackReport } from "./get-player-attack-report";
+import { evaluateBattleOutcome } from "../domain/rules/evaluate-battle-outcome";
 
 type CampaignBattleLogEntryDraft =
   CampaignBattleLogEntry extends infer Entry
@@ -102,4 +104,34 @@ export function appendCampaignBattleLogEntries(
     ...state,
     campaignBattleLog: [...state.campaignBattleLog, ...appended].slice(-MAX_CAMPAIGN_BATTLE_LOG_ENTRIES)
   };
+}
+
+
+/** Appends the terminal result of a chapter exactly once, using existing objective rules. */
+export function appendCampaignChapterResultIfMissing(
+  state: GameStateSnapshot,
+  map: GameMapDefinition
+): GameStateSnapshot {
+  const outcome = evaluateBattleOutcome(state, map);
+  if (outcome === "playing") return state;
+  if (state.campaignBattleLog.some((entry) =>
+    entry.kind === "chapter-result" && entry.chapterId === state.chapterId
+  )) return state;
+
+  const livingPlayers = state.units.filter((unit) => unit.faction === "player" && unit.currentHp > 0);
+  const livingEnemies = state.units.filter((unit) => unit.faction === "enemy" && unit.currentHp > 0);
+  const reason = outcome === "victory"
+    ? "objective-cleared" as const
+    : livingPlayers.length === 0
+      ? "party-wiped" as const
+      : "protected-unit-defeated" as const;
+
+  return appendCampaignBattleLogEntries(state, [{
+    kind: "chapter-result",
+    outcome,
+    objective: map.objective.type,
+    reason,
+    livingPlayerCount: livingPlayers.length,
+    livingEnemyCount: livingEnemies.length
+  }]);
 }

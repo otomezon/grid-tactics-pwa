@@ -53,6 +53,42 @@ type SaveSnapshot = {
   campaignBattleLog: Array<Record<string, unknown>>;
 };
 
+type TerminalVictorySnapshot = {
+  chapterId: string;
+  turn: number;
+  units: Array<{ faction: string; currentHp: number }>;
+  campaignBattleLog: Array<Record<string, unknown>>;
+};
+
+function withTerminalVictoryResult<T extends TerminalVictorySnapshot>(
+  snapshot: T,
+  objective: "defeat_all" | "defeat_boss"
+): T {
+  if (snapshot.campaignBattleLog.some((entry) =>
+    entry.kind === "chapter-result" && entry.chapterId === snapshot.chapterId
+  )) return snapshot;
+  const previousSequence = snapshot.campaignBattleLog.reduce((maximum, entry) =>
+    typeof entry.sequence === "number" ? Math.max(maximum, entry.sequence) : maximum
+  , 0);
+  return {
+    ...snapshot,
+    campaignBattleLog: [
+      ...snapshot.campaignBattleLog,
+      {
+        sequence: previousSequence + 1,
+        chapterId: snapshot.chapterId,
+        turn: snapshot.turn,
+        kind: "chapter-result",
+        outcome: "victory",
+        objective,
+        reason: "objective-cleared",
+        livingPlayerCount: snapshot.units.filter((unit) => unit.faction === "player" && unit.currentHp > 0).length,
+        livingEnemyCount: snapshot.units.filter((unit) => unit.faction === "enemy" && unit.currentHp > 0).length
+      }
+    ]
+  };
+}
+
 async function startCampaign(page: Page, input: InteractionInput): Promise<void> {
   await page.goto("/");
   const title = page.getByTestId("campaign-title-screen");
@@ -245,16 +281,24 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await activate(page.getByRole("button", { name: "第2章・試作マップを開始" }), input);
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
   await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
-  expect(await readAutoSave(page)).toEqual(clearedChapterOne);
+  const clearedChapterOneWithResult = withTerminalVictoryResult(clearedChapterOne, "defeat_boss");
+  expect(await readAutoSave(page)).toEqual(clearedChapterOneWithResult);
 
   await activate(page.getByRole("button", { name: deploymentStartButton }), input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   await expectMobileViewport(page, input);
   await acknowledgePendingMapEvents(page, { input });
   const chapterTwoState = await readAutoSave(page) as SaveSnapshot;
-  expect(chapterTwoState.campaignBattleLog).toEqual(clearedChapterOne.campaignBattleLog);
+  expect(chapterTwoState.campaignBattleLog.slice(0, clearedChapterOne.campaignBattleLog.length)).toEqual(clearedChapterOne.campaignBattleLog);
+  expect(chapterTwoState.campaignBattleLog.at(-1)).toMatchObject({
+    sequence: 9,
+    chapterId: "chapter_01_map",
+    kind: "chapter-result",
+    outcome: "victory",
+    reason: "objective-cleared"
+  });
   expect(chapterTwoState).toMatchObject({
-    saveVersion: 9,
+    saveVersion: 10,
     chapterId: "chapter_02_map",
     phase: "player",
     turn: 1,
@@ -283,7 +327,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await continueCampaign(page, input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   expect(await readAutoSave(page)).toEqual(chapterTwoState);
-  expect((await readAutoSave(page) as SaveSnapshot).campaignBattleLog).toEqual(clearedChapterOne.campaignBattleLog);
+  expect((await readAutoSave(page) as SaveSnapshot).campaignBattleLog).toEqual(chapterTwoState.campaignBattleLog);
 
   const clearedChapterTwo: SaveSnapshot = {
     ...chapterTwoState,
@@ -298,16 +342,24 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await activate(page.getByRole("button", { name: "第3章・試作マップを開始" }), input);
   await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
   await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
-  expect(await readAutoSave(page)).toEqual(clearedChapterTwo);
+  const clearedChapterTwoWithResult = withTerminalVictoryResult(clearedChapterTwo, "defeat_all");
+  expect(await readAutoSave(page)).toEqual(clearedChapterTwoWithResult);
 
   await activate(page.getByRole("button", { name: deploymentStartButton }), input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   await expectMobileViewport(page, input);
   await acknowledgePendingMapEvents(page, { input });
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
-  expect(chapterThreeState.campaignBattleLog).toEqual(clearedChapterOne.campaignBattleLog);
+  expect(chapterThreeState.campaignBattleLog.slice(0, chapterTwoState.campaignBattleLog.length)).toEqual(chapterTwoState.campaignBattleLog);
+  expect(chapterThreeState.campaignBattleLog.at(-1)).toMatchObject({
+    sequence: 10,
+    chapterId: "chapter_02_map",
+    kind: "chapter-result",
+    outcome: "victory",
+    reason: "objective-cleared"
+  });
   expect(chapterThreeState).toMatchObject({
-    saveVersion: 9,
+    saveVersion: 10,
     chapterId: "chapter_03_map",
     phase: "player",
     turn: 1,
@@ -375,17 +427,19 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expectMobileViewport(page, input);
   expect(await readAutoSave(page)).toEqual(historyState);
 
-  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 3件" });
+  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 5件" });
   await expect(battleHistoryToggle).toBeVisible();
   await activate(battleHistoryToggle, input);
   const battleHistoryPanel = page.getByTestId("campaign-battle-history");
   await expect(battleHistoryPanel).toBeVisible();
-  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(3);
+  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(5);
   await expect(battleHistoryPanel).toContainText("第1章 · 第1章・試作マップ");
   await expect(battleHistoryPanel).toContainText("第8ターン");
   await expect(battleHistoryPanel).toContainText("主人公 → 敵01");
   await expect(battleHistoryPanel).toContainText("敵02 · 敵軍行動（攻撃）");
   await expect(battleHistoryPanel).toContainText("1体撃破");
+  await expect(battleHistoryPanel).toContainText("ステージクリア · 勝利条件達成");
+  await expect(battleHistoryPanel).toContainText("第2章 · 第2章・試作マップ");
   const savedBeforeBattleHistory = await readAutoSave(page);
   await activate(battleHistoryPanel.getByRole("button", { name: "閉じる" }), input);
   await expect(battleHistoryPanel).toHaveCount(0);

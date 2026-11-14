@@ -1,6 +1,6 @@
 # ドキュメント目次
 
-PR #115でデータ駆動の加入イベントを追加。PR #116（merge commit `31fe5a3d26f2aaa9c79210ab7ae38d9284e6cb63`）で `show-choice` と `event-choice` による永続的な会話選択・分岐、saveVersion 7への移行をmainへ追加した。PR #117（merge commit `1b462f99cdc70a029e2986e592bc5f689e6bd3cb`）では、選択済み会話分岐を含むセーブJSONの往復とmap validatorの回帰テストを追加した。saveVersion 8で章間キャンペーン選択を永続化し、選択済みの内容を「キャンペーン選択履歴」から読み取り専用で参照できる。saveVersion 9では確定済みの戦闘行動・実strike結果をキャンペーン全体の履歴として保存し、撃破者別件数を実結果から集計する。正式な人物・会話・章ルートの内容は未設定。
+PR #115でデータ駆動の加入イベントを追加。PR #116（merge commit `31fe5a3d26f2aaa9c79210ab7ae38d9284e6cb63`）で `show-choice` と `event-choice` による永続的な会話選択・分岐、saveVersion 7への移行をmainへ追加した。PR #117（merge commit `1b462f99cdc70a029e2986e592bc5f689e6bd3cb`）では、選択済み会話分岐を含むセーブJSONの往復とmap validatorの回帰テストを追加した。saveVersion 8で章間キャンペーン選択を永続化し、選択済みの内容を「キャンペーン選択履歴」から読み取り専用で参照できる。saveVersion 9では確定済みの戦闘行動・実strike結果をキャンペーン全体の履歴として保存し、撃破者別件数を実結果から集計する。saveVersion 10では各章の勝利／敗北結果も同じ時系列へ一度だけ記録し、章間・再読込後に読み返せる。正式な人物・会話・章ルートの内容は未設定。
 
 PR #129（merge commit `686e304155f1e539c8e238003d56655c01b03e1e`）では、WebKit mobile profileの320px幅でマップを右端までスクロールし、右端マスへの2タップ移動（初回プレビュー時のセーブ不変・2回目の移動確定と保存）を検証するE2Eを追加した。実機iOS Safari／PWAの確認とは区別する。
 

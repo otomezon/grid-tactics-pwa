@@ -39,7 +39,7 @@ import { getEnemyPhaseForecast } from "./application/get-enemy-phase-forecast";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
 import { getCampaignChoiceHistory } from "./application/get-campaign-choice-history";
 import { getCampaignBattleHistory } from "./application/get-campaign-battle-history";
-import { appendCampaignBattleLogEntries, createEnemyBattleLogEntries, createPlayerAttackBattleLogEntry } from "./application/record-campaign-battle-log";
+import { appendCampaignBattleLogEntries, appendCampaignChapterResultIfMissing, createEnemyBattleLogEntries, createPlayerAttackBattleLogEntry } from "./application/record-campaign-battle-log";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
 import { getBattleObjectiveNavigationTargets } from "./application/get-battle-objective-navigation-targets";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
@@ -515,18 +515,23 @@ function CampaignApp() {
         }
 
         let restoredState = migration.snapshot;
+        if (restoredState.phase !== "enemy") {
+          restoredState = appendCampaignChapterResultIfMissing(restoredState, restoredChapter.map);
+        }
         setActiveChapter(restoredChapter);
         setGameState(restoredState);
         setDeploymentAssignments(createDeploymentAssignments(restoredState, restoredChapter.map));
         setDeploymentSelectedUnitIds(createDeploymentSelection(restoredState, restoredChapter.map));
         setDeploymentPending(false);
-        if (migration.migrated) {
+        if (migration.migrated || restoredState !== migration.snapshot) {
           setSaveStatus("saving");
           try {
             await saveGameState(restoredState);
             if (!cancelled) {
               setSaveStatus("saved");
-              setMessage("以前のセーブデータを新しい形式へ移行しました。");
+              setMessage(migration.migrated
+                ? "以前のセーブデータを新しい形式へ移行しました。"
+                : "章の結果をキャンペーン戦闘記録へ追加しました。");
             }
           } catch {
             if (!cancelled) {
@@ -551,6 +556,7 @@ function CampaignApp() {
             enemyPhaseSource.chapterId,
             enemyPhaseSource.turn
           );
+          restoredState = appendCampaignChapterResultIfMissing(restoredState, restoredChapter.map);
           setGameState(restoredState);
           if (!cancelled) {
             setBattleHistory([{ sequence: 0, turn: enemyPhaseTurn, kind: "enemy-phase", actions: enemyPhase.actions }]);
@@ -867,7 +873,7 @@ function CampaignApp() {
     let stateToSave = nextState;
     try {
       const eventExecution = resolveMapEventTransition(previousState, nextState, currentMap);
-      stateToSave = eventExecution.nextState;
+      stateToSave = appendCampaignChapterResultIfMissing(eventExecution.nextState, currentMap);
       setGameState(stateToSave);
       await saveGameState(stateToSave);
       setSaveStatus("saved");
@@ -1087,12 +1093,20 @@ function CampaignApp() {
 
       if (restoredState.phase === "enemy") {
         restoredEnemyPhaseTurn = restoredState.turn;
-        const enemyPhase = runEnemyPhase(restoredState, chapter.map);
-        restoredState = enemyPhase.nextState;
+        const enemyPhaseSource = restoredState;
+        const enemyPhase = runEnemyPhase(enemyPhaseSource, chapter.map);
+        restoredState = appendCampaignBattleLogEntries(
+          enemyPhase.nextState,
+          createEnemyBattleLogEntries(enemyPhase.actions, enemyPhaseSource.units),
+          enemyPhaseSource.chapterId,
+          enemyPhaseSource.turn
+        );
+        restoredState = appendCampaignChapterResultIfMissing(restoredState, chapter.map);
         restoredEnemyPhaseActions = enemyPhase.actions;
         restoreMessage = formatEnemyPhaseSummary(enemyPhase, chapter.map);
       } else {
         const outcome = evaluateBattleOutcome(restoredState, chapter.map);
+        restoredState = appendCampaignChapterResultIfMissing(restoredState, chapter.map);
         if (outcome === "victory") {
           restoreMessage = "勝利条件を達成したバックアップを復元しました。";
         } else if (outcome === "defeat") {
@@ -1174,12 +1188,20 @@ function CampaignApp() {
 
       if (importedState.phase === "enemy") {
         importedEnemyPhaseTurn = importedState.turn;
-        const enemyPhase = runEnemyPhase(importedState, chapter.map);
-        importedState = enemyPhase.nextState;
+        const enemyPhaseSource = importedState;
+        const enemyPhase = runEnemyPhase(enemyPhaseSource, chapter.map);
+        importedState = appendCampaignBattleLogEntries(
+          enemyPhase.nextState,
+          createEnemyBattleLogEntries(enemyPhase.actions, enemyPhaseSource.units),
+          enemyPhaseSource.chapterId,
+          enemyPhaseSource.turn
+        );
+        importedState = appendCampaignChapterResultIfMissing(importedState, chapter.map);
         importedEnemyPhaseActions = enemyPhase.actions;
         importMessage = formatEnemyPhaseSummary(enemyPhase, chapter.map);
       } else {
         const outcome = evaluateBattleOutcome(importedState, chapter.map);
+        importedState = appendCampaignChapterResultIfMissing(importedState, chapter.map);
         if (outcome === "victory") {
           importMessage = "勝利条件を達成したセーブデータを復元しました。";
         } else if (outcome === "defeat") {

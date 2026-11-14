@@ -502,7 +502,7 @@ test.describe("production PWA shell", () => {
       campaignBattleLog: unknown[];
     };
     expect(migratedAutoSave.turn).toBe(4);
-    expect(migratedAutoSave.saveVersion).toBe(9);
+    expect(migratedAutoSave.saveVersion).toBe(10);
     expect(migratedAutoSave.reserveUnits).toEqual([]);
     expect(migratedAutoSave.campaignBattleLog).toEqual([]);
     expect(migratedAutoSave.firedMapEventIds).toEqual([]);

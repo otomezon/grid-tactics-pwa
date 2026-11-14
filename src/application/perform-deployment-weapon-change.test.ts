@@ -34,7 +34,7 @@ describe("performDeploymentWeaponChange", () => {
       equippedWeaponName: "試作の鉄の槍"
     });
     expect(result.nextState.units.find((unit) => unit.id === "unit_004")?.equippedWeaponId).toBe("iron_lance");
-    expect(result.nextState.saveVersion).toBe(9);
+    expect(result.nextState.saveVersion).toBe(10);
     expect(state).toEqual(original);
   });
 

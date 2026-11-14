@@ -101,6 +101,24 @@ function isCampaignBattleLogEntry(value: unknown): value is CampaignBattleLogEnt
     !isNonNegativeInteger(value.turn) || value.turn < 1
   ) return false;
 
+  if (value.kind === "chapter-result") {
+    if (!hasOnlyKeys(value, [
+      "sequence", "chapterId", "turn", "kind", "outcome", "objective",
+      "reason", "livingPlayerCount", "livingEnemyCount"
+    ])) return false;
+    if (
+      (value.outcome !== "victory" && value.outcome !== "defeat") ||
+      (value.objective !== "defeat_all" && value.objective !== "defeat_boss") ||
+      !isNonNegativeInteger(value.livingPlayerCount) ||
+      !isNonNegativeInteger(value.livingEnemyCount)
+    ) return false;
+    if (value.outcome === "victory") {
+      return value.reason === "objective-cleared" && value.livingPlayerCount > 0;
+    }
+    if (value.reason === "party-wiped") return value.livingPlayerCount === 0;
+    return value.reason === "protected-unit-defeated" && value.livingPlayerCount > 0;
+  }
+
   if (value.kind === "player-action") {
     if (!hasOnlyKeys(value, ["sequence", "chapterId", "turn", "kind", "action", "actorId", "actorName", "detail"])) return false;
     return (
@@ -244,9 +262,22 @@ export function isValidGameStateSnapshot(
   }
 
   let previousBattleLogSequence = 0;
+  const chapterResultIds = new Set<string>();
   for (const entry of value.campaignBattleLog) {
-    if (!isCampaignBattleLogEntry(entry) || entry.sequence <= previousBattleLogSequence) return false;
+    if (
+      !isCampaignBattleLogEntry(entry) ||
+      entry.sequence <= previousBattleLogSequence ||
+      chapterResultIds.has(entry.chapterId)
+    ) return false;
     previousBattleLogSequence = entry.sequence;
+    if (entry.kind === "chapter-result") {
+      if (
+        entry.chapterId === map.id &&
+        (entry.objective !== map.objective.type ||
+          (entry.outcome === "victory" && map.objective.type === "defeat_all" && entry.livingEnemyCount !== 0))
+      ) return false;
+      chapterResultIds.add(entry.chapterId);
+    }
   }
 
   const firedMapEventIds = new Set<string>();
