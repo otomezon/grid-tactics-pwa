@@ -2777,7 +2777,7 @@ function CampaignApp() {
             {mapInteractionPoints.some((point) => point.kind === "village") && <span><i className="legend-swatch map-object-village" />村</span>}
             {mapInteractionPoints.some((point) => point.kind === "treasure-chest") && <span><i className="legend-swatch map-object-chest" />宝箱</span>}
             {mapInteractionPoints.some((point) => point.kind === "door") && <span><i className="legend-swatch map-object-door" />扉</span>}
-            {mapInteractionPoints.some((point) => point.kind === "location") && <span><i className="legend-swatch map-interaction" />調査地点</span>
+            {mapInteractionPoints.some((point) => point.kind === "location") && <span><i className="legend-swatch map-interaction" />調査地点</span>}
             {movementPreviewPath && newlyAttackableKeys.size > 0 && (
               <span><i className="legend-swatch attack-after-move" />移動プレビュー先から攻撃可能</span>
             )}
