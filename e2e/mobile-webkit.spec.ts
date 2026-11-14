@@ -353,3 +353,207 @@ test("keeps a right-edge movement preview read-only at 320px until the second We
   }).toEqual({ position: { x: 9, y: 9 }, hasMoved: true });
 });
 
+
+
+test("carries one campaign through all three chapters on narrow WebKit touch and restores every committed save", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto("/");
+
+  const title = page.getByTestId("campaign-title-screen");
+  await expect(title).toBeVisible();
+  await title.getByRole("button", { name: "はじめから" }).tap();
+  await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+  await page.getByRole("button", { name: "出撃メンバーと配置を確定して戦闘開始" }).tap();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page, { input: "tap" });
+
+  const initialState = await readAutoSave(page) as {
+    saveVersion: number;
+    chapterId: string;
+    turn: number;
+    phase: "player" | "enemy";
+    rngState: number;
+    units: Array<{
+      id: string;
+      name: string;
+      faction: "player" | "enemy";
+      classId: string;
+      level: number;
+      experience: number;
+      stats: Record<string, number>;
+      growthRates: Record<string, number>;
+      currentHp: number;
+      movementType: string;
+      move: number;
+      usableWeaponTypes: string[];
+      inventory: string[];
+      equippedWeaponId: string | null;
+      position: { x: number; y: number };
+      hasMoved: boolean;
+      hasActed: boolean;
+    }>;
+    reserveUnits: Array<{
+      id: string;
+      name: string;
+      classId: string;
+      level: number;
+      experience: number;
+      stats: Record<string, number>;
+      growthRates: Record<string, number>;
+      currentHp: number;
+      movementType: string;
+      move: number;
+      usableWeaponTypes: string[];
+      inventory: string[];
+      equippedWeaponId: string | null;
+    }>;
+  };
+  const carriedCandidate = initialState.units.find((unit) => unit.id === "unit_001" && unit.faction === "player");
+  const reserveCandidate = initialState.units.find((unit) => unit.id === "unit_004" && unit.faction === "player");
+  if (!carriedCandidate || !reserveCandidate) {
+    throw new Error("The WebKit three-chapter fixture is missing an expected player unit.");
+  }
+
+  const carriedUnit = {
+    ...carriedCandidate,
+    level: 7,
+    experience: 42,
+    stats: { ...carriedCandidate.stats, strength: 11 },
+    currentHp: 13,
+    inventory: [...carriedCandidate.inventory, "healing_potion"]
+  };
+  const reserveUnit = {
+    id: reserveCandidate.id,
+    name: reserveCandidate.name,
+    classId: reserveCandidate.classId,
+    level: 4,
+    experience: 28,
+    stats: { ...reserveCandidate.stats, strength: 9 },
+    growthRates: { ...reserveCandidate.growthRates },
+    currentHp: 14,
+    movementType: reserveCandidate.movementType,
+    move: reserveCandidate.move,
+    usableWeaponTypes: [...reserveCandidate.usableWeaponTypes],
+    inventory: [...reserveCandidate.inventory],
+    equippedWeaponId: reserveCandidate.equippedWeaponId
+  };
+
+  // Prepare cleared chapter snapshots to validate the real touch-driven result,
+  // next-chapter deployment, autosave commit, and resume flow without claiming
+  // this fixture is a manual battle or a balance-test playthrough.
+  const clearedChapterOne = {
+    ...initialState,
+    rngState: 0x12345678,
+    units: initialState.units
+      .filter((unit) => unit.faction === "player" && unit.id !== reserveCandidate.id)
+      .map((unit) => unit.id === carriedUnit.id ? carriedUnit : unit),
+    reserveUnits: [...initialState.reserveUnits, reserveUnit]
+  };
+  await writeAutoSave(page, clearedChapterOne);
+  await page.reload();
+
+  const resumeChapterOne = page.getByTestId("campaign-title-screen").getByRole("button", { name: "つづきから" });
+  await expect(resumeChapterOne).toBeEnabled();
+  await resumeChapterOne.tap();
+  await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "第2章・試作マップを開始" }).tap();
+  await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+  await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
+  expect(await readAutoSave(page)).toEqual(clearedChapterOne);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+
+  await page.getByRole("button", { name: "出撃メンバーと配置を確定して戦闘開始" }).tap();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page, { input: "tap" });
+  const chapterTwoState = await readAutoSave(page) as typeof initialState;
+  expect(chapterTwoState).toMatchObject({
+    saveVersion: 7,
+    chapterId: "chapter_02_map",
+    phase: "player",
+    turn: 1,
+    rngState: 0x12345678
+  });
+  expect(chapterTwoState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+    faction: "player",
+    level: 7,
+    experience: 42,
+    stats: { strength: 11 },
+    currentHp: 13,
+    inventory: carriedUnit.inventory,
+    hasMoved: false,
+    hasActed: false
+  });
+  expect(chapterTwoState.units.some((unit) => unit.id === "unit_004")).toBe(false);
+  expect(chapterTwoState.reserveUnits.find((unit) => unit.id === "unit_004")).toMatchObject({
+    level: 4,
+    experience: 28,
+    stats: { strength: 9 },
+    currentHp: 14,
+    inventory: reserveUnit.inventory
+  });
+
+  await page.reload();
+  const resumeChapterTwo = page.getByTestId("campaign-title-screen").getByRole("button", { name: "つづきから" });
+  await expect(resumeChapterTwo).toBeEnabled();
+  await resumeChapterTwo.tap();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  expect(await readAutoSave(page)).toEqual(chapterTwoState);
+
+  const clearedChapterTwo = {
+    ...chapterTwoState,
+    rngState: 0x23456789,
+    units: chapterTwoState.units.filter((unit) => unit.faction === "player")
+  };
+  await writeAutoSave(page, clearedChapterTwo);
+  await page.reload();
+  const resumeClearedChapterTwo = page.getByTestId("campaign-title-screen").getByRole("button", { name: "つづきから" });
+  await expect(resumeClearedChapterTwo).toBeEnabled();
+  await resumeClearedChapterTwo.tap();
+  await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "第3章・試作マップを開始" }).tap();
+  await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+  await expect(page.locator(".deployment-heading")).toContainText("3人出撃 / 1人控え");
+  expect(await readAutoSave(page)).toEqual(clearedChapterTwo);
+
+  await page.getByRole("button", { name: "出撃メンバーと配置を確定して戦闘開始" }).tap();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page, { input: "tap" });
+  const chapterThreeState = await readAutoSave(page) as typeof initialState;
+  expect(chapterThreeState).toMatchObject({
+    saveVersion: 7,
+    chapterId: "chapter_03_map",
+    phase: "player",
+    turn: 1,
+    rngState: 0x23456789
+  });
+  expect(chapterThreeState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
+    faction: "player",
+    level: 7,
+    experience: 42,
+    stats: { strength: 11 },
+    currentHp: 13,
+    inventory: carriedUnit.inventory,
+    hasMoved: false,
+    hasActed: false
+  });
+  expect(chapterThreeState.units.some((unit) => unit.id === "unit_004")).toBe(false);
+  expect(chapterThreeState.reserveUnits.find((unit) => unit.id === "unit_004")).toMatchObject({
+    level: 4,
+    experience: 28,
+    stats: { strength: 9 },
+    currentHp: 14,
+    inventory: reserveUnit.inventory
+  });
+  expect(chapterThreeState.units.filter((unit) => unit.faction === "enemy").map((unit) => unit.id))
+    .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+
+  await page.reload();
+  const resumeChapterThree = page.getByTestId("campaign-title-screen").getByRole("button", { name: "つづきから" });
+  await expect(resumeChapterThree).toBeEnabled();
+  await resumeChapterThree.tap();
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  expect(await readAutoSave(page)).toEqual(chapterThreeState);
+});
