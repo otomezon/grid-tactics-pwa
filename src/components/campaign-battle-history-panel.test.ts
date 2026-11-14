@@ -45,6 +45,13 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("1体撃破");
     expect(html).toContain("20ダメージ");
     expect(html).toContain("最大5,000件");
+    expect(html).toContain('aria-label="章で絞り込み"');
+    expect(html).toContain('aria-label="記録種別で絞り込み"');
+    expect(html).toContain('aria-label="履歴内を検索"');
+    expect(html).toContain("すべての章");
+    expect(html).toContain("味方の行動・攻撃");
+    expect(html).toContain("1 / 1件を表示");
+    expect(html).toContain("撃破者別記録（表示中）");
   });
 
   it("renders an empty defeat summary", () => {
@@ -52,8 +59,10 @@ describe("CampaignBattleHistoryPanel", () => {
       entries: [],
       onClose: vi.fn()
     }));
-    expect(html).toContain("0件");
-    expect(html).toContain("確定した撃破記録はまだありません。");
+    expect(html).toContain("0 / 0件を表示");
+    expect(html).toContain("表示中の記録に確定した撃破はありません。");
+    expect(html).toContain("条件に一致する戦闘記録はありません。");
+    expect(html).toContain("絞り込みを解除");
   });
 
   it("renders chapter victory and defeat results in the persistent timeline", () => {

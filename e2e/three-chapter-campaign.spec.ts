@@ -618,7 +618,8 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await activate(battleHistoryToggle, input);
   const battleHistoryPanel = page.getByTestId("campaign-battle-history");
   await expect(battleHistoryPanel).toBeVisible();
-  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(12);
+  const battleLogEntries = battleHistoryPanel.getByTestId("campaign-battle-log-entry");
+  await expect(battleLogEntries).toHaveCount(12);
   await expect(battleHistoryPanel).toContainText("第1章 · 第1章・試作マップ");
   await expect(battleHistoryPanel).toContainText("第8ターン");
   await expect(battleHistoryPanel).toContainText("主人公 → 敵01");
@@ -633,6 +634,32 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toContainText("回復薬");
   await expect(battleHistoryPanel).toContainText("HP +7");
   const savedBeforeBattleHistory = await readAutoSave(page);
+  const chapterFilter = battleHistoryPanel.getByRole("combobox", { name: "章で絞り込み" });
+  const categoryFilter = battleHistoryPanel.getByRole("combobox", { name: "記録種別で絞り込み" });
+  const historySearch = battleHistoryPanel.getByRole("searchbox", { name: "履歴内を検索" });
+
+  await chapterFilter.selectOption("chapter_02_map");
+  const chapterTwoText = await battleLogEntries.allTextContents();
+  expect(chapterTwoText.length).toBeGreaterThan(0);
+  expect(chapterTwoText.every((entry) => entry.includes("第2章 · 第2章・試作マップ"))).toBe(true);
+
+  await chapterFilter.selectOption("all");
+  await categoryFilter.selectOption("enemy");
+  await expect(battleLogEntries.first()).toContainText("敵軍行動");
+  expect(await battleLogEntries.count()).toBeGreaterThan(0);
+
+  await categoryFilter.selectOption("all");
+  await historySearch.fill("HP +7");
+  await expect(battleLogEntries).toHaveCount(1);
+  await expect(battleLogEntries.first()).toContainText("HP +7");
+  await expect(battleHistoryPanel).toContainText("1 / 12件を表示");
+
+  await battleHistoryPanel.getByRole("button", { name: "絞り込みを解除" }).click();
+  await expect(battleLogEntries).toHaveCount(12);
+  await expect(battleHistoryPanel.getByRole("button", { name: "絞り込みを解除" })).toBeDisabled();
+  await expectMobileViewport(page, input);
+  expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
+
   await activate(battleHistoryPanel.getByRole("button", { name: "閉じる" }), input);
   await expect(battleHistoryPanel).toHaveCount(0);
   await expect(battleHistoryToggle).toBeFocused();

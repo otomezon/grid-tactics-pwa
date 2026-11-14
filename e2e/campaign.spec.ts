@@ -505,7 +505,7 @@ test.describe("browser campaign flow", () => {
     const guide = page.getByRole("region", { name: "操作ガイド" });
     await expect(guide).toBeVisible();
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    const stepHeading = guide.getByRole("heading", { level: 3 });
+    const stepHeading = guide.locator(".operation-guide-content").getByRole("heading", { level: 3 });
     await expect(stepHeading).toHaveText("出撃準備を整える");
 
     const steps = [
