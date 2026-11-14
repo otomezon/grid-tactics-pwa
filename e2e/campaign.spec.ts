@@ -2800,7 +2800,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       turn: number;
       phase: string;
       rngState: number;
-      units: Array<{ id: string; faction: string; position: { x: number; y: number } }>;
+      units: Array<{ id: string; faction: string; currentHp: number; position: { x: number; y: number } }>;
       reserveUnits: unknown[];
       campaignBattleLog: Array<Record<string, unknown>>;
     };
