@@ -60,8 +60,30 @@ describe("chapter content registry", () => {
       event.trigger.type === "event-choice" &&
       ["chapter-02-door-markings", "chapter-02-door-surroundings"].includes(event.id)
     )).toHaveLength(2);
+    expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-scout-recruitment-choice")?.action)
+      .toMatchObject({
+        type: "show-choice",
+        campaignChoiceKey: "chapter-02.scout-recruitment",
+        choices: [
+          { id: "join-scout", label: "仲間に誘う" },
+          { id: "decline-scout", label: "今回は見送る" }
+        ]
+      });
+    expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-scout-recruitment-join")?.action)
+      .toMatchObject({ type: "recruit-unit", unit: { id: "recruit_scout", name: "斥候ミナ", classId: "archer" } });
+    expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-scout-recruitment-decline")?.action)
+      .toMatchObject({ type: "show-message" });
+    expect(CHAPTER_03_MAP.playerDeployment.find((deployment) => deployment.unitId === "recruit_scout"))
+      .toMatchObject({ x: 7, y: 8, optional: true });
+    expect(CHAPTER_03_MAP.events?.find((event) => event.id === "chapter-03-scout-joins-expedition"))
+      .toMatchObject({
+        condition: { type: "campaign-choice", key: "chapter-02.scout-recruitment", choiceId: "join-scout" },
+        action: { type: "show-message" }
+      });
     expect(CHAPTER_03_MAP.events?.filter((event) => event.condition?.key === "chapter-02.village-route"))
       .toHaveLength(2);
+    expect(CHAPTER_03_MAP.events?.filter((event) => event.condition?.key === "chapter-02.scout-recruitment"))
+      .toHaveLength(1);
     expect(isValidCampaignChoiceLinks()).toBe(true);
   });
 

@@ -377,6 +377,58 @@ describe("resolveMapEvents", () => {
     expect(INITIAL_GAME_STATE).toEqual(original);
   });
 
+  it("recruits only after the player selects the recruitment branch", () => {
+    const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
+    const recruit = {
+      ...campaignData,
+      id: "choice_recruit",
+      name: "選択加入候補",
+      stats: { ...campaignData.stats },
+      growthRates: { ...campaignData.growthRates },
+      usableWeaponTypes: [...campaignData.usableWeaponTypes],
+      inventory: [...campaignData.inventory]
+    };
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "recruitment-choice",
+        trigger: { type: "unit-interacts", x: 9, y: 8, label: "加入地点" },
+        action: {
+          type: "show-choice",
+          text: "同行者を誘いますか？",
+          choices: [
+            { id: "join", label: "誘う" },
+            { id: "decline", label: "見送る" }
+          ]
+        }
+      }, {
+        id: "recruitment-join",
+        trigger: { type: "event-choice", eventId: "recruitment-choice", choiceId: "join" },
+        action: { type: "recruit-unit", unit: recruit, text: "選択加入候補が仲間になりました。" }
+      }]
+    };
+    const opened = resolveMapEvents(INITIAL_GAME_STATE, map, {
+      type: "unit-interacts", x: 9, y: 8, label: "加入地点", unitId: "unit_004"
+    });
+    expect(opened.nextState.reserveUnits).toEqual([]);
+    expect(opened.messages.map((message) => message.id)).toEqual(["recruitment-choice"]);
+
+    const joined = chooseMapEventOption(opened.nextState, map, "recruitment-choice", "join");
+    expect(joined.nextState.reserveUnits.map((unit) => unit.id)).toEqual([recruit.id]);
+    expect(joined.nextState.firedMapEventIds).toContain("recruitment-join");
+    expect(joined.messages.map((message) => message.id)).toEqual(["recruitment-join"]);
+    expect(isValidGameStateSnapshot(joined.nextState, map)).toBe(true);
+
+    const declined = chooseMapEventOption(opened.nextState, map, "recruitment-choice", "decline");
+    expect(declined.nextState.reserveUnits).toEqual([]);
+    expect(declined.nextState.firedMapEventIds).not.toContain("recruitment-join");
+    expect(declined.nextState.mapEventChoices).toContainEqual({
+      eventId: "recruitment-choice",
+      choiceId: "decline"
+    });
+  });
+
   it("rejects a recruited ID already present in the active roster without committing the event", () => {
     const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
     const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
@@ -610,6 +662,75 @@ describe("resolveMapEvents", () => {
     expect(surroundings.messages[0]?.text).toContain("通行条件は未設定");
     expect(surroundings.nextState.firedMapEventIds).not.toContain("chapter-02-door-markings");
     expect(CHAPTER_02_MAP.terrain).toEqual(originalTerrain);
+  });
+
+  it("persists the optional scout decision independently of the village route and recruits only on acceptance", () => {
+    const villageOpened = resolveMapEvents(CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP, {
+      type: "unit-interacts",
+      x: 9,
+      y: 8,
+      label: "試作村",
+      unitId: "unit_003"
+    });
+    const routeChoice = chooseMapEventOption(
+      villageOpened.nextState, CHAPTER_02_MAP, "chapter-02-village-route-choice", "forest-trail"
+    );
+    const priorVillageChoice = routeChoice.nextState.campaignChoices[0]!;
+    const opened = resolveMapEvents(routeChoice.nextState, CHAPTER_02_MAP, {
+      type: "unit-interacts",
+      x: 5,
+      y: 7,
+      label: "旅の斥候",
+      unitId: "unit_003"
+    });
+    expect(opened.messages[0]).toMatchObject({
+      id: "chapter-02-scout-recruitment-choice",
+      choices: [
+        { id: "join-scout", label: "仲間に誘う" },
+        { id: "decline-scout", label: "今回は見送る" }
+      ]
+    });
+
+    const joined = chooseMapEventOption(
+      opened.nextState, CHAPTER_02_MAP, "chapter-02-scout-recruitment-choice", "join-scout"
+    );
+    expect(joined.nextState.campaignChoices).toContainEqual(priorVillageChoice);
+    expect(joined.nextState.campaignChoices).toContainEqual({
+      key: "chapter-02.scout-recruitment",
+      choiceId: "join-scout",
+      sourceChapterId: "chapter_02_map",
+      sourceEventId: "chapter-02-scout-recruitment-choice"
+    });
+    expect(joined.nextState.reserveUnits.find((unit) => unit.id === "recruit_scout"))
+      .toMatchObject({ name: "斥候ミナ", classId: "archer" });
+    expect(joined.nextState.units.some((unit) => unit.id === "recruit_scout")).toBe(false);
+    expect(joined.nextState.firedMapEventIds).toContain("chapter-02-scout-recruitment-join");
+
+    const chapterThreeAfterJoin = resolveMapEvents({
+      ...CHAPTER_03_INITIAL_STATE,
+      campaignChoices: joined.nextState.campaignChoices
+    }, CHAPTER_03_MAP, { type: "stage-start" });
+    expect(chapterThreeAfterJoin.messages.map((message) => message.id))
+      .toContain("chapter-03-scout-joins-expedition");
+
+    const declined = chooseMapEventOption(
+      opened.nextState, CHAPTER_02_MAP, "chapter-02-scout-recruitment-choice", "decline-scout"
+    );
+    expect(declined.nextState.reserveUnits).toEqual([]);
+    expect(declined.nextState.campaignChoices).toContainEqual({
+      key: "chapter-02.scout-recruitment",
+      choiceId: "decline-scout",
+      sourceChapterId: "chapter_02_map",
+      sourceEventId: "chapter-02-scout-recruitment-choice"
+    });
+    expect(declined.nextState.firedMapEventIds).toContain("chapter-02-scout-recruitment-decline");
+
+    const chapterThreeAfterDecline = resolveMapEvents({
+      ...CHAPTER_03_INITIAL_STATE,
+      campaignChoices: declined.nextState.campaignChoices
+    }, CHAPTER_03_MAP, { type: "stage-start" });
+    expect(chapterThreeAfterDecline.messages.map((message) => message.id))
+      .not.toContain("chapter-03-scout-joins-expedition");
   });
 
   it("uses the Chapter 2 village decision in Chapter 3 and grants the chest potion once", () => {

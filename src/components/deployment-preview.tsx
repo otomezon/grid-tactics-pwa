@@ -48,7 +48,7 @@ export function DeploymentPreview({
   }
   const deploymentSlots = new Map(map.playerDeployment.map((slot, index) => [
     positionKey(slot.x, slot.y),
-    { ordinal: index + 1, unitId: slot.unitId }
+    { ordinal: index + 1, unitId: slot.unitId, optional: slot.optional === true }
   ] as const));
   const occupiedCount = assignedByPosition.size;
   const firstSlot = map.playerDeployment[0];
@@ -101,12 +101,13 @@ export function DeploymentPreview({
               data-testid="deployment-preview-tile"
               data-position={key}
               data-slot={slot ? "true" : "false"}
+              data-optional={slot?.optional ? "true" : "false"}
             >
               {slot && assigned ? (
                 <button
                   className={"deployment-preview-unit" + (detailUnitId === assigned.id || activeInspectedPositionKey === key ? " is-inspected" : "")}
                   type="button"
-                  aria-label={assigned.name + "、" + label + "に配置済み。詳細を表示"}
+                  aria-label={assigned.name + "、" + label + "に配置済み" + (slot.optional ? "（任意枠）" : "") + "。詳細を表示"}
                   aria-pressed={activeInspectedPositionKey === key}
                   disabled={disabled}
                   onClick={() => {
@@ -123,13 +124,14 @@ export function DeploymentPreview({
                 <button
                   className={"deployment-preview-empty-slot" + (activeInspectedPositionKey === key ? " is-inspected" : "")}
                   type="button"
-                  aria-label={"空き出撃位置 " + slot.ordinal + "、" + label + "の地形を確認"}
+                  aria-label={(slot.optional ? "任意の空き出撃位置 " : "空き出撃位置 ") + slot.ordinal + "、" + label + "の地形を確認"}
                   aria-pressed={activeInspectedPositionKey === key}
                   disabled={disabled}
                   onClick={() => setInspectedPositionKey(key)}
                   data-testid="deployment-preview-empty-slot"
                 >
                   <span aria-hidden="true">＋</span>
+                  {slot.optional && <span className="deployment-preview-optional-label">任意枠</span>}
                 </button>
               ) : (
                 <span className="deployment-preview-terrain-symbol" aria-hidden="true">
@@ -173,6 +175,7 @@ export function DeploymentPreview({
       <div className="deployment-preview-legend" aria-label="配置プレビューの凡例">
         <span><i className="deployment-preview-legend-ally" />出撃予定</span>
         <span><i className="deployment-preview-legend-empty" />空き出撃位置</span>
+        {map.playerDeployment.some((slot) => slot.optional) && <span>任意枠</span>}
         <span><i className="deployment-preview-legend-terrain" />地形</span>
       </div>
       <p className="deployment-preview-note">表示は現在の編成・出撃位置のプレビューです。配置確定まではゲーム状態とセーブを変更しません。</p>

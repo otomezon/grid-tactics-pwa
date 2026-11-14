@@ -48,6 +48,36 @@ describe("isValidGameMapDefinition", () => {
     expect(isValidGameMapDefinition(enemyTarget)).toBe(false);
   });
 
+  it("allows optional player deployment slots but rejects invalid or optional enemy slots", () => {
+    const withOptionalPlayer = {
+      ...CHAPTER_01_MAP,
+      playerDeployment: [
+        ...CHAPTER_01_MAP.playerDeployment,
+        { unitId: "optional_recruit", x: 9, y: 9, optional: true }
+      ]
+    };
+    expect(isValidGameMapDefinition(withOptionalPlayer)).toBe(true);
+
+    const invalidOptional = {
+      ...withOptionalPlayer,
+      playerDeployment: withOptionalPlayer.playerDeployment.map((slot, index) =>
+        index === withOptionalPlayer.playerDeployment.length - 1
+          ? { ...slot, optional: "yes" }
+          : slot
+      )
+    };
+    expect(isValidGameMapDefinition(invalidOptional)).toBe(false);
+
+    const optionalEnemy = {
+      ...CHAPTER_01_MAP,
+      enemyDeployment: [
+        ...CHAPTER_01_MAP.enemyDeployment,
+        { unitId: "optional_enemy", x: 9, y: 9, optional: true }
+      ]
+    };
+    expect(isValidGameMapDefinition(optionalEnemy)).toBe(false);
+  });
+
   it("validates map-local one-shot event triggers and message actions", () => {
     const valid: GameMapDefinition = {
       ...CHAPTER_01_MAP,
@@ -315,6 +345,39 @@ describe("isValidGameMapDefinition", () => {
     })).toBe(false);
   });
 
+
+  it("allows recruitment behind a choice opened by a map interaction", () => {
+    const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
+    const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
+    const recruit = { ...campaignData, id: "choice_recruit", name: "選択加入候補" };
+    const valid: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "recruitment-choice",
+        trigger: { type: "unit-interacts", x: 9, y: 8, label: "加入地点" },
+        action: {
+          type: "show-choice",
+          text: "同行者を誘いますか？",
+          choices: [
+            { id: "join", label: "誘う" },
+            { id: "decline", label: "見送る" }
+          ]
+        }
+      }, {
+        id: "recruitment-choice-branch",
+        trigger: { type: "event-choice", eventId: "recruitment-choice", choiceId: "join" },
+        action: { type: "recruit-unit", unit: recruit, text: "仲間になりました。" }
+      }]
+    };
+    expect(isValidGameMapDefinition(valid)).toBe(true);
+
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: valid.events!.map((event) => event.id === "recruitment-choice"
+        ? { ...event, trigger: { type: "stage-start" } }
+        : event)
+    })).toBe(false);
+  });
 
   it("validates choice definitions and event-choice branch references", () => {
     const valid: GameMapDefinition = {

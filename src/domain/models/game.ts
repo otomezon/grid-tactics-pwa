@@ -65,6 +65,8 @@ export interface MapDeployment {
   unitId: string;
   x: number;
   y: number;
+  /** Optional player candidate slot; omitted when the campaign has not recruited this unit. */
+  optional?: boolean;
 }
 
 export interface MapObjective {

@@ -633,3 +633,118 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryToggle).toBeFocused();
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
 });
+
+test("recruits the optional Chapter 2 scout and deploys her in Chapter 3", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const input: InteractionInput = testInfo.project.name === "webkit-mobile" ? "tap" : "click";
+  if (input === "tap") await page.setViewportSize({ width: 320, height: 720 });
+
+  await startCampaign(page, input);
+  const initialChapterOne = await readAutoSave(page) as SaveSnapshot;
+  const clearedChapterOne: SaveSnapshot = {
+    ...initialChapterOne,
+    units: initialChapterOne.units.filter((unit) => unit.faction === "player")
+  };
+  await writeAutoSave(page, withTerminalVictoryResult(clearedChapterOne, "defeat_boss"));
+  await page.reload();
+  await continueCampaign(page, input);
+  await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+
+  await activate(page.getByRole("button", { name: "第2章・試作マップを開始" }), input);
+  await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+  await expect(page.locator(".deployment-heading")).toContainText("4人出撃 / 0人控え");
+  await activate(page.getByRole("button", { name: deploymentStartButton }), input);
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  await acknowledgePendingMapEvents(page, { input });
+
+  await activate(page.locator('[data-map-position="5,8"]'), input);
+  const scoutTile = page.locator('[data-map-position="5,7"]');
+  await activate(scoutTile, input);
+  if (input === "tap") await activate(scoutTile, input);
+  const scoutPanel = page.getByTestId("map-interaction-panel");
+  await expect(scoutPanel).toContainText("旅の斥候");
+  await activate(scoutPanel.getByRole("button", { name: "調べる" }), input);
+
+  const scoutDialogue = page.getByTestId("map-event-dialog");
+  await expect(scoutDialogue).toHaveAttribute("data-event-id", "chapter-02-scout-recruitment-choice");
+  await expect(scoutDialogue.getByTestId("map-event-choice")).toHaveCount(2);
+  await activate(
+    scoutDialogue.getByTestId("map-event-choice").filter({ hasText: "仲間に誘う" }),
+    input
+  );
+  await expect(scoutDialogue).toHaveAttribute("data-event-id", "chapter-02-scout-recruitment-join");
+  await expect(scoutDialogue).toContainText("斥候ミナが同行することになりました");
+  await acknowledgePendingMapEvents(page, { input });
+
+  const chapterTwoWithRecruit = await readAutoSave(page) as SaveSnapshot;
+  expect(chapterTwoWithRecruit.campaignChoices).toContainEqual({
+    key: "chapter-02.scout-recruitment",
+    choiceId: "join-scout",
+    sourceChapterId: "chapter_02_map",
+    sourceEventId: "chapter-02-scout-recruitment-choice"
+  });
+  expect(chapterTwoWithRecruit.firedMapEventIds).toContain("chapter-02-scout-recruitment-join");
+  expect(chapterTwoWithRecruit.units.some((unit) => unit.id === "recruit_scout")).toBe(false);
+  expect(chapterTwoWithRecruit.reserveUnits.find((unit) => unit.id === "recruit_scout"))
+    .toMatchObject({ name: "斥候ミナ", classId: "archer", currentHp: 20 });
+
+  const clearedChapterTwo: SaveSnapshot = {
+    ...chapterTwoWithRecruit,
+    units: chapterTwoWithRecruit.units.filter((unit) => unit.faction === "player")
+  };
+  await writeAutoSave(page, withTerminalVictoryResult(clearedChapterTwo, "defeat_all"));
+  await page.reload();
+  await continueCampaign(page, input);
+  await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
+
+  await activate(page.getByRole("button", { name: "第3章・試作マップを開始" }), input);
+  await expect(page.getByRole("heading", { name: "出撃準備" })).toBeVisible();
+  await expect(page.locator(".deployment-heading")).toContainText("4人出撃 / 1人控え");
+  const clearedChapterTwoWithResult = withTerminalVictoryResult(clearedChapterTwo, "defeat_all");
+  expect(await readAutoSave(page)).toEqual(clearedChapterTwoWithResult);
+
+  const scoutRow = page.locator(".deployment-unit").filter({ hasText: "斥候ミナ" });
+  const scoutCheckbox = scoutRow.locator('input[type="checkbox"]');
+  await expect(scoutRow).toBeVisible();
+  await expect(scoutCheckbox).not.toBeChecked();
+  await activate(scoutCheckbox, input);
+  await expect(page.locator(".deployment-heading")).toContainText("5人出撃 / 0人控え");
+  await expect(page.getByLabel("斥候ミナの出撃位置")).toHaveValue("7,8");
+
+  await activate(page.getByRole("button", { name: deploymentStartButton }), input);
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  const scoutArrival = page.getByTestId("map-event-dialog");
+  await expect(scoutArrival).toHaveAttribute("data-event-id", "chapter-03-scout-joins-expedition");
+  await expect(scoutArrival).toContainText("同行を認めてくれてありがとう");
+  await acknowledgePendingMapEvents(page, { input });
+
+  const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
+  expect(chapterThreeState).toMatchObject({
+    saveVersion: 10,
+    chapterId: "chapter_03_map",
+    phase: "player",
+    turn: 1
+  });
+  expect(chapterThreeState.units.find((unit) => unit.id === "recruit_scout")).toMatchObject({
+    faction: "player",
+    name: "斥候ミナ",
+    position: { x: 7, y: 8 },
+    hasMoved: false,
+    hasActed: false
+  });
+  expect(chapterThreeState.reserveUnits.some((unit) => unit.id === "recruit_scout")).toBe(false);
+  expect(chapterThreeState.campaignChoices).toContainEqual({
+    key: "chapter-02.scout-recruitment",
+    choiceId: "join-scout",
+    sourceChapterId: "chapter_02_map",
+    sourceEventId: "chapter-02-scout-recruitment-choice"
+  });
+  expect(chapterThreeState.firedMapEventIds).toContain("chapter-03-scout-joins-expedition");
+
+  await page.reload();
+  await continueCampaign(page, input);
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  expect(await readAutoSave(page)).toEqual(chapterThreeState);
+  await expect(page.locator(".map-grid").getByRole("button", { name: /斥候ミナ/ })).toBeVisible();
+  await expectMobileViewport(page, input);
+});

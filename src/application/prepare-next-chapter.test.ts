@@ -250,6 +250,46 @@ describe("prepareNextChapter", () => {
     })).toThrow(/player-phase turn 1/);
   });
 
+  it("skips an unrecruited optional player deployment without blocking the chapter transition", () => {
+    const next = nextChapterFixture();
+    const nextMap: GameMapDefinition = {
+      ...next.map,
+      playerDeployment: [
+        ...next.map.playerDeployment,
+        { unitId: "optional_scout", x: 9, y: 9, optional: true }
+      ]
+    };
+    const result = prepareNextChapter({
+      previousState: clearedState(),
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap,
+      currentHpPolicy: "preserve"
+    });
+
+    expect(result.units.filter((unit) => unit.faction === "player")).toHaveLength(4);
+    expect(result.reserveUnits).toHaveLength(0);
+    expect(isValidGameStateSnapshot(result, nextMap)).toBe(true);
+  });
+
+  it("still rejects a missing required player deployment", () => {
+    const next = nextChapterFixture();
+    const nextMap: GameMapDefinition = {
+      ...next.map,
+      playerDeployment: [
+        ...next.map.playerDeployment,
+        { unitId: "required_scout", x: 9, y: 9 }
+      ]
+    };
+    expect(() => prepareNextChapter({
+      previousState: clearedState(),
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap,
+      currentHpPolicy: "preserve"
+    })).toThrow(/has no matching player unit/);
+  });
+
   it("carries an event-recruited reserve into the next chapter and allows deployment", () => {
     const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
     const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;
@@ -261,14 +301,28 @@ describe("prepareNextChapter", () => {
     const previousMap: GameMapDefinition = {
       ...CHAPTER_01_MAP,
       events: [{
-        id: "unit-recruitment",
+        id: "unit-recruitment-choice",
         trigger: { type: "unit-interacts", x: 9, y: 8, label: "加入地点" },
+        action: {
+          type: "show-choice",
+          text: "同行者を誘いますか？",
+          choices: [
+            { id: "join", label: "誘う" },
+            { id: "decline", label: "見送る" }
+          ]
+        }
+      }, {
+        id: "unit-recruitment",
+        trigger: { type: "event-choice", eventId: "unit-recruitment-choice", choiceId: "join" },
         action: { type: "recruit-unit", unit: recruit, text: "加入しました。" }
       }]
     };
-    const joined = resolveMapEvents(INITIAL_GAME_STATE, previousMap, {
+    const opened = resolveMapEvents(INITIAL_GAME_STATE, previousMap, {
       type: "unit-interacts", x: 9, y: 8, label: "加入地点", unitId: "unit_004"
-    }).nextState;
+    });
+    const joined = chooseMapEventOption(
+      opened.nextState, previousMap, "unit-recruitment-choice", "join"
+    ).nextState;
     const afterVictory: GameStateSnapshot = {
       ...joined,
       units: joined.units.filter((unit) => unit.faction === "player")
@@ -276,7 +330,7 @@ describe("prepareNextChapter", () => {
     const next = nextChapterFixture();
     const nextMap: GameMapDefinition = {
       ...next.map,
-      playerDeployment: [...next.map.playerDeployment, { unitId: recruit.id, x: 4, y: 9 }]
+      playerDeployment: [...next.map.playerDeployment, { unitId: recruit.id, x: 4, y: 9, optional: true }]
     };
     const carried = prepareNextChapter({
       previousState: afterVictory,

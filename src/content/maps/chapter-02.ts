@@ -1,5 +1,6 @@
 import type { GameMapDefinition, GameStateSnapshot } from "../../domain/models/game";
 import { HEALING_POTION_ID } from "../items";
+import { CHAPTER_02_SCOUT_RECRUIT } from "../campaign-recruits";
 import { CHAPTER_01_MAP, createMainCharacterDefeatEvent, INITIAL_GAME_STATE, MAIN_CHARACTER_UNIT_ID } from "./chapter-01";
 
 const terrain = CHAPTER_01_MAP.terrain.map((row) => [...row]);
@@ -78,6 +79,53 @@ export const CHAPTER_02_MAP: GameMapDefinition = {
         type: "show-message",
         speaker: "村の案内人",
         text: "東の峠道は見通しがよい一方、敵の姿を見かけることがあるそうです。"
+      }
+    },
+    {
+      id: "chapter-02-scout-recruitment-choice",
+      trigger: {
+        type: "unit-interacts",
+        x: 5,
+        y: 7,
+        label: "旅の斥候",
+        description: "斥候ミナが同行者を探しています。話を聞いたあと、加入するかどうか選べます。"
+      },
+      action: {
+        type: "show-choice",
+        speaker: "斥候ミナ",
+        text: "道案内なら手伝えるよ。よかったら一緒に旅をさせてくれないかな？",
+        campaignChoiceKey: "chapter-02.scout-recruitment",
+        choices: [
+          { id: "join-scout", label: "仲間に誘う" },
+          { id: "decline-scout", label: "今回は見送る" }
+        ]
+      }
+    },
+    {
+      id: "chapter-02-scout-recruitment-join",
+      trigger: {
+        type: "event-choice",
+        eventId: "chapter-02-scout-recruitment-choice",
+        choiceId: "join-scout"
+      },
+      action: {
+        type: "recruit-unit",
+        speaker: "斥候ミナ",
+        text: "斥候ミナが同行することになりました。今の戦闘には参加せず、第3章の出撃準備で選べます。",
+        unit: CHAPTER_02_SCOUT_RECRUIT
+      }
+    },
+    {
+      id: "chapter-02-scout-recruitment-decline",
+      trigger: {
+        type: "event-choice",
+        eventId: "chapter-02-scout-recruitment-choice",
+        choiceId: "decline-scout"
+      },
+      action: {
+        type: "show-message",
+        speaker: "斥候ミナ",
+        text: "分かった。気が変わったらまた声をかけてね。"
       }
     },
     {
