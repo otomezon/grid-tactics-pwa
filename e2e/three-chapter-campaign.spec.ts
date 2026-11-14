@@ -463,12 +463,12 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expectMobileViewport(page, input);
   expect(await readAutoSave(page)).toEqual(historyState);
 
-  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 5件" });
+  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 7件" });
   await expect(battleHistoryToggle).toBeVisible();
   await activate(battleHistoryToggle, input);
   const battleHistoryPanel = page.getByTestId("campaign-battle-history");
   await expect(battleHistoryPanel).toBeVisible();
-  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(5);
+  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(7);
   await expect(battleHistoryPanel).toContainText("第1章 · 第1章・試作マップ");
   await expect(battleHistoryPanel).toContainText("第8ターン");
   await expect(battleHistoryPanel).toContainText("主人公 → 敵01");
@@ -476,6 +476,8 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toContainText("1体撃破");
   await expect(battleHistoryPanel).toContainText("ステージクリア · 勝利条件達成");
   await expect(battleHistoryPanel).toContainText("第2章 · 第2章・試作マップ");
+  await expect(battleHistoryPanel).toContainText("マップ調査");
+  await expect(battleHistoryPanel).toContainText("試作村");
   const savedBeforeBattleHistory = await readAutoSave(page);
   await activate(battleHistoryPanel.getByRole("button", { name: "閉じる" }), input);
   await expect(battleHistoryPanel).toHaveCount(0);
