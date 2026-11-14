@@ -2828,6 +2828,48 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   gap: 10px;
 }
 .campaign-battle-history-header h2 { margin: 0; }
+.campaign-battle-history-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.campaign-battle-history-tabs button {
+  min-width: 112px;
+  min-height: 42px;
+}
+.campaign-battle-history-tabs button[aria-pressed="true"] {
+  border-color: rgba(131, 189, 187, .8);
+  background: rgba(85, 137, 137, .28);
+  color: #e4f5f1;
+  font-weight: 800;
+}
+.campaign-unit-record-archive {
+  display: grid;
+  gap: 11px;
+  min-width: 0;
+}
+.campaign-unit-record-archive-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.campaign-unit-record-archive-header h3 {
+  margin: 0;
+  color: #e8f4f0;
+  font-size: .9rem;
+}
+.campaign-unit-record-archive-header p { margin: 3px 0 0; }
+.campaign-unit-record-archive-filters {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto;
+}
+.campaign-unit-record-archive-search { grid-column: auto; }
+.campaign-unit-record-archive-card h4 {
+  margin: 0;
+  color: #e8f4f0;
+  font-size: .84rem;
+}
 .campaign-battle-history-note,
 .campaign-battle-history-entry-heading,
 .campaign-battle-history-footnote {
