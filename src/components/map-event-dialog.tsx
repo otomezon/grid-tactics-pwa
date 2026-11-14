@@ -21,8 +21,13 @@ export function MapEventDialog({
   const hasChoices = (event.choices?.length ?? 0) > 0;
 
   useEffect(() => {
-    if (hasChoices) choiceButtonRefs.current[0]?.focus();
-    else continueButtonRef.current?.focus();
+    // Defer focus until the click that opened the dialog has fully completed.
+    // Otherwise the browser can restore focus to the launch button after this effect.
+    const frame = window.requestAnimationFrame(() => {
+      if (hasChoices) choiceButtonRefs.current[0]?.focus();
+      else continueButtonRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [event.id, hasChoices]);
 
   function focusableActions(): HTMLButtonElement[] {
