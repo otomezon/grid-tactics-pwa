@@ -2934,3 +2934,25 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .pwa-update-prompt { align-items: stretch; flex-direction: column; gap: 10px; padding: 12px; }
   .pwa-update-prompt-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
 }
+
+
+/* User-initiated request for browser-managed persistent origin storage. */
+.campaign-storage-durability {
+  display: grid; gap: 8px; margin: 12px 0 16px; padding: 12px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: rgba(12, 24, 34, .36);
+}
+.campaign-storage-durability-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 6px 10px;
+}
+.campaign-storage-durability-heading h3 { margin: 0; font-size: .84rem; }
+.campaign-storage-durability-heading span { color: #c6d8de; font-size: .7rem; font-weight: 800; }
+.campaign-storage-durability > p { margin: 0; color: var(--text-muted); font-size: .72rem; line-height: 1.55; }
+.campaign-storage-durability .campaign-secondary-button { min-height: 38px; justify-self: start; }
+.campaign-storage-durability-feedback { color: #d4e8df !important; }
+.campaign-storage-durability-note { opacity: .9; }
+@media (max-width: 420px) {
+  .campaign-storage-durability { padding: 10px; }
+  .campaign-storage-durability-heading { align-items: flex-start; }
+}

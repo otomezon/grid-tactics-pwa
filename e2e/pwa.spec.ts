@@ -211,6 +211,62 @@ test.describe("production PWA shell", () => {
     await expect(page.getByTestId("pwa-install-help")).toBeVisible();
   });
 
+  test("requests persistent browser storage only after explicit user action", async ({ page }) => {
+    await page.addInitScript(() => {
+      const testWindow = window as Window & { __storagePersistRequests?: number };
+      testWindow.__storagePersistRequests = 0;
+      Object.defineProperty(navigator, "storage", {
+        configurable: true,
+        value: {
+          persisted: async () => false,
+          persist: async () => {
+            testWindow.__storagePersistRequests = (testWindow.__storagePersistRequests ?? 0) + 1;
+            return true;
+          }
+        }
+      });
+    });
+    await page.goto("/");
+    const panel = page.getByTestId("storage-durability-panel");
+    const status = panel.getByTestId("storage-durability-status");
+    await expect(status).toHaveText("未許可");
+    expect(await page.evaluate(
+      () => (window as Window & { __storagePersistRequests?: number }).__storagePersistRequests
+    )).toBe(0);
+    await panel.getByTestId("request-storage-durability").click();
+    await expect(status).toHaveText("許可済み");
+    await expect(panel.getByRole("status")).toContainText("永続ストレージが許可されました");
+    expect(await page.evaluate(
+      () => (window as Window & { __storagePersistRequests?: number }).__storagePersistRequests
+    )).toBe(1);
+    await expect(panel).toContainText("端末故障");
+  });
+
+  test("explains denied and unsupported persistent-storage requests", async ({ page, context }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "storage", {
+        configurable: true,
+        value: { persisted: async () => false, persist: async () => false }
+      });
+    });
+    await page.goto("/");
+    const deniedPanel = page.getByTestId("storage-durability-panel");
+    await expect(deniedPanel.getByTestId("storage-durability-status")).toHaveText("未許可");
+    await deniedPanel.getByTestId("request-storage-durability").click();
+    await expect(deniedPanel.getByRole("status")).toContainText("許可しませんでした");
+
+    const unsupportedPage = await context.newPage();
+    await unsupportedPage.addInitScript(() => {
+      Object.defineProperty(navigator, "storage", { configurable: true, value: undefined });
+    });
+    await unsupportedPage.goto("/");
+    const unsupportedPanel = unsupportedPage.getByTestId("storage-durability-panel");
+    await expect(unsupportedPanel.getByTestId("storage-durability-status")).toHaveText("非対応");
+    await expect(unsupportedPanel.getByTestId("request-storage-durability")).toHaveCount(0);
+    await expect(unsupportedPanel).toContainText("JSON書き出しやローカルバックアップ");
+    await unsupportedPage.close();
+  });
+
   test("reopens the cached application shell after going offline", async ({ page, context }) => {
     await page.goto("/");
     await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
