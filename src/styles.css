@@ -2898,3 +2898,39 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .campaign-battle-history-entry-heading { font-size: .64rem; }
   .campaign-battle-strikes { font-size: .66rem; }
 }
+
+.pwa-update-prompt {
+  position: fixed;
+  z-index: 1000;
+  inset-inline: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(calc(100% - 24px), 760px);
+  margin-inline: auto;
+  padding: 14px 16px;
+  border: 1px solid rgba(131, 189, 187, .65);
+  border-radius: 14px;
+  color: #edf3f7;
+  background: linear-gradient(165deg, rgba(31, 47, 62, .99), rgba(18, 31, 43, .99));
+  box-shadow: 0 16px 42px rgba(0, 0, 0, .46);
+}
+.pwa-update-prompt-copy { min-width: 0; }
+.pwa-update-prompt-copy .eyebrow { margin-bottom: 4px; }
+.pwa-update-prompt-copy h2 { margin: 0 0 5px; font-size: .95rem; }
+.pwa-update-prompt-copy p:not(.eyebrow) {
+  margin: 0;
+  color: #c5d4de;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+.pwa-update-prompt-copy .pwa-update-error { margin-top: 5px; color: #ffc0b1; }
+.pwa-update-prompt-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.pwa-update-prompt-actions button { min-height: 40px; padding-inline: 12px; }
+.pwa-update-prompt-actions button:disabled { cursor: not-allowed; opacity: .48; }
+@media (max-width: 520px) {
+  .pwa-update-prompt { align-items: stretch; flex-direction: column; gap: 10px; padding: 12px; }
+  .pwa-update-prompt-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+}
