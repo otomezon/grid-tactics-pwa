@@ -23,7 +23,7 @@ export default defineConfig({
     },
     {
       name: "webkit-mobile",
-      testMatch: ["**/mobile-webkit.spec.ts", "**/three-chapter-campaign.spec.ts"],
+      testMatch: ["**/mobile-webkit.spec.ts", "**/pwa-mobile-webkit.spec.ts", "**/three-chapter-campaign.spec.ts"],
       use: { ...devices["iPhone 13"] }
     }
   ],
