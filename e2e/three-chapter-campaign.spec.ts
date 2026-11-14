@@ -527,10 +527,55 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   expect(await readAutoSave(page)).toEqual(chapterThreeState);
 
+  // The Chapter 2 chest reward must remain a usable inventory item after the
+  // Chapter 3 transition, not merely survive as an opaque inventory ID.
+  await activate(page.locator(".map-grid").getByRole("button", { name: /主人公/ }), input);
+  const healingPotionRow = page.locator(".inventory-items li").filter({ hasText: "回復薬" });
+  const useHealingPotion = page.getByRole("button", { name: "回復薬を使用" });
+  await expect(healingPotionRow).toContainText("所持数：2個");
+  await expect(useHealingPotion).toBeEnabled();
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("HPを7回復");
+    expect(dialog.message()).toContain("行動を消費");
+    await dialog.accept();
+  });
+  await activate(useHealingPotion, input);
+  await expect(useHealingPotion).toBeDisabled();
+  await expect(page.locator(".unit-details")).toContainText("行動済み");
+  await expect(page.locator(".unit-details")).toContainText("20 / 20");
+  await expect(healingPotionRow).toContainText("所持数：1個");
+
+  const healedChapterThreeState = await readAutoSave(page) as SaveSnapshot;
+  const healedProtagonist = healedChapterThreeState.units.find((unit) => unit.id === "unit_001");
+  expect(healedProtagonist).toMatchObject({
+    currentHp: 20,
+    hasMoved: false,
+    hasActed: true,
+    inventory: carriedUnit.inventory
+  });
+  expect(healedChapterThreeState.campaignBattleLog.slice(0, chapterThreeState.campaignBattleLog.length))
+    .toEqual(chapterThreeState.campaignBattleLog);
+  expect(healedChapterThreeState.campaignBattleLog.at(-1)).toMatchObject({
+    kind: "player-action",
+    action: "item-use",
+    actorId: "unit_001",
+    actorName: carriedUnit.name
+  });
+  expect(healedChapterThreeState.campaignBattleLog.at(-1)?.detail).toContain("HP +7");
+
+  await page.reload();
+  await continueCampaign(page, input);
+  await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+  expect(await readAutoSave(page)).toEqual(healedChapterThreeState);
+  await activate(page.locator(".map-grid").getByRole("button", { name: /主人公/ }), input);
+  await expect(page.getByRole("button", { name: "回復薬を使用" })).toBeDisabled();
+  await expect(page.locator(".inventory-items li").filter({ hasText: "回復薬" }))
+    .toContainText("所持数：1個");
+
   // Exercise the campaign-history UI with a historical source event that is no
   // longer registered. This deliberately uses IDs only and must not invent text.
   const historyState: SaveSnapshot = {
-    ...chapterThreeState,
+    ...healedChapterThreeState,
     campaignChoices: [{
       key: "campaign.retired-route",
       choiceId: "retired-option",
@@ -563,12 +608,12 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expectMobileViewport(page, input);
   expect(await readAutoSave(page)).toEqual(historyState);
 
-  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 11件" });
+  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 12件" });
   await expect(battleHistoryToggle).toBeVisible();
   await activate(battleHistoryToggle, input);
   const battleHistoryPanel = page.getByTestId("campaign-battle-history");
   await expect(battleHistoryPanel).toBeVisible();
-  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(11);
+  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(12);
   await expect(battleHistoryPanel).toContainText("第1章 · 第1章・試作マップ");
   await expect(battleHistoryPanel).toContainText("第8ターン");
   await expect(battleHistoryPanel).toContainText("主人公 → 敵01");
@@ -580,6 +625,8 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toContainText("試作村");
   await expect(battleHistoryPanel).toContainText("試作宝箱");
   await expect(battleHistoryPanel).toContainText("試作扉");
+  await expect(battleHistoryPanel).toContainText("回復薬");
+  await expect(battleHistoryPanel).toContainText("HP +7");
   const savedBeforeBattleHistory = await readAutoSave(page);
   await activate(battleHistoryPanel.getByRole("button", { name: "閉じる" }), input);
   await expect(battleHistoryPanel).toHaveCount(0);
