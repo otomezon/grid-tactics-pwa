@@ -171,7 +171,59 @@ export interface CampaignUnitBattleRecord {
   statGains: UnitStats;
 }
 
-export const SAVE_VERSION = 8 as const;
+export type CampaignPlayerActionKind =
+  | "movement" | "weapon-change" | "item-use" | "class-change" | "map-interaction" | "wait";
+
+export interface CampaignBattleStrikeRecord {
+  actorId: string;
+  actorName: string;
+  targetId: string;
+  targetName: string;
+  kind: "initial" | "counter" | "follow-up";
+  weaponName: string;
+  outcome: "miss" | "hit" | "critical";
+  damage: number;
+  targetHpBefore: number;
+  targetHpAfter: number;
+}
+
+interface CampaignBattleLogBase {
+  sequence: number;
+  chapterId: string;
+  turn: number;
+}
+
+export type CampaignBattleLogEntry =
+  | (CampaignBattleLogBase & {
+      kind: "player-action";
+      action: CampaignPlayerActionKind;
+      actorId: string;
+      actorName: string;
+      detail: string;
+    })
+  | (CampaignBattleLogBase & {
+      kind: "player-attack";
+      attackerId: string;
+      attackerName: string;
+      defenderId: string;
+      defenderName: string;
+      defenderRemainingHp: number;
+      experienceAwarded: number;
+      strikes: CampaignBattleStrikeRecord[];
+    })
+  | (CampaignBattleLogBase & {
+      kind: "enemy-action";
+      enemyId: string;
+      enemyName: string;
+      actionKind: "attacked" | "moved-and-attacked" | "moved" | "waited";
+      targetId?: string;
+      targetName?: string;
+      destination?: Position;
+      strikes: CampaignBattleStrikeRecord[];
+    });
+
+export const MAX_CAMPAIGN_BATTLE_LOG_ENTRIES = 5000 as const;
+export const SAVE_VERSION = 9 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
@@ -193,4 +245,6 @@ export interface GameStateSnapshot {
   mapEventChoices: MapEventChoiceSelection[];
   /** One-time named choices retained by the whole campaign across chapter transitions. */
   campaignChoices: CampaignChoiceSelection[];
+  /** Confirmed battle actions and actual strike outcomes, retained across chapters. */
+  campaignBattleLog: CampaignBattleLogEntry[];
 }

@@ -38,6 +38,8 @@ import { getEnemyThreatInspectionDetails } from "./application/get-enemy-threat-
 import { getEnemyPhaseForecast } from "./application/get-enemy-phase-forecast";
 import { getBattleResultDetails } from "./application/get-battle-result-details";
 import { getCampaignChoiceHistory } from "./application/get-campaign-choice-history";
+import { getCampaignBattleHistory } from "./application/get-campaign-battle-history";
+import { appendCampaignBattleLogEntries, createEnemyBattleLogEntries, createPlayerAttackBattleLogEntry } from "./application/record-campaign-battle-log";
 import { getBattleObjectiveDetails, getTerrainInspectionDetails } from "./application/get-battle-map-details";
 import { getBattleObjectiveNavigationTargets } from "./application/get-battle-objective-navigation-targets";
 import { getPlayerAttackReport } from "./application/get-player-attack-report";
@@ -82,6 +84,7 @@ import { DeploymentUnitComparison } from "./components/deployment-unit-compariso
 import { MapEventDialog } from "./components/map-event-dialog";
 import { MapEventHistoryPanel } from "./components/map-event-history-panel";
 import { CampaignChoiceHistoryPanel } from "./components/campaign-choice-history-panel";
+import { CampaignBattleHistoryPanel } from "./components/campaign-battle-history-panel";
 import { MapInteractionPanel } from "./components/map-interaction-panel";
 import {
   getAvailableMapInteraction,
@@ -390,6 +393,7 @@ function CampaignApp() {
   const [isOperationGuideOpen, setIsOperationGuideOpen] = useState(false);
   const [isMapEventHistoryOpen, setIsMapEventHistoryOpen] = useState(false);
   const [isCampaignChoiceHistoryOpen, setIsCampaignChoiceHistoryOpen] = useState(false);
+  const [isCampaignBattleHistoryOpen, setIsCampaignBattleHistoryOpen] = useState(false);
   const [isPhaseEndReviewOpen, setIsPhaseEndReviewOpen] = useState(false);
   const [inspectedPosition, setInspectedPosition] = useState<Position | null>(null);
   const [mapFocusPosition, setMapFocusPosition] = useState<Position>({ x: 0, y: 0 });
@@ -419,6 +423,7 @@ function CampaignApp() {
   const importSaveFileInput = useRef<HTMLInputElement>(null);
   const mapEventHistoryToggleRef = useRef<HTMLButtonElement>(null);
   const campaignChoiceHistoryToggleRef = useRef<HTMLButtonElement>(null);
+  const campaignBattleHistoryToggleRef = useRef<HTMLButtonElement>(null);
   const mapViewportRef = useRef<HTMLDivElement>(null);
   const hadPendingMapEventRef = useRef(false);
   const phaseEndButtonRef = useRef<HTMLButtonElement>(null);
@@ -428,6 +433,7 @@ function CampaignApp() {
   useEffect(() => {
     setIsMapEventHistoryOpen(false);
     setIsCampaignChoiceHistoryOpen(false);
+    setIsCampaignBattleHistoryOpen(false);
   }, [gameState.chapterId, gameState.firedMapEventIds.length, gameState.campaignChoices.length]);
 
   useEffect(() => {
@@ -537,8 +543,14 @@ function CampaignApp() {
             return;
           }
           const enemyPhaseTurn = restoredState.turn;
-          const enemyPhase = runEnemyPhase(restoredState, restoredChapter.map);
-          restoredState = enemyPhase.nextState;
+          const enemyPhaseSource = restoredState;
+          const enemyPhase = runEnemyPhase(enemyPhaseSource, restoredChapter.map);
+          restoredState = appendCampaignBattleLogEntries(
+            enemyPhase.nextState,
+            createEnemyBattleLogEntries(enemyPhase.actions, enemyPhaseSource.units),
+            enemyPhaseSource.chapterId,
+            enemyPhaseSource.turn
+          );
           setGameState(restoredState);
           if (!cancelled) {
             setBattleHistory([{ sequence: 0, turn: enemyPhaseTurn, kind: "enemy-phase", actions: enemyPhase.actions }]);
@@ -717,6 +729,10 @@ function CampaignApp() {
     () => getCampaignChoiceHistory(gameState.campaignChoices),
     [gameState.campaignChoices]
   );
+  const campaignBattleHistory = useMemo(
+    () => getCampaignBattleHistory(gameState.campaignBattleLog),
+    [gameState.campaignBattleLog]
+  );
   const pendingMapEventMessages = useMemo(
     () => gameState.chapterId === currentMap.id
       ? getPendingMapEventMessages(gameState, currentMap)
@@ -813,21 +829,30 @@ function CampaignApp() {
   }, [gameState, selectedUnit, combatTargetId, currentMap]);
 
   function recordPlayerAction(
+    state: GameStateSnapshot,
     action: PlayerActionHistoryKind,
-    unitName: string,
+    actorId: string,
+    actorName: string,
     detail: string
-  ): void {
+  ): GameStateSnapshot {
     setBattleHistory((entries) => [
       ...entries,
       {
         sequence: entries.length,
-        turn: gameState.turn,
+        turn: state.turn,
         kind: "player-action",
         action,
-        unitName,
+        unitName: actorName,
         detail
       }
     ]);
+    return appendCampaignBattleLogEntries(state, [{
+      kind: "player-action",
+      action,
+      actorId,
+      actorName,
+      detail
+    }]);
   }
 
   async function persist(
@@ -862,12 +887,14 @@ function CampaignApp() {
         ...entries,
         { sequence: entries.length, turn: enemyPhaseState.turn, kind: "enemy-phase", actions: execution.actions }
       ]);
-      setGameState(execution.nextState);
-      await persist(
+      const stateWithLog = appendCampaignBattleLogEntries(
         execution.nextState,
-        formatEnemyPhaseSummary(execution, currentMap),
-        enemyPhaseState
+        createEnemyBattleLogEntries(execution.actions, enemyPhaseState.units),
+        enemyPhaseState.chapterId,
+        enemyPhaseState.turn
       );
+      setGameState(stateWithLog);
+      await persist(stateWithLog, formatEnemyPhaseSummary(execution, currentMap), enemyPhaseState);
     } catch (error) {
       setMessage(getErrorMessage(error));
     }
@@ -881,6 +908,11 @@ function CampaignApp() {
   function closeCampaignChoiceHistory(): void {
     setIsCampaignChoiceHistoryOpen(false);
     campaignChoiceHistoryToggleRef.current?.focus();
+  }
+
+  function closeCampaignBattleHistory(): void {
+    setIsCampaignBattleHistoryOpen(false);
+    campaignBattleHistoryToggleRef.current?.focus();
   }
 
   async function handleAcknowledgeMapEvent(eventId: string): Promise<void> {
@@ -1414,14 +1446,15 @@ function CampaignApp() {
       return;
     }
 
-    const nextState = movementExecution.nextState;
-    setGameState(nextState);
-    setCombatTargetId(null);
-    recordPlayerAction(
+    const nextState = recordPlayerAction(
+      movementExecution.nextState,
       "movement",
+      movementExecution.movedUnit.id,
       movementExecution.movedUnit.name,
       positionLabel(selectedUnit.position) + " → " + positionLabel(movementExecution.movedUnit.position)
     );
+    setGameState(nextState);
+    setCombatTargetId(null);
     await persist(nextState, selectedUnit.name + "が" + positionLabel(position) + "へ移動しました。攻撃または待機を選択してください。");
   }
 
@@ -1429,13 +1462,13 @@ function CampaignApp() {
     if (!selectedUnit || !availableMapInteraction || !interactive) return;
     try {
       const execution = performMapInteraction(gameState, currentMap, selectedUnit.id);
-      setGameState(execution.nextState);
+      const nextState = recordPlayerAction(execution.nextState, "map-interaction", selectedUnit.id, selectedUnit.name, execution.interaction.label);
+      setGameState(nextState);
       setCombatTargetId(null);
       setEnemyActionMapPreview(null);
       setPromotionConfirmUnitId(null);
-      recordPlayerAction("map-interaction", selectedUnit.name, execution.interaction.label);
       await persist(
-        execution.nextState,
+        nextState,
         selectedUnit.name + "は「" + execution.interaction.label + "」を調べました。このフェイズの行動を消費しました。"
       );
     } catch (error) {
@@ -1456,10 +1489,10 @@ function CampaignApp() {
       return;
     }
 
-    setGameState(execution.nextState);
+    const nextState = recordPlayerAction(execution.nextState, "weapon-change", execution.updatedUnit.id, execution.updatedUnit.name, execution.equippedWeaponName + "を装備");
+    setGameState(nextState);
     setCombatTargetId(null);
-    recordPlayerAction("weapon-change", execution.updatedUnit.name, execution.equippedWeaponName + "を装備");
-    await persist(execution.nextState, selectedUnit.name + "は" + execution.equippedWeaponName + "を装備しました。");
+    await persist(nextState, selectedUnit.name + "は" + execution.equippedWeaponName + "を装備しました。");
   }
 
   async function handleInstallApp(): Promise<void> {
@@ -1505,12 +1538,12 @@ function CampaignApp() {
 
     try {
       const execution = performItemUse(gameState, selectedUnit.id, itemId);
-      setGameState(execution.nextState);
+      const nextState = recordPlayerAction(execution.nextState, "item-use", selectedUnit.id, selectedUnit.name, item.name + " · HP +" + execution.healedHp);
+      setGameState(nextState);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
-      recordPlayerAction("item-use", selectedUnit.name, item.name + " · HP +" + execution.healedHp);
       await persist(
-        execution.nextState,
+        nextState,
         selectedUnit.name + "は" + item.name + "を使い、HPが" + execution.healedHp +
           "回復しました。このフェイズの行動を消費しました。"
       );
@@ -1538,12 +1571,12 @@ function CampaignApp() {
       const execution = performClassChange(gameState, selectedUnit.id, definition);
       const targetName = getClassDisplayName(definition.toClassId);
       const bonusText = formatPromotionBonuses(execution.appliedBonuses);
-      setGameState(execution.nextState);
+      const nextState = recordPlayerAction(execution.nextState, "class-change", selectedUnit.id, selectedUnit.name, targetName + "へクラスチェンジ · " + bonusText);
+      setGameState(nextState);
       setCombatTargetId(null);
       setPromotionConfirmUnitId(null);
-      recordPlayerAction("class-change", selectedUnit.name, targetName + "へクラスチェンジ · " + bonusText);
       await persist(
-        execution.nextState,
+        nextState,
         selectedUnit.name + "は" + targetName + "へクラスチェンジしました。能力ボーナス：" + bonusText +
           "。クラスチェンジの証を1個消費し、このフェイズの行動を消費しました。"
       );
@@ -1564,15 +1597,20 @@ function CampaignApp() {
         combatTargetId
       );
       const targetName = gameState.units.find((unit) => unit.id === combatTargetId)?.name ?? "敵";
+      const attackReport = getPlayerAttackReport(execution);
       setBattleHistory((entries) => [
         ...entries,
         {
           sequence: entries.length,
           turn: gameState.turn,
           kind: "player-attack",
-          report: getPlayerAttackReport(execution)
+          report: attackReport
         }
       ]);
+      const nextState = appendCampaignBattleLogEntries(
+        execution.nextState,
+        [createPlayerAttackBattleLogEntry(attackReport)]
+      );
       const log = execution.result.events.map((event) => {
         const actor = gameState.units.find((unit) => unit.id === event.attackerId)?.name ?? "ユニット";
         const outcome = !event.hit ? "ミス" : event.critical ? "必殺" : "命中";
@@ -1590,12 +1628,12 @@ function CampaignApp() {
         (defeated ? "。" + targetName + "を撃破しました。" : "。") +
         experienceText +
         levelUpText;
-      setGameState(execution.nextState);
+      setGameState(nextState);
       setCombatTargetId(null);
-      if (!execution.nextState.units.some((unit) => unit.id === selectedUnit.id)) {
+      if (!nextState.units.some((unit) => unit.id === selectedUnit.id)) {
         setSelectedUnitId(null);
       }
-      await persist(execution.nextState, successMessage);
+      await persist(nextState, successMessage);
     } catch (error) {
       setCombatTargetId(null);
       setMessage(getErrorMessage(error));
@@ -1606,10 +1644,10 @@ function CampaignApp() {
     if (!selectedUnit || !interactive || selectedUnit.hasActed) return;
 
     const execution = performPlayerWait(gameState, selectedUnit.id);
-    setGameState(execution.nextState);
+    const nextState = recordPlayerAction(execution.nextState, "wait", execution.waitedUnit.id, execution.waitedUnit.name, "このフェイズの行動を終了");
+    setGameState(nextState);
     setCombatTargetId(null);
-    recordPlayerAction("wait", execution.waitedUnit.name, "このフェイズの行動を終了");
-    await persist(execution.nextState, selectedUnit.name + "は待機しました。");
+    await persist(nextState, selectedUnit.name + "は待機しました。");
   }
 
   function handleDeploymentPreviewSelect(unitId: string): void {
@@ -1975,10 +2013,28 @@ function CampaignApp() {
               aria-controls={isCampaignChoiceHistoryOpen ? "campaign-choice-history-panel" : undefined}
               onClick={() => {
                 setIsMapEventHistoryOpen(false);
+                setIsCampaignBattleHistoryOpen(false);
                 setIsCampaignChoiceHistoryOpen((open) => !open);
               }}
             >
               選択記録 <span>（{campaignChoiceHistory.length}件）</span>
+            </button>
+          )}
+          {campaignBattleHistory.length > 0 && (
+            <button
+              ref={campaignBattleHistoryToggleRef}
+              className="secondary-button save-file-button campaign-battle-history-toggle"
+              type="button"
+              aria-label={"キャンペーン戦闘記録 " + campaignBattleHistory.length + "件"}
+              aria-expanded={isCampaignBattleHistoryOpen}
+              aria-controls={isCampaignBattleHistoryOpen ? "campaign-battle-history-panel" : undefined}
+              onClick={() => {
+                setIsMapEventHistoryOpen(false);
+                setIsCampaignChoiceHistoryOpen(false);
+                setIsCampaignBattleHistoryOpen((open) => !open);
+              }}
+            >
+              戦闘記録 <span>（{campaignBattleHistory.length}件）</span>
             </button>
           )}
           <button
@@ -2081,6 +2137,13 @@ function CampaignApp() {
         <CampaignChoiceHistoryPanel
           entries={campaignChoiceHistory}
           onClose={closeCampaignChoiceHistory}
+        />
+      )}
+
+      {isCampaignBattleHistoryOpen && campaignBattleHistory.length > 0 && (
+        <CampaignBattleHistoryPanel
+          entries={campaignBattleHistory}
+          onClose={closeCampaignBattleHistory}
         />
       )}
 
@@ -3017,7 +3080,7 @@ function CampaignApp() {
                 ))}
               </ol>
               <p className="helper-text enemy-phase-report-note">
-                確定した味方の移動・武器変更・攻撃・アイテム使用・クラスチェンジ・待機と、敵軍行動を発生順に表示します。移動プレビューや閲覧操作は記録しません。この履歴は現在の画面セッションだけの一時情報です。リロード・セーブ読込・章切替後には引き継がれず、セーブデータには保存しません。
+                確定した味方の移動・武器変更・攻撃・アイテム使用・クラスチェンジ・待機と、敵軍行動を発生順に表示します。移動プレビューや閲覧操作は記録しません。この詳細レポートは現在の画面セッションだけの一時情報です。リロード・セーブ読込・章切替後には引き継がれません。実際に確定した行動と攻撃結果の要約は、別の「キャンペーン戦闘記録」に保存されます。
               </p>
             </section>
           )}

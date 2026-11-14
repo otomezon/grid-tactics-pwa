@@ -22,13 +22,13 @@ async function startNewCampaign(page: Page): Promise<void> {
 async function continueSavedCampaign(page: Page): Promise<void> {
   const title = page.getByTestId("campaign-title-screen");
   await expect(title).toBeVisible();
+  // The title screen appears before its asynchronous IndexedDB lookup completes.
+  // Wait for the persisted-campaign action instead of mistaking the loading-time
+  // "はじめから" button for a genuinely empty save slot.
   const continueButton = title.getByRole("button", { name: "つづきから" });
-  if (await continueButton.count()) {
-    await expect(continueButton).toBeEnabled();
-    await continueButton.click();
-  } else {
-    await title.getByRole("button", { name: "はじめから" }).click();
-  }
+  await expect(continueButton).toBeVisible();
+  await expect(continueButton).toBeEnabled();
+  await continueButton.click();
 }
 
 async function startBattle(page: Page): Promise<void> {
@@ -123,7 +123,7 @@ test.describe("campaign title and save hub", () => {
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
     };
-    expect(saved.saveVersion).toBe(8);
+    expect(saved.saveVersion).toBe(9);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
@@ -149,7 +149,7 @@ test.describe("campaign title and save hub", () => {
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
     };
-    expect(acknowledgedSave.saveVersion).toBe(8);
+    expect(acknowledgedSave.saveVersion).toBe(9);
     expect(acknowledgedSave.firedMapEventIds).toEqual(saved.firedMapEventIds);
     expect(acknowledgedSave.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
 
@@ -949,13 +949,25 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await page.getByRole("button", { name: "待機", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
-    const historyEntry = page.getByTestId("battle-history").getByTestId("player-action-history");
-    await expect(historyEntry).toHaveCount(1);
-    await expect(historyEntry).toContainText("主人公");
-    await expect(historyEntry).toContainText("待機");
-    await expect(historyEntry).toContainText("このフェイズの行動を終了");
-    const savedState = await readAutoSave(page) as { [key: string]: unknown };
+    const transientEntry = page.getByTestId("battle-history").getByTestId("player-action-history");
+    await expect(transientEntry).toHaveCount(1);
+    await expect(transientEntry).toContainText("主人公");
+    await expect(transientEntry).toContainText("待機");
+    const savedState = await readAutoSave(page) as {
+      campaignBattleLog: Array<Record<string, unknown>>;
+      [key: string]: unknown;
+    };
     expect(savedState).not.toHaveProperty("battleHistory");
+    expect(savedState.campaignBattleLog).toHaveLength(1);
+    expect(savedState.campaignBattleLog[0]).toMatchObject({
+      sequence: 1,
+      chapterId: "chapter_01_map",
+      turn: 1,
+      kind: "player-action",
+      action: "wait",
+      actorId: "unit_001",
+      actorName: "主人公"
+    });
 
     await page.reload();
     await continueSavedCampaign(page);
@@ -963,6 +975,24 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(page.getByTestId("battle-history")).toHaveCount(0);
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
+
+    const historyToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 1件" });
+    await expect(historyToggle).toBeVisible();
+    const savedBeforeOpen = await readAutoSave(page);
+    expect(savedBeforeOpen).toEqual(savedState);
+    await historyToggle.click();
+    const historyPanel = page.getByTestId("campaign-battle-history");
+    await expect(historyPanel).toBeVisible();
+    await expect(historyPanel).toContainText("第1章 · 第1章・試作マップ");
+    await expect(historyPanel).toContainText("第1ターン");
+    await expect(historyPanel).toContainText("主人公");
+    await expect(historyPanel).toContainText("待機");
+    expect(await readAutoSave(page)).toEqual(savedBeforeOpen);
+
+    await historyPanel.getByRole("button", { name: "閉じる" }).click();
+    await expect(historyPanel).toHaveCount(0);
+    await expect(historyToggle).toBeFocused();
+    expect(await readAutoSave(page)).toEqual(savedBeforeOpen);
   });
 
   test("records weapon changes without consuming the unit action", async ({ page }) => {
@@ -2091,7 +2121,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(enemyPhase.getByTestId("enemy-phase-action")).toHaveCount(5);
     for (const enemyName of ["敵01", "敵02", "敵03", "敵04", "敵将"]) await expect(enemyPhase).toContainText(enemyName);
     await expect(enemyPhase).toContainText(/攻撃|移動|待機/);
-    await expect(report).toContainText("セーブデータには保存しません");
+    await expect(report).toContainText("別の「キャンペーン戦闘記録」に保存されます。");
     const savedState = await readAutoSave(page);
     expect(savedState).not.toHaveProperty("battleHistory");
     await page.reload();
@@ -2668,7 +2698,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 8,
+      saveVersion: 9,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2743,7 +2773,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 8,
+      saveVersion: 9,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1

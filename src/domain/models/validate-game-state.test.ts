@@ -451,4 +451,58 @@ describe("isValidGameStateSnapshot", () => {
     }, map)).toBe(false);
   });
 
+  it("validates bounded campaign battle logs as ordered confirmed outcomes only", () => {
+    const entry = {
+      sequence: 1,
+      chapterId: "chapter_01_map",
+      turn: 2,
+      kind: "player-attack" as const,
+      attackerId: "unit_001",
+      attackerName: "主人公",
+      defenderId: "enemy_001",
+      defenderName: "敵01",
+      defenderRemainingHp: 0,
+      experienceAwarded: 30,
+      strikes: [{
+        actorId: "unit_001",
+        actorName: "主人公",
+        targetId: "enemy_001",
+        targetName: "敵01",
+        kind: "initial" as const,
+        weaponName: "試作の鉄の剣",
+        outcome: "hit" as const,
+        damage: 20,
+        targetHpBefore: 20,
+        targetHpAfter: 0
+      }]
+    };
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [entry]
+    }, CHAPTER_01_MAP)).toBe(true);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [entry, { ...entry, sequence: 1 }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [{ ...entry, forecast: { damage: 99 } }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [{
+        ...entry,
+        strikes: [{ ...entry.strikes[0], damage: 19 }]
+      }]
+    }, CHAPTER_01_MAP)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: Array.from({ length: 5001 }, (_, index) => ({
+        ...entry,
+        sequence: index + 1
+      }))
+    }, CHAPTER_01_MAP)).toBe(false);
+  });
+
+
 });

@@ -129,7 +129,16 @@ export function prepareNextChapter({
       ...record,
       statGains: { ...record.statGains }
     })),
-    campaignChoices: previousState.campaignChoices.map((selection) => ({ ...selection }))
+    campaignChoices: previousState.campaignChoices.map((selection) => ({ ...selection })),
+    campaignBattleLog: previousState.campaignBattleLog.map((entry) => ({
+      ...entry,
+      ...(entry.kind === "player-attack" || entry.kind === "enemy-action"
+        ? { strikes: entry.strikes.map((strike) => ({ ...strike })) }
+        : {}),
+      ...(entry.kind === "enemy-action" && entry.destination
+        ? { destination: { ...entry.destination } }
+        : {})
+    }))
   };
   if (!isValidGameStateSnapshot(nextState, nextMap)) {
     throw new Error("The prepared next chapter state is invalid.");

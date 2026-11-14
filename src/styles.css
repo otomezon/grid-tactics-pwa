@@ -2777,3 +2777,124 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   font-size: .84rem;
   font-weight: 800;
 }
+
+/* Read-only campaign-wide battle log, separate from the transient detail report. */
+.campaign-battle-history-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(104, 137, 155, .58);
+  border-radius: 12px;
+  background: rgba(18, 31, 43, .88);
+}
+.campaign-battle-history-header,
+.campaign-battle-history-entry-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.campaign-battle-history-header h2 { margin: 0; }
+.campaign-battle-history-note,
+.campaign-battle-history-entry-heading,
+.campaign-battle-history-footnote {
+  color: var(--text-muted);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+.campaign-battle-history-note { margin: 5px 0 0; }
+.campaign-battle-history-close { flex: 0 0 auto; min-height: 40px; }
+.campaign-battle-defeats {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid rgba(104, 137, 155, .4);
+  border-radius: 9px;
+  background: rgba(11, 23, 33, .52);
+}
+.campaign-battle-defeats h3 { margin: 0; font-size: .82rem; }
+.campaign-battle-defeats ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.campaign-battle-defeats li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: #e8f0f4;
+  font-size: .75rem;
+}
+.campaign-battle-defeats li span {
+  flex: 0 0 auto;
+  color: #a9dfd0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+.campaign-battle-history-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(58vh, 620px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 3px 0 22px;
+  overscroll-behavior: contain;
+}
+.campaign-battle-history-list > li { min-width: 0; padding-left: 2px; }
+.campaign-battle-history-entry {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(12, 24, 34, .48);
+  overflow-wrap: anywhere;
+}
+.campaign-battle-history-entry-heading {
+  color: var(--text-muted);
+  font-size: .68rem;
+}
+.campaign-battle-history-entry-heading strong {
+  flex: 0 0 auto;
+  color: #c6d7e0;
+  font-variant-numeric: tabular-nums;
+}
+.campaign-battle-history-entry h4 {
+  margin: 7px 0 4px;
+  color: #edf3f7;
+  font-size: .8rem;
+}
+.campaign-battle-history-entry > p {
+  margin: 5px 0 0;
+  color: #dce6ec;
+  font-size: .74rem;
+  line-height: 1.5;
+}
+.campaign-battle-strikes {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: .69rem;
+  line-height: 1.5;
+}
+.campaign-battle-history-footnote {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(104, 137, 155, .35);
+}
+@media (max-width: 420px) {
+  .campaign-battle-history-panel { padding: 10px; gap: 10px; }
+  .campaign-battle-history-header { align-items: flex-start; }
+  .campaign-battle-history-close { padding-inline: 10px; }
+  .campaign-battle-history-entry { padding: 8px; }
+  .campaign-battle-history-entry-heading { font-size: .64rem; }
+  .campaign-battle-strikes { font-size: .66rem; }
+}

@@ -58,7 +58,7 @@ src/
 | レイヤー | 現在の責務 | 状態 |
 |---|---|---|
 | content | 地形、章レジストリ／章別マップ／初期状態、仮武器、14職の型付きクラスレジストリ、昇格先・仮能力ボーナス、クラスチェンジアイテム | 実装あり。第2章・昇格ボーナス／上限は試作データ。移動／武器クラス別表はCP-09／10の承認待ち |
-| domain/models | GameUnit、CampaignUnit、GameStateSnapshot、saveVersion 8検証、戦闘／控え名簿・配置地形・クラス／所持品／装備参照の整合性検証 | 実装あり |
+| domain/models | GameUnit、CampaignUnit、GameStateSnapshot、saveVersion 9検証、戦闘／控え名簿・配置地形・クラス／所持品／装備参照の整合性検証 | 実装あり |
 | domain/movement | 地形・占有を考慮した到達可能範囲と、同じDijkstra探索から再構成する決定的な最小コスト経路 | 実装あり。経路表示はUI専用でGameState／saveVersionへ追加しない |
 | domain/combat | 武器適合、式、射程、予測、決定論的解決、敵脅威範囲、移動プレビュー起点の攻撃可能対象、暫定Manhattan距離 | 実装あり |
 | domain/random | Xorshift32 seed/state・combat rolls | 実装あり |
@@ -71,7 +71,7 @@ src/
 
 ## 3. 現在のデータフロー
 
-1. AppがIndexedDB auto slotをロードし、saveVersion 1〜7を現行のsaveVersion 8へmigrationするか、現行version 8 validatorを通す。validatorはマップ構造と目標参照を確認し、保存内の各ユニットID／陣営がマップの出撃名簿と一致すること、各ユニットの現在地が移動種別のmovementCostがnullでない地形であること、クラス／所持品IDが登録済みであること、装備武器が所持品かつ使用可能武器種に含まれること、現役ユニットのHPが正であることを検証する。撃破済みユニットはstateから除去できるため、配置名簿の全員がstateに存在することまでは要求しない。
+1. AppがIndexedDB auto slotをロードし、saveVersion 1〜8を現行のsaveVersion 9へmigrationするか、現行version 9 validatorを通す。validatorはマップ構造と目標参照を確認し、保存内の各ユニットID／陣営がマップの出撃名簿と一致すること、各ユニットの現在地が移動種別のmovementCostがnullでない地形であること、クラス／所持品IDが登録済みであること、装備武器が所持品かつ使用可能武器種に含まれること、現役ユニットのHPが正であることを検証する。撃破済みユニットはstateから除去できるため、配置名簿の全員がstateに存在することまでは要求しない。
 2. player phaseでは既存の移動・装備・攻撃・待機操作を使う。移動可能マスと累計コストは同じ到達可能性計算から表示し、ポインター／キーボードフォーカス時にはDijkstraの前駆ノードをたどって最小コスト経路を一時表示する。経路プレビューが有効な間は、その移動先を攻撃起点として同じ装備武器・射程projectionを評価し、現在位置から射程外でも移動後に攻撃可能な敵を別の枠で表示する。タッチ操作では最初のタップで同じ経路を表示し、同じマスへの2回目のタップで移動を確定する。経路プレビューはGameStateやIndexedDBへ書き込まず、移動先を選択した時点で従来どおり位置とhasMovedを保存する。味方攻撃と敵軍フェイズの実結果はAppのReact stateに時系列で蓄積する。履歴はIndexedDBやGameStateSnapshotには書き込まず、リロード・セーブ読込・バックアップ復元・章切替で破棄する。
 3. 「自軍フェイズ終了」で敵軍フェイズへ移り、砦上の生存中の敵軍ユニットを最大HPの10%（端数切り捨て・暫定）回復してから `phase: enemy` のスナップショットを保存する。
 4. `runEnemyPhase` が敵ユニットをID辞書順に処理する。現在攻撃できるなら対象評価して攻撃、いなければ移動可能範囲を調べ、移動後攻撃、接近、待機を選ぶ。
@@ -103,7 +103,7 @@ src/
 - `domain/progression/`: EXP・成長、クラス昇格、章報酬定義型を実装。正式な昇格値とクラス別移動／武器データは未決定。
 - `domain/events/`: ターン／撃破／勝利イベント。
 - UIコンポーネント分割。現状は `App.tsx` に集約。
-- 基本リザルト、章定義されたアイテム報酬、次章開始UIは実装済み。永続的な戦闘イベント履歴／撃破者別統計、正式な会話・分岐コンテンツと章解放UIは未実装。名前付き選択の章間永続化と後続章イベントの条件判定は汎用機構としてsaveVersion 8に実装済み。
+- 基本リザルト、章定義されたアイテム報酬、次章開始UIは実装済み。確定済み行動・実strikeだけを保持する永続キャンペーン戦闘履歴と撃破者別集計はsaveVersion 9に実装済み。正式な会話・分岐コンテンツと章解放UIは未実装。名前付き選択の章間永続化と後続章イベントの条件判定はsaveVersion 8で導入された汎用機構。
 
 ## 能力成長率の読み取り専用表示
 
@@ -171,7 +171,7 @@ saveVersionを4へ更新し、v1／v2／v3は既存データを保持したま�
 
 移動commandはマップ地形、移動種別、移動力、他ユニットの占有を含めて既存の最小コスト経路探索で合法性を再検証する。武器変更commandは登録武器・所持・クラス／武器種適性を検証し、移動後の行動前変更を許可する。待機commandは生存味方の未行動状態を検証して行動フラグのみを更新する。3 commandとも入力snapshotを不変に保ち、RNGや累計戦績を変更しない。
 
-## データ駆動マップイベント・永続確認・章間キャンペーン選択（saveVersion 8）
+## データ駆動マップイベント・永続確認・章間キャンペーン選択（saveVersion 9）
 
 `GameMapDefinition.events` は章マップに属する一度きりのイベント定義であり、`src/application/resolve-map-events.ts` がトリガーを解決し、`resolve-map-event-transition.ts` が確定済みGameStateの前後差分からターン／フェイズ開始、ユニット撃破、ボス撃破、勝敗確定のトリガーを生成する。地点調査は `unit-interacts`、選択済み分岐は `event-choice` を使う。ステージ開始と初回ターン開始は出撃確定時に処理する。
 
@@ -179,9 +179,9 @@ saveVersionを4へ更新し、v1／v2／v3は既存データを保持したま�
 
 未確認イベントがある間は戦闘入力と次章遷移をロックする。敵軍フェイズ開始イベントが未確認の場合はphase: enemyのcheckpointを保存するが敵AIは実行しない。最後のイベント確認後にだけ既存の敵フェイズ処理を続行する。新章のテンプレートは空の発火／確認ID配列から始まる。
 
-saveVersion 1〜4は空の発火／確認ID配列と選択履歴を追加してversion 8へ移行する。saveVersion 5は既発火IDをすべて確認済みとして保持し、空の選択履歴を加えてversion 8へ移行する。saveVersion 6は発火／確認IDを保持したまま空の選択履歴を加えてversion 8へ移行する。saveVersion 7は現章の選択履歴を保持し、空のcampaignChoicesを追加してversion 8へ移行する。いずれも過去イベントを意図せず再表示しない。IndexedDB schemaはversion 1を維持する。
+saveVersion 1〜4は空の発火／確認ID配列と選択履歴を追加してversion 9へ移行する。saveVersion 5は既発火IDをすべて確認済みとして保持し、空の選択履歴を加えてversion 9へ移行する。saveVersion 6は発火／確認IDを保持したまま空の選択履歴を加えてversion 9へ移行する。saveVersion 7は現章の選択履歴を保持し、空のcampaignChoicesを追加してversion 9へ移行する。saveVersion 8は既存campaignChoicesを保持してversion 9へ移行する。すべての旧バージョンで過去の戦闘行動を推測せず空のcampaignBattleLogを追加し、過去イベントを意図せず再表示しない。IndexedDB schemaはversion 1を維持する。
 
-イベントアクションは `show-message`、2〜4択の `show-choice`、明示的な `grant-item`、マップデータに事前登録された敵 `spawn-reinforcement`、検証済みCampaignUnitの `recruit-unit` をサポートする。付与では登録済みアイテムID・数量1〜5・生存中の出撃味方・所持品5枠を検証する。増援では敵陣営・未使用ID・配置座標・通行可能地形・空きマスを検証し、通常のGameUnitとして追加する。ユニット撃破トリガーは増援IDにも対応する。イベントはコンテンツ順にコピーしたsnapshotへ適用し、全アクション成功後にだけ発火IDを記録するため、途中失敗で部分的な報酬や増援を残さない。メッセージ履歴は3アクションすべての発火順を既存のfired IDsから再構築する。PR #134までの既存イベント効果は当時のsaveVersionを維持して追加された。現行では `campaignChoices` を加えたsaveVersion 8を使う。既存の試作章には報酬・増援・キャンペーン選択コンテンツを追加せず、CP-13の昇格アイテム配布先・数量も決めない。村・宝箱・扉を独立したマップオブジェクトとして扱う機能と、正式な加入人物・会話・章ルートの具体的コンテンツは未実装である。汎用の加入／会話選択処理は実装済み。
+イベントアクションは `show-message`、2〜4択の `show-choice`、明示的な `grant-item`、マップデータに事前登録された敵 `spawn-reinforcement`、検証済みCampaignUnitの `recruit-unit` をサポートする。付与では登録済みアイテムID・数量1〜5・生存中の出撃味方・所持品5枠を検証する。増援では敵陣営・未使用ID・配置座標・通行可能地形・空きマスを検証し、通常のGameUnitとして追加する。ユニット撃破トリガーは増援IDにも対応する。イベントはコンテンツ順にコピーしたsnapshotへ適用し、全アクション成功後にだけ発火IDを記録するため、途中失敗で部分的な報酬や増援を残さない。メッセージ履歴は3アクションすべての発火順を既存のfired IDsから再構築する。PR #134までの既存イベント効果は当時のsaveVersionを維持して追加された。`campaignChoices` はsaveVersion 8で導入され、現行では `campaignBattleLog` を追加したsaveVersion 9を使う。既存の試作章には報酬・増援・キャンペーン選択コンテンツを追加せず、CP-13の昇格アイテム配布先・数量も決めない。村・宝箱・扉を独立したマップオブジェクトとして扱う機能と、正式な加入人物・会話・章ルートの具体的コンテンツは未実装である。汎用の加入／会話選択処理は実装済み。
 
 `getMapEventMessageHistory` は現在章の `firedMapEventIds` を保存順にたどり、マップ定義から発火済みメッセージ本文を再構築する。イベント履歴パネルは確認済み／未確認を問わず既発火メッセージを読み取り専用で表示する。本文・発生時刻・履歴用snapshot fieldを新たに保存せず、会話選択結果は `mapEventChoices` からラベルを復元する。章切替後は新章のイベントだけを表示する。
 
@@ -191,7 +191,7 @@ saveVersion 1〜4は空の発火／確認ID配列と選択履歴を追加してv
 
 ## マップ地点の調査操作（PR #114）
 
-`MapEventTrigger` の `unit-interacts` はマップ座標、UIラベル／説明、任意の対象player IDを持つ。map validatorは座標範囲、進入可能地形、初期配置との重複、同一地点イベントの座標重複、対象味方IDを検証する。`getMapInteractionPoints` は未発火地点だけをマップに投影し、`getAvailableMapInteraction` はplayer phaseで生存・未行動の味方が地点上にいる場合だけ操作対象を返す。`performMapInteraction` は実行時にも章・フェイズ・勝敗・位置・陣営・生存・行動状態を検証し、既存の `resolveMapEvents` でアクションを解決した後に調査ユニットの `hasActed` を立てる。イベント効果が失敗した場合は行動フラグも発火IDも更新しない。成功時は既存の確認ダイアログとイベント履歴で再読み込み後も確認できる。既存GameState fieldだけを利用し、saveVersion 8／IndexedDB schema 1を維持する。
+`MapEventTrigger` の `unit-interacts` はマップ座標、UIラベル／説明、任意の対象player IDを持つ。map validatorは座標範囲、進入可能地形、初期配置との重複、同一地点イベントの座標重複、対象味方IDを検証する。`getMapInteractionPoints` は未発火地点だけをマップに投影し、`getAvailableMapInteraction` はplayer phaseで生存・未行動の味方が地点上にいる場合だけ操作対象を返す。`performMapInteraction` は実行時にも章・フェイズ・勝敗・位置・陣営・生存・行動状態を検証し、既存の `resolveMapEvents` でアクションを解決した後に調査ユニットの `hasActed` を立てる。イベント効果が失敗した場合は行動フラグも発火IDも更新しない。成功時は既存の確認ダイアログとイベント履歴で再読み込み後も確認できる。既存GameState fieldだけを利用し、saveVersion 9／IndexedDB schema 1を維持する。
 
 ## Map-event recruitment
 
@@ -204,7 +204,7 @@ Map-authored dialogue uses a `show-choice` action with two to four uniquely iden
 
 `chooseMapEventOption` verifies that the source dialogue is pending, the requested option exists, and no prior choice was recorded. It then creates a detached snapshot containing the selected option and source acknowledgement, resolves only matching branch events through the existing event resolver, validates the complete result, and returns it for a single save. If a branch effect fails, neither the selection nor branch fired IDs are committed to the caller's snapshot. The UI saves this combined snapshot before resuming a waiting enemy phase. Event history rebuilds the chosen label from map content and `mapEventChoices`; no dialogue text or choice labels are duplicated in save data.
 
-The chapter-local `mapEventChoices` list was added in `saveVersion: 7`; `saveVersion: 8` adds campaign-wide `campaignChoices`. A `show-choice` event may declare an optional `campaignChoiceKey`; selecting it appends the key, choice ID, source chapter, and source event to the campaign ledger exactly once. A later chapter event may declare `condition: { type: "campaign-choice", key, choiceId }`; it runs only when its normal trigger matches and the persisted campaign decision matches. `prepareNextChapter` carries this campaign ledger while each chapter starts fresh local fired/acknowledged/event-choice arrays. Version 1–6 saves preserve their existing migration behavior and add an empty campaign ledger; version 7 keeps its local `mapEventChoices` and adds an empty ledger. IndexedDB database schema version remains 1. No production chapter receives invented characters, dialogue, choices, or route content as part of the generic engine implementation.
+The chapter-local `mapEventChoices` list was added in `saveVersion: 7`; `saveVersion: 8` adds campaign-wide `campaignChoices`, and `saveVersion: 9` adds the bounded campaign-wide `campaignBattleLog`. A `show-choice` event may declare an optional `campaignChoiceKey`; selecting it appends the key, choice ID, source chapter, and source event to the campaign ledger exactly once. A later chapter event may declare `condition: { type: "campaign-choice", key, choiceId }`; it runs only when its normal trigger matches and the persisted campaign decision matches. `prepareNextChapter` carries this campaign ledger while each chapter starts fresh local fired/acknowledged/event-choice arrays. Versions 1–7 preserve their prior progression and add the applicable missing fields, while version 8 preserves `campaignChoices`; all versions 1–8 initialize an empty `campaignBattleLog` and migrate to version 9. IndexedDB database schema version remains 1. No production chapter receives invented characters, dialogue, choices, or route content as part of the generic engine implementation.
 
 
 ## 章間キャンペーン選択
@@ -220,3 +220,11 @@ The chapter-local `mapEventChoices` list was added in `saveVersion: 7`; `saveVer
 - `src/application/get-campaign-choice-history.ts` は `GameStateSnapshot.campaignChoices` を選択順に読み、`CHAPTERS` 内の元章・元イベントの `show-choice` 定義から章番号／章名／話者／会話文／選択ラベルを投影する。
 - 元章または選択肢が現在のcontent registryに存在しない場合、投影は本文／ラベルを作らず、保存済みのsource ID／choice IDをfallbackとして残す。
 - `CampaignChoiceHistoryPanel` は現章だけを扱う `MapEventHistoryPanel` とは別のヘッダーボタン／領域で開閉する。どちらも読み取り専用で、履歴本文・タイムスタンプ・追加のGameState／saveVersion fieldを作らない。
+
+
+## 永続的なキャンペーン戦闘履歴（saveVersion 9）
+
+- `GameStateSnapshot.campaignBattleLog` は全章を通した単調増加sequenceの時系列ログで、上限は5,000件。プレイヤーの確定コマンド（移動・武器変更・アイテム使用・クラスチェンジ・地点調査・待機）、確定した味方攻撃の実strike、解決した敵行動と敵strikeだけを保存する。
+- 攻撃strikeはactor／target、武器名、命中／ミス／必殺、実ダメージ、対象HPの前後を保存する。撃破者別件数はHPが正数から0になった実strikeから導出し、予測値や欠落データからは推測しない。
+- 予測AttackPlan、命中率／予測ダメージ、標的／移動候補評価、AIスコア、UIプレビュー・選択・閲覧・キャンセルは保存しない。既存の詳細な `battleHistory` はセッション内レポートとして残り、永続キャンペーン履歴とは別パネルにする。
+- `prepareNextChapter` はcampaignBattleLogをdeep copyして引き継ぐ。v1〜v8のセーブは過去の行動を捏造せず空配列でversion 9へ移行する。JSON export/import・IndexedDB auto slot・backupはGameStateSnapshotを通じて記録を保持し、IndexedDB schemaは1のまま。
