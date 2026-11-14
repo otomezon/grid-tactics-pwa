@@ -16,6 +16,7 @@ export function MapEventDialog({
   onAcknowledge,
   onChooseChoice
 }: MapEventDialogProps) {
+  const dialogRef = useRef<HTMLElement>(null);
   const continueButtonRef = useRef<HTMLButtonElement>(null);
   const choiceButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const hasChoices = (event.choices?.length ?? 0) > 0;
@@ -25,8 +26,7 @@ export function MapEventDialog({
     // Focus only after saving completes, then defer past the opening click's default action.
     if (disabled) return;
     const frame = window.requestAnimationFrame(() => {
-      if (hasChoices) choiceButtonRefs.current[0]?.focus();
-      else continueButtonRef.current?.focus();
+      focusFirstAvailableAction();
     });
     return () => window.cancelAnimationFrame(frame);
   }, [event.id, hasChoices, disabled]);
@@ -35,14 +35,32 @@ export function MapEventDialog({
     if (hasChoices) {
       return choiceButtonRefs.current
         .slice(0, event.choices?.length ?? 0)
-        .filter((button): button is HTMLButtonElement => button !== null);
+        .filter((button): button is HTMLButtonElement => button !== null && !button.disabled);
     }
-    return continueButtonRef.current ? [continueButtonRef.current] : [];
+    return continueButtonRef.current && !continueButtonRef.current.disabled
+      ? [continueButtonRef.current]
+      : [];
+  }
+
+  function focusFirstAvailableAction(): void {
+    const firstAction = focusableActions()[0];
+    if (firstAction) firstAction.focus();
+    else dialogRef.current?.focus();
   }
 
   return (
-    <div className="map-event-dialog-backdrop" data-testid="map-event-dialog-backdrop">
+    <div
+      className="map-event-dialog-backdrop"
+      data-testid="map-event-dialog-backdrop"
+      onClick={(clickEvent) => {
+        if (clickEvent.target === clickEvent.currentTarget) {
+          focusFirstAvailableAction();
+        }
+      }}
+    >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         className="map-event-dialog"
         role="dialog"
         aria-modal="true"
@@ -55,8 +73,11 @@ export function MapEventDialog({
             keyboardEvent.preventDefault();
           } else if (keyboardEvent.key === "Tab") {
             const actions = focusableActions();
-            if (actions.length === 0) return;
             keyboardEvent.preventDefault();
+            if (actions.length === 0) {
+              dialogRef.current?.focus();
+              return;
+            }
             const activeIndex = actions.indexOf(document.activeElement as HTMLButtonElement);
             const lastIndex = actions.length - 1;
             const nextIndex = keyboardEvent.shiftKey
