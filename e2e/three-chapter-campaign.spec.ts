@@ -327,10 +327,31 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await continueCampaign(page, input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   expect(await readAutoSave(page)).toEqual(chapterTwoState);
+
+  await activate(page.locator('[data-map-position="8,8"]'), input);
+  await activate(page.locator('[data-map-position="9,8"]'), input);
+  await expect(page.locator('[data-testid="map-object-marker"]')).toHaveCount(3);
+  const villageMarker = page.locator('[data-map-position="9,8"]').getByTestId("map-object-marker");
+  await expect(villageMarker).toHaveAttribute("data-object-kind", "village");
+  await expect(villageMarker).toHaveText("村");
+  await expect(page.locator('[data-testid="map-object-marker"][data-object-kind="treasure-chest"]')).toHaveText("宝");
+  await expect(page.locator('[data-testid="map-object-marker"][data-object-kind="door"]')).toHaveText("扉");
+  const objectPanel = page.getByTestId("map-interaction-panel");
+  await expect(objectPanel).toContainText("試作村");
+  await activate(objectPanel.getByRole("button", { name: "村を訪問する" }), input);
+  await expect(page.getByTestId("map-event-dialog")).toHaveAttribute("data-event-id", "chapter-02-prototype-village-visit");
+  await expect(page.getByTestId("map-event-dialog")).toContainText("正式な村人・会話・報酬は未設定です。");
+  await acknowledgePendingMapEvents(page, { input });
+  await expect(page.locator('[data-object-kind="village"]')).toHaveCount(0);
+  const chapterTwoAfterObjectInteraction = await readAutoSave(page) as SaveSnapshot;
+  expect(chapterTwoAfterObjectInteraction.firedMapEventIds).toContain("chapter-02-prototype-village-visit");
+  expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_004")).toMatchObject({
+    position: { x: 9, y: 8 }, hasMoved: true, hasActed: true
+  });
   expect((await readAutoSave(page) as SaveSnapshot).campaignBattleLog).toEqual(chapterTwoState.campaignBattleLog);
 
   const clearedChapterTwo: SaveSnapshot = {
-    ...chapterTwoState,
+    ...chapterTwoAfterObjectInteraction,
     rngState: 0x23456789,
     units: chapterTwoState.units.filter((unit) => unit.faction === "player")
   };
