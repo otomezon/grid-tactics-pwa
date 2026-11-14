@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
+import { CHAPTER_02_MAP, CHAPTER_02_INITIAL_STATE } from "../content/maps/chapter-02";
 import type { CampaignUnit, GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import {
@@ -77,6 +78,26 @@ describe("map interactions", () => {
       { id: "chest-event", kind: "treasure-chest", label: "宝箱" },
       { id: "door-event", kind: "door", label: "扉" }
     ]);
+  });
+
+  it("keeps the new village and chest available in saves that fired the old prototype event IDs", () => {
+    const legacySnapshot = {
+      ...CHAPTER_02_INITIAL_STATE,
+      firedMapEventIds: [
+        "chapter-02-prototype-village-visit",
+        "chapter-02-prototype-chest-open"
+      ]
+    };
+
+    const pending = getMapInteractionPoints(legacySnapshot, CHAPTER_02_MAP);
+    expect(pending.map((point) => ({ id: point.id, kind: point.kind }))).toContainEqual({
+      id: "chapter-02-village-route-choice",
+      kind: "village"
+    });
+    expect(pending.map((point) => ({ id: point.id, kind: point.kind }))).toContainEqual({
+      id: "chapter-02-prototype-chest-reward",
+      kind: "treasure-chest"
+    });
   });
 
   it("allows investigation after movement, fires the event once, and consumes the action", () => {

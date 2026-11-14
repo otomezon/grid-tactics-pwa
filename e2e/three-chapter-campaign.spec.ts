@@ -343,21 +343,73 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   const objectPanel = page.getByTestId("map-interaction-panel");
   await expect(objectPanel).toContainText("試作村");
   await activate(objectPanel.getByRole("button", { name: "村を訪問する" }), input);
-  await expect(page.getByTestId("map-event-dialog")).toHaveAttribute("data-event-id", "chapter-02-prototype-village-visit");
-  await expect(page.getByTestId("map-event-dialog")).toContainText("正式な村人・会話・報酬は未設定です。");
+  const villageDialog = page.getByTestId("map-event-dialog");
+  await expect(villageDialog).toHaveAttribute("data-event-id", "chapter-02-village-route-choice");
+  await expect(villageDialog).toContainText("森を抜ける小道と、東へ続く古い峠道");
+  await expect(villageDialog.getByTestId("map-event-choice")).toHaveCount(2);
+  await activate(villageDialog.getByTestId("map-event-choice").filter({ hasText: "森の小道について聞く" }), input);
+  await expect(villageDialog).toHaveAttribute("data-event-id", "chapter-02-village-forest-trail");
+  await expect(villageDialog).toContainText("森の小道は狭いものの");
   await acknowledgePendingMapEvents(page, { input });
   await expect(page.locator('[data-object-kind="village"]')).toHaveCount(0);
-  const chapterTwoAfterObjectInteraction = await readAutoSave(page) as SaveSnapshot;
-  expect(chapterTwoAfterObjectInteraction.firedMapEventIds).toContain("chapter-02-prototype-village-visit");
-  expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_003")).toMatchObject({
+  const chapterTwoAfterVillageChoice = await readAutoSave(page) as SaveSnapshot;
+  expect(chapterTwoAfterVillageChoice.firedMapEventIds).toContain("chapter-02-village-route-choice");
+  expect(chapterTwoAfterVillageChoice.firedMapEventIds).toContain("chapter-02-village-forest-trail");
+  expect(chapterTwoAfterVillageChoice.campaignChoices).toContainEqual({
+    key: "chapter-02.village-route",
+    choiceId: "forest-trail",
+    sourceChapterId: "chapter_02_map",
+    sourceEventId: "chapter-02-village-route-choice"
+  });
+  expect(chapterTwoAfterVillageChoice.units.find((unit) => unit.id === "unit_003")).toMatchObject({
     position: { x: 9, y: 8 }, hasMoved: true, hasActed: true
   });
-  const battleLogAfterObjectInteraction = (await readAutoSave(page) as SaveSnapshot).campaignBattleLog;
-  expect(battleLogAfterObjectInteraction.slice(0, chapterTwoState.campaignBattleLog.length)).toEqual(chapterTwoState.campaignBattleLog);
-  expect(battleLogAfterObjectInteraction.slice(chapterTwoState.campaignBattleLog.length)).toMatchObject([
+  expect(chapterTwoAfterVillageChoice.campaignBattleLog.slice(0, chapterTwoState.campaignBattleLog.length))
+    .toEqual(chapterTwoState.campaignBattleLog);
+  expect(chapterTwoAfterVillageChoice.campaignBattleLog.slice(chapterTwoState.campaignBattleLog.length)).toMatchObject([
     { kind: "player-action", action: "movement", actorId: "unit_003" },
     { kind: "player-action", action: "map-interaction", actorId: "unit_003", detail: "試作村" }
   ]);
+
+  await page.reload();
+  await continueCampaign(page, input);
+  expect(await readAutoSave(page)).toEqual(chapterTwoAfterVillageChoice);
+
+  await activate(page.locator('[data-map-position="3,8"]'), input);
+  const chestTile = page.locator('[data-map-position="7,8"]');
+  await activate(chestTile, input);
+  if (input === "tap") await activate(chestTile, input);
+  const chestPanel = page.getByTestId("map-interaction-panel");
+  await expect(chestPanel).toContainText("試作宝箱");
+  await activate(chestPanel.getByRole("button", { name: "宝箱を開ける" }), input);
+  const chestDialog = page.getByTestId("map-event-dialog");
+  await expect(chestDialog).toHaveAttribute("data-event-id", "chapter-02-prototype-chest-reward");
+  await expect(chestDialog).toContainText("試作回復薬を1つ手に入れました。");
+  await acknowledgePendingMapEvents(page, { input });
+  await expect(page.locator('[data-object-kind="treasure-chest"]')).toHaveCount(0);
+  const chapterTwoAfterObjectInteraction = await readAutoSave(page) as SaveSnapshot;
+  expect(chapterTwoAfterObjectInteraction.firedMapEventIds).toContain("chapter-02-prototype-chest-reward");
+  expect(chapterTwoAfterObjectInteraction.campaignChoices).toEqual(chapterTwoAfterVillageChoice.campaignChoices);
+  expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_002")).toMatchObject({
+    position: { x: 7, y: 8 }, hasMoved: true, hasActed: true
+  });
+  expect(chapterTwoAfterObjectInteraction.reserveUnits.find((unit) => unit.id === "unit_004")).toMatchObject({
+    id: "unit_004",
+    inventory: reserveUnit.inventory
+  });
+  expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_001")?.inventory)
+    .toEqual([...carriedUnit.inventory, "healing_potion"]);
+  const chestBattleLog = chapterTwoAfterObjectInteraction.campaignBattleLog;
+  expect(chestBattleLog.slice(0, chapterTwoAfterVillageChoice.campaignBattleLog.length))
+    .toEqual(chapterTwoAfterVillageChoice.campaignBattleLog);
+  expect(chestBattleLog.slice(chapterTwoAfterVillageChoice.campaignBattleLog.length)).toMatchObject([
+    { kind: "player-action", action: "movement", actorId: "unit_002" },
+    { kind: "player-action", action: "map-interaction", actorId: "unit_002", detail: "試作宝箱" }
+  ]);
+
+  await page.reload();
+  await continueCampaign(page, input);
+  expect(await readAutoSave(page)).toEqual(chapterTwoAfterObjectInteraction);
 
   const clearedChapterTwo: SaveSnapshot = {
     ...chapterTwoAfterObjectInteraction,
@@ -378,6 +430,9 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await activate(page.getByRole("button", { name: deploymentStartButton }), input);
   await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
   await expectMobileViewport(page, input);
+  const chapterThreeFollowUp = page.getByTestId("map-event-dialog");
+  await expect(chapterThreeFollowUp).toHaveAttribute("data-event-id", "chapter-03-village-forest-trail-follow-up");
+  await expect(chapterThreeFollowUp).toContainText("第2章の村で聞いた森の小道");
   await acknowledgePendingMapEvents(page, { input });
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterThreeState.campaignBattleLog.slice(0, chapterTwoState.campaignBattleLog.length)).toEqual(chapterTwoState.campaignBattleLog);
@@ -401,13 +456,19 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     turn: 1,
     rngState: 0x23456789
   });
+  expect(chapterThreeState.campaignChoices).toContainEqual({
+    key: "chapter-02.village-route",
+    choiceId: "forest-trail",
+    sourceChapterId: "chapter_02_map",
+    sourceEventId: "chapter-02-village-route-choice"
+  });
   expect(chapterThreeState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
     faction: "player",
     level: 7,
     experience: 42,
     stats: { strength: 11 },
     currentHp: 13,
-    inventory: carriedUnit.inventory,
+    inventory: [...carriedUnit.inventory, "healing_potion"],
     hasMoved: false,
     hasActed: false
   });
@@ -463,12 +524,12 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expectMobileViewport(page, input);
   expect(await readAutoSave(page)).toEqual(historyState);
 
-  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 7件" });
+  const battleHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 9件" });
   await expect(battleHistoryToggle).toBeVisible();
   await activate(battleHistoryToggle, input);
   const battleHistoryPanel = page.getByTestId("campaign-battle-history");
   await expect(battleHistoryPanel).toBeVisible();
-  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(7);
+  await expect(battleHistoryPanel.getByTestId("campaign-battle-log-entry")).toHaveCount(9);
   await expect(battleHistoryPanel).toContainText("第1章 · 第1章・試作マップ");
   await expect(battleHistoryPanel).toContainText("第8ターン");
   await expect(battleHistoryPanel).toContainText("主人公 → 敵01");
@@ -478,6 +539,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toContainText("第2章 · 第2章・試作マップ");
   await expect(battleHistoryPanel).toContainText("マップ調査");
   await expect(battleHistoryPanel).toContainText("試作村");
+  await expect(battleHistoryPanel).toContainText("試作宝箱");
   const savedBeforeBattleHistory = await readAutoSave(page);
   await activate(battleHistoryPanel.getByRole("button", { name: "閉じる" }), input);
   await expect(battleHistoryPanel).toHaveCount(0);

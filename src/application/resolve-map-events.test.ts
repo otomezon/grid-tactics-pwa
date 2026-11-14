@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
+import { HEALING_POTION_ID } from "../content/items";
+import { CHAPTER_02_MAP, CHAPTER_02_INITIAL_STATE } from "../content/maps/chapter-02";
+import { CHAPTER_03_MAP, CHAPTER_03_INITIAL_STATE } from "../content/maps/chapter-03";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import type { GameMapDefinition, MapEventTrigger } from "../domain/models/game";
 import {
@@ -564,6 +567,99 @@ describe("resolveMapEvents", () => {
     expect(selected.nextState.firedMapEventIds).toEqual(["route-decision", "local-forest-branch"]);
     expect(isValidGameStateSnapshot(selected.nextState, map)).toBe(true);
     expect(INITIAL_GAME_STATE.campaignChoices).toEqual([]);
+  });
+
+  it("uses the Chapter 2 village decision in Chapter 3 and grants the chest potion once", () => {
+    const villageOpened = resolveMapEvents(CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP, {
+      type: "unit-interacts",
+      x: 9,
+      y: 8,
+      label: "試作村",
+      unitId: "unit_003"
+    });
+    expect(villageOpened.messages[0]).toMatchObject({
+      id: "chapter-02-village-route-choice",
+      choices: [
+        { id: "forest-trail", label: "森の小道について聞く" },
+        { id: "eastern-pass", label: "東の峠道について聞く" }
+      ]
+    });
+
+    const villageChoice = chooseMapEventOption(
+      villageOpened.nextState,
+      CHAPTER_02_MAP,
+      "chapter-02-village-route-choice",
+      "forest-trail"
+    );
+    expect(villageChoice.nextState.campaignChoices).toEqual([{
+      key: "chapter-02.village-route",
+      choiceId: "forest-trail",
+      sourceChapterId: CHAPTER_02_MAP.id,
+      sourceEventId: "chapter-02-village-route-choice"
+    }]);
+    expect(villageChoice.nextState.firedMapEventIds).toContain("chapter-02-village-forest-trail");
+    expect(villageChoice.nextState.firedMapEventIds).not.toContain("chapter-02-village-eastern-pass");
+
+    const chapterThree = resolveMapEvents({
+      ...CHAPTER_03_INITIAL_STATE,
+      campaignChoices: villageChoice.nextState.campaignChoices
+    }, CHAPTER_03_MAP, { type: "stage-start" });
+    expect(chapterThree.messages.map((message) => message.id)).toEqual([
+      "chapter-03-village-forest-trail-follow-up"
+    ]);
+    expect(chapterThree.messages[0]?.text).toContain("第2章の村で聞いた森の小道");
+    expect(chapterThree.nextState.firedMapEventIds).not.toContain("chapter-03-village-eastern-pass-follow-up");
+
+    const easternVillageOpened = resolveMapEvents(CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP, {
+      type: "unit-interacts", x: 9, y: 8, label: "試作村", unitId: "unit_003"
+    });
+    const easternChoice = chooseMapEventOption(
+      easternVillageOpened.nextState, CHAPTER_02_MAP, "chapter-02-village-route-choice", "eastern-pass"
+    );
+    const easternChapterThree = resolveMapEvents({
+      ...CHAPTER_03_INITIAL_STATE,
+      campaignChoices: easternChoice.nextState.campaignChoices
+    }, CHAPTER_03_MAP, { type: "stage-start" });
+    expect(easternChapterThree.messages.map((message) => message.id)).toEqual([
+      "chapter-03-village-eastern-pass-follow-up"
+    ]);
+    expect(easternChapterThree.nextState.firedMapEventIds)
+      .not.toContain("chapter-03-village-forest-trail-follow-up");
+
+    const beforeChest = [...CHAPTER_02_INITIAL_STATE.units.find((unit) => unit.id === "unit_001")!.inventory];
+    const chestOpened = resolveMapEvents(CHAPTER_02_INITIAL_STATE, CHAPTER_02_MAP, {
+      type: "unit-interacts",
+      x: 7,
+      y: 8,
+      label: "試作宝箱",
+      unitId: "unit_004"
+    });
+    const afterChest = chestOpened.nextState.units.find((unit) => unit.id === "unit_001")!.inventory;
+    expect(afterChest).toEqual([...beforeChest, HEALING_POTION_ID]);
+    expect(chestOpened.nextState.firedMapEventIds).toContain("chapter-02-prototype-chest-reward");
+    const repeatedChest = resolveMapEvents(chestOpened.nextState, CHAPTER_02_MAP, {
+      type: "unit-interacts",
+      x: 7,
+      y: 8,
+      label: "試作宝箱",
+      unitId: "unit_004"
+    });
+    expect(repeatedChest.nextState).toBe(chestOpened.nextState);
+    expect(repeatedChest.nextState.units.find((unit) => unit.id === "unit_001")!.inventory)
+      .toEqual([...beforeChest, HEALING_POTION_ID]);
+
+    const fullInventoryState = {
+      ...CHAPTER_02_INITIAL_STATE,
+      units: CHAPTER_02_INITIAL_STATE.units.map((unit) => unit.id === "unit_001"
+        ? { ...unit, inventory: ["iron_sword", "healing_potion", "promotion_seal", "iron_sword", "healing_potion"] }
+        : unit)
+    };
+    const unchangedFullInventory = structuredClone(fullInventoryState);
+    expect(() => resolveMapEvents(fullInventoryState, CHAPTER_02_MAP, {
+      type: "unit-interacts", x: 7, y: 8, label: "試作宝箱", unitId: "unit_004"
+    })).toThrow(/inventory does not have enough free slots/);
+    expect(fullInventoryState).toEqual(unchangedFullInventory);
+    expect(fullInventoryState.firedMapEventIds).not.toContain("chapter-02-prototype-chest-reward");
   });
 
 });
