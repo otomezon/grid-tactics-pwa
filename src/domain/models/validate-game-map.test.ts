@@ -344,4 +344,55 @@ describe("isValidGameMapDefinition", () => {
     })).toBe(false);
   });
 
+  it("validates campaign-choice conditions and uniquely declared choice keys", () => {
+    const sourceEvent = {
+      id: "source-choice",
+      trigger: { type: "stage-start" as const },
+      action: {
+        type: "show-choice" as const,
+        campaignChoiceKey: "campaign.route",
+        text: "どちらへ進みますか？",
+        choices: [{ id: "forest", label: "森" }, { id: "road", label: "街道" }]
+      }
+    };
+    const conditionEvent = {
+      id: "forest-only",
+      trigger: { type: "stage-start" as const },
+      condition: { type: "campaign-choice" as const, key: "campaign.route", choiceId: "forest" },
+      action: { type: "show-message" as const, text: "森を選んだ場合のイベントです。" }
+    };
+    expect(isValidGameMapDefinition({
+      ...CHAPTER_01_MAP,
+      events: [sourceEvent, conditionEvent]
+    })).toBe(true);
+    expect(isValidGameMapDefinition({
+      ...CHAPTER_01_MAP,
+      events: [sourceEvent, {
+        ...conditionEvent,
+        condition: { ...conditionEvent.condition, choiceId: "" }
+      }]
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...CHAPTER_01_MAP,
+      events: [sourceEvent, {
+        ...conditionEvent,
+        condition: { ...conditionEvent.condition, key: "" }
+      }]
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...CHAPTER_01_MAP,
+      events: [sourceEvent, {
+        ...sourceEvent,
+        id: "duplicate-choice-key"
+      }]
+    })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...CHAPTER_01_MAP,
+      events: [{
+        ...sourceEvent,
+        action: { ...sourceEvent.action, campaignChoiceKey: "" }
+      }]
+    })).toBe(false);
+  });
+
 });

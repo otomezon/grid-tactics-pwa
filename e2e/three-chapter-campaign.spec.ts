@@ -187,7 +187,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await acknowledgePendingMapEvents(page, { input });
   const chapterTwoState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterTwoState).toMatchObject({
-    saveVersion: 7,
+    saveVersion: 8,
     chapterId: "chapter_02_map",
     phase: "player",
     turn: 1,
@@ -238,7 +238,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await acknowledgePendingMapEvents(page, { input });
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterThreeState).toMatchObject({
-    saveVersion: 7,
+    saveVersion: 8,
     chapterId: "chapter_03_map",
     phase: "player",
     turn: 1,

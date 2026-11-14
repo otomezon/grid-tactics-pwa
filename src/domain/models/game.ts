@@ -105,9 +105,24 @@ export interface MapEventChoiceSelection {
   choiceId: string;
 }
 
+/** A one-time dialogue decision retained across chapter transitions. */
+export interface CampaignChoiceSelection {
+  key: string;
+  choiceId: string;
+  sourceChapterId: string;
+  sourceEventId: string;
+}
+
+/** A content condition that gates an event on an earlier campaign decision. */
+export interface MapEventCondition {
+  type: "campaign-choice";
+  key: string;
+  choiceId: string;
+}
+
 export type MapEventAction =
   | { type: "show-message"; speaker?: string; text: string }
-  | { type: "show-choice"; speaker?: string; text: string; choices: MapEventChoiceDefinition[] }
+  | { type: "show-choice"; speaker?: string; text: string; choices: MapEventChoiceDefinition[]; campaignChoiceKey?: string }
   | {
       type: "grant-item";
       speaker?: string;
@@ -122,6 +137,8 @@ export type MapEventAction =
 export interface MapEventDefinition {
   id: string;
   trigger: MapEventTrigger;
+  /** Optional cross-chapter condition; evaluated when the event's normal trigger occurs. */
+  condition?: MapEventCondition;
   action: MapEventAction;
 }
 
@@ -154,7 +171,7 @@ export interface CampaignUnitBattleRecord {
   statGains: UnitStats;
 }
 
-export const SAVE_VERSION = 7 as const;
+export const SAVE_VERSION = 8 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;
@@ -172,6 +189,8 @@ export interface GameStateSnapshot {
   firedMapEventIds: string[];
   /** IDs of fired event messages the player has explicitly acknowledged. */
   acknowledgedMapEventIds: string[];
-  /** Selected dialogue options, keyed by the one-shot source event ID. */
+  /** Selected dialogue options for the current chapter, keyed by source event ID. */
   mapEventChoices: MapEventChoiceSelection[];
+  /** One-time named choices retained by the whole campaign across chapter transitions. */
+  campaignChoices: CampaignChoiceSelection[];
 }

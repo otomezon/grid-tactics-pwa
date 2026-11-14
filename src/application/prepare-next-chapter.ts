@@ -128,7 +128,8 @@ export function prepareNextChapter({
     campaignUnitBattleRecords: previousState.campaignUnitBattleRecords.map((record) => ({
       ...record,
       statGains: { ...record.statGains }
-    }))
+    })),
+    campaignChoices: previousState.campaignChoices.map((selection) => ({ ...selection }))
   };
   if (!isValidGameStateSnapshot(nextState, nextMap)) {
     throw new Error("The prepared next chapter state is invalid.");

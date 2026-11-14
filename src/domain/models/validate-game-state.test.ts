@@ -409,4 +409,46 @@ describe("isValidGameStateSnapshot", () => {
     expect(isValidGameStateSnapshot({ ...selected, mapEventChoices: [] }, map)).toBe(false);
   });
 
+  it("validates persisted campaign choices and their current-chapter source event", () => {
+    const map = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "persistent-choice",
+        trigger: { type: "stage-start" as const },
+        action: {
+          type: "show-choice" as const,
+          campaignChoiceKey: "campaign.route",
+          text: "選んでください。",
+          choices: [{ id: "forest", label: "森" }, { id: "road", label: "街道" }]
+        }
+      }]
+    };
+    const selected = {
+      ...INITIAL_GAME_STATE,
+      firedMapEventIds: ["persistent-choice"],
+      acknowledgedMapEventIds: ["persistent-choice"],
+      mapEventChoices: [{ eventId: "persistent-choice", choiceId: "forest" }],
+      campaignChoices: [{
+        key: "campaign.route",
+        choiceId: "forest",
+        sourceChapterId: map.id,
+        sourceEventId: "persistent-choice"
+      }]
+    };
+    expect(isValidGameStateSnapshot(selected, map)).toBe(true);
+    expect(isValidGameStateSnapshot({ ...selected, campaignChoices: [] }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      campaignChoices: [...selected.campaignChoices, ...selected.campaignChoices]
+    }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      campaignChoices: [{ ...selected.campaignChoices[0]!, choiceId: "unknown" }]
+    }, map)).toBe(false);
+    expect(isValidGameStateSnapshot({
+      ...selected,
+      campaignChoices: [{ ...selected.campaignChoices[0]!, sourceEventId: "missing" }]
+    }, map)).toBe(false);
+  });
+
 });

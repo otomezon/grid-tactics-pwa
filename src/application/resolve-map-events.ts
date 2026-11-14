@@ -29,6 +29,14 @@ export interface MapEventChoiceExecution extends MapEventExecution {
   selectedChoiceLabel: string;
 }
 
+function matchesCondition(event: MapEventDefinition, state: GameStateSnapshot): boolean {
+  const condition = event.condition;
+  if (!condition) return true;
+  return condition.type === "campaign-choice" && state.campaignChoices.some(
+    (selection) => selection.key === condition.key && selection.choiceId === condition.choiceId
+  );
+}
+
 function matchesTrigger(event: MapEventDefinition, trigger: MapEventTrigger): boolean {
   const expected = event.trigger;
   if (expected.type !== trigger.type) return false;
@@ -198,6 +206,7 @@ export function resolveMapEvents(
     if (
       fired.has(event.id) ||
       choiceNotRecorded ||
+      !matchesCondition(event, state) ||
       !triggers.some((trigger) => matchesTrigger(event, trigger))
     ) continue;
     nextState = applyMapEventAction(nextState, event);
@@ -239,9 +248,21 @@ export function chooseMapEventOption(
     throw new Error("A choice has already been recorded for this dialogue event.");
   }
 
+  const campaignChoiceKey = definition.action.campaignChoiceKey;
+  if (campaignChoiceKey && state.campaignChoices.some((selection) => selection.key === campaignChoiceKey)) {
+    throw new Error("The campaign choice key has already been selected.");
+  }
   const chosenState: GameStateSnapshot = {
     ...state,
     mapEventChoices: [...state.mapEventChoices, { eventId, choiceId }],
+    campaignChoices: campaignChoiceKey
+      ? [...state.campaignChoices, {
+          key: campaignChoiceKey,
+          choiceId,
+          sourceChapterId: state.chapterId,
+          sourceEventId: eventId
+        }]
+      : state.campaignChoices,
     acknowledgedMapEventIds: [...state.acknowledgedMapEventIds, eventId]
   };
   const branchExecution = resolveMapEvents(chosenState, map, { type: "event-choice", eventId, choiceId });

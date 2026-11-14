@@ -9,6 +9,7 @@ const PREVIOUS_SAVE_VERSION = 3;
 const VERSION_FOUR_SAVE_VERSION = 4;
 const VERSION_FIVE_SAVE_VERSION = 5;
 const VERSION_SIX_SAVE_VERSION = 6;
+const VERSION_SEVEN_SAVE_VERSION = 7;
 const FALLBACK_RNG_STATE = 0x6d2b79f5;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -61,7 +62,7 @@ export interface GameStateMigrationResult {
   snapshot: GameStateSnapshot;
   migrated: boolean;
 }
-/** Adds durable dialogue choice selections in v7 while preserving previous migration behavior. */
+/** Adds cross-chapter campaign choices in v8 while preserving all prior migration guarantees. */
 export function migrateGameStateSnapshot(
   value: unknown,
   map: GameMapDefinition
@@ -70,8 +71,10 @@ export function migrateGameStateSnapshot(
   if (!isRecord(value)) return null;
 
   let candidate: unknown;
-  if (value.saveVersion === VERSION_SIX_SAVE_VERSION) {
-    candidate = { ...value, saveVersion: SAVE_VERSION, mapEventChoices: [] };
+  if (value.saveVersion === VERSION_SEVEN_SAVE_VERSION) {
+    candidate = { ...value, saveVersion: SAVE_VERSION, campaignChoices: [] };
+  } else if (value.saveVersion === VERSION_SIX_SAVE_VERSION) {
+    candidate = { ...value, saveVersion: SAVE_VERSION, mapEventChoices: [], campaignChoices: [] };
   } else if (value.saveVersion === VERSION_FIVE_SAVE_VERSION) {
     candidate = {
       ...value,
@@ -81,7 +84,8 @@ export function migrateGameStateSnapshot(
       acknowledgedMapEventIds: Array.isArray(value.firedMapEventIds)
         ? [...value.firedMapEventIds]
         : [],
-      mapEventChoices: []
+      mapEventChoices: [],
+      campaignChoices: []
     };
   } else if (value.saveVersion === VERSION_FOUR_SAVE_VERSION) {
     candidate = {
@@ -89,7 +93,8 @@ export function migrateGameStateSnapshot(
       saveVersion: SAVE_VERSION,
       firedMapEventIds: [],
       acknowledgedMapEventIds: [],
-      mapEventChoices: []
+      mapEventChoices: [],
+      campaignChoices: []
     };
   } else if (value.saveVersion === PREVIOUS_SAVE_VERSION) {
     candidate = {
@@ -98,7 +103,8 @@ export function migrateGameStateSnapshot(
       campaignUnitBattleRecords: [],
       firedMapEventIds: [],
       acknowledgedMapEventIds: [],
-      mapEventChoices: []
+      mapEventChoices: [],
+      campaignChoices: []
     };
   } else if (value.saveVersion === VERSION_TWO_SAVE_VERSION) {
     candidate = {
@@ -108,7 +114,8 @@ export function migrateGameStateSnapshot(
       campaignUnitBattleRecords: [],
       firedMapEventIds: [],
       acknowledgedMapEventIds: [],
-      mapEventChoices: []
+      mapEventChoices: [],
+      campaignChoices: []
     };
   } else if (value.saveVersion === LEGACY_SAVE_VERSION) {
     const units = Array.isArray(value.units) ? value.units.map(migrateLegacyUnit) : value.units;
@@ -121,7 +128,8 @@ export function migrateGameStateSnapshot(
       campaignUnitBattleRecords: [],
       firedMapEventIds: [],
       acknowledgedMapEventIds: [],
-      mapEventChoices: []
+      mapEventChoices: [],
+      campaignChoices: []
     };
   } else {
     return null;
