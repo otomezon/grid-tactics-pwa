@@ -106,6 +106,7 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
 
     const reinforcementIds = new Set<string>();
     const recruitmentIds = new Set<string>();
+    const campaignChoiceKeys = new Set<string>();
     for (const candidate of value.events) {
       if (!isRecord(candidate) || !isRecord(candidate.action)) continue;
       if (candidate.action.type === "spawn-reinforcement") {
@@ -175,11 +176,29 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
           return false;
       }
 
+      if (candidate.condition !== undefined) {
+        const condition = candidate.condition;
+        if (
+          !isRecord(condition) ||
+          condition.type !== "campaign-choice" ||
+          !isNonEmptyString(condition.key) || condition.key.length > 128 ||
+          !isNonEmptyString(condition.choiceId) || condition.choiceId.length > 64
+        ) return false;
+      }
+
       const action = candidate.action;
       if (!isEventMessage(action)) return false;
       if (action.type === "show-message") continue;
       if (action.type === "show-choice") {
         if (!isEventChoiceList(action.choices)) return false;
+        if (action.campaignChoiceKey !== undefined) {
+          if (
+            !isNonEmptyString(action.campaignChoiceKey) ||
+            action.campaignChoiceKey.length > 128 ||
+            campaignChoiceKeys.has(action.campaignChoiceKey)
+          ) return false;
+          campaignChoiceKeys.add(action.campaignChoiceKey);
+        }
         continue;
       }
       if (action.type === "grant-item") {
