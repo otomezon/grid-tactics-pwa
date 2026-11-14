@@ -382,7 +382,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   const chapterThreeState = await readAutoSave(page) as SaveSnapshot;
   expect(chapterThreeState.campaignBattleLog.slice(0, chapterTwoState.campaignBattleLog.length)).toEqual(chapterTwoState.campaignBattleLog);
   expect(chapterThreeState.campaignBattleLog.at(-1)).toMatchObject({
-    sequence: 10,
+    sequence: chapterTwoAfterObjectInteraction.campaignBattleLog.length + 1,
     chapterId: "chapter_02_map",
     kind: "chapter-result",
     outcome: "victory",
