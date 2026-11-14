@@ -97,7 +97,7 @@ describe("migrateGameStateSnapshot", () => {
   it("adds empty reserve and campaign record lists when migrating a valid version 2 save", () => {
     const result = migrateGameStateSnapshot(createVersionTwoSnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(7);
+    expect(result?.snapshot.saveVersion).toBe(8);
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.firedMapEventIds).toEqual([]);
@@ -109,18 +109,19 @@ describe("migrateGameStateSnapshot", () => {
   it("adds an empty campaign record list when migrating a valid version 3 save", () => {
     const result = migrateGameStateSnapshot(createVersionThreeSnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(7);
+    expect(result?.snapshot.saveVersion).toBe(8);
     expect(result?.snapshot.reserveUnits).toEqual([]);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual([]);
     expect(result?.snapshot.firedMapEventIds).toEqual([]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual([]);
+    expect(result?.snapshot.campaignChoices).toEqual([]);
     expect(result?.snapshot.units).toEqual(INITIAL_GAME_STATE.units);
   });
 
   it("adds an empty fired-event list when migrating a valid version 4 save", () => {
     const result = migrateGameStateSnapshot(createVersionFourSnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(7);
+    expect(result?.snapshot.saveVersion).toBe(8);
     expect(result?.snapshot.campaignUnitBattleRecords).toEqual(INITIAL_GAME_STATE.campaignUnitBattleRecords);
     expect(result?.snapshot.firedMapEventIds).toEqual([]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual([]);
@@ -129,7 +130,7 @@ describe("migrateGameStateSnapshot", () => {
   it("marks already-fired v5 messages as acknowledged without changing event history", () => {
     const result = migrateGameStateSnapshot(createVersionFiveSnapshot(), CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(7);
+    expect(result?.snapshot.saveVersion).toBe(8);
     expect(result?.snapshot.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(result?.snapshot.campaignChoices).toEqual([]);
@@ -150,7 +151,7 @@ describe("migrateGameStateSnapshot", () => {
     };
     const result = migrateGameStateSnapshot(legacy, CHAPTER_01_MAP);
     expect(result?.migrated).toBe(true);
-    expect(result?.snapshot.saveVersion).toBe(7);
+    expect(result?.snapshot.saveVersion).toBe(8);
     expect(result?.snapshot.firedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(result?.snapshot.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
     expect(result?.snapshot.mapEventChoices).toEqual([]);
