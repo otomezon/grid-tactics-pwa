@@ -22,13 +22,13 @@ async function startNewCampaign(page: Page): Promise<void> {
 async function continueSavedCampaign(page: Page): Promise<void> {
   const title = page.getByTestId("campaign-title-screen");
   await expect(title).toBeVisible();
+  // The title screen appears before its asynchronous IndexedDB lookup completes.
+  // Wait for the persisted-campaign action instead of mistaking the loading-time
+  // "はじめから" button for a genuinely empty save slot.
   const continueButton = title.getByRole("button", { name: "つづきから" });
-  if (await continueButton.count()) {
-    await expect(continueButton).toBeEnabled();
-    await continueButton.click();
-  } else {
-    await title.getByRole("button", { name: "はじめから" }).click();
-  }
+  await expect(continueButton).toBeVisible();
+  await expect(continueButton).toBeEnabled();
+  await continueButton.click();
 }
 
 async function startBattle(page: Page): Promise<void> {
@@ -2121,7 +2121,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(enemyPhase.getByTestId("enemy-phase-action")).toHaveCount(5);
     for (const enemyName of ["敵01", "敵02", "敵03", "敵04", "敵将"]) await expect(enemyPhase).toContainText(enemyName);
     await expect(enemyPhase).toContainText(/攻撃|移動|待機/);
-    await expect(report).toContainText("セーブデータには保存しません");
+    await expect(report).toContainText("別の「キャンペーン戦闘記録」に保存されます。");
     const savedState = await readAutoSave(page);
     expect(savedState).not.toHaveProperty("battleHistory");
     await page.reload();
