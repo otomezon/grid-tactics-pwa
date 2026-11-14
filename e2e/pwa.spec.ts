@@ -352,7 +352,7 @@ test.describe("production PWA shell", () => {
     expect(await readAutoSave(page)).toEqual(originalSave);
   });
 
-  test("reloads for a service-worker update without losing the autosaved battle state", async ({ page, context }) => {
+  test("defers a service-worker update during battle until explicit approval at a safe screen", async ({ page, context }) => {
     await page.addInitScript((key) => {
       const currentCount = Number(sessionStorage.getItem(key) ?? "0");
       sessionStorage.setItem(key, String(currentCount + 1));
@@ -360,13 +360,12 @@ test.describe("production PWA shell", () => {
 
     await page.goto("/");
     await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
-    await page.evaluate(async () => {
-      await navigator.serviceWorker.ready;
-    });
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await page.reload();
     await expect.poll(() => page.evaluate(
       () => navigator.serviceWorker.controller?.scriptURL ?? ""
     )).toContain("/sw.js");
+
     await enterNewCampaign(page);
     await page.getByRole("button", { name: deploymentStartButton }).click();
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
@@ -381,24 +380,46 @@ test.describe("production PWA shell", () => {
       } | null;
       return savedState?.units?.some((unit) => unit.faction === "player" && unit.hasActed) ?? false;
     }).toBe(true);
-
-    const navigationCountBeforeUpdate = await page.evaluate(
-      (key) => Number(sessionStorage.getItem(key) ?? "0"),
-      navigationCountKey
+    const committedBattleSave = await readAutoSave(page);
+    const navigationCountDuringBattle = await page.evaluate(
+      (key) => Number(sessionStorage.getItem(key) ?? "0"), navigationCountKey
     );
 
     await page.evaluate(async () => {
       const response = await fetch("/__test/force-sw-update", { method: "POST" });
       if (!response.ok) throw new Error("Could not prepare a service-worker update.");
-
       const registration = await navigator.serviceWorker.ready;
-      void registration.update().catch(() => undefined);
+      await registration.update();
     });
+
+    await expect(page.getByTestId("pwa-update-prompt")).toBeVisible();
+    await expect(page.getByTestId("pwa-update-apply")).toBeDisabled();
+    await expect(page.getByTestId("pwa-update-prompt")).toContainText("プレイ中の状態を守るため更新を保留しています");
+    expect(await readAutoSave(page)).toEqual(committedBattleSave);
+    await expect.poll(
+      () => page.evaluate((key) => Number(sessionStorage.getItem(key) ?? "0"), navigationCountKey),
+      { timeout: 1_500 }
+    ).toBe(navigationCountDuringBattle);
+
+    await page.getByTestId("pwa-update-dismiss").click();
+    await expect(page.getByTestId("pwa-update-prompt")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(committedBattleSave);
+
+    // A reload returns to the saved title screen, where the waiting worker can be approved.
+    await page.reload();
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
+    await expect(page.getByRole("button", { name: "つづきから" })).toBeEnabled();
+    await expect(page.getByTestId("pwa-update-prompt")).toBeVisible();
+    const navigationCountBeforeApply = await page.evaluate(
+      (key) => Number(sessionStorage.getItem(key) ?? "0"), navigationCountKey
+    );
+    await expect(page.getByTestId("pwa-update-apply")).toBeEnabled();
+    await page.getByTestId("pwa-update-apply").click();
 
     await expect.poll(
       () => page.evaluate((key) => Number(sessionStorage.getItem(key) ?? "0"), navigationCountKey),
       { timeout: 30_000 }
-    ).toBeGreaterThan(navigationCountBeforeUpdate);
+    ).toBeGreaterThan(navigationCountBeforeApply);
 
     await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
     await page.getByRole("button", { name: "つづきから" }).click();
@@ -414,6 +435,7 @@ test.describe("production PWA shell", () => {
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await expect(page.locator(".unit-details")).toContainText("行動済み");
   });
+
   test("creates three backup generations, rotates the oldest, and validates confirmed restores", async ({ page }) => {
     await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");

@@ -1,5 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { lazy, Suspense, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { UnitRoster } from "./components/unit-roster";
+import { PwaUpdatePrompt, PwaUpdateSafetyContext } from "./components/pwa-update-prompt";
+import { canApplyPwaUpdate } from "./application/can-apply-pwa-update";
 import { DeploymentPreview } from "./components/deployment-preview";
 import { DeploymentLoadoutEditor } from "./components/deployment-loadout-editor";
 import { UnitGrowthPanel } from "./components/unit-growth-panel";
@@ -757,6 +759,22 @@ function CampaignApp() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [pendingMapEventMessages.length]);
+
+  const setPwaUpdateSafety = useContext(PwaUpdateSafetyContext);
+  const pwaUpdateSafe = canApplyPwaUpdate({
+    isTitleScreenVisible,
+    battleOutcome,
+    deploymentPending,
+    saveStatus,
+    loadBlocked,
+    backupActionPending,
+    isStartingNextChapter,
+    hasPendingMapEvents: pendingMapEventMessages.length > 0
+  });
+  useEffect(() => {
+    setPwaUpdateSafety(pwaUpdateSafe);
+  }, [pwaUpdateSafe, setPwaUpdateSafety]);
+  useEffect(() => () => setPwaUpdateSafety(false), [setPwaUpdateSafety]);
 
   const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
     pendingMapEventMessages.length === 0 && !deploymentPending &&
@@ -3202,22 +3220,26 @@ const LazyClassPromotionSnapshotBench = lazy(() =>
 
 /** Development-only isolated promotion previews; never mount campaign persistence on these routes. */
 export default function App() {
+  const [canApplyUpdate, setCanApplyUpdate] = useState(false);
   const params = new URLSearchParams(window.location.search);
   const isDevelopment = import.meta.env.DEV;
   const isSnapshotBenchRoute = isDevelopment && params.get("promotion-snapshots") === "1";
   const isPromotionLabRoute = isDevelopment && params.get("promotion-lab") === "1";
 
-  if (isSnapshotBenchRoute) {
-    return (
-      <Suspense fallback={<main className="promotion-lab"><p>セーブ比較ベンチを読み込んでいます…</p></main>}>
-        <LazyClassPromotionSnapshotBench />
-      </Suspense>
-    );
-  }
-
-  return isPromotionLabRoute ? (
+  const appContent = isSnapshotBenchRoute ? (
+    <Suspense fallback={<main className="promotion-lab"><p>セーブ比較ベンチを読み込んでいます…</p></main>}>
+      <LazyClassPromotionSnapshotBench />
+    </Suspense>
+  ) : isPromotionLabRoute ? (
     <Suspense fallback={<main className="promotion-lab"><p>試験室を読み込んでいます…</p></main>}>
       <LazyClassPromotionLab />
     </Suspense>
   ) : <CampaignApp />;
+
+  return (
+    <PwaUpdateSafetyContext.Provider value={setCanApplyUpdate}>
+      <PwaUpdatePrompt canApplyUpdate={canApplyUpdate} />
+      {appContent}
+    </PwaUpdateSafetyContext.Provider>
+  );
 }
