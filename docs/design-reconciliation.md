@@ -34,13 +34,13 @@
 | 主人公撃破・第1章ボス撃破 | §3.2／§8.3 | 試作3章で `unit_001` の撃破を敗北条件に設定。第1章は `enemy_005`（敵将）の撃破を `defeat_boss` の勝利条件とし、マップイベントで結果メッセージを表示 | `src/content/maps/chapter-01.ts`, `chapter-02.ts`, `chapter-03.ts`, `resolve-map-event-transition.ts` |
 | 自動保存 | §10.3 | enemy phase開始状態と終了状態を保存 | App、IndexedDB |
 | 砦のフェイズ開始回復 | §4.2 | フェイズ開始時に該当陣営の生存ユニットを最大HPの10%回復 | `apply-fort-recovery.ts`、`resolve-enemy-phase.ts` |
-| マップイベント基盤・永続確認・履歴 | §8.3 | ステージ開始・指定ターン／フェイズ開始・ユニット撃破・ボス撃破・勝利／敗北を一度だけ発火。メッセージ確認状態を保存し、未確認イベントは再読み込み後もモーダルで再表示。敵軍フェイズ開始イベントの確認前は敵AIを停止。確認済みを含む発火済みメッセージは現章のイベント履歴で発生順に読み返せる | `GameMapDefinition.events`, `resolve-map-events.ts`, `resolve-map-event-transition.ts`, `map-event-dialog.tsx`, `map-event-history-panel.tsx` | `firedMapEventIds`／`acknowledgedMapEventIds`／`mapEventChoices` をsaveVersion 7へ保存。履歴は既存IDとマップcontentから再構成する読み取り専用UIで、新規save field／時刻は追加しない。v5の既発火IDは確認済みとして移行。村／宝箱／扉の独立したマップオブジェクトは未実装。会話選択肢は `show-choice`／`event-choice` による汎用エンジンを実装済みだが、正式な会話・人物・章ルートは未設定。加入は `unit-interacts` と `recruit-unit` による汎用イベントアクションを実装済みだが、正式な加入人物・会話・配置コンテンツは未設定 |
+| マップイベント基盤・永続確認・履歴 | §8.3 | ステージ開始・指定ターン／フェイズ開始・ユニット撃破・ボス撃破・勝利／敗北を一度だけ発火。メッセージ確認状態を保存し、未確認イベントは再読み込み後もモーダルで再表示。敵軍フェイズ開始イベントの確認前は敵AIを停止。確認済みを含む発火済みメッセージは現章のイベント履歴で発生順に読み返せる | `GameMapDefinition.events`, `resolve-map-events.ts`, `resolve-map-event-transition.ts`, `map-event-dialog.tsx`, `map-event-history-panel.tsx` | `firedMapEventIds`／`acknowledgedMapEventIds`／`mapEventChoices`／`campaignChoices` をsaveVersion 8へ保存。履歴は既存IDとマップcontentから再構成する読み取り専用UIで、新規save field／時刻は追加しない。v5の既発火IDは確認済みとして移行。村／宝箱／扉の独立したマップオブジェクトは未実装。会話選択肢は `show-choice`／`event-choice` による汎用エンジンを実装済み。`campaignChoiceKey`を付けた選択は章間で保持し、後続章のイベント条件にできるが、正式な会話・人物・章ルートは未設定。加入は `unit-interacts` と `recruit-unit` による汎用イベントアクションを実装済みだが、正式な加入人物・会話・配置コンテンツは未設定 |
 
 | 章クリアから次章準備・保存再開 | 実装済み（勝利後の明示操作で報酬適用と次章snapshotを準備し、出撃配置確定後にのみ保存。既存のHP／EXP／能力／所持品／控え／RNGを引き継ぐ） | `src/application/prepare-next-chapter.ts`, `src/application/apply-chapter-rewards.ts`, `src/App.tsx` | Chromium E2Eで第1章クリアfixture→第2章準備→未確定中の旧セーブ維持→配置確定→saveVersion 3再読込を検証 |
 
 ## 3. B：設計済み・未実装
 
-正式な章マップ・敵配置・報酬数量、加入人物や加入会話の具体的コンテンツ、実際の章ルートを選ぶ会話分岐、キャンペーン選択／解放管理は未実装。汎用的な会話選択肢と `event-choice` 分岐エンジンは実装済み。汎用の加入イベント処理は `unit-interacts` に結び付く `recruit-unit` アクションとして実装し、明示定義されたCampaignUnitを控え名簿へ追加して次章へ引き継げる。主人公撃破による敗北条件の接続は試作3章で `unit_001` を対象に実装したが、正式な人物設定やシナリオは未決定。マップイベント基盤は実装済みで、ステージ開始／指定ターン・フェイズ開始／ユニット撃破／ボス撃破／勝利／敗北の一度きりのトリガーと、メッセージ表示・永続確認までを扱う。未確認メッセージは再読み込み後も表示し、敵軍フェイズ開始イベントは確認されるまでAI解決を停止する。章レジストリ・設定報酬適用・次章遷移UIは試作コンテンツ付きで実装済み。クラス昇格条件・コマンド・UIは実装済み。CP-07〜CP-14／CP-16の非数値ベースラインは2026-11-10に了承され、移動・行動前限定／行動消費と初期証の自動付与廃止を実装した。CP-04／CP-05の能力ボーナス・クラス別上限は数値未決定のため仮値のまま。具体的な証の報酬設定も未実装。詳細は [class-promotion.md](class-promotion.md) に記録した。撃破数・経験値・レベルアップの基本表示と、敵軍の生存／撃破一覧・生存味方のクラス／Lv／EXP／HPを表示する詳細リザルトを実装した。味方攻撃と敵軍フェイズの実解決結果を発生順にまとめるセッション内時系列履歴を追加した。これはリロード・セーブ読込・バックアップ復元・章切替で消える一時UI状態であり、永続的な戦闘履歴・撃破者別統計・正式な加入／会話コンテンツは未実装。会話選択肢の汎用エンジンは実装済み。
+正式な章マップ・敵配置・報酬数量、加入人物や加入会話の具体的コンテンツ、実際の章ルートを選ぶ会話分岐と章解放UIは未実装。汎用的な会話選択肢と `event-choice` 分岐エンジンに加え、名前付き選択を章間で保存し後続章イベントの条件にする仕組み（`campaignChoiceKey`／`campaignChoices`／`campaign-choice` condition）は実装済み。汎用の加入イベント処理は `unit-interacts` に結び付く `recruit-unit` アクションとして実装し、明示定義されたCampaignUnitを控え名簿へ追加して次章へ引き継げる。主人公撃破による敗北条件の接続は試作3章で `unit_001` を対象に実装したが、正式な人物設定やシナリオは未決定。マップイベント基盤は実装済みで、ステージ開始／指定ターン・フェイズ開始／ユニット撃破／ボス撃破／勝利／敗北の一度きりのトリガーと、メッセージ表示・永続確認までを扱う。未確認メッセージは再読み込み後も表示し、敵軍フェイズ開始イベントは確認されるまでAI解決を停止する。章レジストリ・設定報酬適用・次章遷移UIは試作コンテンツ付きで実装済み。クラス昇格条件・コマンド・UIは実装済み。CP-07〜CP-14／CP-16の非数値ベースラインは2026-11-10に了承され、移動・行動前限定／行動消費と初期証の自動付与廃止を実装した。CP-04／CP-05の能力ボーナス・クラス別上限は数値未決定のため仮値のまま。具体的な証の報酬設定も未実装。詳細は [class-promotion.md](class-promotion.md) に記録した。撃破数・経験値・レベルアップの基本表示と、敵軍の生存／撃破一覧・生存味方のクラス／Lv／EXP／HPを表示する詳細リザルトを実装した。味方攻撃と敵軍フェイズの実解決結果を発生順にまとめるセッション内時系列履歴を追加した。これはリロード・セーブ読込・バックアップ復元・章切替で消える一時UI状態であり、永続的な戦闘履歴・撃破者別統計・正式な加入／会話コンテンツは未実装。会話選択肢の汎用エンジンは実装済み。
 
 ## 4. 章間引き継ぎ基盤
 
@@ -94,3 +94,11 @@ PR #76では味方インスペクターが既存のGameStateSnapshot／content�
 
 - 勝利／敗北リザルトからタイトル画面へ戻る操作を追加。これは表示状態だけを変更し、自動セーブ／GameState／saveVersion／IndexedDBを書き換えない。
 - タイトル画面の「つづきから」で同じリザルトを再表示できることをChromium E2Eで検証する。
+
+
+## 章間キャンペーン選択の照合（saveVersion 8）
+
+- `show-choice.campaignChoiceKey` は一度だけ選べるキャンペーン全体のキーで、選択結果・元章・元イベントを `campaignChoices` に保存する。通常の `mapEventChoices` は現章内の選択履歴として従来どおり保持する。
+- 後続章のマップイベントは `condition: { type: "campaign-choice", key, choiceId }` で選択結果を参照する。chapter registry validationで選択元が後の章になっていないこと、キー重複、choice ID参照を検証する。
+- 次章遷移時はcampaignChoicesのみ継承し、現章のイベント発火／確認／選択履歴は次章の初期状態へリセットする。saveVersion 7から8への移行では既存の `mapEventChoices` を保持し、`campaignChoices: []` を追加する。IndexedDB schema 1は維持する。
+- 実際の章ルート・正式会話・人物・報酬は追加していない。これは将来のコンテンツ authoring のための汎用基盤である。
