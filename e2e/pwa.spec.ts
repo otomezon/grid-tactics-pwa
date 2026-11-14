@@ -470,12 +470,14 @@ test.describe("production PWA shell", () => {
       (key) => Number(sessionStorage.getItem(key) ?? "0"), navigationCountKey
     );
     await expect(page.getByTestId("pwa-update-apply")).toBeEnabled();
+    const updateNavigation = page.waitForNavigation({ waitUntil: "load", timeout: 30_000 });
     await page.getByTestId("pwa-update-apply").click();
+    await updateNavigation;
 
-    await expect.poll(
-      () => page.evaluate((key) => Number(sessionStorage.getItem(key) ?? "0"), navigationCountKey),
-      { timeout: 30_000 }
-    ).toBeGreaterThan(navigationCountBeforeApply);
+    const navigationCountAfterApply = await page.evaluate(
+      (key) => Number(sessionStorage.getItem(key) ?? "0"), navigationCountKey
+    );
+    expect(navigationCountAfterApply).toBeGreaterThan(navigationCountBeforeApply);
 
     await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
     await page.getByRole("button", { name: "つづきから" }).click();

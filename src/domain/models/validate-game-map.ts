@@ -242,5 +242,39 @@ export function isValidGameMapDefinition(value: unknown): value is GameMapDefini
     }
   }
 
+  if (value.objects !== undefined) {
+    if (!Array.isArray(value.objects) || value.objects.length > 128) return false;
+    if (value.objects.length > 0 && !Array.isArray(value.events)) return false;
+
+    const eventsById = new Map(
+      (Array.isArray(value.events) ? value.events as Record<string, unknown>[] : [])
+        .map((event) => [event.id as string, event] as const)
+    );
+    const objectIds = new Set<string>();
+    const referencedEventIds = new Set<string>();
+
+    for (const candidate of value.objects) {
+      if (
+        !isRecord(candidate) ||
+        !isNonEmptyString(candidate.id) ||
+        candidate.id.length > 128 ||
+        objectIds.has(candidate.id) ||
+        !isNonEmptyString(candidate.eventId) ||
+        candidate.eventId.length > 128 ||
+        referencedEventIds.has(candidate.eventId) ||
+        (candidate.kind !== "village" &&
+          candidate.kind !== "treasure-chest" &&
+          candidate.kind !== "door")
+      ) return false;
+
+      const event = eventsById.get(candidate.eventId);
+      if (!isRecord(event) || !isRecord(event.trigger) || event.trigger.type !== "unit-interacts") {
+        return false;
+      }
+      objectIds.add(candidate.id);
+      referencedEventIds.add(candidate.eventId);
+    }
+  }
+
   return true;
 }

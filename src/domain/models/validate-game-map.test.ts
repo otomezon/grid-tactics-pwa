@@ -241,6 +241,34 @@ describe("isValidGameMapDefinition", () => {
   });
 
 
+  it("validates first-class map objects against unique unit-interaction events", () => {
+    const events = [
+      { id: "village-event", trigger: { type: "unit-interacts", x: 9, y: 8, label: "村" }, action: { type: "show-message", text: "村イベントです。" } },
+      { id: "chest-event", trigger: { type: "unit-interacts", x: 7, y: 8, label: "宝箱" }, action: { type: "show-message", text: "宝箱イベントです。" } },
+      { id: "door-event", trigger: { type: "unit-interacts", x: 9, y: 7, label: "扉" }, action: { type: "show-message", text: "扉イベントです。" } }
+    ];
+    const valid = {
+      ...CHAPTER_01_MAP,
+      events,
+      objects: [
+        { id: "village-object", kind: "village", eventId: "village-event" },
+        { id: "chest-object", kind: "treasure-chest", eventId: "chest-event" },
+        { id: "door-object", kind: "door", eventId: "door-event" }
+      ]
+    };
+    expect(isValidGameMapDefinition({ ...CHAPTER_01_MAP, events: undefined, objects: [] })).toBe(true);
+    expect(isValidGameMapDefinition(valid)).toBe(true);
+    expect(isValidGameMapDefinition({ ...valid, objects: [{ ...valid.objects[0], eventId: "missing-event" }] })).toBe(false);
+    expect(isValidGameMapDefinition({ ...valid, objects: [{ ...valid.objects[0], eventId: "door-event" }, { ...valid.objects[1], eventId: "door-event" }] })).toBe(false);
+    expect(isValidGameMapDefinition({ ...valid, objects: [{ ...valid.objects[0], kind: "shop" }] })).toBe(false);
+    expect(isValidGameMapDefinition({ ...valid, objects: [{ ...valid.objects[0] }, { ...valid.objects[0], id: "village-object-2" }] })).toBe(false);
+    expect(isValidGameMapDefinition({ ...valid, objects: [{ ...valid.objects[0] }], events: undefined })).toBe(false);
+    expect(isValidGameMapDefinition({
+      ...valid,
+      events: [{ ...events[0], trigger: { type: "stage-start" } }]
+    })).toBe(false);
+  });
+
   it("accepts a valid interaction-driven recruitment event and rejects invalid variants", () => {
     const source = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
     const { faction: _faction, position: _position, hasMoved: _hasMoved, hasActed: _hasActed, ...campaignData } = source;

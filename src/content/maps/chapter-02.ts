@@ -26,7 +26,59 @@ export const CHAPTER_02_MAP: GameMapDefinition = {
   ],
   objective: { type: "defeat_all" },
   defeatCondition: { type: "unit_defeated", targetUnitId: MAIN_CHARACTER_UNIT_ID },
-  events: [createMainCharacterDefeatEvent(2)]
+  objects: [
+    { id: "chapter-02-prototype-village", kind: "village", eventId: "chapter-02-prototype-village-visit" },
+    { id: "chapter-02-prototype-chest", kind: "treasure-chest", eventId: "chapter-02-prototype-chest-open" },
+    { id: "chapter-02-prototype-door", kind: "door", eventId: "chapter-02-prototype-door-inspect" }
+  ],
+  events: [
+    createMainCharacterDefeatEvent(2),
+    {
+      id: "chapter-02-prototype-village-visit",
+      trigger: {
+        type: "unit-interacts",
+        x: 9,
+        y: 8,
+        label: "試作村",
+        description: "村オブジェクトの操作確認用です。正式な村人・会話・報酬はありません。"
+      },
+      action: {
+        type: "show-message",
+        speaker: "操作確認",
+        text: "村イベントの動作確認です。正式な村人・会話・報酬は未設定です。"
+      }
+    },
+    {
+      id: "chapter-02-prototype-chest-open",
+      trigger: {
+        type: "unit-interacts",
+        x: 7,
+        y: 8,
+        label: "試作宝箱",
+        description: "宝箱オブジェクトの操作確認用です。報酬内容は未設定です。"
+      },
+      action: {
+        type: "show-message",
+        speaker: "操作確認",
+        text: "宝箱を開けました。正式な報酬は未設定です。"
+      }
+    },
+    {
+      id: "chapter-02-prototype-door-inspect",
+      trigger: {
+        type: "unit-interacts",
+        x: 9,
+        y: 7,
+        label: "試作扉",
+        description: "扉オブジェクトの操作確認用です。鍵・通行効果は未設定です。"
+      },
+      action: {
+        type: "show-message",
+        speaker: "操作確認",
+        text: "扉を調べました。通行可否はマップの地形定義のままです。"
+      }
+    }
+  ]
 };
 
 // Placeholder chapter data exists to exercise chapter carry-over and save restoration.

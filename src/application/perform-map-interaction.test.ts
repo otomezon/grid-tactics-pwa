@@ -43,6 +43,7 @@ describe("map interactions", () => {
     const state = movedInvestigator();
     expect(getMapInteractionPoints(state, INTERACTION_MAP)).toEqual([{
       id: "prototype-investigation",
+      kind: "location",
       label: "試作調査地点",
       description: "操作確認用の地点です。",
       position: { x: 9, y: 8 },
@@ -52,6 +53,30 @@ describe("map interactions", () => {
     expect(getAvailableMapInteraction(state, INTERACTION_MAP, "unit_004")?.id)
       .toBe("prototype-investigation");
     expect(getAvailableMapInteraction(state, INTERACTION_MAP, "unit_001")).toBeNull();
+  });
+
+  it("projects village, treasure chest, and door kinds from linked map objects", () => {
+    const events = [
+      { id: "village-event", trigger: { type: "unit-interacts" as const, x: 9, y: 8, label: "村" }, action: { type: "show-message" as const, text: "村" } },
+      { id: "chest-event", trigger: { type: "unit-interacts" as const, x: 7, y: 8, label: "宝箱" }, action: { type: "show-message" as const, text: "宝箱" } },
+      { id: "door-event", trigger: { type: "unit-interacts" as const, x: 9, y: 7, label: "扉" }, action: { type: "show-message" as const, text: "扉" } }
+    ];
+    const map: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events,
+      objects: [
+        { id: "village-object", kind: "village", eventId: "village-event" },
+        { id: "chest-object", kind: "treasure-chest", eventId: "chest-event" },
+        { id: "door-object", kind: "door", eventId: "door-event" }
+      ]
+    };
+    expect(getMapInteractionPoints(INITIAL_GAME_STATE, map).map((point) => ({
+      id: point.id, kind: point.kind, label: point.label
+    }))).toEqual([
+      { id: "village-event", kind: "village", label: "村" },
+      { id: "chest-event", kind: "treasure-chest", label: "宝箱" },
+      { id: "door-event", kind: "door", label: "扉" }
+    ]);
   });
 
   it("allows investigation after movement, fires the event once, and consumes the action", () => {
