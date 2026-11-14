@@ -94,6 +94,7 @@ export function isValidGameStateSnapshot(
     !Array.isArray(value.firedMapEventIds) || value.firedMapEventIds.length > 1000 ||
     !Array.isArray(value.acknowledgedMapEventIds) || value.acknowledgedMapEventIds.length > 1000 ||
     !Array.isArray(value.mapEventChoices) || value.mapEventChoices.length > 256 ||
+    !Array.isArray(value.campaignChoices) || value.campaignChoices.length > 256 ||
     map.terrain.length !== map.height || map.terrain.some((row) => row.length !== map.width)
   ) return false;
 
@@ -194,6 +195,55 @@ export function isValidGameStateSnapshot(
     if (
       firedMapEventIds.has(eventId) &&
       acknowledgedMapEventIds.has(eventId) !== selectedChoiceEventIds.has(eventId)
+    ) return false;
+  }
+
+  const campaignChoicesByKey = new Map<string, {
+    choiceId: string;
+    sourceChapterId: string;
+    sourceEventId: string;
+  }>();
+  for (const candidate of value.campaignChoices) {
+    if (
+      !isRecord(candidate) ||
+      !isNonEmptyString(candidate.key) || candidate.key.length > 128 ||
+      !isNonEmptyString(candidate.choiceId) || candidate.choiceId.length > 64 ||
+      !isNonEmptyString(candidate.sourceChapterId) || candidate.sourceChapterId.length > 128 ||
+      !isNonEmptyString(candidate.sourceEventId) || candidate.sourceEventId.length > 128 ||
+      campaignChoicesByKey.has(candidate.key)
+    ) return false;
+    const selection = {
+      choiceId: candidate.choiceId,
+      sourceChapterId: candidate.sourceChapterId,
+      sourceEventId: candidate.sourceEventId
+    };
+    campaignChoicesByKey.set(candidate.key, selection);
+
+    if (candidate.sourceChapterId === map.id) {
+      const source = choiceEvents.get(candidate.sourceEventId);
+      if (
+        !source ||
+        source.action.type !== "show-choice" ||
+        source.action.campaignChoiceKey !== candidate.key ||
+        !source.action.choices.some((choice) => choice.id === candidate.choiceId) ||
+        !firedMapEventIds.has(candidate.sourceEventId) ||
+        !acknowledgedMapEventIds.has(candidate.sourceEventId) ||
+        !value.mapEventChoices.some((choice) =>
+          choice.eventId === candidate.sourceEventId && choice.choiceId === candidate.choiceId
+        )
+      ) return false;
+    }
+  }
+
+  for (const candidate of value.mapEventChoices) {
+    const source = choiceEvents.get(candidate.eventId);
+    if (source?.action.type !== "show-choice" || source.action.campaignChoiceKey === undefined) continue;
+    const campaignSelection = campaignChoicesByKey.get(source.action.campaignChoiceKey);
+    if (
+      !campaignSelection ||
+      campaignSelection.choiceId !== candidate.choiceId ||
+      campaignSelection.sourceChapterId !== map.id ||
+      campaignSelection.sourceEventId !== candidate.eventId
     ) return false;
   }
 
