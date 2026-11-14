@@ -78,6 +78,7 @@ import {
   type SaveBackupRecord
 } from "./persistence/save-repository";
 import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
+import { getStorageOperationErrorMessage } from "./persistence/storage-error";
 import { OperationGuide } from "./components/operation-guide";
 import { CampaignTitleScreen } from "./components/campaign-title-screen";
 import { BattleContributionPanel } from "./components/battle-contribution-panel";
@@ -299,7 +300,8 @@ function strikeKindLabel(kind: AttackPlan["forecast"]["strikes"][number]["kind"]
 }
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "戦闘操作に失敗しました。";
+  return getStorageOperationErrorMessage(error) ??
+    (error instanceof Error ? error.message : "戦闘操作に失敗しました。");
 }
 
 function formatFortRecoverySummary(recoveries: FortRecoveryRecord[]): string {
@@ -897,9 +899,12 @@ function CampaignApp() {
       setSaveStatus("saved");
       setMessage(successMessage);
       return { saved: true, state: stateToSave };
-    } catch {
+    } catch (error) {
       setSaveStatus("failed");
-      setMessage("行動は画面に反映されましたが、セーブに失敗しました。ストレージ設定を確認してください。");
+      const storageErrorMessage = getStorageOperationErrorMessage(error);
+      setMessage(storageErrorMessage
+        ? "行動は画面に反映されましたが、自動保存に失敗しました。" + storageErrorMessage
+        : "行動は画面に反映されましたが、セーブに失敗しました。ストレージ設定を確認してください。");
       return { saved: false, state: stateToSave };
     }
   }
@@ -1808,9 +1813,12 @@ function CampaignApp() {
         setSaveStatus("saved");
         setHasSavedCampaign(true);
         setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。");
-      } catch {
+      } catch (error) {
         setSaveStatus("failed");
-        setMessage("出撃配置は確定しましたが、自動保存に失敗しました。次の行動時に再保存します。");
+        const storageErrorMessage = getStorageOperationErrorMessage(error);
+        setMessage(storageErrorMessage
+          ? "出撃配置は確定しましたが、自動保存に失敗しました。" + storageErrorMessage
+          : "出撃配置は確定しましたが、自動保存に失敗しました。次の行動時に再保存します。");
       }
 
       setDeploymentPending(false);
