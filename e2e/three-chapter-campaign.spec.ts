@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { acknowledgePendingMapEvents } from "./helpers/map-events";
 
@@ -705,6 +706,21 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(allyRecords).toHaveCount(1);
   await expect(allyRecords.first()).toHaveAttribute("data-unit-id", "unit_001");
   await expect(allyArchive).toContainText("1 / 2名を表示");
+  const allyCsvButton = allyArchive.getByRole("button", { name: "味方別累計をCSV出力" });
+  await expect(allyCsvButton).toBeVisible();
+  if (input === "click") {
+    const downloadPromise = page.waitForEvent("download");
+    await allyCsvButton.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^campaign-unit-records-\d{4}-\d{2}-\d{2}\.csv$/);
+    const downloadPath = await download.path();
+    if (!downloadPath) throw new Error("The ally-record CSV download has no temporary file path.");
+    const csv = await readFile(downloadPath, "utf8");
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(csv).toContain(archivedHero.name);
+    expect(csv).not.toContain(archivedAlly.name);
+    expect(csv).toContain("与ダメージ");
+  }
   await allyArchive.getByRole("button", { name: "検索を解除" }).click();
   await expect(allyRecords).toHaveCount(2);
   await expectMobileViewport(page, input);
@@ -732,6 +748,22 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleLogEntries).toHaveCount(1);
   await expect(battleLogEntries.first()).toContainText("HP +7");
   await expect(battleHistoryPanel).toContainText("1 / 12件を表示");
+  const timelineCsvButton = battleHistoryPanel.getByRole("button", { name: "時系列ログをCSV出力" });
+  await expect(timelineCsvButton).toBeVisible();
+  if (input === "click") {
+    const downloadPromise = page.waitForEvent("download");
+    await timelineCsvButton.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-\d{4}-\d{2}-\d{2}\.csv$/);
+    const downloadPath = await download.path();
+    if (!downloadPath) throw new Error("The timeline CSV download has no temporary file path.");
+    const csv = await readFile(downloadPath, "utf8");
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(csv).toContain("HP +7");
+    expect(csv).toContain("主人公");
+    expect(csv).not.toContain("敵02");
+  }
+  expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
 
   await battleHistoryPanel.getByRole("button", { name: "絞り込みを解除" }).click();
   await expect(battleLogEntries).toHaveCount(12);
