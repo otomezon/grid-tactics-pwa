@@ -2860,6 +2860,56 @@ test("shows candidate details and persists the selected deployment roster", asyn
     expect(await readAutoSave(page)).toEqual(saved);
   });
 
+  test("safely backs up the current auto-save before restoring a prior generation", async ({ page }) => {
+    await startBattle(page);
+    const currentSave = await readAutoSave(page) as { rngState: number; [key: string]: unknown };
+
+    await page.reload();
+    const title = page.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+    await title.getByTestId("title-create-save-backup").click();
+    await expect(title.getByTestId("title-backup-entry-backup-1")).toBeVisible();
+
+    const changedSave = {
+      ...currentSave,
+      rngState: currentSave.rngState === 0xffff_ffff ? 1 : currentSave.rngState + 1
+    };
+    await writeAutoSave(page, changedSave);
+    await page.reload();
+    const restoreTitle = page.getByTestId("campaign-title-screen");
+    await expect(restoreTitle).toBeVisible();
+
+    let cancelMessage = "";
+    page.once("dialog", async (dialog) => {
+      cancelMessage = dialog.message();
+      await dialog.dismiss();
+    });
+    await restoreTitle.getByTestId("title-restore-backup-1").click();
+    expect(cancelMessage).toContain("第1世代へ退避");
+    expect(await readAutoSave(page)).toEqual(changedSave);
+    await expect(restoreTitle).toBeVisible();
+
+    page.once("dialog", async (dialog) => {
+      await dialog.accept();
+    });
+    await restoreTitle.getByTestId("title-restore-backup-1").click();
+    await expect(page.getByTestId("campaign-title-screen")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(currentSave);
+
+    await page.reload();
+    const restoredTitle = page.getByTestId("campaign-title-screen");
+    await expect(restoredTitle).toBeVisible();
+    await expect(restoredTitle.getByTestId("title-backup-entry-backup-1")).toBeVisible();
+    await expect(restoredTitle.getByTestId("title-backup-entry-backup-2")).toBeVisible();
+
+    page.once("dialog", async (dialog) => {
+      await dialog.accept();
+    });
+    await restoredTitle.getByTestId("title-restore-backup-1").click();
+    await expect(page.getByTestId("campaign-title-screen")).toHaveCount(0);
+    expect(await readAutoSave(page)).toEqual(changedSave);
+  });
+
   test("blocks new-campaign overwrite when the stored snapshot cannot be validated", async ({ page }) => {
     await startBattle(page);
     const invalidStoredSnapshot = { saveVersion: 999, chapterId: "chapter_01_map" };
