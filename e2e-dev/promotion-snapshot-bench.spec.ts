@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 function makePromotionSnapshotFile() {
   const snapshot = {
-    saveVersion: 9,
+    saveVersion: 10,
     chapterId: "chapter_01_map",
     phase: "player",
     turn: 4,

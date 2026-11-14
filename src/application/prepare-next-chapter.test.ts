@@ -94,7 +94,14 @@ describe("prepareNextChapter", () => {
     expect(carried.hasActed).toBe(false);
     expect(result.campaignUnitBattleRecords).toEqual(previousState.campaignUnitBattleRecords);
     expect(result.campaignUnitBattleRecords).not.toBe(previousState.campaignUnitBattleRecords);
-    expect(result.campaignBattleLog).toEqual(previousState.campaignBattleLog);
+    expect(result.campaignBattleLog.slice(0, -1)).toEqual(previousState.campaignBattleLog);
+    expect(result.campaignBattleLog.at(-1)).toMatchObject({
+      sequence: 2,
+      kind: "chapter-result",
+      chapterId: CHAPTER_01_MAP.id,
+      outcome: "victory",
+      reason: "objective-cleared"
+    });
     expect(result.campaignBattleLog).not.toBe(previousState.campaignBattleLog);
     expect(result.campaignBattleLog[0]).not.toBe(previousState.campaignBattleLog[0]);
     expect(isValidGameStateSnapshot(result, next.map)).toBe(true);
@@ -361,6 +368,31 @@ describe("prepareNextChapter", () => {
     const roadEvents = resolveMapEvents(roadNext, nextMap, { type: "stage-start" });
     expect(roadEvents.messages).toEqual([]);
     expect(roadEvents.nextState).toBe(roadNext);
+  });
+
+  it("does not duplicate a chapter result that was already recorded before transition", () => {
+    const next = nextChapterFixture();
+    const state = clearedState({
+      campaignBattleLog: [{
+        sequence: 1,
+        chapterId: CHAPTER_01_MAP.id,
+        turn: 7,
+        kind: "chapter-result",
+        outcome: "victory",
+        objective: "defeat_boss",
+        reason: "objective-cleared",
+        livingPlayerCount: 4,
+        livingEnemyCount: 0
+      }]
+    });
+    const result = prepareNextChapter({
+      previousState: state,
+      previousMap: CHAPTER_01_MAP,
+      nextChapterInitialState: next.state,
+      nextMap: next.map,
+      currentHpPolicy: "preserve"
+    });
+    expect(result.campaignBattleLog).toEqual(state.campaignBattleLog);
   });
 
 });

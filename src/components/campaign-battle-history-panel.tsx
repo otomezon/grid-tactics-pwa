@@ -125,7 +125,7 @@ export function CampaignBattleHistoryPanel({ entries, onClose }: CampaignBattleH
       </ol>
 
       <p className="campaign-battle-history-footnote">
-        実際に確定した行動・攻撃結果のみを保存しています。敵AIの予測や候補評価は含みません。
+        実際に確定した行動・攻撃結果と章の勝敗結果のみを保存しています。敵AIの予測や候補評価は含みません。
         最大5,000件を保持し、上限を超えると古い履歴から入れ替わります。
       </p>
     </section>

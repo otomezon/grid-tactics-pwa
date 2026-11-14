@@ -7,6 +7,7 @@ import type {
 } from "../domain/models/game";
 import { evaluateBattleOutcome } from "../domain/rules/evaluate-battle-outcome";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
+import { appendCampaignChapterResultIfMissing } from "./record-campaign-battle-log";
 
 export type ChapterCarryOverHpPolicy = "preserve" | "restore";
 export interface PrepareNextChapterInput {
@@ -72,6 +73,7 @@ export function prepareNextChapter({
     throw new Error("The next chapter template must be a valid player-phase turn 1 state.");
   }
 
+  const previousStateWithResult = appendCampaignChapterResultIfMissing(previousState, previousMap);
   const previousPartyIds = new Set(previousMap.playerDeployment.map(({ unitId }) => unitId));
   const previousPlayers = new Map(
     previousState.units.filter((unit) => unit.faction === "player").map((unit) => [unit.id, unit] as const)
@@ -125,12 +127,12 @@ export function prepareNextChapter({
     ...nextChapterInitialState,
     units: [...playerUnits, ...enemyUnits],
     reserveUnits,
-    campaignUnitBattleRecords: previousState.campaignUnitBattleRecords.map((record) => ({
+    campaignUnitBattleRecords: previousStateWithResult.campaignUnitBattleRecords.map((record) => ({
       ...record,
       statGains: { ...record.statGains }
     })),
-    campaignChoices: previousState.campaignChoices.map((selection) => ({ ...selection })),
-    campaignBattleLog: previousState.campaignBattleLog.map((entry) => ({
+    campaignChoices: previousStateWithResult.campaignChoices.map((selection) => ({ ...selection })),
+    campaignBattleLog: previousStateWithResult.campaignBattleLog.map((entry) => ({
       ...entry,
       ...(entry.kind === "player-attack" || entry.kind === "enemy-action"
         ? { strikes: entry.strikes.map((strike) => ({ ...strike })) }

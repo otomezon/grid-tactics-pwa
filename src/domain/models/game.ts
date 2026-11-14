@@ -193,7 +193,20 @@ interface CampaignBattleLogBase {
   turn: number;
 }
 
+export type CampaignChapterResultReason =
+  | "objective-cleared"
+  | "party-wiped"
+  | "protected-unit-defeated";
+
 export type CampaignBattleLogEntry =
+  | (CampaignBattleLogBase & {
+      kind: "chapter-result";
+      outcome: "victory" | "defeat";
+      objective: "defeat_all" | "defeat_boss";
+      reason: CampaignChapterResultReason;
+      livingPlayerCount: number;
+      livingEnemyCount: number;
+    })
   | (CampaignBattleLogBase & {
       kind: "player-action";
       action: CampaignPlayerActionKind;
@@ -223,7 +236,7 @@ export type CampaignBattleLogEntry =
     });
 
 export const MAX_CAMPAIGN_BATTLE_LOG_ENTRIES = 5000 as const;
-export const SAVE_VERSION = 9 as const;
+export const SAVE_VERSION = 10 as const;
 
 export interface GameStateSnapshot {
   saveVersion: typeof SAVE_VERSION;

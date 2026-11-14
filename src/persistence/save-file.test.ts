@@ -149,6 +149,26 @@ describe("save file export and import format", () => {
   it("does not assume the enclosed snapshot is valid", () => {
     const content = createSaveFileContent(INITIAL_GAME_STATE);
     const result = parseSaveFileContent(content) as { saveVersion: number };
-    expect(result.saveVersion).toBe(9);
+    expect(result.saveVersion).toBe(10);
   });
+
+  it("round-trips a completed chapter result in the persistent campaign log", () => {
+    const snapshot = {
+      ...INITIAL_GAME_STATE,
+      campaignBattleLog: [{
+        sequence: 1,
+        chapterId: CHAPTER_01_MAP.id,
+        turn: 8,
+        kind: "chapter-result" as const,
+        outcome: "victory" as const,
+        objective: "defeat_boss" as const,
+        reason: "objective-cleared" as const,
+        livingPlayerCount: 3,
+        livingEnemyCount: 0
+      }]
+    };
+    expect(isValidGameStateSnapshot(snapshot, CHAPTER_01_MAP)).toBe(true);
+    expect(parseSaveFileContent(createSaveFileContent(snapshot))).toEqual(snapshot);
+  });
+
 });

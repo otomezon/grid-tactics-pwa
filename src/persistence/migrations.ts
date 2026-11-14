@@ -11,6 +11,7 @@ const VERSION_FIVE_SAVE_VERSION = 5;
 const VERSION_SIX_SAVE_VERSION = 6;
 const VERSION_SEVEN_SAVE_VERSION = 7;
 const VERSION_EIGHT_SAVE_VERSION = 8;
+const VERSION_NINE_SAVE_VERSION = 9;
 const FALLBACK_RNG_STATE = 0x6d2b79f5;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -63,7 +64,7 @@ export interface GameStateMigrationResult {
   snapshot: GameStateSnapshot;
   migrated: boolean;
 }
-/** Adds the campaign battle log in v9 while preserving all prior migration guarantees. */
+/** Adds chapter-result entries to the campaign battle log in v10 while preserving all prior migration guarantees. */
 export function migrateGameStateSnapshot(
   value: unknown,
   map: GameMapDefinition
@@ -72,7 +73,9 @@ export function migrateGameStateSnapshot(
   if (!isRecord(value)) return null;
 
   let candidate: unknown;
-  if (value.saveVersion === VERSION_EIGHT_SAVE_VERSION) {
+  if (value.saveVersion === VERSION_NINE_SAVE_VERSION) {
+    candidate = { ...value, saveVersion: SAVE_VERSION };
+  } else if (value.saveVersion === VERSION_EIGHT_SAVE_VERSION) {
     candidate = { ...value, saveVersion: SAVE_VERSION };
   } else if (value.saveVersion === VERSION_SEVEN_SAVE_VERSION) {
     candidate = { ...value, saveVersion: SAVE_VERSION, campaignChoices: [] };
@@ -137,7 +140,13 @@ export function migrateGameStateSnapshot(
   } else {
     return null;
   }
-  if (isRecord(candidate)) candidate = { ...candidate, saveVersion: SAVE_VERSION, campaignBattleLog: [] };
+  if (isRecord(candidate)) {
+    candidate = {
+      ...candidate,
+      saveVersion: SAVE_VERSION,
+      ...(value.saveVersion === VERSION_NINE_SAVE_VERSION ? {} : { campaignBattleLog: [] })
+    };
+  }
   if (!isValidGameStateSnapshot(candidate, map)) return null;
   return { snapshot: candidate, migrated: true };
 }

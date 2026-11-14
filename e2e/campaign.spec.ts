@@ -123,7 +123,7 @@ test.describe("campaign title and save hub", () => {
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
     };
-    expect(saved.saveVersion).toBe(9);
+    expect(saved.saveVersion).toBe(10);
     expect(saved.turn).toBe(1);
     expect(saved.phase).toBe("player");
     expect(saved.chapterId).toBeTruthy();
@@ -149,7 +149,7 @@ test.describe("campaign title and save hub", () => {
       firedMapEventIds: string[];
       acknowledgedMapEventIds: string[];
     };
-    expect(acknowledgedSave.saveVersion).toBe(9);
+    expect(acknowledgedSave.saveVersion).toBe(10);
     expect(acknowledgedSave.firedMapEventIds).toEqual(saved.firedMapEventIds);
     expect(acknowledgedSave.acknowledgedMapEventIds).toEqual(["chapter-01-opening-briefing"]);
 
@@ -363,7 +363,15 @@ test.describe("campaign title and save hub", () => {
     await title.getByRole("button", { name: "つづきから" }).click();
     await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
 
-    const savedResult = await readAutoSave(page);
+    const savedResult = await readAutoSave(page) as { campaignBattleLog: Array<Record<string, unknown>> };
+    expect(savedResult.campaignBattleLog.at(-1)).toMatchObject({
+      kind: "chapter-result",
+      outcome: "victory",
+      objective: "defeat_boss",
+      reason: "objective-cleared",
+      livingPlayerCount: 4,
+      livingEnemyCount: 0
+    });
     await page.getByTestId("return-to-campaign-title").click();
     await expect(title).toBeVisible();
     await expect(title.getByTestId("campaign-resume-summary")).toContainText("クリア");
@@ -392,7 +400,15 @@ test.describe("campaign title and save hub", () => {
     await title.getByRole("button", { name: "つづきから" }).click();
     await expect(page.locator(".battle-outcome").getByText("敗北", { exact: true })).toBeVisible();
 
-    const savedResult = await readAutoSave(page);
+    const savedResult = await readAutoSave(page) as { campaignBattleLog: Array<Record<string, unknown>> };
+    expect(savedResult.campaignBattleLog.at(-1)).toMatchObject({
+      kind: "chapter-result",
+      outcome: "defeat",
+      objective: "defeat_boss",
+      reason: "protected-unit-defeated",
+      livingPlayerCount: 3,
+      livingEnemyCount: 5
+    });
     await page.getByTestId("return-to-campaign-title").click();
     await expect(title).toBeVisible();
     await expect(title.getByTestId("campaign-resume-summary")).toContainText("敗北");
@@ -1646,7 +1662,10 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(career).toContainText("撃破");
     await expect(career).toContainText("レベルアップ");
     await expect(career).toContainText("累計能力上昇：HP +1");
-    expect(await readAutoSave(page)).not.toBeNull();
+    const victorySave = await readAutoSave(page) as { campaignBattleLog: Array<Record<string, unknown>> };
+    expect(victorySave.campaignBattleLog.at(-1)).toMatchObject({
+      kind: "chapter-result", outcome: "victory", reason: "objective-cleared"
+    });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
     await page.reload();
@@ -2698,7 +2717,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       }>;
     };
     expect(nextChapterState).toMatchObject({
-      saveVersion: 9,
+      saveVersion: 10,
       chapterId: "chapter_02_map",
       phase: "player",
       turn: 1,
@@ -2773,7 +2792,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
       units: Array<{ id: string; faction: string }>;
     };
     expect(chapterThreeState).toMatchObject({
-      saveVersion: 9,
+      saveVersion: 10,
       chapterId: "chapter_03_map",
       phase: "player",
       turn: 1

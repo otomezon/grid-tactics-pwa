@@ -6,6 +6,7 @@ import { performAttack } from "./perform-attack";
 import { getPlayerAttackReport } from "./get-player-attack-report";
 import {
   appendCampaignBattleLogEntries,
+  appendCampaignChapterResultIfMissing,
   createEnemyBattleLogEntries,
   createPlayerAttackBattleLogEntry
 } from "./record-campaign-battle-log";
@@ -151,4 +152,44 @@ describe("campaign battle log recording", () => {
     expect(entry).not.toHaveProperty("targetEvaluations");
     expect(entry).not.toHaveProperty("movementEvaluations");
   });
+  it("records an objective victory once with exact surviving unit counts", () => {
+    const victoryState = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.faction === "player")
+    };
+    const recorded = appendCampaignChapterResultIfMissing(victoryState, CHAPTER_01_MAP);
+    expect(recorded.campaignBattleLog.at(-1)).toMatchObject({
+      sequence: 1,
+      chapterId: CHAPTER_01_MAP.id,
+      turn: victoryState.turn,
+      kind: "chapter-result",
+      outcome: "victory",
+      objective: "defeat_boss",
+      reason: "objective-cleared",
+      livingPlayerCount: victoryState.units.length,
+      livingEnemyCount: 0
+    });
+    expect(appendCampaignChapterResultIfMissing(recorded, CHAPTER_01_MAP)).toBe(recorded);
+  });
+
+  it("distinguishes a party wipe from a protected-unit defeat", () => {
+    const partyWipe = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.faction === "enemy")
+    };
+    const protectedUnitDefeat = {
+      ...INITIAL_GAME_STATE,
+      units: INITIAL_GAME_STATE.units.filter((unit) => unit.id !== "unit_001")
+    };
+    expect(appendCampaignChapterResultIfMissing(partyWipe, CHAPTER_01_MAP).campaignBattleLog.at(-1))
+      .toMatchObject({ kind: "chapter-result", outcome: "defeat", reason: "party-wiped", livingPlayerCount: 0 });
+    expect(appendCampaignChapterResultIfMissing(protectedUnitDefeat, CHAPTER_01_MAP).campaignBattleLog.at(-1))
+      .toMatchObject({ kind: "chapter-result", outcome: "defeat", reason: "protected-unit-defeated", livingPlayerCount: 3 });
+  });
+
+  it("leaves an active chapter snapshot untouched", () => {
+    expect(appendCampaignChapterResultIfMissing(INITIAL_GAME_STATE, CHAPTER_01_MAP))
+      .toBe(INITIAL_GAME_STATE);
+  });
+
 });
