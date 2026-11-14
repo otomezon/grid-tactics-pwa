@@ -36,6 +36,21 @@ type SavedUnit = {
 
 type ReserveUnit = Omit<SavedUnit, "faction" | "position" | "hasMoved" | "hasActed">;
 
+type SavedCampaignUnitBattleRecord = {
+  unitId: string;
+  unitName: string;
+  attacks: number;
+  strikes: number;
+  hits: number;
+  misses: number;
+  criticalHits: number;
+  damageDealt: number;
+  enemiesDefeated: number;
+  experienceAwarded: number;
+  levelUps: number;
+  statGains: Record<string, number>;
+};
+
 type SaveSnapshot = {
   saveVersion: number;
   chapterId: string;
@@ -44,6 +59,7 @@ type SaveSnapshot = {
   rngState: number;
   units: SavedUnit[];
   reserveUnits: ReserveUnit[];
+  campaignUnitBattleRecords: SavedCampaignUnitBattleRecord[];
   campaignChoices: {
     key: string;
     choiceId: string;
@@ -172,7 +188,7 @@ async function writeAutoSave(page: Page, data: SaveSnapshot): Promise<void> {
 
 test("carries one campaign through all three chapters with desktop clicks and mobile WebKit touch", async ({ page }, testInfo) => {
   // This end-to-end flow now exercises all three Chapter 2 objects plus save/reload on WebKit touch.
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   const input: InteractionInput = testInfo.project.name === "webkit-mobile" ? "tap" : "click";
   if (input === "tap") await page.setViewportSize({ width: 320, height: 720 });
   await startCampaign(page, input);
@@ -579,8 +595,47 @@ test("carries one campaign through all three chapters with desktop clicks and mo
 
   // Exercise the campaign-history UI with a historical source event that is no
   // longer registered. This deliberately uses IDs only and must not invent text.
+  const archivedHero = healedChapterThreeState.units.find((unit) => unit.id === "unit_001");
+  const archivedAlly = healedChapterThreeState.units.find((unit) => unit.id === "unit_003");
+  if (!archivedHero || !archivedAlly) {
+    throw new Error("The campaign archive fixture is missing an expected player unit.");
+  }
+  const zeroStatGains = {
+    hp: 0, strength: 0, magic: 0, skill: 0,
+    speed: 0, luck: 0, defense: 0, resistance: 0
+  };
   const historyState: SaveSnapshot = {
     ...healedChapterThreeState,
+    campaignUnitBattleRecords: [
+      {
+        unitId: archivedHero.id,
+        unitName: archivedHero.name,
+        attacks: 4,
+        strikes: 6,
+        hits: 5,
+        misses: 1,
+        criticalHits: 1,
+        damageDealt: 28,
+        enemiesDefeated: 2,
+        experienceAwarded: 70,
+        levelUps: 1,
+        statGains: { ...zeroStatGains, strength: 1 }
+      },
+      {
+        unitId: archivedAlly.id,
+        unitName: archivedAlly.name,
+        attacks: 3,
+        strikes: 4,
+        hits: 4,
+        misses: 0,
+        criticalHits: 0,
+        damageDealt: 40,
+        enemiesDefeated: 1,
+        experienceAwarded: 50,
+        levelUps: 0,
+        statGains: { ...zeroStatGains }
+      }
+    ],
     campaignChoices: [{
       key: "campaign.retired-route",
       choiceId: "retired-option",
@@ -634,6 +689,30 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toContainText("回復薬");
   await expect(battleHistoryPanel).toContainText("HP +7");
   const savedBeforeBattleHistory = await readAutoSave(page);
+
+  const allyTotalsTab = battleHistoryPanel.getByRole("button", { name: "味方別累計" });
+  await activate(allyTotalsTab, input);
+  const allyArchive = battleHistoryPanel.getByTestId("campaign-unit-battle-records-archive");
+  await expect(allyArchive).toBeVisible();
+  const allyRecords = allyArchive.getByTestId("campaign-unit-record-entry");
+  await expect(allyRecords).toHaveCount(2);
+  await expect(allyRecords.first()).toHaveAttribute("data-unit-id", "unit_003");
+  const careerSort = allyArchive.getByRole("combobox", { name: "累計戦績の並べ替え" });
+  await careerSort.selectOption("enemiesDefeated");
+  await expect(allyRecords.first()).toHaveAttribute("data-unit-id", "unit_001");
+  const careerSearch = allyArchive.getByRole("searchbox", { name: "味方戦績を名前で検索" });
+  await careerSearch.fill(archivedHero.name);
+  await expect(allyRecords).toHaveCount(1);
+  await expect(allyRecords.first()).toHaveAttribute("data-unit-id", "unit_001");
+  await expect(allyArchive).toContainText("1 / 2名を表示");
+  await allyArchive.getByRole("button", { name: "検索を解除" }).click();
+  await expect(allyRecords).toHaveCount(2);
+  await expectMobileViewport(page, input);
+  expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
+
+  await activate(battleHistoryPanel.getByRole("button", { name: "時系列ログ" }), input);
+  await expect(battleLogEntries).toHaveCount(12);
+
   const chapterFilter = battleHistoryPanel.getByRole("combobox", { name: "章で絞り込み" });
   const categoryFilter = battleHistoryPanel.getByRole("combobox", { name: "記録種別で絞り込み" });
   const historySearch = battleHistoryPanel.getByRole("searchbox", { name: "履歴内を検索" });
@@ -664,6 +743,31 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toHaveCount(0);
   await expect(battleHistoryToggle).toBeFocused();
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
+
+  // saveVersion 8 has campaign totals but predates the persistent timeline.
+  // The archive entry point must remain available after that save migrates.
+  const legacySnapshot = { ...historyState, saveVersion: 8 } as unknown as Record<string, unknown>;
+  delete legacySnapshot.campaignBattleLog;
+  await writeAutoSave(page, legacySnapshot as unknown as SaveSnapshot);
+  await page.reload();
+  await continueCampaign(page, input);
+  const migratedLegacySave = await readAutoSave(page) as SaveSnapshot;
+  expect(migratedLegacySave.saveVersion).toBe(10);
+  expect(migratedLegacySave.campaignBattleLog).toEqual([]);
+  expect(migratedLegacySave.campaignUnitBattleRecords).toEqual(historyState.campaignUnitBattleRecords);
+
+  const legacyHistoryToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 味方累計 2名" });
+  await expect(legacyHistoryToggle).toBeVisible();
+  await activate(legacyHistoryToggle, input);
+  const legacyHistoryPanel = page.getByTestId("campaign-battle-history");
+  await expect(legacyHistoryPanel).toContainText("0 / 0件を表示");
+  await activate(legacyHistoryPanel.getByRole("button", { name: "味方別累計" }), input);
+  await expect(legacyHistoryPanel.getByTestId("campaign-unit-record-entry")).toHaveCount(2);
+  await expectMobileViewport(page, input);
+  expect(await readAutoSave(page)).toEqual(migratedLegacySave);
+  await activate(legacyHistoryPanel.getByRole("button", { name: "閉じる" }), input);
+  await expect(legacyHistoryToggle).toBeFocused();
+  expect(await readAutoSave(page)).toEqual(migratedLegacySave);
 });
 
 test("recruits the optional Chapter 2 scout and deploys her in Chapter 3", async ({ page }, testInfo) => {

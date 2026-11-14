@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import type { CampaignBattleHistoryEntry } from "../application/get-campaign-battle-history";
+import type { CampaignUnitBattleRecord } from "../domain/models/game";
+import { CampaignUnitBattleRecordsArchive } from "./campaign-unit-battle-records";
 import {
   filterCampaignBattleHistory,
   type CampaignBattleHistoryCategory
@@ -8,6 +10,7 @@ import type { CampaignBattleLogEntry, CampaignBattleStrikeRecord } from "../doma
 
 export interface CampaignBattleHistoryPanelProps {
   entries: readonly CampaignBattleHistoryEntry[];
+  unitRecords: readonly CampaignUnitBattleRecord[];
   onClose: () => void;
 }
 
@@ -51,7 +54,8 @@ function buildDefeatCounts(entries: readonly CampaignBattleHistoryEntry[]) {
   );
 }
 
-export function CampaignBattleHistoryPanel({ entries, onClose }: CampaignBattleHistoryPanelProps) {
+export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: CampaignBattleHistoryPanelProps) {
+  const [activeView, setActiveView] = useState<"timeline" | "units">("timeline");
   const [chapterFilter, setChapterFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState<CampaignBattleHistoryCategory>("all");
   const [query, setQuery] = useState("");
@@ -103,7 +107,9 @@ export function CampaignBattleHistoryPanel({ entries, onClose }: CampaignBattleH
           <p className="eyebrow">CAMPAIGN BATTLE LOG</p>
           <h2 id="campaign-battle-history-title">キャンペーン戦闘記録</h2>
           <p className="campaign-battle-history-note" aria-live="polite">
-            {filteredEntries.length} / {entries.length}件を表示 · 発生順
+            {activeView === "timeline"
+              ? `${filteredEntries.length} / ${entries.length}件を表示 · 発生順`
+              : `${unitRecords.length}名 · 味方別の累計戦績`}
           </p>
         </div>
         <button className="secondary-button campaign-battle-history-close" type="button" onClick={onClose}>
@@ -111,6 +117,27 @@ export function CampaignBattleHistoryPanel({ entries, onClose }: CampaignBattleH
         </button>
       </header>
 
+      <div className="campaign-battle-history-tabs" role="group" aria-label="キャンペーン記録の表示切替">
+        <button
+          className="secondary-button"
+          type="button"
+          aria-pressed={activeView === "timeline"}
+          onClick={() => setActiveView("timeline")}
+        >
+          時系列ログ
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          aria-pressed={activeView === "units"}
+          onClick={() => setActiveView("units")}
+        >
+          味方別累計
+        </button>
+      </div>
+
+      {activeView === "timeline" ? (
+        <>
       <div className="campaign-battle-history-filters" role="group" aria-label="戦闘記録の絞り込み">
         <label className="campaign-battle-history-filter">
           <span>章</span>
@@ -228,6 +255,10 @@ export function CampaignBattleHistoryPanel({ entries, onClose }: CampaignBattleH
         実際に確定した行動・攻撃結果と章の勝敗結果のみを保存しています。敵AIの予測や候補評価は含みません。
         最大5,000件を保持し、上限を超えると古い履歴から入れ替わります。
       </p>
+        </>
+      ) : (
+        <CampaignUnitBattleRecordsArchive records={unitRecords} />
+      )}
     </section>
   );
 }

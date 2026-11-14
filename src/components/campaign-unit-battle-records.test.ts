@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { CampaignUnitBattleRecord } from "../domain/models/game";
 import {
   CampaignUnitBattleRecordPanel,
+  CampaignUnitBattleRecordsArchive,
   CampaignUnitBattleRecordsSummary
 } from "./campaign-unit-battle-records";
 
@@ -54,5 +55,42 @@ describe("CampaignUnitBattleRecordsSummary", () => {
   it("renders an empty campaign state without inventing statistics", () => {
     const html = renderToStaticMarkup(createElement(CampaignUnitBattleRecordsSummary, { records: [] }));
     expect(html).toContain("このキャンペーンには、まだ味方の攻撃記録がありません");
+  });
+});
+
+
+describe("CampaignUnitBattleRecordsArchive", () => {
+  it("renders sortable and searchable campaign-wide ally records", () => {
+    const secondRecord: CampaignUnitBattleRecord = {
+      ...record,
+      unitId: "unit_002",
+      unitName: "味方02",
+      damageDealt: 24,
+      enemiesDefeated: 2,
+      experienceAwarded: 50
+    };
+    const html = renderToStaticMarkup(createElement(CampaignUnitBattleRecordsArchive, {
+      records: [record, secondRecord]
+    }));
+    expect(html).toContain('data-testid="campaign-unit-battle-records-archive"');
+    expect(html).toContain('aria-label="累計戦績の並べ替え"');
+    expect(html).toContain('aria-label="味方戦績を名前で検索"');
+    expect(html).toContain("与ダメージ順");
+    expect(html).toContain("撃破数順");
+    expect(html).toContain("2 / 2名を表示");
+    expect(html).toContain("味方01");
+    expect(html).toContain("味方02");
+    expect(html).toContain("敵の反撃は含まず");
+  });
+
+  it("distinguishes a campaign without attack records from a search with no matches", () => {
+    const emptyHtml = renderToStaticMarkup(createElement(CampaignUnitBattleRecordsArchive, {
+      records: []
+    }));
+    const noMatchHtml = renderToStaticMarkup(createElement(CampaignUnitBattleRecordsArchive, {
+      records: [record]
+    }));
+    expect(emptyHtml).toContain("このキャンペーンには、まだ味方の攻撃記録がありません");
+    expect(noMatchHtml).toContain("味方別の累計戦績");
   });
 });
