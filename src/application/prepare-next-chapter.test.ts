@@ -4,7 +4,7 @@ import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import { prepareNextChapter } from "./prepare-next-chapter";
 import { preparePlayerDeployment } from "./prepare-player-deployment";
-import { resolveMapEvents } from "./resolve-map-events";
+import { chooseMapEventOption, resolveMapEvents } from "./resolve-map-events";
 
 function nextChapterFixture(): { map: GameMapDefinition; state: GameStateSnapshot } {
   const map: GameMapDefinition = {
@@ -285,6 +285,69 @@ describe("prepareNextChapter", () => {
       hasActed: false
     });
     expect(isValidGameStateSnapshot(deployed, nextMap)).toBe(true);
+  });
+
+  it("carries a named choice into the next chapter and gates its events by the selected option", () => {
+    const sourceMap: GameMapDefinition = {
+      ...CHAPTER_01_MAP,
+      events: [{
+        id: "persistent-route",
+        trigger: { type: "stage-start" },
+        action: {
+          type: "show-choice",
+          campaignChoiceKey: "campaign.route",
+          text: "進路を選んでください。",
+          choices: [
+            { id: "forest", label: "森" },
+            { id: "road", label: "街道" }
+          ]
+        }
+      }]
+    };
+    const opened = resolveMapEvents(INITIAL_GAME_STATE, sourceMap, { type: "stage-start" });
+    const next = nextChapterFixture();
+    const nextMap: GameMapDefinition = {
+      ...next.map,
+      events: [{
+        id: "forest-route-event",
+        trigger: { type: "stage-start" },
+        condition: { type: "campaign-choice", key: "campaign.route", choiceId: "forest" },
+        action: { type: "show-message", text: "前章で森を選んだ場合だけ表示されます。" }
+      }]
+    };
+
+    const forestChoice = chooseMapEventOption(opened.nextState, sourceMap, "persistent-route", "forest");
+    const forestVictory: GameStateSnapshot = {
+      ...forestChoice.nextState,
+      units: forestChoice.nextState.units.filter((unit) => unit.faction === "player")
+    };
+    const forestNext = prepareNextChapter({
+      previousState: forestVictory,
+      previousMap: sourceMap,
+      nextChapterInitialState: next.state,
+      nextMap,
+      currentHpPolicy: "preserve"
+    });
+    expect(forestNext.campaignChoices).toEqual(forestChoice.nextState.campaignChoices);
+    const forestEvents = resolveMapEvents(forestNext, nextMap, { type: "stage-start" });
+    expect(forestEvents.messages.map((message) => message.id)).toEqual(["forest-route-event"]);
+    expect(forestEvents.nextState.firedMapEventIds).toContain("forest-route-event");
+
+    const roadChoice = chooseMapEventOption(opened.nextState, sourceMap, "persistent-route", "road");
+    const roadVictory: GameStateSnapshot = {
+      ...roadChoice.nextState,
+      units: roadChoice.nextState.units.filter((unit) => unit.faction === "player")
+    };
+    const roadNext = prepareNextChapter({
+      previousState: roadVictory,
+      previousMap: sourceMap,
+      nextChapterInitialState: next.state,
+      nextMap,
+      currentHpPolicy: "preserve"
+    });
+    const roadEvents = resolveMapEvents(roadNext, nextMap, { type: "stage-start" });
+    expect(roadEvents.messages).toEqual([]);
+    expect(roadEvents.nextState).toBe(roadNext);
   });
 
 });
