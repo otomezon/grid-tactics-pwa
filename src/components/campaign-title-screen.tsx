@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from "react";
+import { StorageDurabilityPanel } from "./storage-durability-panel";
 
 export interface CampaignBackupView {
   slotId: string;
@@ -156,6 +157,7 @@ export function CampaignTitleScreen({
             <p className="eyebrow">SAVE DATA</p>
             <h2 id="campaign-data-heading">セーブデータ管理</h2>
             <p className="campaign-data-intro">セーブはこのブラウザ内に保存されます。別の端末へ移す場合はJSONを書き出してください。</p>
+            <StorageDurabilityPanel />
             <div className="campaign-data-actions">
               <button className="campaign-secondary-button" type="button" disabled={!canExportSave} onClick={onExportSaveFile}>
                 セーブを書き出す
