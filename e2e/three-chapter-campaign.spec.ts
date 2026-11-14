@@ -36,6 +36,21 @@ type SavedUnit = {
 
 type ReserveUnit = Omit<SavedUnit, "faction" | "position" | "hasMoved" | "hasActed">;
 
+type SavedCampaignUnitBattleRecord = {
+  unitId: string;
+  unitName: string;
+  attacks: number;
+  strikes: number;
+  hits: number;
+  misses: number;
+  criticalHits: number;
+  damageDealt: number;
+  enemiesDefeated: number;
+  experienceAwarded: number;
+  levelUps: number;
+  statGains: Record<string, number>;
+};
+
 type SaveSnapshot = {
   saveVersion: number;
   chapterId: string;
@@ -44,6 +59,7 @@ type SaveSnapshot = {
   rngState: number;
   units: SavedUnit[];
   reserveUnits: ReserveUnit[];
+  campaignUnitBattleRecords: SavedCampaignUnitBattleRecord[];
   campaignChoices: {
     key: string;
     choiceId: string;
