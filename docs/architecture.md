@@ -73,6 +73,8 @@ src/
 
 `GameMapDefinition.objects`はオブジェクト種別と既存イベントIDだけを持つcontent定義で、座標・表示名・説明・効果を重複管理しない。map validatorは各オブジェクトが一意な`unit-interacts`イベントを参照することを検証する。実行は既存の`getAvailableMapInteraction`／`performMapInteraction`／`resolveMapEvents`へ委譲し、完了状態は`firedMapEventIds`から復元する。JSON export/import、ローカルbackup、章内再開は既存IDを保持するためsaveVersion 10／IndexedDB schema 1を変更しない。扉はこの基盤ではイベントのみで、地形や経路探索を変更しない。
 
+第2章の村は`show-choice`で選択を表示し、`chooseMapEventOption`が`campaignChoices`へ保存する。後続章の`campaign-choice` conditionが選択IDに対応したメッセージだけを発火する。宝箱は既存の`grant-item`処理を通じて主人公の所持品へ試作回復薬1個を追加する。所持品スロット検証・原子的失敗・既存イベントの一度限り実行を再利用する。これらは既存のセーブ項目とイベントIDで実現し、saveVersion 10／IndexedDB schema 1を変更しない。扉はこの基盤ではイベントのみで、地形や経路探索を変更しない。
+
 ## 3. 現在のデータフロー
 
 1. AppがIndexedDB auto slotをロードし、saveVersion 1〜9を現行のsaveVersion 10へmigrationするか、現行version 10 validatorを通す。validatorはマップ構造と目標参照を確認し、保存内の各ユニットID／陣営がマップの出撃名簿と一致すること、各ユニットの現在地が移動種別のmovementCostがnullでない地形であること、クラス／所持品IDが登録済みであること、装備武器が所持品かつ使用可能武器種に含まれること、現役ユニットのHPが正であることを検証する。撃破済みユニットはstateから除去できるため、配置名簿の全員がstateに存在することまでは要求しない。

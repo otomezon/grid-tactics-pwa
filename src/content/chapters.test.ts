@@ -4,6 +4,7 @@ import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import { CHAPTERS, getChapterById, getNextChapter, INITIAL_CHAPTER, isValidCampaignChoiceLinks } from "./chapters";
 import { CHAPTER_01_MAP, MAIN_CHARACTER_UNIT_ID } from "./maps/chapter-01";
 import { CHAPTER_02_MAP } from "./maps/chapter-02";
+import { CHAPTER_03_MAP } from "./maps/chapter-03";
 
 describe("chapter content registry", () => {
   it("registers unique chapters with valid initial snapshots", () => {
@@ -32,10 +33,24 @@ describe("chapter content registry", () => {
     expect(CHAPTER_01_MAP.enemyDeployment.some((deployment) => deployment.unitId === "enemy_005")).toBe(true);
     expect(CHAPTER_01_MAP.objects).toBeUndefined();
     expect(CHAPTER_02_MAP.objects).toEqual([
-      { id: "chapter-02-prototype-village", kind: "village", eventId: "chapter-02-prototype-village-visit" },
-      { id: "chapter-02-prototype-chest", kind: "treasure-chest", eventId: "chapter-02-prototype-chest-open" },
+      { id: "chapter-02-prototype-village", kind: "village", eventId: "chapter-02-village-route-choice" },
+      { id: "chapter-02-prototype-chest", kind: "treasure-chest", eventId: "chapter-02-prototype-chest-reward" },
       { id: "chapter-02-prototype-door", kind: "door", eventId: "chapter-02-prototype-door-inspect" }
     ]);
+    expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-village-route-choice")?.action)
+      .toMatchObject({
+        type: "show-choice",
+        campaignChoiceKey: "chapter-02.village-route",
+        choices: [
+          { id: "forest-trail", label: "森の小道について聞く" },
+          { id: "eastern-pass", label: "東の峠道について聞く" }
+        ]
+      });
+    expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-prototype-chest-reward")?.action)
+      .toMatchObject({ type: "grant-item", itemId: "healing_potion", quantity: 1 });
+    expect(CHAPTER_03_MAP.events?.filter((event) => event.condition?.key === "chapter-02.village-route"))
+      .toHaveLength(2);
+    expect(isValidCampaignChoiceLinks()).toBe(true);
   });
 
   it("provides deterministic next-chapter lookup", () => {

@@ -38,7 +38,37 @@ export const CHAPTER_03_MAP: GameMapDefinition = {
   ],
   objective: { type: "defeat_all" },
   defeatCondition: { type: "unit_defeated", targetUnitId: MAIN_CHARACTER_UNIT_ID },
-  events: [createMainCharacterDefeatEvent(3)]
+  events: [
+    createMainCharacterDefeatEvent(3),
+    {
+      id: "chapter-03-village-forest-trail-follow-up",
+      trigger: { type: "stage-start" },
+      condition: {
+        type: "campaign-choice",
+        key: "chapter-02.village-route",
+        choiceId: "forest-trail"
+      },
+      action: {
+        type: "show-message",
+        speaker: "旅の記録",
+        text: "第2章の村で聞いた森の小道を思い出した。険しい地形を避けるときに役立ちそうだ。"
+      }
+    },
+    {
+      id: "chapter-03-village-eastern-pass-follow-up",
+      trigger: { type: "stage-start" },
+      condition: {
+        type: "campaign-choice",
+        key: "chapter-02.village-route",
+        choiceId: "eastern-pass"
+      },
+      action: {
+        type: "show-message",
+        speaker: "旅の記録",
+        text: "第2章の村で聞いた東の峠道の話を思い出した。進む前に周囲を警戒しよう。"
+      }
+    }
+  ]
 };
 
 // Prototype layout only: reuses the existing cast and rules without defining story or rewards.
