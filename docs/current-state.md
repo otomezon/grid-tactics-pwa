@@ -277,7 +277,7 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - `GameMapDefinition.objects`に`village`／`treasure-chest`／`door`を定義し、各オブジェクトを既存の`unit-interacts`イベントIDへ一対一で関連付ける。座標・表示ラベル・説明・効果の正本はイベント定義側に置く。
 - 種別ごとのマーカーと操作名を表示し、実行は既存の`performMapInteraction`／`resolveMapEvents`へ委譲する。メッセージ・選択肢・アイテム付与・加入など既存のイベントアクションを再利用できる。
 - 完了状態は`firedMapEventIds`から導出し、完了後は未操作マーカーから除外する。新しいsnapshot field、saveVersion、IndexedDB schema変更は行わない。
-- 第1章には報酬・正式な人物・会話を含まない試作オブジェクトのみを配置する。扉はイベントのみであり、鍵消費や地形通行可否の変更は含まない。
+- 第2章には報酬・正式な人物・会話を含まない試作オブジェクトのみを配置する。扉はイベントのみであり、鍵消費や地形通行可否の変更は含まない。
 
 
 ## ブラウザの永続ストレージ要求
