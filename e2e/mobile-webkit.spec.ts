@@ -116,7 +116,7 @@ async function startWebKitBattle(page: Page): Promise<void> {
 }
 
 test("keeps a pending map-event dialog open until explicit WebKit touch acknowledgement", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 320, height: 720 });
   await page.goto("/");
 
   const title = page.getByTestId("campaign-title-screen");
@@ -129,6 +129,7 @@ test("keeps a pending map-event dialog open until explicit WebKit touch acknowle
   const dialog = page.getByTestId("map-event-dialog");
   const acknowledgement = dialog.getByRole("button", { name: "確認して続ける" });
   await expect(dialog).toBeVisible();
+  await expect(acknowledgement).toBeEnabled();
   await expect(acknowledgement).toBeFocused();
 
   const pendingSave = await readAutoSave(page) as {
@@ -152,6 +153,11 @@ test("keeps a pending map-event dialog open until explicit WebKit touch acknowle
 
   await acknowledgement.tap();
   await expect(dialog).toHaveCount(0);
+  const mapViewport = page.getByRole("region", {
+    name: "戦闘マップ。狭い画面では左右にスクロールできます"
+  });
+  await expect(mapViewport).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   await expect.poll(async () => {
     const saved = await readAutoSave(page) as {
       firedMapEventIds: string[];
