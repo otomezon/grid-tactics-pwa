@@ -35,7 +35,7 @@ describe("chapter content registry", () => {
     expect(CHAPTER_02_MAP.objects).toEqual([
       { id: "chapter-02-prototype-village", kind: "village", eventId: "chapter-02-village-route-choice" },
       { id: "chapter-02-prototype-chest", kind: "treasure-chest", eventId: "chapter-02-prototype-chest-reward" },
-      { id: "chapter-02-prototype-door", kind: "door", eventId: "chapter-02-prototype-door-inspect" }
+      { id: "chapter-02-prototype-door", kind: "door", eventId: "chapter-02-door-inspection-choice" }
     ]);
     expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-village-route-choice")?.action)
       .toMatchObject({
@@ -48,6 +48,18 @@ describe("chapter content registry", () => {
       });
     expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-prototype-chest-reward")?.action)
       .toMatchObject({ type: "grant-item", itemId: "healing_potion", quantity: 1 });
+    expect(CHAPTER_02_MAP.events?.find((event) => event.id === "chapter-02-door-inspection-choice")?.action)
+      .toMatchObject({
+        type: "show-choice",
+        choices: [
+          { id: "door-markings", label: "扉の表面を調べる" },
+          { id: "door-surroundings", label: "扉の周囲を調べる" }
+        ]
+      });
+    expect(CHAPTER_02_MAP.events?.filter((event) =>
+      event.trigger.type === "event-choice" &&
+      ["chapter-02-door-markings", "chapter-02-door-surroundings"].includes(event.id)
+    )).toHaveLength(2);
     expect(CHAPTER_03_MAP.events?.filter((event) => event.condition?.key === "chapter-02.village-route"))
       .toHaveLength(2);
     expect(isValidCampaignChoiceLinks()).toBe(true);
