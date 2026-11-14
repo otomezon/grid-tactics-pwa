@@ -60,6 +60,7 @@ describe("save file export and import format", () => {
         trigger: { type: "stage-start" as const },
         action: {
           type: "show-choice" as const,
+          campaignChoiceKey: "campaign.route",
           speaker: "保存テスト",
           text: "どちらへ進みますか？",
           choices: [
@@ -73,7 +74,13 @@ describe("save file export and import format", () => {
       ...INITIAL_GAME_STATE,
       firedMapEventIds: ["save-dialogue-choice"],
       acknowledgedMapEventIds: ["save-dialogue-choice"],
-      mapEventChoices: [{ eventId: "save-dialogue-choice", choiceId: "north" }]
+      mapEventChoices: [{ eventId: "save-dialogue-choice", choiceId: "north" }],
+      campaignChoices: [{
+        key: "campaign.route",
+        choiceId: "north",
+        sourceChapterId: CHAPTER_01_MAP.id,
+        sourceEventId: "save-dialogue-choice"
+      }]
     };
 
     expect(isValidGameStateSnapshot(snapshot, map)).toBe(true);
@@ -110,6 +117,6 @@ describe("save file export and import format", () => {
   it("does not assume the enclosed snapshot is valid", () => {
     const content = createSaveFileContent(INITIAL_GAME_STATE);
     const result = parseSaveFileContent(content) as { saveVersion: number };
-    expect(result.saveVersion).toBe(7);
+    expect(result.saveVersion).toBe(8);
   });
 });
