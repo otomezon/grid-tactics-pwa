@@ -28,7 +28,7 @@ describe("buildCampaignBattleHistoryCsv", () => {
     expect(csv).toContain('"宝箱を調べた"');
     expect(csv).toContain('"勝利"');
     expect(csv).toContain('"敵将撃破"');
-    expect(dataRows).toHaveLength(4);
+    expect(dataRows).toHaveLength(5);
     expect(csv).not.toContain("命中率");
     expect(csv).not.toContain("AI");
   });
