@@ -2,7 +2,7 @@
 
 ## 1. 監査スナップショット
 
-PR #1〜#119、PR #121、PR #123〜#125、PR #127〜#133はmainへマージ済み。PR #133（merge commit `ee174d00f082e96473a6b579959e83cc1461e878`）では3章連続キャンペーンの同一シナリオをChromiumと320px WebKit touchの両方で実行するE2Eを追加した。PR #119でスマートフォン／PWA実機確認手順を追加し、PR #121でnpm lockfile v3をコミットしてCI／セットアップを`npm ci`へ統一した。PR #114で味方のマップ地点調査、PR #115でマップイベントによる味方加入、PR #116（merge commit `31fe5a3d26f2aaa9c79210ab7ae38d9284e6cb63`）で選択肢付き会話と条件分岐の汎用処理を追加した。PR #117（merge commit `1b462f99cdc70a029e2986e592bc5f689e6bd3cb`）では選択済み分岐を含むセーブJSONの往復・map validator回帰テストと関連文書の同期を行った。PR #105では現章の発火済みイベント履歴、PR #106では自軍フェイズ終了レビューの敵攻撃対象・全味方予測HP表示、PR #107では敵攻撃のstrike別予測詳細を追加した。 PR #108では敵軍フェイズ予測の各行動をマップで一時確認できるようにした。PR #102でプレイヤー操作commandのapplication境界とマップイベント基盤（saveVersion 5）、PR #103で未確認イベントメッセージの再表示・確認状態保存（saveVersion 6）、PR #104でイベント確認に対応したブラウザテストセットアップを追加した。PR #113ではマップイベントに明示的なアイテム付与と事前定義された敵増援の出現を追加し、発火ID・ユニット・所持品の既存GameStateだけで一度限り実行する。PR #95で出撃前の装備変更を出撃予定／控え予定の両方へ追加し、saveVersion 3を維持した。PR #92でタイトル画面／保存データ管理と第3章試作マップを追加し、PR #93でREADME・AGENTS.md・実装状況の記述を同期した。PR #87でクラス役割タグによる遠距離攻撃役の暫定標的優先、PR #88で移動先選択理由、PR #89で攻撃対象候補の既存評価内訳、PR #90で移動先候補の既存評価内訳を予測／戦闘履歴へ追加した。PR #91では章クリアから次章出撃確定・再読込までの統合E2Eを追加した。
+PR #1〜#119、PR #121、PR #123〜#125、PR #127〜#134はmainへマージ済み。PR #133（merge commit `ee174d00f082e96473a6b579959e83cc1461e878`）では3章連続キャンペーンの同一シナリオをChromiumと320px WebKit touchの両方で実行するE2Eを追加し、PR #134（merge commit `f01e1adb4a136f20c1344bd6501b2612631653e5`）ではWebKit mobileのPWAオフライン起動と戦闘セーブのオフライン再開を追加した。PR #134 head CI run #43574312379とmain post-merge CI run #43575130210はいずれも成功（54 test files／345 unit tests、browser E2E 76件、development E2E 5件）。PR #119でスマートフォン／PWA実機確認手順を追加し、PR #121でnpm lockfile v3をコミットしてCI／セットアップを`npm ci`へ統一した。PR #114で味方のマップ地点調査、PR #115でマップイベントによる味方加入、PR #116（merge commit `31fe5a3d26f2aaa9c79210ab7ae38d9284e6cb63`）で選択肢付き会話と条件分岐の汎用処理を追加した。PR #117（merge commit `1b462f99cdc70a029e2986e592bc5f689e6bd3cb`）では選択済み分岐を含むセーブJSONの往復・map validator回帰テストと関連文書の同期を行った。PR #105では現章の発火済みイベント履歴、PR #106では自軍フェイズ終了レビューの敵攻撃対象・全味方予測HP表示、PR #107では敵攻撃のstrike別予測詳細を追加した。 PR #108では敵軍フェイズ予測の各行動をマップで一時確認できるようにした。PR #102でプレイヤー操作commandのapplication境界とマップイベント基盤（saveVersion 5）、PR #103で未確認イベントメッセージの再表示・確認状態保存（saveVersion 6）、PR #104でイベント確認に対応したブラウザテストセットアップを追加した。PR #113ではマップイベントに明示的なアイテム付与と事前定義された敵増援の出現を追加し、発火ID・ユニット・所持品の既存GameStateだけで一度限り実行する。PR #95で出撃前の装備変更を出撃予定／控え予定の両方へ追加し、saveVersion 3を維持した。PR #92でタイトル画面／保存データ管理と第3章試作マップを追加し、PR #93でREADME・AGENTS.md・実装状況の記述を同期した。PR #87でクラス役割タグによる遠距離攻撃役の暫定標的優先、PR #88で移動先選択理由、PR #89で攻撃対象候補の既存評価内訳、PR #90で移動先候補の既存評価内訳を予測／戦闘履歴へ追加した。PR #91では章クリアから次章出撃確定・再読込までの統合E2Eを追加した。
 
 - 勝利／敗北リザルトの「タイトルへ戻る」はタイトル画面の表示状態だけを切り替え、自動セーブを変更しない。タイトルの「つづきから」では同じステージ結果へ再開できる。PR #110で追加。
 - PR #112では、7基本職×3 profileの21ケース昇格試験fixtureに第1章の敵将 `enemy_005` を生存・行動済みで追加する。`defeat_boss` 目標が試験前に勝利へ解決される状態を避け、既存AIによる敵軍phase比較を開始できるようにする。試験用fixtureのみの変更で、ゲーム処理・未承認バランス値・GameState／saveVersion／IndexedDBは変更しない。
@@ -37,7 +37,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | 機能 | 状況 | 関連ファイル |
 |---|---|---|
 | タイトル画面・キャンペーン開始／再開 | 実装追加（起動時に「はじめから」「つづきから」を提供。新規開始の出撃確定前は既存auto saveを保持し、確定後の保存成功時に置換。セーブJSON import/exportと3世代バックアップ管理も起動時画面に集約） | `src/components/campaign-title-screen.tsx`, `src/App.tsx` | Chromium E2Eで初回起動・再開・キャンセル／未確定時セーブ不変・壊れたセーブによる上書き防止・バックアップ作成・320px幅を検証 |
-| キャンペーン3章カタログ | 実装追加（既存の地形・ユニット・武器・勝利条件を再利用した第3章の試作マップを登録。章1→2→3の順次遷移と現行saveVersion 7の読み込みを維持。正式シナリオ／報酬／バランスを含まない） | `src/content/maps/chapter-03.ts`, `src/content/chapters.ts` | chapter registry unit testで各マップ／初期snapshotの妥当性と次章参照を検証。Chromium E2Eで第2章クリア→第3章出撃確定→再読み込みを検証。PR #133で同一シナリオを320px幅WebKit touchでも実行予定 |
+| キャンペーン3章カタログ | 実装追加（既存の地形・ユニット・武器・勝利条件を再利用した第3章の試作マップを登録。章1→2→3の順次遷移と現行saveVersion 8の読み込みを維持。正式シナリオ／報酬／バランスを含まない） | `src/content/maps/chapter-03.ts`, `src/content/chapters.ts` | chapter registry unit test、Chromium／320px WebKit touchの3章連続E2Eで章間引き継ぎ・再読込を検証。PR #134でWebKit mobileのPWA offline shell起動とoffline後の戦闘セーブ再開も検証 |
 | React／Vite／PWA | 実装済み（manifest／Service Worker／オフライン起動に加え、ブラウザ標準のインストールプロンプトとインストール済み状態のUIを提供） | `package.json`, `vite.config.ts`, `src/main.tsx`, `src/App.tsx` |
 | 操作ガイド | 実装済み（任意で開閉できる6段階の案内。出撃準備・移動・攻撃予測・アイテム／行動・地形・敵攻撃範囲・ターン進行・セーブ管理を説明。表示専用でGameState／saveVersion／IndexedDBを変更しない） | `src/components/operation-guide.tsx`, `src/App.tsx`, `src/styles.css` | Chromium E2Eで全6段階の遷移、320px幅での横はみ出し防止、閉じた後の再表示、ガイド表示中のオートセーブ不変を確認 |
 | 10×10マップ・地形 | 実装済み（仮コンテンツ） | `src/content/maps/chapter-01.ts`, `src/content/terrain.ts` |
@@ -53,7 +53,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | マップ目標・地形情報パネル | 実装済み（既存マップ／GameStateから勝利・敗北条件の進行と、選択／フォーカス中マスの移動コスト・守備／回避補正・配置ユニット・砦効果を表示。PR #73では残敵一覧／名前付きボス／保護対象の位置へ目標パネルから移動する閲覧専用ナビゲーションを追加。ゲーム状態／セーブは変更しない） | `src/application/get-battle-map-details.ts`, `src/application/get-battle-objective-navigation-targets.ts`, `src/components/battle-objective-panel.tsx`, `src/App.tsx`, `src/styles.css` | application／component単体テストとChromium E2Eで残敵数・ボスHP・敗北対象・目標ナビゲーション・320px幅・セーブ不変を検証 |
 | 敵攻撃範囲の表示切替 | 実装済み（PR #40マージ済み。自軍フェイズでON／OFF。生存・未行動敵の現在位置と、地形・占有を考慮した移動可能マス、装備中で使用可能な武器の射程から脅威マスを予測。敵AIの移動先・対象の確定予告ではない。距離は暫定Manhattan。表示状態はセーブしない） | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/App.tsx`, `src/styles.css` | PR #40最終head CI run #560: typecheck、23 test files／154 tests、production build、Chromium E2E 12件成功 |
 | 敵攻撃範囲の発生源詳細 | 実装追加（敵攻撃範囲を表示中にマスを確認すると、そのマスへ攻撃可能な生存・未行動敵、装備武器、現在位置／移動後の候補起点と距離を表示。脅威範囲と同一の移動・射程projectionを使い、敵AIの行動先／攻撃対象を確定しない。UIは一時状態でGameState／オートセーブを変更しない） | `src/domain/combat/calculate-enemy-threatened-tiles.ts`, `src/application/get-enemy-threat-inspection-details.ts`, `src/components/enemy-threat-inspector.tsx`, `src/App.tsx`, `src/styles.css` | 単体テストで複数敵の帰属、起点、敵ID順、無脅威／敵フェイズ、集合overlayとの整合性を確認。Chromium E2Eで詳細表示・空の安全マス・セーブ不変・狭幅表示を検証 |
-| RNG state・save migration | 実装済み（saveVersion 7、version 1〜6→7。v1は旧weapon／RNG変換、v2はreserve追加、v3はcampaignUnitBattleRecords追加、v4は発火済みイベントID追加、v5は既発火イベントIDを確認済みに移行、v6は空のmapEventChoicesを追加。既存の発火／確認状態を保持し、旧セーブに存在しない選択履歴は捏造しない） | `src/domain/random/`, `src/persistence/migrations.ts` | migrations／validator／save-file tests、Chromium E2Eでv6の保存・再読み込みを検証 |
+| RNG state・save migration | 実装済み（saveVersion 8、version 1〜7→8。v1は旧weapon／RNG変換、v2はreserve追加、v3はcampaignUnitBattleRecords追加、v4は発火済みイベントID追加、v5は既発火イベントIDを確認済みに移行、v6はmapEventChoices追加、v7は既存の章内choiceを保持して空のcampaignChoicesを追加。旧セーブに過去のキャンペーン選択を推測して付与しない） | `src/domain/random/`, `src/persistence/migrations.ts` | migrations／validator／save-file testsでv1〜v7→v8、chapter-local choice保持、campaignChoicesの初期化を検証 |
 | 自軍フェイズ終了／敵軍開始 | 実装済み | `src/application/resolve-enemy-phase.ts`, `src/App.tsx` |
 | ターン終了レビュー | 実装追加（未行動の味方一覧に加え、敵軍フェイズ予測から敵の攻撃対象と味方全員の予測HP／被ダメージ／撃破見込みを表示。予測一覧から行動済みを含む味方を選択して戦闘へ戻れる。未行動者を残してフェイズ終了するかを明示選択し、全員行動済みなら即時終了。確認はゲーム状態を変更しない） | `src/components/player-phase-end-review.tsx`, `src/App.tsx`, `src/styles.css`。component testsとChromium E2Eで全味方のHP予測、敵の攻撃対象、行動済み味方の選択／フォーカス復帰、320px幅、レビュー中のオートセーブ不変、明示確認後のフェイズ進行、全員行動済み時の確認省略を検証。 |
 | 敵AI（攻撃対象評価） | 基本実装・暫定スコア | `src/application/resolve-enemy-phase.ts` |
@@ -70,7 +70,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | マップ指定ユニット撃破による敗北 | ルール実装済み。試作3章すべてで `unit_001` を主人公の保護対象に設定（セーブ形式変更なし）。正式キャラクター設定は未確定 | `src/domain/rules/evaluate-battle-outcome.ts`, `src/content/maps/chapter-01.ts`, `chapter-02.ts`, `chapter-03.ts` |
 | マップ定義の整合性検証 | 実装済み（terrain寸法／値、配置ID／座標の重複・範囲、ボス／敗北対象の所属陣営を検証） | `src/domain/models/validate-game-map.ts` |
 | セーブ内ユニットの出撃名簿・地形・コンテンツ参照整合性 | 実装済み（各unit ID／factionの出撃名簿一致、移動種別で通行可能な現在地、登録済みクラス／武器／アイテムID、装備武器の所持・適性、現役ユニットのHP>0を検証。撃破済みユニットの欠落は許可） | `src/domain/models/validate-game-state.ts` |
-| 出撃準備・配置確定 | 実装済み（生存中の候補／控えから出撃メンバーと位置を選択。候補詳細から所有・適性のある武器へ装備変更／解除が可能で、active／reserveの両方に対応。編集はメモリ上のみで、配置確定時にまとめて保存。saveVersion 7を使用）。正式な章ごとの人数条件は未決定。 | `src/application/prepare-player-deployment.ts`, `src/application/perform-deployment-weapon-change.ts`, `src/App.tsx` | application testsとChromium E2Eでactive／reserveの装備・解除、所有・適性制約、確定前セーブ不変、確定後保存を確認 |
+| 出撃準備・配置確定 | 実装済み（生存中の候補／控えから出撃メンバーと位置を選択。候補詳細から所有・適性のある武器へ装備変更／解除が可能で、active／reserveの両方に対応。編集はメモリ上のみで、配置確定時にまとめて保存。saveVersion 8を使用）。正式な章ごとの人数条件は未決定。 | `src/application/prepare-player-deployment.ts`, `src/application/perform-deployment-weapon-change.ts`, `src/App.tsx` | application testsとChromium E2Eでactive／reserveの装備・解除、所有・適性制約、確定前セーブ不変、確定後保存を確認 |
 | 出撃準備のユニット比較 | 実装追加（出撃予定／控え予定の候補から2人を選び、クラス・Lv・EXP・HP・移動・装備・武器適性・8能力・8成長率を横並び表示。同一ユニットの比較は拒否。320px幅では比較表内だけを横スクロールし、ページ横はみ出しを防止。UI状態のみでGameState／編成／装備／IndexedDB／saveVersionを変更しない） | `src/components/deployment-unit-comparison.tsx`, `src/App.tsx`, `src/styles.css` | component test、Chromium E2Eでactive／reserve間比較、重複選択拒否、クリア、320px幅、確定前セーブ不変を検証 |
 | 出撃準備の配置プレビュー | 実装追加（章マップの地形・登録済み出撃マス・現在の編成／割り当てを10列×10行で表示。位置プルダウン／メンバー選択に追従し、空きマスを表示。配置済み味方から詳細を開ける。プレビューは一時UI状態のみ） | `src/components/deployment-preview.tsx`, `src/App.tsx`, `src/styles.css` | Chromium E2Eで初期配置、入れ替え、控え化、詳細フォーカス、320px幅、確定前のセーブ不変を検証 |
 | 出撃準備の地形インスペクター | 実装追加（登録済み出撃マスを選ぶと地形名・歩兵／騎馬の移動コスト・守備／回避補正を表示。配置中ユニットに対する通行可否も表示し、通行不可なら警告。砦効果は既存の試作値をそのまま説明。地形値／出撃ルール／GameState／セーブは変更しない） | `src/application/get-deployment-terrain-details.ts`, `src/application/get-deployment-terrain-details.test.ts`, `src/components/deployment-preview.tsx`, `src/styles.css` | application／component単体テストで平地・山・砦・範囲外・非出撃マス、歩兵／騎馬の通行差を検証。Chromium E2Eで空きマス閲覧・補正表示・320px幅・セーブ不変を確認 |
@@ -78,16 +78,16 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 | 章クリアから次章準備・保存再開 | 実装済み（勝利後の明示操作で報酬適用と次章snapshotを準備し、出撃配置確定後にのみ保存。既存のHP／EXP／能力／所持品／控え／RNGを引き継ぐ） | `src/application/prepare-next-chapter.ts`, `src/application/apply-chapter-rewards.ts`, `src/App.tsx` | Chromium E2Eで第1章クリアfixture→第2章準備→未確定中の旧セーブ維持→配置確定→saveVersion 7再読込を検証 |
 | ステージ結果詳細表示 | 実装済み（敵配置全体の生存／撃破一覧、生存味方のクラス・Lv・EXP・HPに加え、画面セッション中に確定した味方開始攻撃の実貢献を味方別に表示。攻撃回数、命中／ミス／必殺、実与ダメージ、撃破、獲得EXP、レベルアップ／能力上昇を集計し、敵の反撃は除外。リロード後は集計なしを明示。恒久記録や撃破済みユニットの最終HPは保持せず、saveVersion変更なし） | `src/application/get-battle-result-details.ts`, `src/application/get-battle-contribution-details.ts`, `src/components/battle-contribution-panel.tsx`, `src/App.tsx` | application／component tests、Chromium E2Eでリロード後の履歴欠落表示を検証 |
 | キャンペーン累計戦績 | 実装追加（味方開始攻撃の実strikeのみを累計し、攻撃行動・strike・命中／ミス／必殺・実与ダメージ・撃破・獲得EXP・レベルアップ・能力上昇を味方IDごとに保存。active／reserve／撃破済み名簿から外れた味方の過去記録も保持。出撃候補詳細・戦闘中インスペクター・リザルトに表示。章間引き継ぎ、JSON export/import、バックアップを通じて保持。saveVersion 7） | `src/application/record-player-battle-contribution.ts`, `src/components/campaign-unit-battle-records.tsx`, `src/domain/models/game.ts`, `src/persistence/migrations.ts` | application／validation／migration／save-file／component tests、Chromium E2Eで実攻撃・レベルアップ・リロード後保持を検証 |
-| 戦闘行動のセッション内時系列履歴 | 実装済み（PR #56で味方攻撃・敵軍フェイズを追加、PR #77で味方の移動・武器変更・アイテム使用・クラスチェンジ・待機を追加。確定済み行動だけを発生順に表示し、閲覧／プレビュー／キャンセルは記録しない。リロード・セーブ読込・バックアップ復元・章切替でリセットし、saveVersion 7のセーブ形式には保存しない） | `src/App.tsx`, `src/application/get-player-attack-report.ts`, `src/application/resolve-enemy-phase.ts` | PR #77 CI run #984: typecheck・unit tests・production build・Chromium E2E 46件成功。main CI run #985も成功 |
-| マップイベントによる味方加入 | 実装済み（`unit-interacts` の一度限りイベントに `recruit-unit` を定義すると、検証済みCampaignUnitを既存の `reserveUnits` に追加。今の戦闘へは出さず、次章マップのplayerDeploymentにIDが定義された場合に出撃準備から選択可能。saveVersion 7で保存） | `src/domain/models/validate-campaign-unit.ts`, `src/application/resolve-map-events.ts`, `src/application/prepare-next-chapter.ts` | map／save validation、二重加入防止、加入者の次章引き継ぎ・出撃準備までのunit tests |
-| 会話選択肢・条件分岐イベント | 実装済み（2〜4択の `show-choice` と、選択IDに一致する `event-choice` トリガーを検証・一度限り実行。選択を `mapEventChoices` に保存し、履歴にも反映。saveVersion 7） | `src/application/resolve-map-events.ts`, `src/domain/models/validate-game-map.ts`, `src/domain/models/validate-game-state.ts` | resolver・map/save validation・migration・dialog/history component tests |
-| 永続的な戦闘履歴・撃破者別統計・キャンペーン選択／分岐 | 未実装（永続的な撃破者ログ、章解放・選択進行をまたぐキャンペーン全体の分岐管理が必要。汎用会話分岐エンジンは実装済みだが、正式な人物・会話・章コンテンツは未設定） | — |
+| 戦闘行動のセッション内時系列履歴 | 実装済み（PR #56で味方攻撃・敵軍フェイズを追加、PR #77で味方の移動・武器変更・アイテム使用・クラスチェンジ・待機を追加。確定済み行動だけを発生順に表示し、閲覧／プレビュー／キャンセルは記録しない。リロード・セーブ読込・バックアップ復元・章切替でリセットし、saveVersion 8のセーブ形式には保存しない） | `src/App.tsx`, `src/application/get-player-attack-report.ts`, `src/application/resolve-enemy-phase.ts` | PR #77 CI run #984: typecheck・unit tests・production build・Chromium E2E 46件成功。main CI run #985も成功 |
+| マップイベントによる味方加入 | 実装済み（`unit-interacts` の一度限りイベントに `recruit-unit` を定義すると、検証済みCampaignUnitを既存の `reserveUnits` に追加。今の戦闘へは出さず、次章マップのplayerDeploymentにIDが定義された場合に出撃準備から選択可能。saveVersion 8で保存） | `src/domain/models/validate-campaign-unit.ts`, `src/application/resolve-map-events.ts`, `src/application/prepare-next-chapter.ts` | map／save validation、二重加入防止、加入者の次章引き継ぎ・出撃準備までのunit tests |
+| 会話選択肢・条件分岐イベント | 実装済み（2〜4択の `show-choice` と、選択IDに一致する `event-choice` トリガーを検証・一度限り実行。選択を章内の `mapEventChoices` に保存し、履歴にも反映。任意の `campaignChoiceKey` を付けた選択は `campaignChoices` に永続化され、次章以降の `MapEventDefinition.condition`（`campaign-choice`）で一致する場合だけイベントを実行する。saveVersion 8） | `src/application/resolve-map-events.ts`, `src/content/chapters.ts`, `src/domain/models/validate-game-map.ts`, `src/domain/models/validate-game-state.ts` | resolver・章間遷移・chapter registry・map/save validation・migration・save-file round-trip tests |
+| 永続的な戦闘履歴・撃破者別統計 | 未実装（撃破者別のイベントログや戦闘履歴の永続保存は未対応。既存のキャンペーン累計戦績とは別機能） | — |
 | 経験値・レベルアップ | 実装済み（PR #6） | `src/domain/progression/level-up.ts`, `src/application/perform-attack.ts` |
 | 経験値報酬 | 実装済み（設計書§5.3の初期案） | `src/application/perform-attack.ts` | application tests |
 | レベルアップ・個別成長判定 | 実装済み（仮クラス上限） | `src/domain/progression/level-up.ts`, `src/content/classes.ts` | progression tests |
 | 敵軍ユニットの結果一覧 | 実装済み（章マップの敵配置と現在状態を照合し、生存／撃破を表示） | `src/application/get-battle-result-details.ts` | 単体テスト・E2Eで検証 |
 | 選択ユニットの経験値表示 | 実装済み（EXP x/100） | `src/App.tsx` | CI build。実機操作未確認 |
-| 戦闘中の消費型回復アイテム | 実装済み（同一IDの所持アイテムは数量をまとめて表示し、回復薬の操作はスタックごとに1つ。移動後の味方が自身に使用し、確認後に最大10HPを回復。HP上限で制限し、アイテム1個と行動を消費。回復量は試作値。アプリケーション層はIDから登録済みアイテム効果を解決する。saveVersion 7の既存inventory配列を利用） | `src/content/items.ts`, `src/application/perform-item-use.ts`, `src/App.tsx` | application単体テストとChromium E2Eで移動後使用・キャンセル・HP上限・保存後状態を検証 |
+| 戦闘中の消費型回復アイテム | 実装済み（同一IDの所持アイテムは数量をまとめて表示し、回復薬の操作はスタックごとに1つ。移動後の味方が自身に使用し、確認後に最大10HPを回復。HP上限で制限し、アイテム1個と行動を消費。回復量は試作値。アプリケーション層はIDから登録済みアイテム効果を解決する。saveVersion 8の既存inventory配列を利用） | `src/content/items.ts`, `src/application/perform-item-use.ts`, `src/App.tsx` | application単体テストとChromium E2Eで移動後使用・キャンセル・HP上限・保存後状態を検証 |
 | progression／attack／class-change／content tests | mainのPR #6〜#7と今回のPR #8で実装済み | `src/domain/progression/`, `src/application/`, `src/content/class-promotion.test.ts` | GitHub Actions run #168: 13 test files／78 tests成功 |
 | 昇格先パス | 実装済み（設計書§5.5の7系統） | `src/content/classes.ts` | mapping tests |
 | クラスチェンジ条件・アイテム消費・能力ボーナス適用 | ルール基盤実装済み。採択済みCP-12により移動・行動前のみ実行可、成功時に行動済みとなる。CP-09／10の移動・武器適性・装備維持、7経路すべての一段階昇格を回帰テスト化。PR #32でCP-07／08のEXP 0／99保持、現在HP 1／満タン維持、HP上限でのボーナス制限を追加 | `src/domain/progression/class-change.ts`, `src/application/perform-class-change.ts`, `src/domain/progression/class-change.test.ts`, `src/content/class-promotion.test.ts` | PR #32 CI run #503: 22 test files／146 tests、Chromium E2E 11件成功 |
@@ -123,7 +123,7 @@ PR #50はPR #48／#49後のREADME・開発ルール・実装状況を同期し�
 - クラス上限はHP60／他能力30の暫定共通値。正式なクラス別上限ではない。CP-01／02／03／06／15は2026-11-12に採択済み。昇格確認画面では要求ボーナス・実増加量・仮上限を分けて表示する。開発用 `/?promotion-lab=1` は合成fixtureだけを使う独立stat previewで、本編GameState／RNG／IndexedDB／自動保存には接続しない。
 - 1戦闘中に複数回ダメージを与えた場合、現行はstrikeごとに+10 EXPを付与する解釈。
 - HP成長時は最大HPのみ増やし、現在HPは維持。
-- 正式な章マップ／敵構成／報酬品目・数量、会話／加入イベント、キャンペーン選択／分岐／解放管理は未実装。第2章はUI／引き継ぎ確認用の試作データ。クラスチェンジ証は採択済みCP-13に従い章報酬／イベントのみで配布するが、具体的な報酬定義は未登録。CP-04／CP-05の正式な数値バランスは未決定。
+- 正式な章マップ／敵構成／報酬品目・数量、加入人物・会話本文、実際の章ルート選択や章解放UIは未実装。汎用のキャンペーン選択永続化と後続章イベントの条件判定は実装済みだが、正式な選択肢・分岐先コンテンツは未定義。第2章はUI／引き継ぎ確認用の試作データ。クラスチェンジ証は採択済みCP-13に従い章報酬／イベントのみで配布するが、具体的な報酬定義は未登録。CP-04／CP-05の正式な数値バランスは未決定。
 - マップ定義validatorは主要な構造・参照整合性を検証し、セーブ状態validatorは出撃名簿、地形通行可否、登録済みクラス／武器／アイテム参照、装備武器の所持・適性、現役ユニットのHP>0を検証する。このセーブ検証はプレイ中の経路履歴や、直前の移動経路が移動力内だったかまでは検証しない（経路プレビューは操作時だけの一時表示）。
 - 出撃準備のメンバー選択・控え保存・章間引き継ぎと、候補詳細のインベントリ表示データ整形はCIテスト対象。ブラウザ／スマートフォン実機でのUI／IndexedDB通し確認は未実施。
 - PlaywrightによるChromium E2Eは出撃準備・名簿保存・行動状態復元・敵軍フェイズ／ターン復元・幅390pxのレイアウトを確認済み。PWA manifest／Service Worker／precache／オフライン起動も本番Previewで検証済み。Service Worker更新時の自動再読み込みとセーブ復元はPR #21で検証済み。セーブファイルのexport/importはPR #22のCIで単体・ブラウザテスト済み（mainマージ済み）。3世代バックアップはPR #23の最終CI run #42734263896でtypecheck・unit tests（21 files／136 tests）・production build・Chromium E2E（10 cases）がすべて成功。 PR #29マージheadのCI run #497ではtypecheck・unit tests（22 files／142 tests）・production build・Chromium E2E（11 cases）がすべて成功。PR #30のマージheadのCI run #499でも同じくtypecheck・22 files／142 tests・production build・Chromium E2E 11 casesがすべて成功。PR #32のマージheadのCI run #503ではtypecheck・22 files／146 tests・production build・Chromium E2E 11 casesがすべて成功。PR #23はmainへマージ済み（merge commit: `f283e38c67c4b4c822e47d93d54d7b7941b0abac`）。実スマートフォンへのインストール・オフライン操作の手動確認は未実施。
@@ -158,7 +158,7 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 
 ### 実セーブsnapshot比較ベンチ（PR #81〜#83）
 
-- 開発route /?promotion-snapshots=1 で、portable save JSON（envelope v1／GameState saveVersion 7）をメモリ上へ複数読み込み、既存validatorで章・マップ・ユニットを検証する。
+- 開発route /?promotion-snapshots=1 で、portable save JSON（envelope v1／GameState saveVersion 8）をメモリ上へ複数読み込み、既存validatorで章・マップ・ユニットを検証する。
 - 現行7基本職のLv.10以上の出撃味方を候補とし、同クラス内の8能力percentileの平均を参考値として表示。3 snapshot未満は分布不足と扱い、low／median／highは自動で決めない。
 - 元snapshotと、試験用promotion tokenをコピーにだけ用いた昇格command結果を比較する。IndexedDB／GameState／RNG／自動保存への書込み・外部送信なし。
 - PR #82で既存 `performAttack` を使う単一seedのcontrol／promotion戦闘比較を追加し、PR #83では20／100／250seedの独立単発戦闘集計を追加。seedはcontrol／promotionでペアにし、各試行は元snapshotへ戻して実行する。HP／敵HP／EXP／撃破状態は試行間で持ち越さない。結果は攻撃命中率・命中時必殺率・平均与ダメージ・対象撃破率・反撃被ダメージ・生存率等を表示するが、敵軍フェイズ・移動・複数ターンの攻略を含まない。統制21ケースの実プレイ比較は未完了で、CP-04／05の数値承認も未実施。
@@ -223,9 +223,9 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - commandはフェイズ、対象ユニットの陣営／生存状態、行動フラグ、武器所持・適性、移動力・地形・占有を検証し、入力snapshotを変更せずに次状態を返す。
 - 移動経路は既存のDijkstra helperを再利用する。UIのタッチ2回確定・キーボード／ポインターによるプレビューはApp側に残し、確定時にapplication commandで再検証する。
 - 武器変更は移動後も行動前なら実行可能という従来挙動を維持し、待機は移動済みでも未行動なら実行可能とする。
-- これら3 command自体はGameStateフィールドを追加せず、RNGやキャンペーン累計戦績を変更しない。マップイベント進行は `firedMapEventIds` と `acknowledgedMapEventIds` をsaveVersion 7へ保存し、選択済み会話分岐は `mapEventChoices` に保存する。IndexedDB schemaは1を維持する。
+- これら3 command自体はGameStateフィールドを追加せず、RNGやキャンペーン累計戦績を変更しない。マップイベント進行は `firedMapEventIds` と `acknowledgedMapEventIds` をsaveVersion 8へ保存し、選択済み会話分岐は `mapEventChoices` に保存する。IndexedDB schemaは1を維持する。
 
-## マップイベント基盤・永続確認・会話分岐（saveVersion 7）
+## マップイベント基盤・永続確認・章間キャンペーン選択（saveVersion 8）
 
 - `GameMapDefinition.events` にマップ固有のイベントを定義する。トリガーはステージ開始、指定ターン／フェイズ開始、特定ユニット撃破、ボス撃破、勝利、敗北、味方による地点調査（`unit-interacts`）、選択済み会話分岐（`event-choice`）をサポートする。
 - イベントアクションは `show-message`、`show-choice`、明示定義された `grant-item`、事前定義された敵の `spawn-reinforcement`、検証済みCampaignUnitを控え名簿へ追加する `recruit-unit` をサポートする。マップイベントは定義順に評価し、各アクションの成功後に発火IDを確定する。複数アクションはdetached snapshot上で解決し、途中失敗時に部分適用しない。
@@ -234,13 +234,21 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - 敵軍フェイズ開始時にイベントメッセージが発火した場合、フェイズ開始checkpointを保存してAI解決を停止する。最後のイベントが確認された後にのみ敵軍AIを実行する。未確認イベントがある敵軍フェイズsnapshotを再読み込みした場合も同じ停止状態から再開する。
 - セーブ検証はイベント定義の構造・参照、発火済みIDの一意性・サイズ、確認済みIDが発火済みIDの一意な部分集合であること、選択済みchoiceが定義済みイベント／選択肢を参照することを検証する。v1〜v4は空の発火／確認ID配列と選択履歴を加えてv7へ移行する。v5は既発火IDを確認済みとして保持し、選択履歴を空配列としてv7へ移行する。v6は発火／確認IDを保持し、空の選択履歴を加えてv7へ移行する。新章は空のイベント進行から開始する。
 - 章1には中立的な操作案内を1件だけ定義し、章2／3はイベントなしを明示している。ストーリー・報酬・正式シナリオの追加を意味しない。
-- Event historyは現在章の発火済み`show-message`／`show-choice`を `firedMapEventIds` の保存順に再構成し、確認済み／未確認の両方を読み取り専用パネルで表示する。会話選択肢のラベルは `mapEventChoices` とマップcontentから復元する。未発火イベントは表示せず、履歴本文・時刻・追加進行情報を保存しない。章切替で表示対象は新章に切り替わる。saveVersion 7／IndexedDB schema 1を使用する。
+- Event historyは現在章の発火済み`show-message`／`show-choice`を `firedMapEventIds` の保存順に再構成し、確認済み／未確認の両方を読み取り専用パネルで表示する。会話選択肢のラベルは `mapEventChoices` とマップcontentから復元する。未発火イベントは表示せず、履歴本文・時刻・追加進行情報を保存しない。章切替で表示対象は新章に切り替わる。saveVersion 8／IndexedDB schema 1を使用する。
 - 関連テスト: `resolve-map-events.test.ts`、`resolve-map-event-transition.test.ts`、マップ／GameState validator tests、v1〜v6 migration tests、`save-file.test.ts` の選択済み会話分岐round-trip、イベントdialog／history component tests、キャンペーン／バックアップ／開発ベンチE2E。
 
-- PR #113ではマップイベントの `grant-item`／`spawn-reinforcement` アクションを追加（当時のsaveVersion 6で既存fieldだけを利用）。付与先は生存中の出撃味方、アイテムは登録済みID、数量は1〜5、所持品は最大5枠。増援はマップイベントに事前定義された敵ユニットのみで、ID重複・敵陣営・座標・地形通行可否・占有マスを検証。イベントはコンテンツ順にdetached snapshotへ適用し、途中失敗時は部分更新せず発火IDも追加しない。増援の撃破も通常の `unit-defeated` トリガーに接続。GameStateに新しいfieldを設けず、既存のfired IDsとunits/inventoryで保持するため当時のsaveVersion 6／IndexedDB schema 1のままにした。既存3章に新報酬・増援は追加しない。後続のPR #116で `mapEventChoices` が追加され、現行saveVersionは7。
+- PR #113ではマップイベントの `grant-item`／`spawn-reinforcement` アクションを追加（当時のsaveVersion 6で既存fieldだけを利用）。付与先は生存中の出撃味方、アイテムは登録済みID、数量は1〜5、所持品は最大5枠。増援はマップイベントに事前定義された敵ユニットのみで、ID重複・敵陣営・座標・地形通行可否・占有マスを検証。イベントはコンテンツ順にdetached snapshotへ適用し、途中失敗時は部分更新せず発火IDも追加しない。増援の撃破も通常の `unit-defeated` トリガーに接続。GameStateに新しいfieldを設けず、既存のfired IDsとunits/inventoryで保持するため当時のsaveVersion 6／IndexedDB schema 1のままにした。既存3章に新報酬・増援は追加しない。後続のPR #116で `mapEventChoices` が追加され、現行saveVersionは8。
 
 - PR #114（作業ブランチ `feat/map-interaction-actions`）では、味方によるマップ地点調査を追加。未発火の調査地点をマップ上の「調」マーカー・凡例・ARIAラベルで表示し、地点にいる生存・未行動の味方の詳細へ「調べる」操作を追加。移動後も調査でき、成功時はその味方の行動を消費する。調査結果は既存のイベント確認ダイアログ／履歴・発火IDで保存し、リロード後に未確認メッセージを再表示。map validatorは座標範囲・通行可能地形・初期配置との重複・地点重複・表示テキスト・任意対象unitを検証。GameStateの新field・saveVersion／IndexedDB schema変更なし。Chapter 1の追加地点は探索コマンド確認用の中立メッセージのみ。
 
 - PR #115では `unit-interacts` に限定した `recruit-unit` を追加。検証済みCampaignUnitを既存の `reserveUnits` に追加し、現在の戦闘には参加させない。加入先IDを次章マップの `playerDeployment` が明示した場合のみ、次章の出撃候補にできる。人物・加入会話・章配置の具体的内容は未決定。
 - PR #116では `show-choice` の2〜4個の選択肢と、選択IDを参照する `event-choice` 分岐を追加。選択は `mapEventChoices` に保存し、source eventの確認と分岐イベントの実行をdetached snapshot上でまとめて検証・確定する。既存章に正式な会話・人物・ルートを追加していない。
 - PR #117では選択済みchoiceを含むsnapshotのmap validator適合性と、JSON export/import round-tripを検証する回帰テストを追加した。
+
+
+## 章をまたぐキャンペーン選択（saveVersion 8）
+
+- `show-choice` に任意の `campaignChoiceKey` を設定すると、選択確定時に `{ key, choiceId, sourceChapterId, sourceEventId }` を `GameStateSnapshot.campaignChoices` へ一度だけ記録する。キーはキャンペーン全体で一意とし、同じキーを再選択して上書きしない。
+- 後続章のイベントには `condition: { type: "campaign-choice", key, choiceId }` を設定できる。通常のイベントtriggerが発火した時に条件も一致した場合だけ、イベントを一度実行する。条件はマップcontent側に保持し、物語・選択肢・分岐先を自動生成しない。
+- `prepareNextChapter` は `campaignChoices` を引き継ぎ、現章だけの `firedMapEventIds`／`acknowledgedMapEventIds`／`mapEventChoices` は次章テンプレートから新規開始する。
+- chapter registry testは名前付きchoice keyの重複、参照先choice ID、選択元より後の章にだけ条件を置けることを検証する。既存3章に正式な選択肢や分岐は追加していない。
