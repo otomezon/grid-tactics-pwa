@@ -171,7 +171,7 @@ saveVersionを4へ更新し、v1／v2／v3は既存データを保持したま�
 
 移動commandはマップ地形、移動種別、移動力、他ユニットの占有を含めて既存の最小コスト経路探索で合法性を再検証する。武器変更commandは登録武器・所持・クラス／武器種適性を検証し、移動後の行動前変更を許可する。待機commandは生存味方の未行動状態を検証して行動フラグのみを更新する。3 commandとも入力snapshotを不変に保ち、RNGや累計戦績を変更しない。
 
-## データ駆動マップイベント・永続確認・会話分岐（saveVersion 7）
+## データ駆動マップイベント・永続確認・章間キャンペーン選択（saveVersion 8）
 
 `GameMapDefinition.events` は章マップに属する一度きりのイベント定義であり、`src/application/resolve-map-events.ts` がトリガーを解決し、`resolve-map-event-transition.ts` が確定済みGameStateの前後差分からターン／フェイズ開始、ユニット撃破、ボス撃破、勝敗確定のトリガーを生成する。地点調査は `unit-interacts`、選択済み分岐は `event-choice` を使う。ステージ開始と初回ターン開始は出撃確定時に処理する。
 
@@ -179,9 +179,9 @@ saveVersionを4へ更新し、v1／v2／v3は既存データを保持したま�
 
 未確認イベントがある間は戦闘入力と次章遷移をロックする。敵軍フェイズ開始イベントが未確認の場合はphase: enemyのcheckpointを保存するが敵AIは実行しない。最後のイベント確認後にだけ既存の敵フェイズ処理を続行する。新章のテンプレートは空の発火／確認ID配列から始まる。
 
-saveVersion 1〜4は空の発火／確認ID配列と選択履歴を追加してversion 7へ移行する。saveVersion 5は既発火IDをすべて確認済みとして保持し、空の選択履歴を加えてversion 7へ移行する。saveVersion 6は発火／確認IDを保持したまま空の選択履歴を加えてversion 7へ移行する。いずれも過去イベントを意図せず再表示しない。IndexedDB schemaはversion 1を維持する。
+saveVersion 1〜4は空の発火／確認ID配列と選択履歴を追加してversion 8へ移行する。saveVersion 5は既発火IDをすべて確認済みとして保持し、空の選択履歴を加えてversion 8へ移行する。saveVersion 6は発火／確認IDを保持したまま空の選択履歴を加えてversion 8へ移行する。saveVersion 7は現章の選択履歴を保持し、空のcampaignChoicesを追加してversion 8へ移行する。いずれも過去イベントを意図せず再表示しない。IndexedDB schemaはversion 1を維持する。
 
-イベントアクションは `show-message`、2〜4択の `show-choice`、明示的な `grant-item`、マップデータに事前登録された敵 `spawn-reinforcement`、検証済みCampaignUnitの `recruit-unit` をサポートする。付与では登録済みアイテムID・数量1〜5・生存中の出撃味方・所持品5枠を検証する。増援では敵陣営・未使用ID・配置座標・通行可能地形・空きマスを検証し、通常のGameUnitとして追加する。ユニット撃破トリガーは増援IDにも対応する。イベントはコンテンツ順にコピーしたsnapshotへ適用し、全アクション成功後にだけ発火IDを記録するため、途中失敗で部分的な報酬や増援を残さない。メッセージ履歴は3アクションすべての発火順を既存のfired IDsから再構築する。GameStateの新fieldやsaveVersion／IndexedDB schemaは追加しない。既存の試作章には報酬・増援を追加せず、CP-13の昇格アイテム配布先・数量も決めない。村・宝箱・扉を独立したマップオブジェクトとして扱う機能と、正式な加入人物・会話・章ルートの具体的コンテンツは未実装である。汎用の加入／会話選択処理は実装済み。
+イベントアクションは `show-message`、2〜4択の `show-choice`、明示的な `grant-item`、マップデータに事前登録された敵 `spawn-reinforcement`、検証済みCampaignUnitの `recruit-unit` をサポートする。付与では登録済みアイテムID・数量1〜5・生存中の出撃味方・所持品5枠を検証する。増援では敵陣営・未使用ID・配置座標・通行可能地形・空きマスを検証し、通常のGameUnitとして追加する。ユニット撃破トリガーは増援IDにも対応する。イベントはコンテンツ順にコピーしたsnapshotへ適用し、全アクション成功後にだけ発火IDを記録するため、途中失敗で部分的な報酬や増援を残さない。メッセージ履歴は3アクションすべての発火順を既存のfired IDsから再構築する。PR #134までの既存イベント効果は当時のsaveVersionを維持して追加された。現行では `campaignChoices` を加えたsaveVersion 8を使う。既存の試作章には報酬・増援・キャンペーン選択コンテンツを追加せず、CP-13の昇格アイテム配布先・数量も決めない。村・宝箱・扉を独立したマップオブジェクトとして扱う機能と、正式な加入人物・会話・章ルートの具体的コンテンツは未実装である。汎用の加入／会話選択処理は実装済み。
 
 `getMapEventMessageHistory` は現在章の `firedMapEventIds` を保存順にたどり、マップ定義から発火済みメッセージ本文を再構築する。イベント履歴パネルは確認済み／未確認を問わず既発火メッセージを読み取り専用で表示する。本文・発生時刻・履歴用snapshot fieldを新たに保存せず、会話選択結果は `mapEventChoices` からラベルを復元する。章切替後は新章のイベントだけを表示する。
 
@@ -191,11 +191,11 @@ saveVersion 1〜4は空の発火／確認ID配列と選択履歴を追加してv
 
 ## マップ地点の調査操作（PR #114）
 
-`MapEventTrigger` の `unit-interacts` はマップ座標、UIラベル／説明、任意の対象player IDを持つ。map validatorは座標範囲、進入可能地形、初期配置との重複、同一地点イベントの座標重複、対象味方IDを検証する。`getMapInteractionPoints` は未発火地点だけをマップに投影し、`getAvailableMapInteraction` はplayer phaseで生存・未行動の味方が地点上にいる場合だけ操作対象を返す。`performMapInteraction` は実行時にも章・フェイズ・勝敗・位置・陣営・生存・行動状態を検証し、既存の `resolveMapEvents` でアクションを解決した後に調査ユニットの `hasActed` を立てる。イベント効果が失敗した場合は行動フラグも発火IDも更新しない。成功時は既存の確認ダイアログとイベント履歴で再読み込み後も確認できる。既存GameState fieldだけを利用し、saveVersion 7／IndexedDB schema 1を維持する。
+`MapEventTrigger` の `unit-interacts` はマップ座標、UIラベル／説明、任意の対象player IDを持つ。map validatorは座標範囲、進入可能地形、初期配置との重複、同一地点イベントの座標重複、対象味方IDを検証する。`getMapInteractionPoints` は未発火地点だけをマップに投影し、`getAvailableMapInteraction` はplayer phaseで生存・未行動の味方が地点上にいる場合だけ操作対象を返す。`performMapInteraction` は実行時にも章・フェイズ・勝敗・位置・陣営・生存・行動状態を検証し、既存の `resolveMapEvents` でアクションを解決した後に調査ユニットの `hasActed` を立てる。イベント効果が失敗した場合は行動フラグも発火IDも更新しない。成功時は既存の確認ダイアログとイベント履歴で再読み込み後も確認できる。既存GameState fieldだけを利用し、saveVersion 8／IndexedDB schema 1を維持する。
 
 ## Map-event recruitment
 
-A map event may use the `recruit-unit` action only with a `unit-interacts` trigger. The action contains a validated `CampaignUnit` definition and adds a detached copy to the existing `GameStateSnapshot.reserveUnits`; it never deploys the recruit into the current battle. The event ID is committed only after the action succeeds, so duplicate recruitment and invalid candidate data cannot partially update the roster. The validator accepts a recruited reserve only when its matching event ID is present in `firedMapEventIds`. The recruitment action reuses the reserve-member and fired-event fields already present in saveVersion 6; saveVersion 7 later adds the independent dialogue-choice list. For later deployment, a subsequent chapter map must explicitly list the recruit ID in `playerDeployment`; the existing next-chapter and deployment commands then carry and select the reserve member. Concrete characters, dialogue, recruitment conditions, and chapter placement remain authored content decisions.
+A map event may use the `recruit-unit` action only with a `unit-interacts` trigger. The action contains a validated `CampaignUnit` definition and adds a detached copy to the existing `GameStateSnapshot.reserveUnits`; it never deploys the recruit into the current battle. The event ID is committed only after the action succeeds, so duplicate recruitment and invalid candidate data cannot partially update the roster. The validator accepts a recruited reserve only when its matching event ID is present in `firedMapEventIds`. The recruitment action reuses the reserve-member and fired-event fields already present in saveVersion 6; saveVersion 7 added the independent dialogue-choice list. For later deployment, a subsequent chapter map must explicitly list the recruit ID in `playerDeployment`; the existing next-chapter and deployment commands then carry and select the reserve member. Concrete characters, dialogue, recruitment conditions, and chapter placement remain authored content decisions.
 
 
 ## Persistent branching dialogue events
@@ -204,4 +204,12 @@ Map-authored dialogue uses a `show-choice` action with two to four uniquely iden
 
 `chooseMapEventOption` verifies that the source dialogue is pending, the requested option exists, and no prior choice was recorded. It then creates a detached snapshot containing the selected option and source acknowledgement, resolves only matching branch events through the existing event resolver, validates the complete result, and returns it for a single save. If a branch effect fails, neither the selection nor branch fired IDs are committed to the caller's snapshot. The UI saves this combined snapshot before resuming a waiting enemy phase. Event history rebuilds the chosen label from map content and `mapEventChoices`; no dialogue text or choice labels are duplicated in save data.
 
-The new `mapEventChoices` list is added in `saveVersion: 7`. Version 1–4 saves migrate with empty event-progress and choice lists; version 5 keeps fired event IDs and treats them as acknowledged; version 6 keeps fired and acknowledged IDs. All older versions migrate directly to version 7 with an empty choice list. IndexedDB database schema version remains 1. No production chapter receives invented characters, dialogue, or route content as part of the generic engine implementation.
+The chapter-local `mapEventChoices` list was added in `saveVersion: 7`; `saveVersion: 8` adds campaign-wide `campaignChoices`. A `show-choice` event may declare an optional `campaignChoiceKey`; selecting it appends the key, choice ID, source chapter, and source event to the campaign ledger exactly once. A later chapter event may declare `condition: { type: "campaign-choice", key, choiceId }`; it runs only when its normal trigger matches and the persisted campaign decision matches. `prepareNextChapter` carries this campaign ledger while each chapter starts fresh local fired/acknowledged/event-choice arrays. Version 1–6 saves preserve their existing migration behavior and add an empty campaign ledger; version 7 keeps its local `mapEventChoices` and adds an empty ledger. IndexedDB database schema version remains 1. No production chapter receives invented characters, dialogue, choices, or route content as part of the generic engine implementation.
+
+
+## 章間キャンペーン選択
+
+- `MapEventAction.show-choice.campaignChoiceKey` は任意の一意キー。選択確定時に `GameStateSnapshot.campaignChoices` へ `{ key, choiceId, sourceChapterId, sourceEventId }` を追加し、既存値の上書き・再選択を拒否する。
+- `MapEventDefinition.condition` は任意のcampaign-choice条件で、通常triggerが一致した場合に選択記録も一致するイベントだけを解決する。コンテンツ検証はキーの重複、source chapterの前後、choice IDを検証する。
+- `prepareNextChapter` はcampaignChoicesを複製して次章へ渡し、chapter-localのイベント進行は引き継がない。
+- saveVersion 8で導入。v7の現在章選択履歴は保持し、campaignChoicesを空配列で初期化する。IndexedDB schema 1は変更しない。
