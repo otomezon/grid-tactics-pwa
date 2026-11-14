@@ -32,6 +32,7 @@ export interface CampaignTitleScreenProps {
   onExportSaveFile: () => void;
   onImportSaveFile: (file: File) => void;
   onCreateBackup: () => void;
+  onExportBackup: (slotId: string) => void;
   onRestoreBackup: (slotId: string) => void;
   onInstallApp: () => void;
 }
@@ -58,6 +59,7 @@ export function CampaignTitleScreen({
   onExportSaveFile,
   onImportSaveFile,
   onCreateBackup,
+  onExportBackup,
   onRestoreBackup,
   onInstallApp
 }: CampaignTitleScreenProps) {
@@ -181,7 +183,7 @@ export function CampaignTitleScreen({
                 <h3>ローカルバックアップ</h3>
                 <span>最大3世代</span>
               </div>
-              <p>現在の自動セーブを別世代として保管できます。バックアップ復元時とセーブJSON読み込み時には、上書き前の自動セーブがあれば第1世代へ自動退避し、既存世代を繰り下げます。</p>
+              <p>現在の自動セーブを別世代として保管できます。各世代は個別のJSONとして書き出して別端末へ移せます。バックアップ復元時とセーブJSON読み込み時には、上書き前の自動セーブがあれば第1世代へ自動退避し、既存世代を繰り下げます。</p>
               <button
                 className="campaign-secondary-button"
                 type="button"
@@ -199,15 +201,26 @@ export function CampaignTitleScreen({
                         <strong>第{backup.generation}世代 · {new Date(backup.savedAt).toLocaleString()}</strong>
                         <span>{backup.chapterTitle}（{backup.chapterId}）</span>
                       </div>
-                      <button
-                        className="campaign-secondary-button"
-                        type="button"
-                        data-testid={"title-restore-" + backup.slotId}
-                        disabled={!backup.restorable || backupActionPending || isLoading}
-                        onClick={() => onRestoreBackup(backup.slotId)}
-                      >
-                        第{backup.generation}世代を復元
-                      </button>
+                      <div className="campaign-backup-actions">
+                        <button
+                          className="campaign-secondary-button"
+                          type="button"
+                          data-testid={"title-export-" + backup.slotId}
+                          disabled={!backup.restorable || backupActionPending || isLoading}
+                          onClick={() => onExportBackup(backup.slotId)}
+                        >
+                          JSONを書き出す
+                        </button>
+                        <button
+                          className="campaign-secondary-button"
+                          type="button"
+                          data-testid={"title-restore-" + backup.slotId}
+                          disabled={!backup.restorable || backupActionPending || isLoading}
+                          onClick={() => onRestoreBackup(backup.slotId)}
+                        >
+                          第{backup.generation}世代を復元
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

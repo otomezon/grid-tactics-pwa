@@ -79,7 +79,7 @@ import {
   saveGameState,
   type SaveBackupRecord
 } from "./persistence/save-repository";
-import { createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
+import { createSaveBackupFileName, createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 import { getStorageOperationErrorMessage } from "./persistence/storage-error";
 import { OperationGuide } from "./components/operation-guide";
 import { CampaignTitleScreen } from "./components/campaign-title-screen";
@@ -1065,6 +1065,44 @@ function CampaignApp() {
       setMessage("セーブデータを書き出しました。ファイルを別の場所にも保管してください。");
     } catch (error) {
       setMessage("セーブデータの書き出しに失敗しました。" + getErrorMessage(error));
+    }
+  }
+
+  async function handleExportSaveBackup(slotId: string): Promise<void> {
+    if (backupActionPending || !backupListLoaded) return;
+    setBackupActionPending(true);
+
+    try {
+      const backup = await loadGameStateBackup(slotId);
+      if (!backup) throw new Error("選択したバックアップが見つかりません。");
+
+      const chapterId = typeof backup.data === "object" && backup.data !== null &&
+        "chapterId" in backup.data && typeof backup.data.chapterId === "string"
+        ? backup.data.chapterId
+        : null;
+      const chapter = chapterId ? getChapterById(chapterId) : undefined;
+      const migration = chapter ? migrateGameStateSnapshot(backup.data, chapter.map) : null;
+      if (!chapter || !migration) {
+        throw new Error("バックアップの保存形式または章IDを検証できません。");
+      }
+
+      const exportedAt = new Date();
+      const generation = Number(slotId.slice("backup-".length));
+      const fileContent = createSaveFileContent(migration.snapshot, exportedAt);
+      const blob = new Blob([fileContent], { type: "application/json;charset=utf-8" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = createSaveBackupFileName(migration.snapshot.chapterId, generation, exportedAt);
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1_000);
+      setMessage("第" + generation + "世代のバックアップを書き出しました。別の端末ではセーブファイル読み込みから復元できます。");
+    } catch (error) {
+      setMessage("バックアップの書き出しに失敗しました。" + getErrorMessage(error));
+    } finally {
+      setBackupActionPending(false);
     }
   }
 
@@ -2064,6 +2102,7 @@ function CampaignApp() {
         onExportSaveFile={() => void handleExportSaveFile()}
         onImportSaveFile={(file) => void handleImportSaveFile(file)}
         onCreateBackup={() => void handleCreateSaveBackup()}
+        onExportBackup={(slotId) => void handleExportSaveBackup(slotId)}
         onRestoreBackup={(slotId) => void handleRestoreSaveBackup(slotId)}
         onInstallApp={() => void handleInstallApp()}
       />
@@ -3246,15 +3285,26 @@ function CampaignApp() {
                       <span>{backup.chapterTitle}（章ID: {backup.chapterId}）</span>
                     </div>
                     <p className="helper-text">{backup.restorable ? "保存形式と章マップを検証済みです。" : "保存形式または章IDを検証できません。復元は拒否されます。"}</p>
-                    <button
-                      className="secondary-button block-button"
-                      type="button"
-                      data-testid={"restore-" + backup.slotId}
-                      disabled={backupActionPending || saveStatus === "loading" || saveStatus === "saving"}
-                      onClick={() => void handleRestoreSaveBackup(backup.slotId)}
-                    >
-                      第{backup.generation}世代を復元
-                    </button>
+                    <div className="save-backup-actions">
+                      <button
+                        className="secondary-button block-button"
+                        type="button"
+                        data-testid={"export-" + backup.slotId}
+                        disabled={!backup.restorable || backupActionPending || saveStatus === "loading" || saveStatus === "saving"}
+                        onClick={() => void handleExportSaveBackup(backup.slotId)}
+                      >
+                        第{backup.generation}世代を書き出す
+                      </button>
+                      <button
+                        className="secondary-button block-button"
+                        type="button"
+                        data-testid={"restore-" + backup.slotId}
+                        disabled={!backup.restorable || backupActionPending || saveStatus === "loading" || saveStatus === "saving"}
+                        onClick={() => void handleRestoreSaveBackup(backup.slotId)}
+                      >
+                        第{backup.generation}世代を復元
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
