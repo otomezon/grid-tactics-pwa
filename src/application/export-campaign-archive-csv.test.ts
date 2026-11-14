@@ -39,7 +39,7 @@ describe("buildCampaignBattleHistoryCsv", () => {
       actorName: '=HYPERLINK("https://example.invalid","name")', detail: 'line 1\nline, "two"'
     };
     const csv = buildCampaignBattleHistoryCsv([entry]);
-    expect(csv).toContain("'=HYPERLINK(""https://example.invalid"",""name"")");
+    expect(csv).toContain('\'=HYPERLINK(""https://example.invalid"",""name"")');
     expect(csv).toContain('"line 1\nline, ""two"""');
   });
 
