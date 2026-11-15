@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
-import { createSaveBackupFileName, createSaveFileContent, parseSaveFileContent } from "./save-file";
+import { createSaveBackupFileName, createSaveFileContent, parseSaveFileContent, parseSaveFileEnvelopeContent } from "./save-file";
 
 describe("save file export and import format", () => {
   it("creates a portable backup filename with its generation and export date", () => {
@@ -33,6 +33,11 @@ describe("save file export and import format", () => {
       exportedAt: "2026-11-10T12:34:56.000Z"
     });
     expect(parseSaveFileContent(content)).toEqual(INITIAL_GAME_STATE);
+    expect(parseSaveFileEnvelopeContent(content)).toEqual({
+      formatVersion: 1,
+      exportedAt: "2026-11-10T12:34:56.000Z",
+      data: INITIAL_GAME_STATE
+    });
   });
 
   it("round-trips cumulative per-unit campaign battle records", () => {
