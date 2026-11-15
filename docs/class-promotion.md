@@ -1,6 +1,6 @@
 # クラスチェンジ仕様・未決定事項と実装計画
 
-- 更新日: 2026-11-12
+- 更新日: 2026-11-15
 - 状態: CP-01〜03／06／07〜14／15／16の非数値方針は採択済み（2026-11-12）。CP-04／05の数値表と初回の証の具体的な配布内容は未決定
 - 根拠: `docs/game-design.md` §5.4–§5.5、`docs/progression.md` §7、現行ソース／テスト
 - 関連実装: `src/content/class-definitions.ts`、`src/content/classes.ts`（互換projection）、`src/content/items.ts`、`src/domain/progression/class-change.ts`、`src/application/perform-class-change.ts`、`src/App.tsx`
@@ -61,7 +61,7 @@
 
 すべての基本職・昇格先に同一の試作上限（HP 60、その他7能力30）を与えている。現行domainはボーナスを昇格先上限まで適用し、既存能力が上限より高い場合も能力を減らさない。HPボーナスは最大HPのみを増やし、現在HPは維持する。
 
-昇格後レベルは1。EXPは採択済みCP-07に従い0〜99の端数を保持する。HPボーナスは採択済みCP-08に従い最大HPだけへ加算し、現在HPは維持する。PR #32の境界テストでEXP 0／99、現在HP 1／満タン、最大HP上限直前のボーナス制限と現在HP維持を検証した（CI run #503: 22 test files／146 tests、Chromium E2E 11件成功）。PR #36のE2Eでは73 EXPを持つユニットについて、現行確認画面が暫定ボーナス・レベル1化・EXP保持・証1個消費・行動消費を説明し、昇格確定後とリロード後もEXP 73が保持されることを検証した（CI run #510: 22 test files／147 tests、Chromium E2E 11件成功）。このテストは現行UIと採択済みCP-07の整合性を確認するもので、CP-15の最終表示要件を確定するものではない。移動力 `move`、移動種別 `movementType`、使用可能武器 `usableWeaponTypes`、装備武器 `equippedWeaponId` は、採択済みCP-09／10に従い正式な昇格先データができるまで元ユニットの値を維持する。CP-12に従い昇格前は未移動・未行動を要求し、昇格後は `hasActed=true` とする。昇格先クラス固有の移動・武器データはまだモデル化されていない。
+昇格後レベルは1。EXPは採択済みCP-07に従い0〜99の端数を保持する。HPボーナスは採択済みCP-08に従い最大HPだけへ加算し、現在HPは維持する。PR #32の境界テストでEXP 0／99、現在HP 1／満タン、最大HP上限直前のボーナス制限と現在HP維持を検証した（CI run #503: 22 test files／146 tests、Chromium E2E 11件成功）。PR #36のE2Eでは73 EXPを持つユニットについて、現行確認画面が暫定ボーナス・レベル1化・EXP保持・証1個消費・行動消費を説明し、昇格確定後とリロード後もEXP 73が保持されることを検証した（CI run #510: 22 test files／147 tests、Chromium E2E 11件成功）。このPR #36時点のテストは現行UIと採択済みCP-07の整合性を確認するものだった。その後、CP-15の必須表示要件は2026-11-12に採択され、PR #39で8能力の差分、上限超過値の維持、キャンセル時のセーブ不変、確定後の状態保持をE2E検証済み（CI run #532）。移動力 `move`、移動種別 `movementType`、使用可能武器 `usableWeaponTypes`、装備武器 `equippedWeaponId` は、採択済みCP-09／10に従い正式な昇格先データができるまで元ユニットの値を維持する。CP-12に従い昇格前は未移動・未行動を要求し、昇格後は `hasActed=true` とする。昇格先クラス固有の移動・武器データはまだモデル化されていない。
 
 ### アイテムとセーブ
 
@@ -168,9 +168,9 @@ CP-12により昇格はその自軍フェイズの行動を消費する。した
 
 ## 4. 保存データ互換性の方針
 
-現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存のGameUnitフィールドだけを使う変更ではsaveVersionを上げずに済むが、saveVersion 4ではキャンペーン累計戦績もsnapshotに保持する。
+現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存のGameUnitフィールドだけを使う変更ではsaveVersionを上げずに済むが、現行saveVersion 10では、キャンペーン累計戦績・章間選択・キャンペーン戦闘履歴などもsnapshotに保持する。クラスチェンジ自体は既存のGameUnitフィールドを使い、専用の保存フィールドを追加していない。
 
-ただし、クラス変更履歴、昇格回数、ユニット単位の例外値、移動・武器データの新規フィールドなどを `GameUnit`／`GameStateSnapshot` に追加する判断をした場合は、保存設計を先に更新し、現行saveVersion 4から次versionへの明示的なmigration・validator・export/import・backup復元テストを実装する。今回のsaveVersion 4への更新はキャンペーン累計戦績の追加であり、昇格回数やクラス変更履歴を追加したものではない。セーブに保存済みの能力値や所持品を、クラス定義変更を理由に起動時に無断で再計算しない。
+ただし、クラス変更履歴、昇格回数、ユニット単位の例外値、移動・武器データの新規フィールドなどを `GameUnit`／`GameStateSnapshot` に追加する判断をした場合は、保存設計を先に更新し、現行saveVersion 10から次versionへの明示的なmigration・validator・export/import・backup復元テストを実装する。saveVersion 4への更新はキャンペーン累計戦績を追加した過去の移行段階であり、現在はv1〜v9からv10への移行を維持している。昇格回数やクラス変更履歴を追加したものではない。セーブに保存済みの能力値や所持品を、クラス定義変更を理由に起動時に無断で再計算しない。
 
 ## 5. 実装計画
 
@@ -227,7 +227,7 @@ CP-01〜03／06／15は2026-11-12に採択済み。CP-04／05は記入表の21�
 | クラス性能 | 移動力・移動種別・武器適性・装備整合性 |
 | 行動ルール | player/enemy phase、移動済み／行動済み、確定後の行動フラグ |
 | 不変性 | 入力state・他ユニット・控え・未選択データが不変 |
-| セーブ | save/load後も昇格後状態が維持される。saveVersion 4でv3からのmigration、旧JSON／backup復元を実装・検証済み |
+| セーブ | save/load後も昇格後状態が維持される。現行saveVersion 10を使用し、v1〜v9からv10へのmigration、JSON import／backup restoreの共通validationを維持 |
 | UI E2E | 事前確認、キャンセル、確定、保存後リロード、モバイル幅 |
 
 CIでは `npm run typecheck`、`npm test`、`npm run build`、`npm run test:e2e` を実行する。実機で確認していない場合は未実施と記載し、CIのChromium結果をスマートフォン実機確認の代用として表現しない。
@@ -243,11 +243,11 @@ Vite開発サーバーで `npm run dev` を起動し、`http://localhost:5173/?p
 
 Vite開発サーバーの `http://localhost:5173/?promotion-snapshots=1` では、アプリのセーブ管理から書き出したJSONを複数読み込み、実際のユニットsnapshotを比較できる。
 
-- 対応形式はportable envelope version 1内の `GameStateSnapshot.saveVersion: 4`。章IDを既存章registryで解決し、現在のmap definitionに対して `isValidGameStateSnapshot` を適用する。不正なJSON、未対応version、未登録章、validator不合格は拒否する。
+- 対応形式はportable envelope version 1。現在のアプリから書き出すsnapshotは `GameStateSnapshot.saveVersion: 10` であり、入力時はsaveVersion 1〜9を現行v10へmigrationしたうえで、章IDを既存chapter registryから解決し、対象mapに対して `isValidGameStateSnapshot` を適用する。不正なJSON、未対応version、未登録章、validator不合格は拒否する。
 - 対象はsnapshot内の出撃中の味方で、現行7基本職、Lv.10以上のユニット。比較コマンドを実行するには自軍フェイズ、未移動・未行動、証を追加できる所持品空き（または証を既に所持）が必要。条件を満たさない候補は理由を表示する。
 - 同一クラスの読み込みsnapshotが3件以上ある場合、各能力の同クラス内順位の平均を参考percentileとして表示する。3件未満は「分布データ不足」とし、low／median／highを自動選択しない。ユーザーは試験記録で候補を判断する。
 - controlは読み込んだ元snapshot、promotionは同じsnapshotから作る切り離しコピーに既存 `performClassChange` を実行した結果。セーブに証がない場合はコピー内だけに試験用 `promotion_seal` を一時追加して消費する。これはCP-13の報酬決定でも、実セーブへの付与でもない。
-- UIは能力8項目、要求ボーナス／実増加／仮上限、クラス・Lv・EXP、最大／現在HP、移動／武器／装備、行動消費、RNG不変を表示する。PR #82では既存 `performAttack` を再利用した単一seedの戦闘比較、PR #83では20／100／250seedの独立単発戦闘集計を追加した。作業中PR #86では、同じsnapshot・seedから既存 `beginEnemyPhase`／`runEnemyPhase` を使う敵軍phase 1回のpaired比較も追加している。敵行動数／攻撃数、選択ユニット標的率・被害・生存率、味方全体被害／撃破、全滅率、次phase進行率を表示する。
+- UIは能力8項目、要求ボーナス／実増加／仮上限、クラス・Lv・EXP、最大／現在HP、移動／武器／装備、行動消費、RNG不変を表示する。PR #82では既存 `performAttack` を再利用した単一seedの戦闘比較、PR #83では20／100／250seedの独立単発戦闘集計を追加した。マージ済みPR #86（merge commit `814789b714620fe805aa33281fad77486d4dc200`）では、同じsnapshot・seedから既存 `beginEnemyPhase`／`runEnemyPhase` を使う敵軍phase 1回のpaired比較を追加した。敵行動数／攻撃数、選択ユニット標的率・被害・生存率、味方全体被害／撃破、全滅率、次phase進行率を表示する。
 - 読み込んだファイルと候補はReactのメモリだけに保持し、IndexedDB・GameState・自動保存・saveVersionを読み書きしない。ネットワーク送信や永続キャッシュも行わない。リロードまたは破棄操作で消去する。これは開発サーバー専用で、本番ビルドでは表示されない。
 
 単発攻撃のseed反復は移動・敵軍phase・複数turnを含まない。PR #86の敵軍phase比較は既存敵AIの行動を1 phaseだけ再現し、controlは行動を見送る枝であるため、昇格せず別の行動を選んだ場合との比較ではない。いずれも候補整理と既存ロジック上の影響確認を補助するものであり、実際のプレイヤー操作を含む完全な戦闘／章攻略、統制した実プレイ21ケース、CP-04／05の数値承認を代替しない。
