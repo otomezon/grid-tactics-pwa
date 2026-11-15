@@ -1,6 +1,6 @@
 # クラスチェンジ・バランス記入表
 
-- 更新日: 2026-11-12
+- 更新日: 2026-11-15
 - 状態: CP-01〜03／06／07〜14／15／16の非数値方針は採択済み（2026-11-12）。能力上限・昇格ボーナス・クラス別移動／武器データ、初回の証の具体的な配布内容は未決定。
 - 関連仕様: [クラスチェンジ仕様・未決定事項と実装計画](class-promotion.md)
 - 判断Issue: [#26 — Design decision: approve the class promotion policy baseline](https://github.com/otomezon/grid-tactics-pwa/issues/26)
@@ -179,7 +179,7 @@ Issue #26でCP-01〜03／06／15を採択した。以下の方針を初期版の
 - 開発用snapshotベンチ（PR #82）は、読み込んだ実snapshotに射程内の生存敵がいる場合、既存 `performAttack` を用いてcontrol／promotionの各コピーから固定seedの単一戦闘サンプルを実行する。forecastと実strikeイベント、戦闘後HP／EXP／終了RNGを表示する。昇格の行動消費を正しく反映し、promotionコピーのみ次の自軍行動機会を模して行動フラグを戻す。敵軍フェイズやターン経過はシミュレートしないため、これは試験条件の確認・比較補助であり、21ケースの統制プレイテスト実施済みとは数えない。合成Playwright fixtureの結果を実プレイ記録欄に転記しない。
 - PR #83の複数seed集計は20／100／250個の決定論的seedをcontrol／promotionへ同一ペアで適用する。各試行は元snapshotから独立し、HP・EXP・撃破状態を持ち越さない。命中率・命中時必殺率・平均与ダメージ・対象敵撃破率・反撃被ダメージ・生存率をまとめるが、単発戦闘だけの集計であり敵軍フェイズ／移動／複数ターンを含む21ケースの実プレイ評価ではない。
 - PR #84の21ケースmatrixは、各基本職3件以上の実セーブ候補がある場合に限り、低位25%・中央値50%・上位90%に近い候補を提示する。候補・敵・条件は21行それぞれ人が確認し、確認済みの21行のみ一括実行できる。各ケースの独立単発戦闘反復をCSVへ記録するが、敵軍フェイズ・移動・複数turnを含む21ケースの統制実プレイとは異なる。データ区分の「実プレイ由来」は利用者申告で、アプリは真正性を検証しない。
-- PR #86の作業ブランチでは、各caseについて同じ開始snapshot／RNGから既存 `beginEnemyPhase`／`runEnemyPhase` を使う1 phaseのpaired comparisonを追加。controlは昇格を見送り当該ユニットを待機させ、promotionは昇格で当該ユニットの行動を消費する。敵行動・攻撃・標的率・選択ユニット／味方全体の被害・生存／撃破・次phase進行を記録する。これは1回の敵軍phaseのみで、controlが別のplayer actionを選ぶ場合や、複数turn／章攻略はシミュレートしない。現行prototype enemy AI上の結果として扱う。
+- マージ済みPR #86（merge commit `814789b714620fe805aa33281fad77486d4dc200`）では、各caseについて同じ開始snapshot／RNGから既存 `beginEnemyPhase`／`runEnemyPhase` を使う1 phaseのpaired comparisonを追加。controlは昇格を見送り当該ユニットを待機させ、promotionは昇格で当該ユニットの行動を消費する。敵行動・攻撃・標的率・選択ユニット／味方全体の被害・生存／撃破・次phase進行を記録する。これは1回の敵軍phaseのみで、controlが別のplayer actionを選ぶ場合や、複数turn／章攻略はシミュレートしない。現行prototype enemy AI上の結果として扱う。
 - control枝では昇格しないこと以外の条件を変えない。比較ログには「昇格により失った当該ターンの行動」と「証1個」のコストを明記する。
 - 予測値と実解決ログを区別する。戦闘式や敵AIの変更は試験中に混ぜず、そのcommit／snapshotを記録する。
 
@@ -254,7 +254,7 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 ## 実セーブsnapshotの取り込み・比較（開発専用）
 
 - 起動: `npm run dev` の後、`http://localhost:5173/?promotion-snapshots=1` を開く。
-- 入力: セーブ管理から書き出したJSON export（envelope version 1／GameState saveVersion 3）を複数選択する。ゲーム内でLv.10以上の基本職ユニットが自軍フェイズ・未移動・未行動のタイミングで書き出すと、昇格コマンドの比較候補になる。
+- 入力: セーブ管理から書き出したJSON export（envelope version 1／現行GameState saveVersion 10）を複数選択する。旧saveVersion 1〜9のJSONも、取込時に既存migrationでv10へ変換してから検証する。ゲーム内でLv.10以上の基本職ユニットが自軍フェイズ・未移動・未行動のタイミングで書き出すと、昇格コマンドの比較候補になる。
 - 検証: snapshotのchapterIdを既存registryから解決し、対象mapに対するsave validatorを通す。未登録章、不正JSON、旧／未知saveVersion、不正なunit／item／positionを拒否する。
 - profile整理: 基本職ごとに読み込んだLv.10+出撃ユニットの件数を集計する。3件以上でのみ8能力の同クラス内percentile rank平均を表示する。3件未満は分布データ不足とし、low／median／highを自動選定しない。候補を低／中央値／上位へ割り当てる判断は人が記録表で行う。
 - control／promotion: controlは元snapshot、promotionはコピーへ既存application commandを実行した結果。promotion_sealが元snapshotに無い場合は、比較コピーの所持品へだけ一時挿入し、コピー内で消費する。これは試験用で、章報酬／既存セーブの所持品へ反映しない。
