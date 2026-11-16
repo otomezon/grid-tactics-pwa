@@ -706,20 +706,34 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(allyRecords).toHaveCount(1);
   await expect(allyRecords.first()).toHaveAttribute("data-unit-id", "unit_001");
   await expect(allyArchive).toContainText("1 / 2名を表示");
-  const allyCsvButton = allyArchive.getByRole("button", { name: "味方別累計をCSV出力" });
-  await expect(allyCsvButton).toBeVisible();
+  const filteredAllyCsvButton = allyArchive.getByRole("button", { name: "検索結果をCSV出力" });
+  const allAllyCsvButton = allyArchive.getByRole("button", { name: "累計全員をCSV出力" });
+  await expect(filteredAllyCsvButton).toBeVisible();
+  await expect(allAllyCsvButton).toBeVisible();
   if (input === "click") {
-    const downloadPromise = page.waitForEvent("download");
-    await allyCsvButton.click();
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^campaign-unit-records-\d{4}-\d{2}-\d{2}\.csv$/);
-    const downloadPath = await download.path();
-    if (!downloadPath) throw new Error("The ally-record CSV download has no temporary file path.");
-    const csv = await readFile(downloadPath, "utf8");
-    expect(csv.startsWith("\uFEFF")).toBe(true);
-    expect(csv).toContain(archivedHero.name);
-    expect(csv).not.toContain(archivedAlly.name);
-    expect(csv).toContain("与ダメージ");
+    const filteredDownloadPromise = page.waitForEvent("download");
+    await filteredAllyCsvButton.click();
+    const filteredDownload = await filteredDownloadPromise;
+    expect(filteredDownload.suggestedFilename()).toMatch(/^campaign-unit-records-filtered-\d{4}-\d{2}-\d{2}\.csv$/);
+    const filteredPath = await filteredDownload.path();
+    if (!filteredPath) throw new Error("The filtered ally-record CSV download has no temporary file path.");
+    const filteredCsv = await readFile(filteredPath, "utf8");
+    expect(filteredCsv.startsWith("\uFEFF")).toBe(true);
+    expect(filteredCsv).toContain('"検索結果","1","2","' + archivedHero.name + '","撃破数順"');
+    expect(filteredCsv).toContain(archivedHero.name);
+    expect(filteredCsv).not.toContain(archivedAlly.name);
+
+    const allDownloadPromise = page.waitForEvent("download");
+    await allAllyCsvButton.click();
+    const allDownload = await allDownloadPromise;
+    expect(allDownload.suggestedFilename()).toMatch(/^campaign-unit-records-all-records-\d{4}-\d{2}-\d{2}\.csv$/);
+    const allPath = await allDownload.path();
+    if (!allPath) throw new Error("The full ally-record CSV download has no temporary file path.");
+    const allCsv = await readFile(allPath, "utf8");
+    expect(allCsv).toContain('"累計全員","2","2","' + archivedHero.name + '","撃破数順"');
+    expect(allCsv).toContain(archivedHero.name);
+    expect(allCsv).toContain(archivedAlly.name);
+    expect(allCsv).toContain("与ダメージ");
   }
   await allyArchive.getByRole("button", { name: "検索を解除" }).click();
   await expect(allyRecords).toHaveCount(2);

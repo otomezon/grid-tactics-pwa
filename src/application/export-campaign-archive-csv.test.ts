@@ -97,6 +97,40 @@ describe("buildCampaignUnitBattleRecordsCsv", () => {
     expect(csv).toContain('"70"');
   });
 
+  it("exports either the searched subset or every ally and records the active sort", () => {
+    const second = { ...record, unitId: "unit_002", unitName: "斥候", damageDealt: 40 };
+    const filtered = buildCampaignUnitBattleRecordsCsv([record], {
+      scope: "filtered",
+      totalRecordCount: 2,
+      query: "主人公",
+      sortBy: "enemiesDefeated"
+    });
+    expect(filtered).toContain('"検索結果","1","2","主人公","撃破数順"');
+    expect(filtered).toContain('"CSV行種別"');
+    expect(filtered).toContain('"味方累計"');
+    expect(filtered).not.toContain('"斥候"');
+    const all = buildCampaignUnitBattleRecordsCsv([second, record], {
+      scope: "all-records",
+      totalRecordCount: 2,
+      query: "主人公",
+      sortBy: "enemiesDefeated"
+    });
+    expect(all).toContain('"累計全員","2","2","主人公","撃破数順"');
+    expect(all).toContain('"斥候"');
+    expect(all).toContain('"主人公"');
+  });
+
+  it("retains export metadata when a name search returns no records", () => {
+    const csv = buildCampaignUnitBattleRecordsCsv([], {
+      scope: "filtered",
+      totalRecordCount: 1,
+      query: "一致なし",
+      sortBy: "damageDealt"
+    });
+    expect(csv).toContain('"エクスポート情報"');
+    expect(csv).toContain('"検索結果","0","1","一致なし","与ダメージ順"');
+  });
+
   it("does not mutate source records", () => {
     const source = [{ ...record, statGains: { ...record.statGains } }];
     const before = JSON.stringify(source);

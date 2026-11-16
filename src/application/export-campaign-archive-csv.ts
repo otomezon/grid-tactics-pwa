@@ -1,6 +1,7 @@
 import type { CampaignBattleStrikeRecord, CampaignUnitBattleRecord } from "../domain/models/game";
 import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
 import type { CampaignBattleHistoryCategory } from "./filter-campaign-battle-history";
+import type { CampaignUnitBattleRecordSort } from "./get-campaign-unit-battle-records-archive";
 
 type CsvCell = string | number | null | undefined;
 
@@ -137,20 +138,65 @@ export function buildCampaignBattleHistoryCsv(entries: readonly CampaignBattleHi
   return serializeCsv(rows);
 }
 
+export type CampaignUnitBattleRecordsCsvExportScope = "filtered" | "all-records";
+
+export interface CampaignUnitBattleRecordsCsvExportContext {
+  scope: CampaignUnitBattleRecordsCsvExportScope;
+  totalRecordCount: number;
+  query: string;
+  sortBy: CampaignUnitBattleRecordSort;
+}
+
+const UNIT_RECORD_SORT_LABELS: Record<CampaignUnitBattleRecordSort, string> = {
+  damageDealt: "与ダメージ順",
+  enemiesDefeated: "撃破数順",
+  experienceAwarded: "獲得EXP順",
+  attacks: "攻撃行動順",
+  unitName: "名前順"
+};
+
 /** Exports the ordered per-ally metrics supplied by the current archive view. */
-export function buildCampaignUnitBattleRecordsCsv(records: readonly CampaignUnitBattleRecord[]): string {
-  const rows: CsvCell[][] = [[
+export function buildCampaignUnitBattleRecordsCsv(
+  records: readonly CampaignUnitBattleRecord[],
+  context?: CampaignUnitBattleRecordsCsvExportContext
+): string {
+  const metadataHeaders = context
+    ? ["出力範囲", "出力対象人数", "累計記録人数", "画面の検索キーワード", "画面の並べ替え"]
+    : [];
+  const headers: CsvCell[] = [
+    ...(context ? ["CSV行種別"] : []),
     "味方ID", "名前", "攻撃行動", "実strike", "命中", "ミス", "必殺", "与ダメージ",
     "撃破", "獲得EXP", "レベルアップ", "HP上昇", "力上昇", "魔力上昇", "技上昇",
-    "速さ上昇", "幸運上昇", "守備上昇", "魔防上昇"
-  ]];
+    "速さ上昇", "幸運上昇", "守備上昇", "魔防上昇",
+    ...metadataHeaders
+  ];
+  const rows: CsvCell[][] = [headers];
+  const exportMetadata: CsvCell[] = context ? [
+    context.scope === "all-records" ? "累計全員" : "検索結果",
+    records.length,
+    context.totalRecordCount,
+    context.query,
+    UNIT_RECORD_SORT_LABELS[context.sortBy]
+  ] : [];
+
+  // Preserve an auditable zero-result export when a name search matches no unit.
+  if (context && records.length === 0) {
+    rows.push([
+      "エクスポート情報",
+      ...Array<CsvCell>(headers.length - metadataHeaders.length - 1).fill(""),
+      ...exportMetadata
+    ]);
+  }
+
   for (const record of records) {
     rows.push([
+      ...(context ? ["味方累計"] : []),
       record.unitId, record.unitName, record.attacks, record.strikes, record.hits, record.misses,
       record.criticalHits, record.damageDealt, record.enemiesDefeated, record.experienceAwarded,
       record.levelUps, record.statGains.hp, record.statGains.strength, record.statGains.magic,
       record.statGains.skill, record.statGains.speed, record.statGains.luck,
-      record.statGains.defense, record.statGains.resistance
+      record.statGains.defense, record.statGains.resistance,
+      ...exportMetadata
     ]);
   }
   return serializeCsv(rows);
