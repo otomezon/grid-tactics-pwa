@@ -230,6 +230,14 @@ Issue #26でCP-01〜03／06／15を採択した。以下の方針を初期版の
 - データ区分はmatrix上で選択された値を「候補の自己申告」として記録し、真正性・出所・独立campaignを検証したとは扱わない。テンプレート出力自体は実プレイ実施済みを意味しない。
 - CSVは明示操作でダウンロードするだけで、保存データ・GameState・RNG・IndexedDB・ネットワーク送信・saveVersionを変更しない。
 
+### 5.8 記入後CSVの再取込・監査（PR #164）
+
+- PR #163で出力したCSVをベンチへ再取込し、21個のcase IDごとにcontrol／promotionの枝が1行ずつ存在するか、重複・未知case・不正行・必須列不足がないか確認する。
+- snapshot fingerprint、元セーブversion、章／turn／phase／開始RNG、候補unit、比較enemy等を枝間で照合し、ペア条件の差を表示する。両枝に入力された実セッションID・実行commit・実行時開始seedの不一致も注意として出す。
+- 観測・実測欄の入力セル数を数える。manual_record_statusの自己申告やCSV上のclassification_is_verifiedを証拠として採用しない。
+- 42行・21ペアが揃っても実プレイ完了・値の正確性・真正性・独立campaign・CP-04／05承認とはみなさない。これは記入漏れ・ペア条件の監査であり、内容の裏取りではない。
+- CSVはメモリ内で解析し、ダウンロードや外部送信を行わない。GameState／RNG／IndexedDB／自動保存／saveVersionは変更しない。
+
 CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に使う。数値バランスの妥当性や実機のプレイ感を証明するものではない。
 
 ## 6. 承認記録

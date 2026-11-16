@@ -51,6 +51,12 @@ function parseCsvRecords(content: string): string[][] {
   return records;
 }
 
+function serializeCsvRecords(records: string[][]): string {
+  return records.map((record) => record.map((value) =>
+    '"' + value.replace(/"/g, '""') + '"'
+  ).join(",")).join("\r\n");
+}
+
 function makePromotionSnapshotFile() {
   const snapshot = {
     saveVersion: 10,
@@ -437,6 +443,49 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(manualValueAt(swordsmanLowControl!, "classification_is_verified")).toBe("false");
   expect(manualValueAt(swordsmanLowControl!, "post_strength")).toBe("");
   expect(manualValueAt(swordsmanLowControl!, "applied_strength_bonus")).toBe("");
+
+  const auditColumn = (name: string) => manualHeaders.indexOf(name);
+  const completedWorksheet = manualRecords.map((record, index) => {
+    if (index === 0) return record;
+    const next = [...record];
+    const values = new Map<string, string>([
+      ["manual_record_status", "記録済み"],
+      ["manual_session_id", "session-" + manualValueAt(record, "case_id")],
+      ["played_at", "2026-11-16T10:00:00+09:00"],
+      ["branch_commit", "abcdef1234567890"],
+      ["observed_start_rng_state", "305419896"],
+      ["post_strength", "14"],
+      ["actual_damage", "8"]
+    ]);
+    for (const [name, value] of values) next[auditColumn(name)] = value;
+    return next;
+  });
+  await bench.getByLabel("記入済み実プレイ記録CSV").setInputFiles({
+    name: "completed-manual-playtest.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(serializeCsvRecords(completedWorksheet))
+  });
+  const worksheetAudit = bench.getByTestId("promotion-manual-worksheet-audit");
+  await expect(worksheetAudit).toContainText("21/21 条件一致ペア");
+  await expect(worksheetAudit).toContainText("42／42");
+  await expect(worksheetAudit).toContainText("観測欄入力済みセル");
+  await expect(worksheetAudit.getByTestId("promotion-manual-audit-case-swordsman-low")).toContainText("観測欄 6/");
+  await expect(worksheetAudit).toContainText("真正性");
+
+  const mismatchedWorksheet = completedWorksheet.map((record) => [...record]);
+  const mismatchRow = mismatchedWorksheet.findIndex((record, index) =>
+    index > 0 &&
+    record[auditColumn("case_id")] === "swordsman:low" &&
+    record[auditColumn("planned_branch")] === "promotion"
+  );
+  mismatchedWorksheet[mismatchRow]![auditColumn("snapshot_fingerprint")] = "different-fingerprint";
+  await bench.getByLabel("記入済み実プレイ記録CSV").setInputFiles({
+    name: "mismatched-manual-playtest.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(serializeCsvRecords(mismatchedWorksheet))
+  });
+  await expect(worksheetAudit).toContainText("20/21 条件一致ペア");
+  await expect(worksheetAudit.getByTestId("promotion-manual-audit-case-swordsman-low")).toContainText("2枝あり・条件差");
 
   const firstSelectedSnapshot = await caseRows.nth(0).locator("select").nth(0).inputValue();
   await caseRows.nth(1).locator("select").nth(0).selectOption(firstSelectedSnapshot);

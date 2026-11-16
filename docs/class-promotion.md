@@ -192,6 +192,16 @@ snapshotベンチは読み込んだsnapshotの既存記録から、キャンペ�
 
 21ケースすべての候補・敵・条件を人が確認した後、control／promotionの2枝を持つ42行の手動観測テンプレートを書き出せる。ケース識別・候補由来・元snapshotの開始条件と昇格前ユニット／比較敵情報だけを埋め、実セッションID・実行日時／commit／seed・昇格後の実測値・攻撃／防御／戦術／敵軍phaseの観測結果・所見は空欄とする。現在のprototypeボーナス／上限やseed反復シミュレーション結果は転記しない。matrixの「実プレイ由来」は利用者申告であり、真正性の検証ではない。テンプレートは実プレイの実施・数値承認を意味しない。明示的なCSV downloadのみで、GameState／RNG／IndexedDB／saveVersion／ネットワーク送信には影響しない。
 
+### 3.8 手動実プレイ記録CSVの再取込・ペア監査（PR #164）
+
+PR #163で出力した42行の記録用CSVを、ベンチ画面の「記入済み実プレイ記録CSVを確認」から再取込できる。監査はCSVの構造と記入内容だけを対象とし、次を表示する。
+
+- 21件の既知case ID、各caseのcontrol／promotion行の有無、重複行・未知case・不正列数・必須列不足を検出する。
+- snapshot fingerprint、元saveVersion、chapter／turn／phase／RNG、候補unit、比較enemy等の共有条件を枝間で比較する。両枝に値が入力された実セッションID・commit・開始seedも差異を表示する。
+- 手動観測・結果欄の非空セル数と行数を集計する。manual_record_statusの記載値を観測欄の入力数に置き換えたり、空欄を推測したりしない。
+- 「条件一致ペア」は2枝の行と記載された共通条件の一致だけを意味する。実プレイ実施、記録の正確性、真正性、独立campaign、CP-04／05の数値承認を認定しない。「実プレイ由来」は引き続き利用者申告であり、classification_is_verifiedの値も認証には使わない。
+- ファイルはブラウザメモリ内でだけ解析し、明示的な破棄またはページ再読込で消える。GameState／RNG／IndexedDB／自動保存／saveVersion／network送信は変更しない。
+
 ## 4. 保存データ互換性の方針
 
 現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存のGameUnitフィールドだけを使う変更ではsaveVersionを上げずに済むが、現行saveVersion 10では、キャンペーン累計戦績・章間選択・キャンペーン戦闘履歴などもsnapshotに保持する。クラスチェンジ自体は既存のGameUnitフィールドを使い、専用の保存フィールドを追加していない。
