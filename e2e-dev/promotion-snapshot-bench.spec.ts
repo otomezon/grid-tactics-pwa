@@ -503,6 +503,70 @@ test("shows saved campaign-history evidence without claiming save authenticity",
   await expect(evidence).toContainText("記録が空でも未プレイとは限りません");
 });
 
+test("exports a deduplicated promotion candidate inventory with source and saved-history provenance", async ({ page }) => {
+  await page.goto("/?promotion-snapshots=1");
+  const bench = page.getByTestId("promotion-snapshot-bench");
+  const first = makePromotionSnapshotWithCampaignHistoryFile();
+  first.data.units[0]!.name = '=HYPERLINK("https://example.invalid")';
+  const second = reverseObjectKeyOrder({
+    ...first,
+    exportedAt: "2026-11-13T00:00:00.000Z"
+  });
+
+  await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles([
+    {
+      name: "campaign-history-first.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(first))
+    },
+    {
+      name: "campaign-history-key-order-copy.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(second))
+    }
+  ]);
+
+  await expect(bench).toContainText("2候補");
+  const exportButton = bench.getByTestId("promotion-snapshot-inventory-export");
+  await expect(exportButton).toBeEnabled();
+  const downloadPromise = page.waitForEvent("download");
+  await exportButton.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("class-promotion-snapshot-inventory.csv");
+  const downloadPath = await download.path();
+  if (!downloadPath) throw new Error("CSV download path was not available.");
+  const csv = await readFile(downloadPath, "utf8");
+  const records = parseCsvRecords(csv);
+  expect(records).toHaveLength(2);
+
+  const headers = records[0]!;
+  const row = records[1]!;
+  expect(row).toHaveLength(headers.length);
+  const value = (name: string) => row[headers.indexOf(name)] ?? "";
+  expect(headers).toContain("campaign_log_tracking_available");
+  expect(headers).toContain("selected_unit_record_damage_dealt");
+  expect(value("import_copy_count")).toBe("2");
+  expect(JSON.parse(value("source_file_names_json"))).toEqual([
+    "campaign-history-first.json",
+    "campaign-history-key-order-copy.json"
+  ]);
+  const imports = JSON.parse(value("source_imports_json")) as Array<{ exportedAt: string }>;
+  expect(imports).toHaveLength(2);
+  expect(imports.map((entry) => entry.exportedAt)).toEqual([
+    "2026-11-12T00:00:00.000Z",
+    "2026-11-13T00:00:00.000Z"
+  ]);
+  expect(value("campaign_log_tracking_available")).toBe("true");
+  expect(value("campaign_log_entries")).toBe("4");
+  expect(value("selected_unit_action_entries")).toBe("1");
+  expect(value("unit_battle_totals_tracking_available")).toBe("true");
+  expect(value("selected_unit_battle_totals_present")).toBe("true");
+  expect(value("selected_unit_record_damage_dealt")).toBe("12");
+  expect(value("unit_name")).toContain("'=HYPERLINK");
+  expect(value("source_save_version")).toBe("10");
+  expect(value("normalized_save_version")).toBe("10");
+});
+
 test("imports an exported save locally and compares the actual unit snapshot with a detached promotion copy", async ({ page }) => {
   await page.goto("/?promotion-snapshots=1");
   const bench = page.getByTestId("promotion-snapshot-bench");
