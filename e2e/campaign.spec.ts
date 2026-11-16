@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { acknowledgePendingMapEvents } from "./helpers/map-events";
 
@@ -1046,6 +1047,40 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await expect(historyPanel).toHaveCount(0);
     await expect(historyToggle).toBeFocused();
     expect(await readAutoSave(page)).toEqual(savedBeforeOpen);
+  });
+
+  test("exports filtered and all-retained campaign logs with scope metadata", async ({ page }) => {
+    await startBattle(page);
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await page.locator(".map-grid").getByRole("button", { name: /味方04/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    const savedBeforeExport = await readAutoSave(page);
+    const historyToggle = page.getByRole("button", { name: "キャンペーン戦闘記録 2件" });
+    await expect(historyToggle).toBeVisible();
+    await historyToggle.click();
+    const panel = page.getByTestId("campaign-battle-history");
+    await panel.getByLabel("履歴内を検索").fill("主人公");
+    await expect(panel).toContainText("1 / 2件を表示");
+    const filteredDownloadPromise = page.waitForEvent("download");
+    await panel.getByRole("button", { name: "絞り込み結果をCSV出力" }).click();
+    const filteredDownload = await filteredDownloadPromise;
+    const filteredPath = await filteredDownload.path();
+    if (!filteredPath) throw new Error("The filtered campaign CSV was not saved to a temporary path.");
+    const filteredCsv = await readFile(filteredPath, "utf8");
+    expect(filteredDownload.suggestedFilename()).toContain("filtered");
+    expect(filteredCsv).toContain('"絞り込み結果","1","2","5000","1","2","0","0","いいえ","all","all","主人公"');
+    expect(filteredCsv).not.toContain('"味方04"');
+    const allDownloadPromise = page.waitForEvent("download");
+    await panel.getByRole("button", { name: "保持ログ全件をCSV出力" }).click();
+    const allDownload = await allDownloadPromise;
+    const allPath = await allDownload.path();
+    if (!allPath) throw new Error("The full retained campaign CSV was not saved to a temporary path.");
+    const allCsv = await readFile(allPath, "utf8");
+    expect(allDownload.suggestedFilename()).toContain("all-retained");
+    expect(allCsv).toContain('"保持ログ全件","2","2","5000","1","2","0","0","いいえ","all","all","主人公"');
+    expect(allCsv).toContain('"味方04"');
+    expect(await readAutoSave(page)).toEqual(savedBeforeExport);
   });
 
   test("records weapon changes without consuming the unit action", async ({ page }) => {

@@ -1,5 +1,6 @@
 import type { CampaignBattleStrikeRecord, CampaignUnitBattleRecord } from "../domain/models/game";
-import type { CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
+import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
+import type { CampaignBattleHistoryCategory } from "./filter-campaign-battle-history";
 
 type CsvCell = string | number | null | undefined;
 
