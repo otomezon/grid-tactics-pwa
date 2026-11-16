@@ -748,13 +748,13 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleLogEntries).toHaveCount(1);
   await expect(battleLogEntries.first()).toContainText("HP +7");
   await expect(battleHistoryPanel).toContainText("1 / 12件を表示");
-  const timelineCsvButton = battleHistoryPanel.getByRole("button", { name: "時系列ログをCSV出力" });
+  const timelineCsvButton = battleHistoryPanel.getByRole("button", { name: "絞り込み結果をCSV出力" });
   await expect(timelineCsvButton).toBeVisible();
   if (input === "click") {
     const downloadPromise = page.waitForEvent("download");
     await timelineCsvButton.click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-filtered-\d{4}-\d{2}-\d{2}\.csv$/);
     const downloadPath = await download.path();
     if (!downloadPath) throw new Error("The timeline CSV download has no temporary file path.");
     const csv = await readFile(downloadPath, "utf8");
@@ -1035,11 +1035,11 @@ test("paginates long campaign battle histories without truncating filtered CSV e
   await expectMobileViewport(page, input);
 
   if (input === "click") {
-    const csvButton = panel.getByRole("button", { name: "時系列ログをCSV出力" });
+    const csvButton = panel.getByRole("button", { name: "絞り込み結果をCSV出力" });
     const downloadPromise = page.waitForEvent("download");
     await csvButton.click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-filtered-\d{4}-\d{2}-\d{2}\.csv$/);
     const downloadPath = await download.path();
     if (!downloadPath) throw new Error("The campaign history CSV download has no temporary file path.");
     const csv = await readFile(downloadPath, "utf8");
