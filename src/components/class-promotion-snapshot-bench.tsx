@@ -1137,7 +1137,7 @@ export function ClassPromotionSnapshotBench() {
                         各試行は元snapshotへ戻した独立の1戦闘です。HP・敵HP・EXP・撃破状態を次の試行へ引き継ぎません。結果はこの仮想戦闘条件での試行集計であり、複数ターンの攻略率・キャンペーン勝率ではありません。
                       </p>
                       <p className="helper-text">
-                        95% Wilson区間は「1 seedにつき1結果」の撃破／生存率にのみ表示します。1戦闘内に複数発生するstrikeの命中率・必殺率には、独立試行ではないためこの区間を付けていません。
+                        95% Wilson区間は「1 seedにつき1結果」の撃破／生存率にのみ表示します。1戦闘内に複数発生するstrikeの命中率・必殺率には、独立試行ではないためこの区間を付けていません。 区間はcontrol／promotionそれぞれの率の幅であり、両者の差の信頼区間や統計的有意差を示すものではありません。
                       </p>
                       <div className="promotion-lab-table-wrap">
                         <table className="promotion-lab-table" aria-label="昇格前後の複数seed戦闘集計">
