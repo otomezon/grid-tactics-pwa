@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 function parseCsvRecords(content: string): string[][] {
-  const source = content.startsWith("\\ufeff") ? content.slice(1) : content;
+  const source = content.startsWith("\ufeff") ? content.slice(1) : content;
   const records: string[][] = [];
   let record: string[] = [];
   let field = "";
@@ -27,13 +27,13 @@ function parseCsvRecords(content: string): string[][] {
     } else if (character === ",") {
       record.push(field);
       field = "";
-    } else if (character === "\\r" && source[index + 1] === "\\n") {
+    } else if (character === "\r" && source[index + 1] === "\n") {
       record.push(field);
       records.push(record);
       record = [];
       field = "";
       index += 1;
-    } else if (character === "\\n") {
+    } else if (character === "\n") {
       record.push(field);
       records.push(record);
       record = [];
