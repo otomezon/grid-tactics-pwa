@@ -42,10 +42,10 @@ function createRows(): Array<Record<string, string>> {
       enemy_class: "fighter",
       enemy_hp: "30",
       enemy_position: "4列・4行",
-      manual_session_id: "session-" + caseId,
-      played_at: "2026-11-16T10:00:00+09:00",
-      branch_commit: "abcdef123456",
-      observed_start_rng_state: "305419896",
+      manual_session_id: "",
+      played_at: "",
+      branch_commit: "",
+      observed_start_rng_state: "",
       post_strength: "",
       actual_damage: "",
       damage_taken: "",
@@ -84,8 +84,14 @@ describe("auditPromotionManualPlaytestWorksheet", () => {
 
   it("flags a mismatch between paired snapshot inputs and paired execution context", () => {
     const rows = createRows();
+    const control = rows.find((row) => row.case_id === "swordsman:low" && row.planned_branch === "control")!;
     const promotion = rows.find((row) => row.case_id === "swordsman:low" && row.planned_branch === "promotion")!;
     promotion.snapshot_fingerprint = "different-snapshot";
+    control.manual_session_id = "session-swordsman-low";
+    promotion.manual_session_id = "session-swordsman-low";
+    control.branch_commit = "abcdef123456";
+    promotion.branch_commit = "abcdef123456";
+    control.observed_start_rng_state = "305419896";
     promotion.observed_start_rng_state = "305419897";
 
     const audit = auditPromotionManualPlaytestWorksheet(toCsv(rows));

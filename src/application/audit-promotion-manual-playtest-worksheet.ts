@@ -406,7 +406,7 @@ export function auditPromotionManualPlaytestWorksheet(
       if (!headers.includes(field)) continue;
       const controlValue = readValue(caseAudit.control.values, field);
       const promotionValue = readValue(caseAudit.promotion.values, field);
-      if (controlValue !== promotionValue && controlValue.length > 0 && promotionValue.length > 0) {
+      if (controlValue !== promotionValue && (controlValue.length > 0 || promotionValue.length > 0)) {
         mismatches.push(label);
       }
     }
