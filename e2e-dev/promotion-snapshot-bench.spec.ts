@@ -323,10 +323,6 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("combat_enemy_defeat_control_only");
   expect(csv).toContain("combat_enemy_defeat_promotion_only");
   expect(csv).toContain("enemy_phase_targeted_control_only");
-  expect(csv).toContain("enemy_phase_party_wipe_promotion_only");
-  expect(csv).toContain("enemy_phase_player_phase_advance_promotion_minus_control_pt");
-  expect(csv).toContain("combat_enemy_defeat_control_only");
-  expect(csv).toContain("combat_enemy_defeat_promotion_only");
   expect(csv).toContain("enemy_phase_party_wipe_control_only");
   expect(csv).toContain("enemy_phase_party_wipe_promotion_only");
   expect(csv).toContain("enemy_phase_player_phase_advance_promotion_minus_control_pt");
