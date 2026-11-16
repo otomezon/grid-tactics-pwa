@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   readStorageDurabilityStatus,
+  readStorageUsageEstimate,
   requestStorageDurability,
-  type StorageDurabilityStatus
+  type StorageDurabilityStatus,
+  type StorageUsageEstimateResult
 } from "../persistence/storage-durability";
 
 const STATUS_LABELS: Record<StorageDurabilityStatus | "checking", string> = {
@@ -13,15 +15,40 @@ const STATUS_LABELS: Record<StorageDurabilityStatus | "checking", string> = {
   error: "状態を確認できません"
 };
 
+type StorageUsageViewState = StorageUsageEstimateResult | { status: "checking" };
+
+function formatStorageBytes(bytes: number): string {
+  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const formatted = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 }).format(value);
+  return formatted + " " + units[unitIndex];
+}
+
+function formatPercentage(value: number): string {
+  return new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 }).format(value) + "%";
+}
+
 export function StorageDurabilityPanel() {
   const [status, setStatus] = useState<StorageDurabilityStatus | "checking">("checking");
   const [requestPending, setRequestPending] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [usageEstimate, setUsageEstimate] = useState<StorageUsageViewState>({ status: "checking" });
+  const [usageRefreshPending, setUsageRefreshPending] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    void readStorageDurabilityStatus().then((nextStatus) => {
-      if (!cancelled) setStatus(nextStatus);
+    void Promise.all([
+      readStorageDurabilityStatus(),
+      readStorageUsageEstimate()
+    ]).then(([nextStatus, nextEstimate]) => {
+      if (cancelled) return;
+      setStatus(nextStatus);
+      setUsageEstimate(nextEstimate);
     });
     return () => {
       cancelled = true;
@@ -44,11 +71,70 @@ export function StorageDurabilityPanel() {
     setRequestPending(false);
   }
 
+  async function handleRefreshUsage(): Promise<void> {
+    if (usageRefreshPending) return;
+    setUsageRefreshPending(true);
+    try {
+      setUsageEstimate(await readStorageUsageEstimate());
+    } finally {
+      setUsageRefreshPending(false);
+    }
+  }
+
+  const usagePercent = usageEstimate.status === "available"
+    ? usageEstimate.usageBytes / usageEstimate.quotaBytes * 100
+    : null;
+  const usageBarPercent = usagePercent === null ? 0 : Math.min(100, Math.max(0, usagePercent));
+
   return (
     <section className="campaign-storage-durability" data-testid="storage-durability-panel" aria-labelledby="storage-durability-heading">
       <div className="campaign-storage-durability-heading">
         <h3 id="storage-durability-heading">ブラウザのセーブ保持</h3>
         <span data-testid="storage-durability-status">{STATUS_LABELS[status]}</span>
+      </div>
+      <div className="campaign-storage-usage" data-testid="storage-usage">
+        <div className="campaign-storage-usage-heading">
+          <h4>サイトのストレージ使用量（概算）</h4>
+          {usagePercent !== null && <strong>{formatPercentage(usagePercent)}</strong>}
+        </div>
+        {usageEstimate.status === "available" ? (
+          <>
+            <p data-testid="storage-usage-summary">
+              推定使用量 {formatStorageBytes(usageEstimate.usageBytes)} / 推定上限 {formatStorageBytes(usageEstimate.quotaBytes)}
+            </p>
+            <div
+              className="campaign-storage-usage-meter"
+              role="progressbar"
+              aria-label="サイトのストレージ使用率"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(usageBarPercent * 10) / 10}
+              aria-valuetext={formatPercentage(usagePercent)}
+            >
+              <span style={{ width: usageBarPercent + "%" }} />
+            </div>
+          </>
+        ) : usageEstimate.status === "checking" ? (
+          <p data-testid="storage-usage-summary" role="status">使用量を確認しています…</p>
+        ) : usageEstimate.status === "unsupported" ? (
+          <p data-testid="storage-usage-summary">このブラウザではストレージ使用量を取得できません。</p>
+        ) : (
+          <p data-testid="storage-usage-summary" role="status">ストレージ使用量を取得できませんでした。再度確認してください。</p>
+        )}
+        <p className="campaign-storage-usage-note">
+          ブラウザが報告するサイト全体の概算です。IndexedDB以外のキャッシュ等を含む場合があり、端末の空き容量や実際に利用できる残量を示すものではありません。
+        </p>
+        {usageEstimate.status !== "unsupported" && (
+          <button
+            className="campaign-secondary-button"
+            type="button"
+            data-testid="refresh-storage-usage"
+            disabled={usageRefreshPending || usageEstimate.status === "checking"}
+            onClick={() => void handleRefreshUsage()}
+          >
+            {usageRefreshPending ? "更新中…" : "利用量を更新"}
+          </button>
+        )}
       </div>
       <p>対応ブラウザでは、サイトデータが自動的な容量整理の対象になりにくくなるよう、永続ストレージを要求できます。</p>
       {(status === "not-granted" || status === "error") && (
