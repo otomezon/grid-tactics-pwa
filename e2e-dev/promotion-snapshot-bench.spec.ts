@@ -692,7 +692,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("enemy_phase_party_wipe_control_only");
   expect(csv).toContain("enemy_phase_party_wipe_promotion_only");
   expect(csv).toContain("enemy_phase_player_phase_advance_promotion_minus_control_pt");
-  expect(csv).toContain("未確認");
+  expect(csv).toContain("合成fixture");
+  expect(csv).not.toContain("未確認");
   const csvRecords = parseCsvRecords(csv);
   expect(csvRecords).toHaveLength(22);
   expect(csvRecords[0]).toHaveLength(191);

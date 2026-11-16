@@ -76,6 +76,14 @@ saveVersion 1〜8からの移行では過去の行動・撃破者・章結果を
 
 味方の攻撃詳細レポートと敵軍フェイズのAI評価内訳は画面内の一時表示であり、snapshotには保存しない。別に、味方開始攻撃から算出する `campaignUnitBattleRecords` の累計値と、確定済み行動・実strike結果からなる `campaignBattleLog` をsaveVersion 10へ保存する。`phase: enemy` のcheckpointから再開した場合は、実際に解決した敵行動とstrikeだけをログに追記し、その確定snapshotを保存する。未確認イベント本文はマップcontentから復元して再表示する。
 
+### 4.1 複数タブ間の自動保存競合
+
+- 起動時に読み込んだauto recordの既存 `savedAt` を、そのタブが最後に確認したrevisionとしてメモリ内に保持する。auto slotがまだない場合は `null` を使う。
+- 自動保存は単一のIndexedDB `readwrite` transaction内でauto recordを読み直し、`savedAt` がタブ側のrevisionと一致した場合だけ更新する。不一致ならtransactionをabortし、別経路の書き込みによって変更されたデータを上書きしない。
+- 成功時の `savedAt` は既存値より必ず大きくする。同一ミリ秒内の連続保存でもrevisionが衝突しない。追加の保存フィールドやindexは不要。
+- 競合を検知したタブはゲーム操作と追加保存を停止し、最新セーブの再読み込みを案内する。競合時に画面内だけで進んだ操作は保存済みとして扱わない。
+- ユーザーが明示的に行うJSON import／バックアップrestoreは既存の安全退避transactionを使う。通常の自動保存とは異なる、確認付きの明示的な置換操作として扱う。
+
 ## 5. 検証
 
 saveVersion、chapterId、phase、turn、非ゼロ32bit RNG state、戦闘ユニットの座標、重複ID／占有、能力値、所持品、装備武器を検証する。戦闘中の全ユニットID／陣営が対応マップの出撃名簿と一致することも確認する。控えは生存HPを持ち、現在のマップのplayerDeployment候補IDに含まれ、戦闘ユニットや他の控えとIDが重複しないことを検証する。マップで敗北対象として指定されたユニットは控えにできない。

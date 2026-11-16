@@ -41,6 +41,27 @@ async function readAutoSave(page: Page): Promise<unknown | null> {
   });
 }
 
+async function readAutoSaveRecord(page: Page): Promise<{ savedAt: number; data: unknown } | null> {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("grid-tactics-pwa", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error("Could not open save database."));
+    });
+    try {
+      const record = await new Promise<{ savedAt: number; data: unknown } | undefined>((resolve, reject) => {
+        const transaction = database.transaction("game-saves", "readonly");
+        const request = transaction.objectStore("game-saves").get("auto");
+        request.onsuccess = () => resolve(request.result as { savedAt: number; data: unknown } | undefined);
+        request.onerror = () => reject(request.error ?? new Error("Could not read auto save record."));
+      });
+      return record ? { savedAt: record.savedAt, data: record.data } : null;
+    } finally {
+      database.close();
+    }
+  });
+}
+
 async function readBackupRecords(page: Page): Promise<Array<{
   slotId: string;
   savedAt: number;
@@ -132,6 +153,43 @@ async function setAutoSaveTurn(page: Page, turn: number): Promise<void> {
 }
 
 test.describe("production PWA shell", () => {
+  test("rejects a stale autosave from a second open tab without replacing the newer save", async ({ page }) => {
+    await startBattle(page);
+
+    const staleTab = await page.context().newPage();
+    await staleTab.goto("/");
+    await expect(staleTab.getByTestId("campaign-title-screen")).toBeVisible();
+    const continueButton = staleTab.getByRole("button", { name: "つづきから" });
+    await expect(continueButton).toBeVisible();
+    await continueButton.click();
+    await expect(staleTab.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
+    const newerRecord = await readAutoSaveRecord(page);
+    expect(newerRecord).not.toBeNull();
+
+    await staleTab.locator(".map-grid").getByRole("button", { name: /味方04/ }).click();
+    await staleTab.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(staleTab.getByTestId("save-conflict-notice")).toContainText("このタブが読み込んだ後にセーブデータが変更されました");
+    await expect(staleTab.getByTestId("save-conflict-notice").getByRole("button", { name: "最新のセーブを再読み込み" })).toBeVisible();
+    expect(await readAutoSaveRecord(page)).toEqual(newerRecord);
+    const persistedState = newerRecord!.data as {
+      units: Array<{ id: string; hasActed: boolean }>;
+    };
+    expect(persistedState.units.find((unit) => unit.id === "unit_001")?.hasActed).toBe(true);
+    expect(persistedState.units.find((unit) => unit.id === "unit_004")?.hasActed).toBe(false);
+
+    await staleTab.reload();
+    await expect(staleTab.getByTestId("campaign-title-screen")).toBeVisible();
+    await staleTab.getByRole("button", { name: "つづきから" }).click();
+    await expect(staleTab.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await staleTab.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await expect(staleTab.locator(".unit-details")).toContainText("行動済み");
+
+    await staleTab.close();
+  });
   test("publishes a valid installable manifest and active service worker", async ({ page }) => {
     await page.goto("/");
 
