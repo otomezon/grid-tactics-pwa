@@ -7,7 +7,7 @@ const EXECUTION_CONTEXT_FIELDS = new Set([
   "observed_start_rng_state"
 ]);
 
-const NUMERIC_VALUE_PATTERN = /^[+-]?(?:(?:\\d+\\.?\\d*)|(?:\\.\\d+))(?:[eE][+-]?\\d+)?$/;
+const NUMERIC_VALUE_PATTERN = /^[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:[eE][+-]?\d+)?$/;
 
 export interface PromotionManualPlaytestObservationComparison {
   caseId: string;
