@@ -12,6 +12,7 @@ import { importPromotionPlaytestSaveContent, type ImportedPromotionPlaytestSave 
 import { getPromotionPlaytestEvidence, type PromotionPlaytestEvidence } from "../application/get-promotion-playtest-evidence";
 import { escapeCsvField } from "../application/escape-csv-field";
 import { serializeCsvDocument } from "../application/serialize-csv-document";
+import { auditPromotionManualPlaytestWorksheet, type PromotionManualPlaytestWorksheetAudit, type PromotionManualPlaytestBranchAudit } from "../application/audit-promotion-manual-playtest-worksheet";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
 
@@ -292,6 +293,9 @@ export function ClassPromotionSnapshotBench() {
   const [matrixDataClassifications, setMatrixDataClassifications] = useState<Record<string, MatrixDataClassification>>({});
   const [matrixResults, setMatrixResults] = useState<Record<string, PromotionPlaytestMatrixResult>>({});
   const [matrixRunError, setMatrixRunError] = useState("");
+  const [manualWorksheetFileName, setManualWorksheetFileName] = useState("");
+  const [manualWorksheetAudit, setManualWorksheetAudit] = useState<PromotionManualPlaytestWorksheetAudit | null>(null);
+  const [manualWorksheetImportError, setManualWorksheetImportError] = useState("");
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
@@ -986,6 +990,28 @@ export function ClassPromotionSnapshotBench() {
     event.target.value = "";
   }
 
+  async function handleManualWorksheetFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setManualWorksheetFileName(file.name);
+    setManualWorksheetAudit(null);
+    setManualWorksheetImportError("");
+    try {
+      if (file.size > 5 * 1024 * 1024) throw new Error("CSVは5MB以下のファイルを選択してください。");
+      setManualWorksheetAudit(auditPromotionManualPlaytestWorksheet(await file.text()));
+    } catch (error) {
+      setManualWorksheetImportError(error instanceof Error ? error.message : "CSVを読み込めませんでした。");
+    }
+    event.target.value = "";
+  }
+
+  function clearManualWorksheetAudit() {
+    setManualWorksheetFileName("");
+    setManualWorksheetAudit(null);
+    setManualWorksheetImportError("");
+  }
+
   const classCounts = BASIC_CLASS_IDS.map((classId) => ({
     classId,
     count: candidates.filter((candidate) => candidate.unit.classId === classId).length
@@ -1003,6 +1029,56 @@ export function ClassPromotionSnapshotBench() {
         </div>
         <a className="secondary-button promotion-lab-back" href="/">キャンペーンへ戻る</a>
       </header>
+
+      <section className="promotion-lab-card" aria-labelledby="promotion-manual-worksheet-audit-heading" data-testid="promotion-manual-worksheet-audit">
+        <div className="promotion-lab-section-heading"><div>
+          <p className="eyebrow">MANUAL PLAYTEST · LOCAL AUDIT</p>
+          <h2 id="promotion-manual-worksheet-audit-heading">記入済み実プレイ記録CSVを確認</h2>
+        </div>
+        {manualWorksheetAudit && <span className="promotion-lab-count">{manualWorksheetAudit.matchedPairCount}/21 条件一致ペア</span>}</div>
+        <label className="promotion-snapshot-file-label">
+          <span>記入後のCSVテンプレート</span>
+          <input type="file" accept=".csv,text/csv" aria-label="記入済み実プレイ記録CSV"
+            onChange={(event) => void handleManualWorksheetFileChange(event)} />
+        </label>
+        <p className="helper-text">#163で出力したCSVを読み込み、21ケースのcontrol／promotion行、候補snapshot・敵・開始条件の一致、記入欄の入力数を確認します。ファイル内容はこの画面のメモリ上だけで扱い、保存・アップロード・外部送信はしません。確認を終えたら破棄できます。</p>
+        <p className="helper-text">ペア成立は2枝の行と記載条件が揃ったことだけを示します。プレイ実施・観測値の正確性・データの真正性・独立campaign・バランス承認は認定しません。manual_record_statusやclassification_is_verifiedの記載値も自動証明として扱いません。</p>
+        {manualWorksheetImportError && <div className="promotion-snapshot-errors" role="alert">{manualWorksheetImportError}</div>}
+        {manualWorksheetAudit && <>
+          <div className="promotion-snapshot-selected"><dl>
+            <div><dt>ファイル</dt><dd>{manualWorksheetFileName}</dd></div>
+            <div><dt>CSV行数／受理行</dt><dd>{manualWorksheetAudit.csvRowCount}／{manualWorksheetAudit.acceptedRowCount}</dd></div>
+            <div><dt>control／promotion両枝あり</dt><dd>{manualWorksheetAudit.pairedCaseCount}/21</dd></div>
+            <div><dt>候補・条件一致ペア</dt><dd>{manualWorksheetAudit.matchedPairCount}/21</dd></div>
+            <div><dt>不足している枝</dt><dd>{manualWorksheetAudit.missingBranchCount}</dd></div>
+            <div><dt>重複枝／不正行</dt><dd>{manualWorksheetAudit.duplicateBranchCount}／{manualWorksheetAudit.invalidRowCount}</dd></div>
+            <div><dt>観測欄入力済みセル／行</dt><dd>{manualWorksheetAudit.observationFilledFieldCount}セル／{manualWorksheetAudit.rowsWithAnyObservation}行</dd></div>
+          </dl></div>
+          {manualWorksheetAudit.errors.length > 0 && <div className="promotion-snapshot-errors" role="alert">
+            <strong>CSV構造・行の確認事項</strong><ul>{manualWorksheetAudit.errors.map((error, index) => <li key={index}>{error}</li>)}</ul>
+          </div>}
+          {manualWorksheetAudit.warnings.length > 0 && <div className="promotion-snapshot-evidence" role="status">
+            <h3>確認上の注意</h3><ul>{manualWorksheetAudit.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
+          </div>}
+          <div className="promotion-lab-table-wrap"><table className="promotion-lab-table" aria-label="実プレイ記録CSVのケース別監査結果">
+            <thead><tr><th>ケース</th><th>control</th><th>promotion</th><th>ペア状態</th><th>候補区分（申告）</th></tr></thead>
+            <tbody>{manualWorksheetAudit.cases.map((entry) => {
+              const formatBranch = (branch: PromotionManualPlaytestBranchAudit | null) => {
+                if (!branch) return "行なし";
+                const observation = branch.observationFilledFieldCount === 0 ? "観測欄未入力" : "観測欄 " + branch.observationFilledFieldCount + "/" + branch.observationFieldCount + " 入力";
+                return (branch.manualRecordStatus || "状態空欄") + " · " + observation;
+              };
+              const pairStatus = !entry.control || !entry.promotion ? "片枝不足" : entry.pairFieldMismatches.length > 0 ? "2枝あり・条件差" : "2枝あり・条件一致";
+              const classification = entry.control?.candidateSourceClassification || entry.promotion?.candidateSourceClassification || "未記入";
+              return <tr key={entry.caseId} data-testid={"promotion-manual-audit-case-" + entry.caseId.replace(":", "-")}>
+                <th scope="row">{entry.caseId}</th><td>{formatBranch(entry.control)}</td><td>{formatBranch(entry.promotion)}</td>
+                <td>{pairStatus}{entry.pairFieldMismatches.length > 0 && <small>{entry.pairFieldMismatches.join("／")}</small>}</td>
+                <td>{classification}</td></tr>;
+            })}</tbody>
+          </table></div>
+          <div className="promotion-snapshot-matrix-actions"><button className="secondary-button" type="button" onClick={clearManualWorksheetAudit}>取り込んだCSVを破棄</button></div>
+        </>}
+      </section>
 
       <section className="promotion-lab-card" aria-labelledby="promotion-snapshot-import-heading">
         <div className="promotion-lab-section-heading">
