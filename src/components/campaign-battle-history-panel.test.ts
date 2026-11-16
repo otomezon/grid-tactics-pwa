@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "../application/get-campaign-battle-history";
 import { getCampaignIncomingStrikeSummary } from "../application/get-campaign-incoming-strike-summary";
-import { CampaignBattleHistoryPanel, CampaignIncomingStrikeSummaryView } from "./campaign-battle-history-panel";
+import { getCampaignEnemyStrikeSummary } from "../application/get-campaign-enemy-strike-summary";
+import { CampaignBattleHistoryPanel, CampaignEnemyStrikeSummaryView, CampaignIncomingStrikeSummaryView } from "./campaign-battle-history-panel";
 
 const entries: CampaignBattleHistoryEntry[] = [{
   sequence: 1,
@@ -59,6 +60,8 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("撃破者別記録（絞り込み結果全体）");
     expect(html).toContain("時系列ログ");
     expect(html).toContain("味方別累計");
+    expect(html).toContain("被攻撃集計");
+    expect(html).toContain("敵攻撃集計");
     expect(html).toContain('aria-label="絞り込み結果をCSV出力"');
     expect(html).toContain('aria-label="保持ログ全件をCSV出力"');
     expect(html).toContain("画面の絞り込みに関係なく保存中の最大5,000件");
@@ -220,6 +223,47 @@ describe("CampaignBattleHistoryPanel", () => {
       onExport: vi.fn()
     }));
     expect(html).toContain("保持中のログに、味方が受けた敵軍strikeはありません。");
+  });
+
+
+  it("renders chapter-scoped enemy strike totals and retained-log coverage", () => {
+    const enemyEntries: CampaignBattleHistoryEntry[] = [{
+      sequence: 10, chapterId: "chapter_01_map", chapterNumber: 1,
+      chapterTitle: "第1章・試作マップ", turn: 2, kind: "enemy-action",
+      enemyId: "enemy_001", enemyName: "敵01", actionKind: "attacked",
+      targetId: "unit_001", targetName: "主人公",
+      strikes: [{
+        actorId: "enemy_001", actorName: "敵01", targetId: "unit_001",
+        targetName: "主人公", kind: "initial", weaponName: "鉄の剣",
+        outcome: "critical", damage: 8, targetHpBefore: 8, targetHpAfter: 0
+      }]
+    }];
+    const html = renderToStaticMarkup(createElement(CampaignEnemyStrikeSummaryView, {
+      summaries: getCampaignEnemyStrikeSummary(enemyEntries),
+      coverage: {
+        retainedCount: 1, retentionLimit: 5000, firstSequence: 10, lastSequence: 10,
+        missingSequenceCount: 0, unretainedLeadingSequenceCount: 9,
+        reachedRetentionLimit: false
+      },
+      onExport: vi.fn()
+    }));
+    expect(html).toContain("敵ユニット別の攻撃");
+    expect(html).toContain("第1章 · 第1章・試作マップ · 敵01");
+    expect(html).toContain("攻撃strike");
+    expect(html).toContain("与ダメージ");
+    expect(html).toContain("味方撃破");
+    expect(html).toContain("先頭より前の未保持連番 9件");
+    expect(html).toContain('aria-label="敵攻撃集計をCSV出力"');
+    expect(html).toContain('data-chapter-id="chapter_01_map"');
+  });
+
+  it("renders a clear empty state when no enemy strikes are retained", () => {
+    const html = renderToStaticMarkup(createElement(CampaignEnemyStrikeSummaryView, {
+      summaries: [],
+      coverage: getCampaignBattleLogCoverage([]),
+      onExport: vi.fn()
+    }));
+    expect(html).toContain("保持中のログに、敵軍が実際に行ったstrikeはありません。");
   });
 
 });

@@ -1,5 +1,6 @@
 import type { CampaignBattleStrikeRecord, CampaignUnitBattleRecord } from "../domain/models/game";
 import type { CampaignIncomingStrikeSummary } from "./get-campaign-incoming-strike-summary";
+import type { CampaignEnemyStrikeSummary } from "./get-campaign-enemy-strike-summary";
 import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
 import type { CampaignBattleHistoryCategory } from "./filter-campaign-battle-history";
 import type { CampaignUnitBattleRecordSort } from "./get-campaign-unit-battle-records-archive";
@@ -235,6 +236,45 @@ export function buildCampaignIncomingStrikeSummaryCsv(
       summary.hitsReceived, summary.missesAvoided, summary.criticalHitsReceived,
       summary.damageReceived, summary.attackerCount, summary.lastSequence,
       ...coverageValues
+    ]);
+  }
+
+  return serializeCsv(rows);
+}
+
+
+/** Exports recorded enemy attacks from the currently retained campaign log. */
+export function buildCampaignEnemyStrikeSummaryCsv(
+  summaries: readonly CampaignEnemyStrikeSummary[],
+  coverage: ReturnType<typeof getCampaignBattleLogCoverage>
+): string {
+  const headers: CsvCell[] = [
+    "CSV行種別", "章ID", "章番号", "章名", "敵ID", "敵名",
+    "攻撃strike数", "命中数", "ミス数", "必殺数", "与ダメージ",
+    "攻撃対象味方数", "味方撃破数", "最終記録連番",
+    "保持ログ件数", "保持上限件数", "保持先頭連番", "保持末尾連番",
+    "先頭より前の未保持連番", "保持範囲内の連番欠番", "保持上限到達"
+  ];
+  const coverageValues: CsvCell[] = [
+    coverage.retainedCount, coverage.retentionLimit, coverage.firstSequence ?? "",
+    coverage.lastSequence ?? "", coverage.unretainedLeadingSequenceCount,
+    coverage.missingSequenceCount, coverage.reachedRetentionLimit ? "はい" : "いいえ"
+  ];
+  const rows: CsvCell[][] = [headers];
+
+  if (summaries.length === 0) {
+    rows.push([
+      "エクスポート情報", "", "", "", "", "", "", "", "", "", "", "", "", "",
+      ...coverageValues
+    ]);
+  }
+
+  for (const summary of summaries) {
+    rows.push([
+      "敵攻撃集計", summary.chapterId, summary.chapterNumber ?? "", summary.chapterTitle,
+      summary.enemyId, summary.enemyName, summary.attackStrikes, summary.hits, summary.misses,
+      summary.criticalHits, summary.damageDealt, summary.targetCount, summary.alliesDefeated,
+      summary.lastSequence, ...coverageValues
     ]);
   }
 

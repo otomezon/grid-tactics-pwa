@@ -6,8 +6,9 @@ import {
 } from "../application/get-campaign-battle-history";
 import type { CampaignUnitBattleRecord } from "../domain/models/game";
 import { CampaignUnitBattleRecordsArchive } from "./campaign-unit-battle-records";
-import { buildCampaignBattleHistoryCsv, buildCampaignIncomingStrikeSummaryCsv, type CampaignBattleHistoryCsvExportScope } from "../application/export-campaign-archive-csv";
+import { buildCampaignBattleHistoryCsv, buildCampaignEnemyStrikeSummaryCsv, buildCampaignIncomingStrikeSummaryCsv, type CampaignBattleHistoryCsvExportScope } from "../application/export-campaign-archive-csv";
 import { getCampaignIncomingStrikeSummary, type CampaignIncomingStrikeSummary } from "../application/get-campaign-incoming-strike-summary";
+import { getCampaignEnemyStrikeSummary, type CampaignEnemyStrikeSummary } from "../application/get-campaign-enemy-strike-summary";
 import { downloadCsv } from "./download-csv";
 import {
   filterCampaignBattleHistory,
@@ -172,8 +173,82 @@ export function CampaignIncomingStrikeSummaryView({
   );
 }
 
+
+export function CampaignEnemyStrikeSummaryView({
+  summaries,
+  coverage,
+  onExport
+}: {
+  summaries: readonly CampaignEnemyStrikeSummary[];
+  coverage: CampaignBattleLogCoverage;
+  onExport: () => void;
+}) {
+  const hasIncompleteLog = coverage.reachedRetentionLimit
+    || coverage.unretainedLeadingSequenceCount > 0
+    || coverage.missingSequenceCount > 0;
+
+  return (
+    <section className="campaign-enemy-strike-summary campaign-incoming-strike-summary" aria-labelledby="campaign-enemy-strike-title" data-testid="campaign-enemy-strikes">
+      <header className="campaign-enemy-strike-header campaign-incoming-strike-header">
+        <div>
+          <h3 id="campaign-enemy-strike-title">敵ユニット別の攻撃（保持ログ内）</h3>
+          <p>敵軍フェイズの実攻撃と、味方攻撃に対する敵側の反撃を章・敵ユニット別に集計します。</p>
+        </div>
+        <button
+          className="secondary-button campaign-battle-history-export"
+          type="button"
+          aria-label="敵攻撃集計をCSV出力"
+          disabled={summaries.length === 0}
+          onClick={onExport}
+        >
+          敵攻撃集計をCSV出力
+        </button>
+      </header>
+      {hasIncompleteLog && (
+        <p className="campaign-enemy-strike-warning campaign-incoming-strike-warning" role="note">
+          先頭より前の未保持連番 {coverage.unretainedLeadingSequenceCount.toLocaleString("ja-JP")}件、
+          保持範囲内の欠番 {coverage.missingSequenceCount.toLocaleString("ja-JP")}件、
+          上限到達 {coverage.reachedRetentionLimit ? "あり" : "なし"}。
+          集計は現在保持しているログのみを対象とし、欠けた行動は補完しません。
+        </p>
+      )}
+      {summaries.length > 0 ? (
+        <ol className="campaign-enemy-strike-list campaign-incoming-strike-list">
+          {summaries.map((summary) => (
+            <li key={summary.chapterId + "\u0000" + summary.enemyId} data-testid="campaign-enemy-strike-entry" data-chapter-id={summary.chapterId} data-unit-id={summary.enemyId}>
+              <article className="campaign-enemy-strike-card campaign-incoming-strike-card">
+                <header>
+                  <strong>{summary.chapterNumber === null ? summary.chapterTitle : `第${summary.chapterNumber}章 · ${summary.chapterTitle}`} · {summary.enemyName}</strong>
+                  <span>{summary.enemyId}</span>
+                </header>
+                <dl>
+                  <div><dt>攻撃strike</dt><dd>{summary.attackStrikes.toLocaleString("ja-JP")}回</dd></div>
+                  <div><dt>命中</dt><dd>{summary.hits.toLocaleString("ja-JP")}回</dd></div>
+                  <div><dt>ミス</dt><dd>{summary.misses.toLocaleString("ja-JP")}回</dd></div>
+                  <div><dt>必殺</dt><dd>{summary.criticalHits.toLocaleString("ja-JP")}回</dd></div>
+                  <div><dt>与ダメージ</dt><dd>{summary.damageDealt.toLocaleString("ja-JP")}</dd></div>
+                  <div><dt>攻撃対象味方</dt><dd>{summary.targetCount.toLocaleString("ja-JP")}人</dd></div>
+                  <div><dt>味方撃破</dt><dd>{summary.alliesDefeated.toLocaleString("ja-JP")}人</dd></div>
+                  <div><dt>最新連番</dt><dd>{summary.lastSequence.toLocaleString("ja-JP")}</dd></div>
+                </dl>
+              </article>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="campaign-battle-history-empty" role="status">
+          保持中のログに、敵軍が実際に行ったstrikeはありません。
+        </p>
+      )}
+      <p className="campaign-enemy-strike-footnote campaign-incoming-strike-footnote">
+        攻撃strike数にはミスも含みます。与ダメージ・味方撃破数は記録済みstrikeだけから算出し、履歴に登場しない敵の0件行は追加しません。
+      </p>
+    </section>
+  );
+}
+
 export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: CampaignBattleHistoryPanelProps) {
-  const [activeView, setActiveView] = useState<"timeline" | "units" | "incoming">("timeline");
+  const [activeView, setActiveView] = useState<"timeline" | "units" | "incoming" | "enemy">("timeline");
   const [chapterFilter, setChapterFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState<CampaignBattleHistoryCategory>("all");
   const [unitFilter, setUnitFilter] = useState("all");
@@ -181,6 +256,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
   const [pageIndex, setPageIndex] = useState(0);
   const logCoverage = useMemo(() => getCampaignBattleLogCoverage(entries), [entries]);
   const incomingSummaries = useMemo(() => getCampaignIncomingStrikeSummary(entries), [entries]);
+  const enemySummaries = useMemo(() => getCampaignEnemyStrikeSummary(entries), [entries]);
 
   const chapters = useMemo(() => {
     const byId = new Map<string, { id: string; chapterNumber: number | null; title: string }>();
@@ -241,6 +317,13 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
     );
   }
 
+  function exportEnemySummary(): void {
+    downloadCsv(
+      buildCampaignEnemyStrikeSummaryCsv(enemySummaries, logCoverage),
+      "campaign-enemy-strikes-" + new Date().toISOString().slice(0, 10) + ".csv"
+    );
+  }
+
   return (
     <section
       id="campaign-battle-history-panel"
@@ -264,7 +347,9 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
               ? pageRangeLabel
               : activeView === "units"
                 ? `${unitRecords.length}名 · 味方別の累計戦績`
-                : `${incomingSummaries.length}名 · 保持ログの被攻撃集計`}
+                : activeView === "incoming"
+                  ? `${incomingSummaries.length}名 · 保持ログの被攻撃集計`
+                  : `${enemySummaries.length}件 · 保持ログの敵攻撃集計`}
           </p>
         </div>
         <button className="secondary-button campaign-battle-history-close" type="button" onClick={onClose}>
@@ -296,6 +381,14 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
           onClick={() => setActiveView("incoming")}
         >
           被攻撃集計
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          aria-pressed={activeView === "enemy"}
+          onClick={() => setActiveView("enemy")}
+        >
+          敵攻撃集計
         </button>
       </div>
 
@@ -500,11 +593,17 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
         </>
       ) : activeView === "units" ? (
         <CampaignUnitBattleRecordsArchive records={unitRecords} />
-      ) : (
+      ) : activeView === "incoming" ? (
         <CampaignIncomingStrikeSummaryView
           summaries={incomingSummaries}
           coverage={logCoverage}
           onExport={exportIncomingSummary}
+        />
+      ) : (
+        <CampaignEnemyStrikeSummaryView
+          summaries={enemySummaries}
+          coverage={logCoverage}
+          onExport={exportEnemySummary}
         />
       )}
     </section>

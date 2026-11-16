@@ -761,6 +761,29 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   }
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
 
+  const enemySummaryTab = battleHistoryPanel.getByRole("button", { name: "敵攻撃集計" });
+  await activate(enemySummaryTab, input);
+  const enemyArchive = battleHistoryPanel.getByTestId("campaign-enemy-strikes");
+  await expect(enemyArchive).toBeVisible();
+  await expect(enemyArchive.getByTestId("campaign-enemy-strike-entry").first()).toBeVisible();
+  await expect(enemyArchive).toContainText("攻撃strike");
+  await expect(enemyArchive).toContainText("与ダメージ");
+  await expect(enemyArchive).toContainText("味方撃破");
+  await expectMobileViewport(page, input);
+  if (input === "click") {
+    const enemyDownloadPromise = page.waitForEvent("download");
+    await enemyArchive.getByRole("button", { name: "敵攻撃集計をCSV出力" }).click();
+    const enemyDownload = await enemyDownloadPromise;
+    expect(enemyDownload.suggestedFilename()).toMatch(/^campaign-enemy-strikes-\d{4}-\d{2}-\d{2}\.csv$/);
+    const enemyPath = await enemyDownload.path();
+    if (!enemyPath) throw new Error("The enemy-strike summary CSV has no temporary file path.");
+    const enemyCsv = await readFile(enemyPath, "utf8");
+    expect(enemyCsv.startsWith("\uFEFF")).toBe(true);
+    expect(enemyCsv).toContain('"攻撃strike数"');
+    expect(enemyCsv).toContain('"敵攻撃集計"');
+  }
+  expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
+
   await activate(battleHistoryPanel.getByRole("button", { name: "時系列ログ" }), input);
   await expect(battleLogEntries).toHaveCount(12);
 
