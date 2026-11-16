@@ -1,6 +1,6 @@
 # クラスチェンジ仕様・未決定事項と実装計画
 
-- 更新日: 2026-11-15
+- 更新日: 2026-11-16
 - 状態: CP-01〜03／06／07〜14／15／16の非数値方針は採択済み（2026-11-12）。CP-04／05の数値表と初回の証の具体的な配布内容は未決定
 - 根拠: `docs/game-design.md` §5.4–§5.5、`docs/progression.md` §7、現行ソース／テスト
 - 関連実装: `src/content/class-definitions.ts`、`src/content/classes.ts`（互換projection）、`src/content/items.ts`、`src/domain/progression/class-change.ts`、`src/application/perform-class-change.ts`、`src/App.tsx`
@@ -149,6 +149,14 @@ CP-01〜03／06／15およびCP-07〜CP-14／CP-16は採択済み。CP-04／05�
 CP-12により昇格はその自軍フェイズの行動を消費する。したがって戦闘比較のpromotion枝は、昇格コマンドが返した `hasActed=true` のstateを保持したうえで、**比較専用の切り離したコピーだけ**次の自軍行動機会を模して `hasActed=false` に戻してから攻撃を実行する。これは昇格直後の同一ターンに攻撃できるという意味ではない。enemy phase、ターン経過、移動、敵AI、複数攻撃機会、複数seedの勝率／分布はシミュレートしない。
 
 この結果は現行戦闘ロジック上の単一seed比較サンプルであり、合成E2E fixtureは実プレイデータではない。全21ケースの実プレイ統制評価やCP-04／05の数値承認を代替せず、現行の昇格値・クラス上限・武器性能・戦闘距離の試作設定も正式化しない。両枝ともブラウザ内の開発用メモリコピーだけで処理し、import元snapshot、GameState、IndexedDB、RNG永続値は変更しない。
+
+### セーブ内プレイ履歴の根拠サマリー（実装）
+
+snapshotベンチは読み込んだsnapshotの既存記録から、キャンペーン戦闘ログの件数・記録章数・行動／攻撃／敵行動／章結果の内訳と、選択ユニットの行動／攻撃／被標的件数を集計する。加えて、`campaignUnitBattleRecords`の選択ユニット分（攻撃・strike・命中・与ダメージ・撃破・EXP）を表示／CSVへ記録する。比較候補の出所を人が評価するための補助であり、ファイルの真正性、改変有無、完全な実プレイ履歴を自動認定するものではない。
+
+- `campaignBattleLog`は元saveVersion 9以上、`campaignUnitBattleRecords`は元saveVersion 3以上で追跡対象として表示する。元バージョンが対象外なら「未追跡」とし、0件と区別する。
+- 記録が0件でも未プレイとは限らない。古いセーブの移行では、保存されていなかった過去の行動を推測・補完しない。
+- これらの集計は既存snapshotの読み取りだけで、GameState／RNG／IndexedDB／autosave／saveVersionは変更しない。利用者申告の「実プレイ由来」区分も引き続き自己申告であり、この集計はその検証ではない。
 
 ### 3.4 複数seedの独立戦闘サンプル（PR #83）
 

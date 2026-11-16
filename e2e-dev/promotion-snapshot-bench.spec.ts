@@ -151,6 +151,55 @@ function makePromotionSnapshotFile() {
 }
 
 
+function makePromotionSnapshotWithCampaignHistoryFile() {
+  const envelope = makePromotionSnapshotFile();
+  return {
+    ...envelope,
+    data: {
+      ...envelope.data,
+      campaignBattleLog: [
+        {
+          sequence: 1, chapterId: "chapter_01_map", turn: 2,
+          kind: "player-action", action: "movement", actorId: "unit_001",
+          actorName: "試験ユニット01", detail: "移動"
+        },
+        {
+          sequence: 2, chapterId: "chapter_01_map", turn: 2,
+          kind: "player-attack", attackerId: "unit_001", attackerName: "試験ユニット01",
+          defenderId: "enemy_001", defenderName: "比較用の敵01", defenderRemainingHp: 18,
+          experienceAwarded: 10,
+          strikes: [{
+            actorId: "unit_001", actorName: "試験ユニット01",
+            targetId: "enemy_001", targetName: "比較用の敵01",
+            kind: "initial", weaponName: "Iron Sword", outcome: "hit", damage: 12,
+            targetHpBefore: 30, targetHpAfter: 18
+          }]
+        },
+        {
+          sequence: 3, chapterId: "chapter_01_map", turn: 2,
+          kind: "enemy-action", enemyId: "enemy_001", enemyName: "比較用の敵01",
+          actionKind: "attacked", targetId: "unit_001", targetName: "試験ユニット01",
+          strikes: []
+        },
+        {
+          sequence: 4, chapterId: "chapter_01_map", turn: 4,
+          kind: "chapter-result", outcome: "victory", objective: "defeat_boss",
+          reason: "objective-cleared", livingPlayerCount: 1, livingEnemyCount: 0
+        }
+      ],
+      campaignUnitBattleRecords: [{
+        unitId: "unit_001", unitName: "試験ユニット01",
+        attacks: 1, strikes: 1, hits: 1, misses: 0, criticalHits: 0,
+        damageDealt: 12, enemiesDefeated: 0, experienceAwarded: 10, levelUps: 0,
+        statGains: {
+          hp: 0, strength: 0, magic: 0, skill: 0,
+          speed: 0, luck: 0, defense: 0, resistance: 0
+        }
+      }]
+    }
+  };
+}
+
 function makeLegacyVersionNinePromotionSnapshotFile() {
   const envelope = makePromotionSnapshotFile();
   return { ...envelope, data: { ...envelope.data, saveVersion: 9 } };
@@ -315,6 +364,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("source_save_version");
   expect(csv).toContain("normalized_save_version");
   expect(csv).toContain("migration_applied");
+  expect(csv).toContain("campaign_log_entries");
+  expect(csv).toContain("selected_unit_record_damage_dealt");
   expect(csv).toContain("exported_at");
   expect(csv).toContain("control_enemy_defeat_rate_95ci_lower");
   expect(csv).toContain("promotion_enemy_defeat_rate_95ci_upper");
@@ -329,12 +380,32 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("未確認");
   const csvRecords = parseCsvRecords(csv);
   expect(csvRecords).toHaveLength(22);
-  expect(csvRecords[0]).toHaveLength(162);
+  expect(csvRecords[0]).toHaveLength(180);
   for (const record of csvRecords.slice(1)) {
     expect(record).toHaveLength(csvRecords[0]!.length);
   }
 });
  
+test("shows saved campaign-history evidence without claiming save authenticity", async ({ page }) => {
+  await page.goto("/?promotion-snapshots=1");
+  const bench = page.getByTestId("promotion-snapshot-bench");
+  await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles({
+    name: "campaign-history.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(makePromotionSnapshotWithCampaignHistoryFile()))
+  });
+
+  const evidence = bench.getByTestId("promotion-snapshot-evidence");
+  await expect(evidence).toContainText("保存済みキャンペーン履歴の根拠");
+  await expect(evidence).toContainText("追跡対象 · 4件");
+  await expect(evidence).toContainText("記録のある章数");
+  await expect(evidence).toContainText("味方行動 1 · 味方攻撃 1 · 敵行動 1 · 章結果 1");
+  await expect(evidence).toContainText("行動 1 · 攻撃 1 · 被標的 1 · 攻撃strike 1");
+  await expect(evidence).toContainText("攻撃 1 · strike 1 · 命中 1 · 与ダメージ 12 · 撃破 0 · EXP 10");
+  await expect(evidence).toContainText("真正性");
+  await expect(evidence).toContainText("記録が空でも未プレイとは限りません");
+});
+
 test("imports an exported save locally and compares the actual unit snapshot with a detached promotion copy", async ({ page }) => {
   await page.goto("/?promotion-snapshots=1");
   const bench = page.getByTestId("promotion-snapshot-bench");
@@ -423,6 +494,7 @@ test("imports v1 and v9 portable saves through in-memory migration and retains s
 
   const selected = bench.getByTestId("promotion-snapshot-selected");
   await expect(selected).toContainText("1 → 10（移行済み）");
+  await expect(bench.getByTestId("promotion-snapshot-evidence")).toContainText("未追跡（この元saveVersionでは記録対象外）");
   await expect(selected).toContainText("export日時");
   await expect(selected).toContainText("2026-11-12T00:00:00.000Z");
 
@@ -432,6 +504,7 @@ test("imports v1 and v9 portable saves through in-memory migration and retains s
   expect(v9Index).toBeGreaterThanOrEqual(0);
   await candidateSelect.selectOption({ index: v9Index });
   await expect(selected).toContainText("9 → 10（移行済み）");
+  await expect(bench.getByTestId("promotion-snapshot-evidence")).toContainText("追跡対象 · 0件");
 
   const databases = await page.evaluate(async () => {
     if (typeof indexedDB.databases !== "function") return [];

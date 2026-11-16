@@ -9,6 +9,7 @@ import { getPromotionCombatSampleSummary, type PromotionCombatSampleSummary } fr
 import { getPromotionEnemyPhaseSampleSummary, type PromotionEnemyPhaseSampleSummary } from "../application/get-promotion-enemy-phase-sample-summary";
 import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../application/build-promotion-playtest-matrix";
 import { importPromotionPlaytestSaveContent, type ImportedPromotionPlaytestSave } from "../application/import-promotion-playtest-save";
+import { getPromotionPlaytestEvidence, type PromotionPlaytestEvidence } from "../application/get-promotion-playtest-evidence";
 import { escapeCsvField } from "../application/escape-csv-field";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
@@ -81,6 +82,7 @@ interface PromotionPlaytestMatrixResult {
   normalizedSaveVersion: number;
   migrationApplied: boolean;
   exportedAt: string;
+  evidence: PromotionPlaytestEvidence;
   summary: PromotionCombatSampleSummary;
   enemyPhaseSummary: PromotionEnemyPhaseSampleSummary;
 }
@@ -264,6 +266,9 @@ export function ClassPromotionSnapshotBench() {
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
+  const selectedEvidence = selectedCandidate
+    ? getPromotionPlaytestEvidence(selectedCandidate.snapshot, selectedCandidate.unit.id, selectedCandidate.sourceSaveVersion)
+    : null;
   const classCandidates = selectedClassId
     ? candidates.filter((candidate) => candidate.unit.classId === selectedClassId)
     : [];
@@ -440,6 +445,11 @@ export function ClassPromotionSnapshotBench() {
           normalizedSaveVersion: row.candidate.normalizedSaveVersion,
           migrationApplied: row.candidate.migrated,
           exportedAt: row.candidate.exportedAt,
+          evidence: getPromotionPlaytestEvidence(
+            row.candidate.snapshot,
+            row.candidate.unit.id,
+            row.candidate.sourceSaveVersion
+          ),
           summary,
           enemyPhaseSummary
         };
@@ -463,7 +473,15 @@ export function ClassPromotionSnapshotBench() {
     const headers = [
       "case_id", "basic_class", "promoted_class", "profile", "target_percentile",
       "candidate_percentile", "source_file", "source_save_version", "normalized_save_version",
-      "migration_applied", "exported_at", "snapshot_fingerprint", "unit_id", "unit_name",
+      "migration_applied", "exported_at",
+      "campaign_log_tracking_available", "unit_battle_totals_tracking_available",
+      "campaign_log_entries", "campaign_chapter_count", "campaign_player_action_entries",
+      "campaign_player_attack_entries", "campaign_enemy_action_entries", "campaign_chapter_result_entries",
+      "selected_unit_action_entries", "selected_unit_attack_entries", "selected_unit_targeted_enemy_action_entries",
+      "selected_unit_attack_strikes", "selected_unit_record_attacks", "selected_unit_record_strikes",
+      "selected_unit_record_hits", "selected_unit_record_damage_dealt",
+      "selected_unit_record_enemies_defeated", "selected_unit_record_experience_awarded",
+      "snapshot_fingerprint", "unit_id", "unit_name",
       "control_hp", "control_strength", "control_magic", "control_skill", "control_speed", "control_luck", "control_defense", "control_resistance",
       "control_current_hp", "control_experience", "movement", "move", "weapon_types", "control_equipped_weapon",
       "promotion_hp", "promotion_strength", "promotion_magic", "promotion_skill", "promotion_speed", "promotion_luck", "promotion_defense", "promotion_resistance",
@@ -521,7 +539,21 @@ export function ClassPromotionSnapshotBench() {
         entry.caseId, entry.classId, entry.promotedClassId, entry.profile,
         entry.targetPercentile, entry.candidatePercentile, entry.fileName,
         entry.sourceSaveVersion, entry.normalizedSaveVersion, entry.migrationApplied ? "true" : "false",
-        entry.exportedAt, entry.fingerprint, entry.unitId, entry.unitName,
+        entry.exportedAt,
+        entry.evidence.campaignLogTrackingAvailable ? "true" : "false",
+        entry.evidence.unitBattleTotalsTrackingAvailable ? "true" : "false",
+        entry.evidence.campaignLogEntries, entry.evidence.campaignChapterCount,
+        entry.evidence.playerActionEntries, entry.evidence.playerAttackEntries,
+        entry.evidence.enemyActionEntries, entry.evidence.chapterResultEntries,
+        entry.evidence.selectedUnitActionEntries, entry.evidence.selectedUnitAttackEntries,
+        entry.evidence.selectedUnitTargetedEnemyActionEntries, entry.evidence.selectedUnitAttackStrikes,
+        entry.evidence.selectedUnitBattleTotals?.attacks ?? "",
+        entry.evidence.selectedUnitBattleTotals?.strikes ?? "",
+        entry.evidence.selectedUnitBattleTotals?.hits ?? "",
+        entry.evidence.selectedUnitBattleTotals?.damageDealt ?? "",
+        entry.evidence.selectedUnitBattleTotals?.enemiesDefeated ?? "",
+        entry.evidence.selectedUnitBattleTotals?.experienceAwarded ?? "",
+        entry.fingerprint, entry.unitId, entry.unitName,
         stats.hp, stats.strength, stats.magic, stats.skill, stats.speed, stats.luck, stats.defense, stats.resistance,
         entry.currentHp, entry.experience, candidate?.unit.movementType ?? "", candidate?.unit.move ?? "",
         candidate?.unit.usableWeaponTypes.join("|") ?? "", entry.equippedWeaponId ?? "",
@@ -790,6 +822,22 @@ export function ClassPromotionSnapshotBench() {
               <div><dt>RNG</dt><dd>{selectedCandidate.snapshot.rngState}</dd></div>
               <div><dt>平均能力percentile</dt><dd>{getAverageClassPercentile(selectedCandidate, classCandidates) === null ? "分布データ不足" : "約" + getAverageClassPercentile(selectedCandidate, classCandidates) + " percentile（参考値）"}</dd></div>
             </dl>
+            {selectedEvidence && (
+              <section className="promotion-snapshot-evidence" data-testid="promotion-snapshot-evidence">
+                <h3>保存済みキャンペーン履歴の根拠</h3>
+                <p className="helper-text">
+                  保存データ内に残っている件数を表示します。ファイルの真正性や、すべての行動が実プレイ由来かどうかを認定するものではありません。
+                </p>
+                <dl>
+                  <div><dt>campaignBattleLog（元saveVersion 9以上）</dt><dd>{selectedEvidence.campaignLogTrackingAvailable ? "追跡対象 · " + selectedEvidence.campaignLogEntries + "件" : "未追跡（この元saveVersionでは記録対象外）"}</dd></div>
+                  <div><dt>記録のある章数</dt><dd>{selectedEvidence.campaignChapterCount}</dd></div>
+                  <div><dt>履歴の内訳</dt><dd>味方行動 {selectedEvidence.playerActionEntries} · 味方攻撃 {selectedEvidence.playerAttackEntries} · 敵行動 {selectedEvidence.enemyActionEntries} · 章結果 {selectedEvidence.chapterResultEntries}</dd></div>
+                  <div><dt>対象ユニットの履歴</dt><dd>行動 {selectedEvidence.selectedUnitActionEntries} · 攻撃 {selectedEvidence.selectedUnitAttackEntries} · 被標的 {selectedEvidence.selectedUnitTargetedEnemyActionEntries} · 攻撃strike {selectedEvidence.selectedUnitAttackStrikes}</dd></div>
+                  <div><dt>味方別累計（元saveVersion 3以上）</dt><dd>{!selectedEvidence.unitBattleTotalsTrackingAvailable ? "未追跡（この元saveVersionでは記録対象外）" : selectedEvidence.selectedUnitBattleTotals ? "攻撃 " + selectedEvidence.selectedUnitBattleTotals.attacks + " · strike " + selectedEvidence.selectedUnitBattleTotals.strikes + " · 命中 " + selectedEvidence.selectedUnitBattleTotals.hits + " · 与ダメージ " + selectedEvidence.selectedUnitBattleTotals.damageDealt + " · 撃破 " + selectedEvidence.selectedUnitBattleTotals.enemiesDefeated + " · EXP " + selectedEvidence.selectedUnitBattleTotals.experienceAwarded : "対象ユニットの累計レコードなし"}</dd></div>
+                </dl>
+                <p className="helper-text">記録が空でも未プレイとは限りません。旧バージョンでは戦闘履歴が保存されていない場合があり、途中の記録欠落・改変の有無も判定しません。</p>
+              </section>
+            )}
             {!selectedCandidate.eligible && (
               <div className="promotion-snapshot-errors" role="status">
                 <strong>現時点では昇格比較できません。</strong>
@@ -973,6 +1021,7 @@ export function ClassPromotionSnapshotBench() {
                     <th>敗北結果率（95%区間）</th>
                     <th>味方全滅率（95%区間）</th>
                     <th>次の自軍phase進行率（95%区間）</th>
+                    <th>保存内履歴の根拠</th>
                     <th>データ区分</th>
                   </tr>
                 </thead>
@@ -1019,6 +1068,11 @@ export function ClassPromotionSnapshotBench() {
                         <td>
                           {formatRateWithConfidenceInterval(result.enemyPhaseSummary.control.playerPhaseAdvanceRate, result.enemyPhaseSummary.control.playerPhaseAdvanceRateInterval95)} → {formatRateWithConfidenceInterval(result.enemyPhaseSummary.promotion.playerPhaseAdvanceRate, result.enemyPhaseSummary.promotion.playerPhaseAdvanceRateInterval95)}
                           <small>同一seed: {formatPairedOutcomeBreakdown(result.enemyPhaseSummary.pairedOutcomes.playerPhaseAdvanced)}</small>
+                        </td>
+                        <td>
+                          {result.evidence.campaignLogTrackingAvailable ? "ログ " + result.evidence.campaignLogEntries + "件" : "ログ: 未追跡"} · {result.evidence.campaignChapterCount}章
+                          <small>対象ユニット: 行動 {result.evidence.selectedUnitActionEntries}／攻撃 {result.evidence.selectedUnitAttackEntries}／被標的 {result.evidence.selectedUnitTargetedEnemyActionEntries}</small>
+                          <small>{result.evidence.unitBattleTotalsTrackingAvailable ? "味方別累計: " + (result.evidence.selectedUnitBattleTotals?.attacks ?? 0) + "攻撃" : "味方別累計: 未追跡"}</small>
                         </td>
                         <td>{getMatrixDataClassificationLabel(result.dataClassification)}</td>
                       </tr>

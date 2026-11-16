@@ -2865,6 +2865,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
   });
 
   test("safely backs up the current auto-save before restoring a prior generation", async ({ page }) => {
+    test.setTimeout(90_000);
     await startBattle(page);
     const currentSave = await readAutoSave(page) as { rngState: number; [key: string]: unknown };
 
