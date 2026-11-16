@@ -23,7 +23,9 @@ describe("getWilsonScoreInterval", () => {
     const interval = getWilsonScoreInterval(20, 20);
 
     expect(interval.lower).toBeGreaterThan(70);
+    expect(interval.lower).toBeLessThanOrEqual(100);
     expect(interval.upper).toBe(100);
+    expect(interval.upper).toBeGreaterThanOrEqual(interval.lower);
   });
 
   it.each([
