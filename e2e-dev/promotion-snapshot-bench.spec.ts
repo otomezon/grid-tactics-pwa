@@ -382,6 +382,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(matrix).toContainText("0/21 実行準備完了");
   const runButton = matrix.getByRole("button", { name: "21ケースのseed反復を実行" });
   await expect(runButton).toBeDisabled();
+  const manualWorksheetButton = matrix.getByTestId("promotion-playtest-manual-worksheet-export");
+  await expect(manualWorksheetButton).toBeDisabled();
 
   await matrix.getByLabel("21ケースの乱数試行回数").selectOption("20");
   for (let index = 0; index < 21; index += 1) {
@@ -389,6 +391,52 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   }
   await expect(matrix).toContainText("21/21 実行準備完了");
   await expect(runButton).toBeEnabled();
+  await expect(manualWorksheetButton).toBeEnabled();
+
+  const manualDownloadPromise = page.waitForEvent("download");
+  await manualWorksheetButton.click();
+  const manualDownload = await manualDownloadPromise;
+  expect(manualDownload.suggestedFilename()).toBe("class-promotion-manual-playtest-worksheet.csv");
+  const manualDownloadPath = await manualDownload.path();
+  if (!manualDownloadPath) throw new Error("Manual worksheet CSV download path was not available.");
+  const manualRecords = parseCsvRecords(await readFile(manualDownloadPath, "utf8"));
+  expect(manualRecords).toHaveLength(43);
+  const manualHeaders = manualRecords[0]!;
+  const manualValueAt = (row: string[], name: string) => row[manualHeaders.indexOf(name)] ?? "";
+  expect(manualHeaders).toContain("manual_record_status");
+  expect(manualHeaders).toContain("candidate_source_classification");
+  expect(manualHeaders).toContain("actual_damage");
+  expect(manualHeaders).toContain("observed_start_rng_state");
+  expect(manualHeaders).toContain("reachable_tiles_count");
+  expect(manualHeaders).toContain("enemy_phase_actions");
+  for (const record of manualRecords.slice(1)) {
+    expect(record).toHaveLength(manualHeaders.length);
+    expect(manualValueAt(record, "manual_record_status")).toBe("未記録");
+    expect(manualValueAt(record, "actual_damage")).toBe("");
+    expect(manualValueAt(record, "observed_start_rng_state")).toBe("");
+    expect(manualValueAt(record, "played_at")).toBe("");
+    expect(manualValueAt(record, "branch_commit")).toBe("");
+  }
+  const manualRowsByCase = new Map<string, string[]>();
+  for (const record of manualRecords.slice(1)) {
+    const caseId = manualValueAt(record, "case_id");
+    manualRowsByCase.set(caseId, [...(manualRowsByCase.get(caseId) ?? []), manualValueAt(record, "planned_branch")]);
+  }
+  expect(manualRowsByCase.size).toBe(21);
+  for (const branches of manualRowsByCase.values()) {
+    expect(branches.sort()).toEqual(["control", "promotion"]);
+  }
+  const swordsmanLowControl = manualRecords.slice(1).find((record) =>
+    manualValueAt(record, "case_id") === "swordsman:low" &&
+    manualValueAt(record, "planned_branch") === "control"
+  );
+  expect(swordsmanLowControl).toBeDefined();
+  expect(manualValueAt(swordsmanLowControl!, "unit_id")).toBeTruthy();
+  expect(manualValueAt(swordsmanLowControl!, "snapshot_rng_state")).toBeTruthy();
+  expect(manualValueAt(swordsmanLowControl!, "candidate_source_classification")).toBe("合成fixture");
+  expect(manualValueAt(swordsmanLowControl!, "classification_is_verified")).toBe("false");
+  expect(manualValueAt(swordsmanLowControl!, "post_strength")).toBe("");
+  expect(manualValueAt(swordsmanLowControl!, "applied_strength_bonus")).toBe("");
 
   const firstSelectedSnapshot = await caseRows.nth(0).locator("select").nth(0).inputValue();
   await caseRows.nth(1).locator("select").nth(0).selectOption(firstSelectedSnapshot);
