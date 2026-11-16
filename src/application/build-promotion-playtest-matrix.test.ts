@@ -6,7 +6,13 @@ import {
   getAverageClassStatPercentile
 } from "./build-promotion-playtest-matrix";
 
-function makeCandidate(key: string, classId: string, stat: number) {
+function makeCandidate(
+  key: string,
+  classId: string,
+  stat: number,
+  snapshotIdentity = key,
+  eligible = true
+) {
   const stats: UnitStats = {
     hp: stat,
     strength: stat,
@@ -19,6 +25,8 @@ function makeCandidate(key: string, classId: string, stat: number) {
   };
   return {
     key,
+    snapshotIdentity,
+    eligible,
     unit: {
       classId,
       stats
@@ -76,4 +84,39 @@ describe("buildPromotionPlaytestMatrix", () => {
     expect(getAverageClassStatPercentile(candidates[0]!, candidates)).toBeNull();
     expect(getAverageClassStatPercentile(candidates[1]!, candidates)).toBeNull();
   });
+  it("does not treat renamed copies of one snapshot as three distinct samples", () => {
+    const candidates = [
+      makeCandidate("copy-a", "swordsman", 10, "same-snapshot"),
+      makeCandidate("copy-b", "swordsman", 20, "same-snapshot"),
+      makeCandidate("copy-c", "swordsman", 30, "same-snapshot")
+    ];
+
+    const slots = buildPromotionPlaytestMatrix(candidates).filter((slot) => slot.classId === "swordsman");
+
+    expect(slots.every((slot) => slot.candidateCount === 3)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleCandidateCount === 3)).toBe(true);
+    expect(slots.every((slot) => slot.distinctSnapshotCount === 1)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleDistinctSnapshotCount === 1)).toBe(true);
+    expect(slots.every((slot) => slot.suggestedCandidate === null)).toBe(true);
+  });
+
+  it("suggests only eligible candidates from three distinct snapshot contents", () => {
+    const candidates = [
+      makeCandidate("ineligible", "swordsman", 5, "save-0", false),
+      makeCandidate("low", "swordsman", 10, "save-1"),
+      makeCandidate("median", "swordsman", 20, "save-2"),
+      makeCandidate("upper", "swordsman", 30, "save-3")
+    ];
+
+    const slots = buildPromotionPlaytestMatrix(candidates).filter((slot) => slot.classId === "swordsman");
+    const selected = slots.map((slot) => slot.suggestedCandidate);
+
+    expect(slots.every((slot) => slot.candidateCount === 4)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleCandidateCount === 3)).toBe(true);
+    expect(slots.every((slot) => slot.distinctSnapshotCount === 4)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleDistinctSnapshotCount === 3)).toBe(true);
+    expect(selected.every((candidate) => candidate !== null && candidate.eligible)).toBe(true);
+    expect(new Set(selected.map((candidate) => candidate?.snapshotIdentity)).size).toBe(3);
+  });
+
 });
