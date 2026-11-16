@@ -18,6 +18,6 @@ export function serializeCsvDocument(
   }
 
   return "\ufeff" + [headers, ...rows]
-    .map((row) => row.map(escapeCsvField).join(","))
+    .map((row) => row.map((cell) => escapeCsvField(typeof cell === "boolean" ? String(cell) : cell)).join(","))
     .join("\r\n");
 }
