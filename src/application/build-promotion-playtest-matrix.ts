@@ -20,8 +20,8 @@ export const PROMOTION_PLAYTEST_PROFILES: readonly {
 export interface PromotionPlaytestCandidateLike {
   key: string;
   unit: Pick<GameUnit, "classId" | "stats">;
-  /** Exact serialized snapshot content; display fingerprints are not collision-safe identities. */
-  snapshotIdentity?: string;
+  /** Canonical save content plus the candidate unit ID; separate unit IDs may be sampled from one save. */
+  unitSnapshotIdentity?: string;
   /** Candidates that cannot currently be used for promotion comparison are excluded from selection. */
   eligible?: boolean;
 }
@@ -35,15 +35,15 @@ export interface PromotionPlaytestMatrixSlot<T extends PromotionPlaytestCandidat
   targetPercentile: number;
   candidateCount: number;
   eligibleCandidateCount: number;
-  distinctSnapshotCount: number;
-  eligibleDistinctSnapshotCount: number;
+  distinctUnitSnapshotCount: number;
+  eligibleDistinctUnitSnapshotCount: number;
   candidatePool: readonly T[];
   suggestedCandidate: T | null;
   suggestedPercentile: number | null;
 }
 
-function getSnapshotIdentity(candidate: PromotionPlaytestCandidateLike): string {
-  return candidate.snapshotIdentity ?? candidate.key;
+function getCandidateUnitIdentity(candidate: PromotionPlaytestCandidateLike): string {
+  return candidate.unitSnapshotIdentity ?? candidate.key;
 }
 
 /**
@@ -78,8 +78,8 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
 
       const classCandidates = candidates.filter((candidate) => candidate.unit.classId === classId);
       const eligibleCandidates = classCandidates.filter((candidate) => candidate.eligible !== false);
-      const distinctSnapshotCount = new Set(classCandidates.map(getSnapshotIdentity)).size;
-      const eligibleDistinctSnapshotCount = new Set(eligibleCandidates.map(getSnapshotIdentity)).size;
+      const distinctUnitSnapshotCount = new Set(classCandidates.map(getSnapshotIdentity)).size;
+      const eligibleDistinctUnitSnapshotCount = new Set(eligibleCandidates.map(getSnapshotIdentity)).size;
       const ranked = eligibleCandidates
         .map((candidate) => ({
           candidate,
@@ -96,9 +96,9 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
         let suggestedCandidate: T | null = null;
         let suggestedPercentile: number | null = null;
 
-        if (eligibleDistinctSnapshotCount >= 3) {
+        if (eligibleDistinctUnitSnapshotCount >= 3) {
           const available = ranked
-            .filter((entry) => !usedSnapshotIdentities.has(getSnapshotIdentity(entry.candidate)))
+            .filter((entry) => !usedSnapshotIdentities.has(getCandidateUnitIdentity(entry.candidate)))
             .sort((left, right) =>
               Math.abs(left.percentile - profile.targetPercentile) -
                 Math.abs(right.percentile - profile.targetPercentile) ||
@@ -109,7 +109,7 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
           if (selected) {
             suggestedCandidate = selected.candidate;
             suggestedPercentile = selected.percentile;
-            usedSnapshotIdentities.add(getSnapshotIdentity(selected.candidate));
+            usedSnapshotIdentities.add(getCandidateUnitIdentity(selected.candidate));
           }
         }
 
@@ -122,8 +122,8 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
           targetPercentile: profile.targetPercentile,
           candidateCount: classCandidates.length,
           eligibleCandidateCount: eligibleCandidates.length,
-          distinctSnapshotCount,
-          eligibleDistinctSnapshotCount,
+          distinctUnitSnapshotCount,
+          eligibleDistinctUnitSnapshotCount,
           candidatePool: classCandidates,
           suggestedCandidate,
           suggestedPercentile
