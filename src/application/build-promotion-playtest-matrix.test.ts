@@ -113,7 +113,7 @@ describe("buildPromotionPlaytestMatrix", () => {
     expect(new Set(slots.map((slot) => slot.suggestedCandidate?.unitSnapshotIdentity)).size).toBe(3);
   });
 
-  it("suggests only eligible candidates from three distinct snapshot contents", () => {
+  it("suggests only eligible candidates from three distinct unit snapshots", () => {
     const candidates = [
       makeCandidate("ineligible", "swordsman", 5, "save-0", false),
       makeCandidate("low", "swordsman", 10, "save-1"),
