@@ -150,6 +150,14 @@ CP-12により昇格はその自軍フェイズの行動を消費する。した
 
 この結果は現行戦闘ロジック上の単一seed比較サンプルであり、合成E2E fixtureは実プレイデータではない。全21ケースの実プレイ統制評価やCP-04／05の数値承認を代替せず、現行の昇格値・クラス上限・武器性能・戦闘距離の試作設定も正式化しない。両枝ともブラウザ内の開発用メモリコピーだけで処理し、import元snapshot、GameState、IndexedDB、RNG永続値は変更しない。
 
+### セーブ内プレイ履歴の根拠サマリー
+
+snapshotベンチは読み込んだsnapshotの既存記録から、キャンペーン戦闘ログの件数・記録章数・行動／攻撃／敵行動／章結果の内訳と、選択ユニットの行動／攻撃／被標的件数を集計する。加えて、`campaignUnitBattleRecords`の選択ユニット分（攻撃・strike・命中・与ダメージ・撃破・EXP）を表示／CSVへ記録する。比較候補の出所を人が評価するための補助であり、ファイルの真正性、改変有無、完全な実プレイ履歴を自動認定するものではない。
+
+- `campaignBattleLog`は元saveVersion 9以上、`campaignUnitBattleRecords`は元saveVersion 3以上で追跡対象として表示する。元バージョンが対象外なら「未追跡」とし、0件と区別する。
+- 記録が0件でも未プレイとは限らない。古いセーブの移行では、保存されていなかった過去の行動を推測・補完しない。
+- これらの集計は既存snapshotの読み取りだけで、GameState／RNG／IndexedDB／autosave／saveVersionは変更しない。利用者申告の「実プレイ由来」区分も引き続き自己申告であり、この集計はその検証ではない。
+
 ### 3.4 複数seedの独立戦闘サンプル（PR #83）
 
 実セーブsnapshotベンチは単一seedの比較に加え、20／100／250個の決定論的seed系列でcontrol／promotionをペア比較できる。seed系列は元snapshotの初期RNG stateから固定saltで分離したXorshift32 streamにより生成し、各seedを両枝へ同じ値で渡す。両枝の戦闘は既存 `performAttack` を使用する。
