@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHAPTERS } from "../content/chapters";
 import type { CampaignBattleLogEntry } from "../domain/models/game";
-import { getCampaignBattleHistory } from "./get-campaign-battle-history";
+import { getCampaignBattleHistory, getCampaignBattleLogCoverage } from "./get-campaign-battle-history";
 
 const entry: CampaignBattleLogEntry = {
   sequence: 12,
