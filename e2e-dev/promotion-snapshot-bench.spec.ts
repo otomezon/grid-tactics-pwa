@@ -392,6 +392,7 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(matrix).toContainText("21/21 実行準備完了");
   await expect(runButton).toBeEnabled();
   await expect(manualWorksheetButton).toBeEnabled();
+  await caseRows.nth(0).locator("select").nth(2).selectOption("synthetic");
 
   const manualDownloadPromise = page.waitForEvent("download");
   await manualWorksheetButton.click();
