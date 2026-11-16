@@ -151,6 +151,26 @@ function makePromotionSnapshotFile() {
 }
 
 
+function makePromotionSnapshotAtCampaignHistoryLimitFile() {
+  const envelope = makePromotionSnapshotFile();
+  return {
+    ...envelope,
+    data: {
+      ...envelope.data,
+      campaignBattleLog: Array.from({ length: 5000 }, (_, index) => ({
+        sequence: index + 6,
+        chapterId: "chapter_01_map",
+        turn: 4,
+        kind: "player-action",
+        action: "wait",
+        actorId: "unit_001",
+        actorName: "試験ユニット01",
+        detail: "待機"
+      }))
+    }
+  };
+}
+
 function makePromotionSnapshotWithCampaignHistoryFile() {
   const envelope = makePromotionSnapshotFile();
   return {
@@ -435,7 +455,7 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("未確認");
   const csvRecords = parseCsvRecords(csv);
   expect(csvRecords).toHaveLength(22);
-  expect(csvRecords[0]).toHaveLength(186);
+  expect(csvRecords[0]).toHaveLength(191);
   for (const record of csvRecords.slice(1)) {
     expect(record).toHaveLength(csvRecords[0]!.length);
   }
@@ -495,6 +515,9 @@ test("shows saved campaign-history evidence without claiming save authenticity",
   const evidence = bench.getByTestId("promotion-snapshot-evidence");
   await expect(evidence).toContainText("保存済みキャンペーン履歴の根拠");
   await expect(evidence).toContainText("追跡対象 · 4件");
+  await expect(evidence).toContainText("4／5000件");
+  await expect(evidence).toContainText("1–4 · 欠番 0件");
+  await expect(evidence).toContainText("上限未到達");
   await expect(evidence).toContainText("記録のある章数");
   await expect(evidence).toContainText("味方行動 1 · 味方攻撃 1 · 敵行動 1 · 章結果 1");
   await expect(evidence).toContainText("行動 1 · 攻撃 1 · 被標的 1 · 攻撃strike 1");
@@ -558,6 +581,8 @@ test("exports a deduplicated promotion candidate inventory with source and saved
   const value = (name: string) => valueAt(row, name);
   const legacyValue = (name: string) => valueAt(legacyRow, name);
   expect(headers).toContain("campaign_log_tracking_available_for_all_imports");
+  expect(headers).toContain("campaign_log_at_retention_limit");
+  expect(headers).toContain("campaign_log_sequence_gap_count");
   expect(headers).toContain("selected_unit_record_damage_dealt");
   expect(value("import_copy_count")).toBe("2");
   expect(JSON.parse(value("source_file_names_json"))).toEqual([
@@ -573,6 +598,11 @@ test("exports a deduplicated promotion candidate inventory with source and saved
   expect(value("campaign_log_tracking_available_for_all_imports")).toBe("true");
   expect(value("campaign_log_tracking_available_for_any_import")).toBe("true");
   expect(value("campaign_log_entries")).toBe("4");
+  expect(value("campaign_log_retention_limit")).toBe("5000");
+  expect(value("campaign_log_at_retention_limit")).toBe("false");
+  expect(value("campaign_log_first_sequence")).toBe("1");
+  expect(value("campaign_log_last_sequence")).toBe("4");
+  expect(value("campaign_log_sequence_gap_count")).toBe("0");
   expect(value("selected_unit_action_entries")).toBe("1");
   expect(value("unit_battle_totals_tracking_available_for_all_imports")).toBe("true");
   expect(value("unit_battle_totals_tracking_available_for_any_import")).toBe("true");
@@ -587,10 +617,47 @@ test("exports a deduplicated promotion candidate inventory with source and saved
   expect(JSON.parse(legacyValue("migration_applied_values_json"))).toEqual([true]);
   expect(legacyValue("campaign_log_tracking_available_for_all_imports")).toBe("false");
   expect(legacyValue("campaign_log_tracking_available_for_any_import")).toBe("false");
+  expect(legacyValue("campaign_log_at_retention_limit")).toBe("false");
+  expect(legacyValue("campaign_log_sequence_gap_count")).toBe("0");
   expect(legacyValue("campaign_log_entries")).toBe("0");
   expect(legacyValue("unit_battle_totals_tracking_available_for_all_imports")).toBe("false");
   expect(legacyValue("unit_battle_totals_tracking_available_for_any_import")).toBe("false");
   expect(legacyValue("selected_unit_battle_totals_present")).toBe("false");
+});
+
+test("shows the campaign log retention cap and gaps in the saved sequence", async ({ page }) => {
+  await page.goto("/?promotion-snapshots=1");
+  const bench = page.getByTestId("promotion-snapshot-bench");
+  await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles({
+    name: "campaign-history-at-retention-limit.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(makePromotionSnapshotAtCampaignHistoryLimitFile()))
+  });
+
+  const evidence = bench.getByTestId("promotion-snapshot-evidence");
+  await expect(evidence).toContainText("追跡対象 · 5000件");
+  await expect(evidence).toContainText("5000／5000件");
+  await expect(evidence).toContainText("6–5005 · 欠番 5件");
+  await expect(evidence).toContainText("最大保管件数に到達");
+  await expect(evidence).toContainText("切り捨て有無を確定できません");
+
+  const exportButton = bench.getByTestId("promotion-snapshot-inventory-export");
+  const downloadPromise = page.waitForEvent("download");
+  await exportButton.click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  if (!downloadPath) throw new Error("CSV download path was not available.");
+  const records = parseCsvRecords(await readFile(downloadPath, "utf8"));
+  const headers = records[0]!;
+  const row = records[1]!;
+  const value = (name: string) => row[headers.indexOf(name)] ?? "";
+  expect(row).toHaveLength(headers.length);
+  expect(value("campaign_log_entries")).toBe("5000");
+  expect(value("campaign_log_retention_limit")).toBe("5000");
+  expect(value("campaign_log_at_retention_limit")).toBe("true");
+  expect(value("campaign_log_first_sequence")).toBe("6");
+  expect(value("campaign_log_last_sequence")).toBe("5005");
+  expect(value("campaign_log_sequence_gap_count")).toBe("5");
 });
 
 test("imports an exported save locally and compares the actual unit snapshot with a detached promotion copy", async ({ page }) => {
