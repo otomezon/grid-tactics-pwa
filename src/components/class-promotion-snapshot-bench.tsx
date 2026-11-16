@@ -795,7 +795,7 @@ export function ClassPromotionSnapshotBench() {
       "observations", "retest_conditions"
     ];
 
-    const rows = matrixRows.flatMap((row) => {
+    const rows: Array<Record<string, string | number | boolean>> = matrixRows.flatMap((row) => {
       const candidate = row.candidate!;
       const target = row.target!;
       const unit = candidate.unit;
@@ -844,7 +844,7 @@ export function ClassPromotionSnapshotBench() {
         enemy_hp: target.currentHp,
         enemy_position: formatUnitLocation(target)
       };
-      return (["control", "promotion"] as const).map((plannedBranch) => ({
+      return (["control", "promotion"] as const).map((plannedBranch): Record<string, string | number | boolean> => ({
         ...values,
         planned_branch: plannedBranch
       }));
