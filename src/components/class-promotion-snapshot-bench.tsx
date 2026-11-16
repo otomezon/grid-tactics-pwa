@@ -206,6 +206,13 @@ function formatDelta(value: number, suffix: string): string {
   return (value > 0 ? "+" : "") + value.toFixed(1) + suffix;
 }
 
+function formatRateWithConfidenceInterval(
+  rate: number,
+  interval: { lower: number; upper: number }
+): string {
+  return rate.toFixed(1) + "%（95%区間 " + interval.lower.toFixed(1) + "–" + interval.upper.toFixed(1) + "%）";
+}
+
 function getStrikeLabel(kind: "initial" | "counter" | "follow-up"): string {
   if (kind === "initial") return "先制攻撃";
   if (kind === "counter") return "反撃";
@@ -439,18 +446,32 @@ export function ClassPromotionSnapshotBench() {
       "control_critical_rate_on_hit", "promotion_critical_rate_on_hit",
       "control_avg_damage_per_battle", "promotion_avg_damage_per_battle",
       "control_enemy_defeat_rate", "promotion_enemy_defeat_rate",
+      "control_enemy_defeat_rate_95ci_lower", "control_enemy_defeat_rate_95ci_upper",
+      "promotion_enemy_defeat_rate_95ci_lower", "promotion_enemy_defeat_rate_95ci_upper",
       "control_avg_counter_damage", "promotion_avg_counter_damage",
       "control_attacker_survival_rate", "promotion_attacker_survival_rate",
+      "control_attacker_survival_rate_95ci_lower", "control_attacker_survival_rate_95ci_upper",
+      "promotion_attacker_survival_rate_95ci_lower", "promotion_attacker_survival_rate_95ci_upper",
       "control_avg_attacker_hp", "promotion_avg_attacker_hp",
       "control_enemy_phase_actions", "promotion_enemy_phase_actions",
       "control_enemy_phase_attack_actions", "promotion_enemy_phase_attack_actions",
       "control_selected_unit_targeted_phase_rate", "promotion_selected_unit_targeted_phase_rate",
+      "control_selected_unit_targeted_phase_rate_95ci_lower", "control_selected_unit_targeted_phase_rate_95ci_upper",
+      "promotion_selected_unit_targeted_phase_rate_95ci_lower", "promotion_selected_unit_targeted_phase_rate_95ci_upper",
       "control_selected_unit_avg_damage", "promotion_selected_unit_avg_damage",
       "control_selected_unit_survival_rate", "promotion_selected_unit_survival_rate",
+      "control_selected_unit_survival_rate_95ci_lower", "control_selected_unit_survival_rate_95ci_upper",
+      "promotion_selected_unit_survival_rate_95ci_lower", "promotion_selected_unit_survival_rate_95ci_upper",
       "control_party_avg_damage", "promotion_party_avg_damage",
       "control_battle_defeat_rate", "promotion_battle_defeat_rate",
+      "control_battle_defeat_rate_95ci_lower", "control_battle_defeat_rate_95ci_upper",
+      "promotion_battle_defeat_rate_95ci_lower", "promotion_battle_defeat_rate_95ci_upper",
       "control_party_wipe_rate", "promotion_party_wipe_rate",
-      "control_player_phase_advance_rate", "promotion_player_phase_advance_rate"
+      "control_party_wipe_rate_95ci_lower", "control_party_wipe_rate_95ci_upper",
+      "promotion_party_wipe_rate_95ci_lower", "promotion_party_wipe_rate_95ci_upper",
+      "control_player_phase_advance_rate", "promotion_player_phase_advance_rate",
+      "control_player_phase_advance_rate_95ci_lower", "control_player_phase_advance_rate_95ci_upper",
+      "promotion_player_phase_advance_rate_95ci_lower", "promotion_player_phase_advance_rate_95ci_upper"
     ];
     const rows = results.map((entry) => {
       const candidate = matrixRows.find((row) => row.id === entry.caseId)?.candidate;
@@ -483,8 +504,12 @@ export function ClassPromotionSnapshotBench() {
         control.criticalRateOnHit, promotion.criticalRateOnHit,
         control.averageAttackDamagePerBattle, promotion.averageAttackDamagePerBattle,
         control.enemyDefeatRate, promotion.enemyDefeatRate,
+        control.enemyDefeatRateInterval95.lower, control.enemyDefeatRateInterval95.upper,
+        promotion.enemyDefeatRateInterval95.lower, promotion.enemyDefeatRateInterval95.upper,
         control.averageCounterDamagePerBattle, promotion.averageCounterDamagePerBattle,
         control.attackerSurvivalRate, promotion.attackerSurvivalRate,
+        control.attackerSurvivalRateInterval95.lower, control.attackerSurvivalRateInterval95.upper,
+        promotion.attackerSurvivalRateInterval95.lower, promotion.attackerSurvivalRateInterval95.upper,
         control.averageAttackerHpRemaining, promotion.averageAttackerHpRemaining,
         entry.enemyPhaseSummary.control.totalEnemyActions,
         entry.enemyPhaseSummary.promotion.totalEnemyActions,
@@ -492,18 +517,38 @@ export function ClassPromotionSnapshotBench() {
         entry.enemyPhaseSummary.promotion.enemyAttackActions,
         entry.enemyPhaseSummary.control.selectedUnitTargetedPhaseRate,
         entry.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRate,
+        entry.enemyPhaseSummary.control.selectedUnitTargetedPhaseRateInterval95.lower,
+        entry.enemyPhaseSummary.control.selectedUnitTargetedPhaseRateInterval95.upper,
+        entry.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRateInterval95.lower,
+        entry.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRateInterval95.upper,
         entry.enemyPhaseSummary.control.selectedUnitAverageDamagePerPhase,
         entry.enemyPhaseSummary.promotion.selectedUnitAverageDamagePerPhase,
         entry.enemyPhaseSummary.control.selectedUnitSurvivalRate,
         entry.enemyPhaseSummary.promotion.selectedUnitSurvivalRate,
+        entry.enemyPhaseSummary.control.selectedUnitSurvivalRateInterval95.lower,
+        entry.enemyPhaseSummary.control.selectedUnitSurvivalRateInterval95.upper,
+        entry.enemyPhaseSummary.promotion.selectedUnitSurvivalRateInterval95.lower,
+        entry.enemyPhaseSummary.promotion.selectedUnitSurvivalRateInterval95.upper,
         entry.enemyPhaseSummary.control.averageTotalPlayerDamagePerPhase,
         entry.enemyPhaseSummary.promotion.averageTotalPlayerDamagePerPhase,
         entry.enemyPhaseSummary.control.battleDefeatRate,
         entry.enemyPhaseSummary.promotion.battleDefeatRate,
+        entry.enemyPhaseSummary.control.battleDefeatRateInterval95.lower,
+        entry.enemyPhaseSummary.control.battleDefeatRateInterval95.upper,
+        entry.enemyPhaseSummary.promotion.battleDefeatRateInterval95.lower,
+        entry.enemyPhaseSummary.promotion.battleDefeatRateInterval95.upper,
         entry.enemyPhaseSummary.control.partyWipeRate,
         entry.enemyPhaseSummary.promotion.partyWipeRate,
+        entry.enemyPhaseSummary.control.partyWipeRateInterval95.lower,
+        entry.enemyPhaseSummary.control.partyWipeRateInterval95.upper,
+        entry.enemyPhaseSummary.promotion.partyWipeRateInterval95.lower,
+        entry.enemyPhaseSummary.promotion.partyWipeRateInterval95.upper,
         entry.enemyPhaseSummary.control.playerPhaseAdvanceRate,
-        entry.enemyPhaseSummary.promotion.playerPhaseAdvanceRate
+        entry.enemyPhaseSummary.promotion.playerPhaseAdvanceRate,
+        entry.enemyPhaseSummary.control.playerPhaseAdvanceRateInterval95.lower,
+        entry.enemyPhaseSummary.control.playerPhaseAdvanceRateInterval95.upper,
+        entry.enemyPhaseSummary.promotion.playerPhaseAdvanceRateInterval95.lower,
+        entry.enemyPhaseSummary.promotion.playerPhaseAdvanceRateInterval95.upper
       ].map(escapeCsvField).join(",");
     });
     const csv = "\ufeff" + [headers.map(escapeCsvField).join(","), ...rows].join("\r\n");
@@ -870,18 +915,18 @@ export function ClassPromotionSnapshotBench() {
                     <th>試行数</th>
                     <th>命中率 control → promotion</th>
                     <th>平均与ダメージ／戦闘</th>
-                    <th>敵撃破率</th>
+                    <th>敵撃破率（95%区間）</th>
                     <th>平均反撃被ダメージ</th>
-                    <th>単発攻撃後の生存率</th>
+                    <th>単発攻撃後の生存率（95%区間）</th>
                     <th>敵軍行動数</th>
                     <th>敵軍攻撃数</th>
-                    <th>本人が狙われた割合</th>
+                    <th>本人が狙われた割合（95%区間）</th>
                     <th>敵軍phase本人平均被ダメージ</th>
-                    <th>敵軍phase本人生存率</th>
+                    <th>敵軍phase本人生存率（95%区間）</th>
                     <th>味方全体平均被ダメージ</th>
-                    <th>敗北結果率</th>
-                    <th>味方全滅率</th>
-                    <th>次の自軍phase進行率</th>
+                    <th>敗北結果率（95%区間）</th>
+                    <th>味方全滅率（95%区間）</th>
+                    <th>次の自軍phase進行率（95%区間）</th>
                     <th>データ区分</th>
                   </tr>
                 </thead>
@@ -896,18 +941,18 @@ export function ClassPromotionSnapshotBench() {
                         <td>{result.summary.sampleCount}</td>
                         <td>{result.summary.control.attackHitRate.toFixed(1)}% → {result.summary.promotion.attackHitRate.toFixed(1)}%</td>
                         <td>{result.summary.control.averageAttackDamagePerBattle.toFixed(1)} → {result.summary.promotion.averageAttackDamagePerBattle.toFixed(1)}</td>
-                        <td>{result.summary.control.enemyDefeatRate.toFixed(1)}% → {result.summary.promotion.enemyDefeatRate.toFixed(1)}%</td>
+                        <td>{formatRateWithConfidenceInterval(result.summary.control.enemyDefeatRate, result.summary.control.enemyDefeatRateInterval95)} → {formatRateWithConfidenceInterval(result.summary.promotion.enemyDefeatRate, result.summary.promotion.enemyDefeatRateInterval95)}</td>
                         <td>{result.summary.control.averageCounterDamagePerBattle.toFixed(1)} → {result.summary.promotion.averageCounterDamagePerBattle.toFixed(1)}</td>
-                        <td>{result.summary.control.attackerSurvivalRate.toFixed(1)}% → {result.summary.promotion.attackerSurvivalRate.toFixed(1)}%</td>
+                        <td>{formatRateWithConfidenceInterval(result.summary.control.attackerSurvivalRate, result.summary.control.attackerSurvivalRateInterval95)} → {formatRateWithConfidenceInterval(result.summary.promotion.attackerSurvivalRate, result.summary.promotion.attackerSurvivalRateInterval95)}</td>
                         <td>{result.enemyPhaseSummary.control.totalEnemyActions.toFixed(1)} → {result.enemyPhaseSummary.promotion.totalEnemyActions.toFixed(1)}</td>
                         <td>{result.enemyPhaseSummary.control.enemyAttackActions.toFixed(1)} → {result.enemyPhaseSummary.promotion.enemyAttackActions.toFixed(1)}</td>
-                        <td>{result.enemyPhaseSummary.control.selectedUnitTargetedPhaseRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRate.toFixed(1)}%</td>
+                        <td>{formatRateWithConfidenceInterval(result.enemyPhaseSummary.control.selectedUnitTargetedPhaseRate, result.enemyPhaseSummary.control.selectedUnitTargetedPhaseRateInterval95)} → {formatRateWithConfidenceInterval(result.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRate, result.enemyPhaseSummary.promotion.selectedUnitTargetedPhaseRateInterval95)}</td>
                         <td>{result.enemyPhaseSummary.control.selectedUnitAverageDamagePerPhase.toFixed(1)} → {result.enemyPhaseSummary.promotion.selectedUnitAverageDamagePerPhase.toFixed(1)}</td>
-                        <td>{result.enemyPhaseSummary.control.selectedUnitSurvivalRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.selectedUnitSurvivalRate.toFixed(1)}%</td>
+                        <td>{formatRateWithConfidenceInterval(result.enemyPhaseSummary.control.selectedUnitSurvivalRate, result.enemyPhaseSummary.control.selectedUnitSurvivalRateInterval95)} → {formatRateWithConfidenceInterval(result.enemyPhaseSummary.promotion.selectedUnitSurvivalRate, result.enemyPhaseSummary.promotion.selectedUnitSurvivalRateInterval95)}</td>
                         <td>{result.enemyPhaseSummary.control.averageTotalPlayerDamagePerPhase.toFixed(1)} → {result.enemyPhaseSummary.promotion.averageTotalPlayerDamagePerPhase.toFixed(1)}</td>
-                        <td>{result.enemyPhaseSummary.control.battleDefeatRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.battleDefeatRate.toFixed(1)}%</td>
-                        <td>{result.enemyPhaseSummary.control.partyWipeRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.partyWipeRate.toFixed(1)}%</td>
-                        <td>{result.enemyPhaseSummary.control.playerPhaseAdvanceRate.toFixed(1)}% → {result.enemyPhaseSummary.promotion.playerPhaseAdvanceRate.toFixed(1)}%</td>
+                        <td>{formatRateWithConfidenceInterval(result.enemyPhaseSummary.control.battleDefeatRate, result.enemyPhaseSummary.control.battleDefeatRateInterval95)} → {formatRateWithConfidenceInterval(result.enemyPhaseSummary.promotion.battleDefeatRate, result.enemyPhaseSummary.promotion.battleDefeatRateInterval95)}</td>
+                        <td>{formatRateWithConfidenceInterval(result.enemyPhaseSummary.control.partyWipeRate, result.enemyPhaseSummary.control.partyWipeRateInterval95)} → {formatRateWithConfidenceInterval(result.enemyPhaseSummary.promotion.partyWipeRate, result.enemyPhaseSummary.promotion.partyWipeRateInterval95)}</td>
+                        <td>{formatRateWithConfidenceInterval(result.enemyPhaseSummary.control.playerPhaseAdvanceRate, result.enemyPhaseSummary.control.playerPhaseAdvanceRateInterval95)} → {formatRateWithConfidenceInterval(result.enemyPhaseSummary.promotion.playerPhaseAdvanceRate, result.enemyPhaseSummary.promotion.playerPhaseAdvanceRateInterval95)}</td>
                         <td>{getMatrixDataClassificationLabel(result.dataClassification)}</td>
                       </tr>
                     );
@@ -1091,6 +1136,9 @@ export function ClassPromotionSnapshotBench() {
                       <p className="helper-text">
                         各試行は元snapshotへ戻した独立の1戦闘です。HP・敵HP・EXP・撃破状態を次の試行へ引き継ぎません。結果はこの仮想戦闘条件での試行集計であり、複数ターンの攻略率・キャンペーン勝率ではありません。
                       </p>
+                      <p className="helper-text">
+                        95% Wilson区間は「1 seedにつき1結果」の撃破／生存率にのみ表示します。1戦闘内に複数発生するstrikeの命中率・必殺率には、独立試行ではないためこの区間を付けていません。 区間はcontrol／promotionそれぞれの率の幅であり、両者の差の信頼区間や統計的有意差を示すものではありません。
+                      </p>
                       <div className="promotion-lab-table-wrap">
                         <table className="promotion-lab-table" aria-label="昇格前後の複数seed戦闘集計">
                           <thead>
@@ -1117,8 +1165,8 @@ export function ClassPromotionSnapshotBench() {
                             </tr>
                             <tr>
                               <th scope="row">この敵の撃破率</th>
-                              <td>{combatSamples.control.enemyDefeatRate.toFixed(1)}%（{combatSamples.control.enemyDefeats}/{combatSamples.sampleCount}）</td>
-                              <td>{combatSamples.promotion.enemyDefeatRate.toFixed(1)}%（{combatSamples.promotion.enemyDefeats}/{combatSamples.sampleCount}）</td>
+                              <td>{formatRateWithConfidenceInterval(combatSamples.control.enemyDefeatRate, combatSamples.control.enemyDefeatRateInterval95)}（{combatSamples.control.enemyDefeats}/{combatSamples.sampleCount}）</td>
+                              <td>{formatRateWithConfidenceInterval(combatSamples.promotion.enemyDefeatRate, combatSamples.promotion.enemyDefeatRateInterval95)}（{combatSamples.promotion.enemyDefeats}/{combatSamples.sampleCount}）</td>
                               <td>{formatDelta(combatSamples.promotion.enemyDefeatRate - combatSamples.control.enemyDefeatRate, "pt")}</td>
                             </tr>
                             <tr>
@@ -1129,8 +1177,8 @@ export function ClassPromotionSnapshotBench() {
                             </tr>
                             <tr>
                               <th scope="row">反撃後の生存率</th>
-                              <td>{combatSamples.control.attackerSurvivalRate.toFixed(1)}%（{combatSamples.control.attackerSurvivals}/{combatSamples.sampleCount}）</td>
-                              <td>{combatSamples.promotion.attackerSurvivalRate.toFixed(1)}%（{combatSamples.promotion.attackerSurvivals}/{combatSamples.sampleCount}）</td>
+                              <td>{formatRateWithConfidenceInterval(combatSamples.control.attackerSurvivalRate, combatSamples.control.attackerSurvivalRateInterval95)}（{combatSamples.control.attackerSurvivals}/{combatSamples.sampleCount}）</td>
+                              <td>{formatRateWithConfidenceInterval(combatSamples.promotion.attackerSurvivalRate, combatSamples.promotion.attackerSurvivalRateInterval95)}（{combatSamples.promotion.attackerSurvivals}/{combatSamples.sampleCount}）</td>
                               <td>{formatDelta(combatSamples.promotion.attackerSurvivalRate - combatSamples.control.attackerSurvivalRate, "pt")}</td>
                             </tr>
                             <tr>

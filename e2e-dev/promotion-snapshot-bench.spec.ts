@@ -238,6 +238,7 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(results).toContainText("敵軍行動数");
   await expect(results).toContainText("本人が狙われた割合");
   await expect(results).toContainText("敵軍phase本人生存率");
+  await expect(results).toContainText("95%区間");
 
   const downloadPromise = page.waitForEvent("download");
   await matrix.getByRole("button", { name: "21ケース結果CSVを書き出す" }).click();
@@ -259,6 +260,10 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("normalized_save_version");
   expect(csv).toContain("migration_applied");
   expect(csv).toContain("exported_at");
+  expect(csv).toContain("control_enemy_defeat_rate_95ci_lower");
+  expect(csv).toContain("promotion_enemy_defeat_rate_95ci_upper");
+  expect(csv).toContain("control_selected_unit_survival_rate_95ci_lower");
+  expect(csv).toContain("promotion_player_phase_advance_rate_95ci_upper");
   expect(csv).toContain("未確認");
 });
  
@@ -308,6 +313,7 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   await expect(samples).toContainText("100試行");
   await expect(samples).toContainText("攻撃命中率");
   await expect(samples).toContainText("この敵の撃破率");
+  await expect(samples).toContainText("95%区間");
   await samples.getByLabel("乱数試行回数").selectOption("20");
   await expect(samples).toContainText("20試行");
   await samples.getByLabel("乱数試行回数").selectOption("250");
