@@ -109,7 +109,7 @@ export function StorageDurabilityPanel() {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(usageBarPercent * 10) / 10}
-              aria-valuetext={formatPercentage(usagePercent)}
+              aria-valuetext={formatPercentage(usagePercent ?? 0)}
             >
               <span style={{ width: usageBarPercent + "%" }} />
             </div>
