@@ -1251,7 +1251,9 @@ function CampaignApp() {
       setMessage(restoreMessage);
     } catch (error) {
       setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
-      setMessage("バックアップの復元に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
+      setMessage(error instanceof SaveConflictError
+        ? "バックアップ復元後にセーブデータが変更されています。最新の状態を再読み込みしてください。"
+        : "バックアップの復元に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
     } finally {
       setBackupActionPending(false);
     }
@@ -1361,7 +1363,9 @@ function CampaignApp() {
       setMessage(importMessage + backupRefreshNotice);
     } catch (error) {
       setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
-      setMessage("セーブファイルの保存に失敗しました。既存の自動セーブとバックアップは変更されていません。" + getErrorMessage(error));
+      setMessage(error instanceof SaveConflictError
+        ? "セーブファイルの読み込み後にセーブデータが変更されています。最新の状態を再読み込みしてください。"
+        : "セーブファイルの保存に失敗しました。既存の自動セーブとバックアップは変更されていません。" + getErrorMessage(error));
     } finally {
       setBackupActionPending(false);
     }
