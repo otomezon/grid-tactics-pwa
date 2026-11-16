@@ -153,10 +153,48 @@ async function setAutoSaveTurn(page: Page, turn: number): Promise<void> {
 }
 
 test.describe("production PWA shell", () => {
+  test("notifies an open stale tab immediately after another tab saves", async ({ page }) => {
+    await startBattle(page);
+
+    const staleTab = await page.context().newPage();
+    await staleTab.goto("/");
+    await expect(staleTab.getByTestId("campaign-title-screen")).toBeVisible();
+    await staleTab.getByRole("button", { name: "つづきから" }).click();
+    await expect(staleTab.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+
+    await staleTab.locator(".map-grid").getByRole("button", { name: /味方04/ }).click();
+    const staleWaitButton = staleTab.getByRole("button", { name: "待機", exact: true });
+    await expect(staleWaitButton).toBeEnabled();
+
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
+    const newestRecord = await readAutoSaveRecord(page);
+    expect(newestRecord).not.toBeNull();
+
+    await expect(staleTab.getByTestId("save-conflict-notice"))
+      .toContainText("このタブが読み込んだ後にセーブデータが変更されました");
+    await expect(staleWaitButton).toBeDisabled();
+    expect(await readAutoSaveRecord(staleTab)).toEqual(newestRecord);
+
+    await staleTab.getByTestId("save-conflict-notice")
+      .getByRole("button", { name: "最新のセーブを再読み込み" }).click();
+    await expect(staleTab.getByTestId("campaign-title-screen")).toBeVisible();
+    await staleTab.getByRole("button", { name: "つづきから" }).click();
+    await expect(staleTab.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
+    await staleTab.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await expect(staleTab.locator(".unit-details")).toContainText("行動済み");
+
+    await staleTab.close();
+  });
+
   test("rejects a stale autosave from a second open tab without replacing the newer save", async ({ page }) => {
     await startBattle(page);
 
     const staleTab = await page.context().newPage();
+    await staleTab.addInitScript(() => {
+      Object.defineProperty(globalThis, "BroadcastChannel", { configurable: true, value: undefined });
+    });
     await staleTab.goto("/");
     await expect(staleTab.getByTestId("campaign-title-screen")).toBeVisible();
     const continueButton = staleTab.getByRole("button", { name: "つづきから" });
@@ -196,6 +234,9 @@ test.describe("production PWA shell", () => {
     await expect(page.getByRole("status")).toContainText("バックアップを作成しました。");
 
     const staleTab = await page.context().newPage();
+    await staleTab.addInitScript(() => {
+      Object.defineProperty(globalThis, "BroadcastChannel", { configurable: true, value: undefined });
+    });
     await staleTab.goto("/");
     const title = staleTab.getByTestId("campaign-title-screen");
     await expect(title.getByTestId("title-restore-backup-1")).toBeEnabled();
@@ -226,6 +267,9 @@ test.describe("production PWA shell", () => {
   test("does not import an older JSON save from a stale tab over newer campaign progress", async ({ page }) => {
     await startBattle(page);
     const staleTab = await page.context().newPage();
+    await staleTab.addInitScript(() => {
+      Object.defineProperty(globalThis, "BroadcastChannel", { configurable: true, value: undefined });
+    });
     await staleTab.goto("/");
     const title = staleTab.getByTestId("campaign-title-screen");
     await expect(title).toBeVisible();

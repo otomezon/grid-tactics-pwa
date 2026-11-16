@@ -269,3 +269,12 @@ JSONファイルのenvelope、saveVersion migration、章マップに対するsn
 - 章IDとsave migration／map validatorを通過したバックアップだけを書き出し対象とする。出力は既存 `createSaveFileContent` によるformat version 1のJSON envelopeなので、別ブラウザでも通常の「セーブファイル読み込み」から使用できる。
 - ダウンロードは明示的なユーザー操作だけで行い、IndexedDB、GameState、RNG、saveVersionを更新しない。元のローカルバックアップも保持する。
 - JSON envelope format version 1、GameStateSnapshot saveVersion 10、IndexedDB schema 1は維持する。
+
+
+## クロスタブのセーブ競合通知
+
+- `src/persistence/save-revision-channel.ts` は同一オリジンのBroadcastChannelを使い、`auto` セーブの `savedAt` revisionだけを別タブへ通知する。セーブ本文、ユニット、章、戦闘履歴はchannelへ流さない。
+- Appは読み込み済みrevisionより大きい通知を受け取ると `saveStatus: "conflict"` へ切り替え、通常のユニット操作・イベント確認・選択・保存／バックアップ操作を停止し、「最新のセーブを再読み込み」へ誘導する。
+- BroadcastChannelは早期検知のための通知経路であり、整合性の正本ではない。すべてのauto-save／明示的置換は引き続きIndexedDBの同じreadwrite transaction内でrevisionを照合する。非対応ブラウザーでは既存のtransaction競合拒否だけで動作する。
+- バックアップの作成や読み出しはauto-save revisionを変えないため通知しない。バックアップ復元／JSON import後は置換後のrevisionを別タブへ通知する。
+- GameState、saveVersion 10、IndexedDB schema 1に新しいfieldやmigrationを追加しない。
