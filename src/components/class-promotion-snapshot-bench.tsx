@@ -750,6 +750,119 @@ export function ClassPromotionSnapshotBench() {
     URL.revokeObjectURL(url);
   }
 
+  function handleDownloadPromotionManualPlaytestWorksheet() {
+    if (readyMatrixCount !== 21 || matrixRows.length !== 21) return;
+    if (matrixRows.some((row) => !row.ready || !row.candidate || !row.target)) return;
+
+    const headers = [
+      "case_id", "planned_branch", "manual_record_status",
+      "basic_class", "promoted_class", "profile", "target_percentile",
+      "candidate_source_classification", "classification_is_verified",
+      "snapshot_fingerprint", "source_file", "source_save_version",
+      "normalized_save_version", "migration_applied", "exported_at",
+      "chapter_id", "snapshot_turn", "snapshot_phase", "snapshot_rng_state",
+      "unit_id", "unit_name", "candidate_position_x", "candidate_position_y",
+      "pre_level", "pre_experience", "pre_current_hp", "pre_max_hp",
+      "pre_hp", "pre_strength", "pre_magic", "pre_skill", "pre_speed",
+      "pre_luck", "pre_defense", "pre_resistance", "pre_equipped_weapon_id",
+      "movement_type", "move", "usable_weapon_types_json",
+      "enemy_id", "enemy_name", "enemy_class", "enemy_hp", "enemy_position",
+      "manual_session_id", "played_at", "branch_commit", "observed_start_rng_state",
+      "post_level", "post_experience", "post_current_hp", "post_max_hp",
+      "post_hp", "post_strength", "post_magic", "post_skill", "post_speed",
+      "post_luck", "post_defense", "post_resistance", "post_equipped_weapon_id",
+      "requested_hp_bonus", "requested_strength_bonus", "requested_magic_bonus",
+      "requested_skill_bonus", "requested_speed_bonus", "requested_luck_bonus",
+      "requested_defense_bonus", "requested_resistance_bonus",
+      "applied_hp_bonus", "applied_strength_bonus", "applied_magic_bonus",
+      "applied_skill_bonus", "applied_speed_bonus", "applied_luck_bonus",
+      "applied_defense_bonus", "applied_resistance_bonus",
+      "approved_cap_hp", "approved_cap_strength", "approved_cap_magic",
+      "approved_cap_skill", "approved_cap_speed", "approved_cap_luck",
+      "approved_cap_defense", "approved_cap_resistance",
+      "physical_effective_attack", "magical_effective_attack", "forecast_damage",
+      "actual_damage", "hit_count", "miss_count", "critical_count", "follow_up_count",
+      "damage_taken", "evasion_notes", "hp_after_battle", "survived",
+      "enemy_attacks_until_defeat", "healing_items_used",
+      "reachable_tiles_count", "reachable_tiles_notes",
+      "attackable_targets_count", "attackable_targets_notes", "objective_contribution",
+      "promotion_seal_consumed", "promotion_action_consumed",
+      "promotion_turn_lost_action_notes", "next_turn_effective_actions",
+      "kills", "damage_prevented",
+      "enemy_phase_actions", "enemy_phase_attacks", "selected_unit_targeted",
+      "selected_unit_damage_taken", "party_damage", "ally_defeats",
+      "party_wipe", "player_phase_advanced",
+      "observations", "retest_conditions"
+    ];
+
+    const rows = matrixRows.flatMap((row) => {
+      const candidate = row.candidate!;
+      const target = row.target!;
+      const unit = candidate.unit;
+      const values: Record<string, string | number | boolean> = {
+        case_id: row.id,
+        manual_record_status: "未記録",
+        basic_class: row.classId,
+        promoted_class: row.promotedClassId,
+        profile: row.profile,
+        target_percentile: row.targetPercentile,
+        candidate_source_classification: getMatrixDataClassificationLabel(row.dataClassification),
+        classification_is_verified: "false",
+        snapshot_fingerprint: candidate.fingerprint,
+        source_file: candidate.fileName,
+        source_save_version: candidate.sourceSaveVersion,
+        normalized_save_version: candidate.normalizedSaveVersion,
+        migration_applied: candidate.migrated,
+        exported_at: candidate.exportedAt,
+        chapter_id: candidate.snapshot.chapterId,
+        snapshot_turn: candidate.snapshot.turn,
+        snapshot_phase: candidate.snapshot.phase,
+        snapshot_rng_state: candidate.snapshot.rngState,
+        unit_id: unit.id,
+        unit_name: unit.name,
+        candidate_position_x: unit.position.x,
+        candidate_position_y: unit.position.y,
+        pre_level: unit.level,
+        pre_experience: unit.experience,
+        pre_current_hp: unit.currentHp,
+        pre_max_hp: unit.stats.hp,
+        pre_hp: unit.stats.hp,
+        pre_strength: unit.stats.strength,
+        pre_magic: unit.stats.magic,
+        pre_skill: unit.stats.skill,
+        pre_speed: unit.stats.speed,
+        pre_luck: unit.stats.luck,
+        pre_defense: unit.stats.defense,
+        pre_resistance: unit.stats.resistance,
+        pre_equipped_weapon_id: unit.equippedWeaponId ?? "",
+        movement_type: unit.movementType,
+        move: unit.move,
+        usable_weapon_types_json: JSON.stringify(unit.usableWeaponTypes),
+        enemy_id: target.id,
+        enemy_name: target.name,
+        enemy_class: target.classId,
+        enemy_hp: target.currentHp,
+        enemy_position: formatUnitLocation(target)
+      };
+      return (["control", "promotion"] as const).map((plannedBranch) => ({
+        ...values,
+        planned_branch: plannedBranch
+      }));
+    });
+    const csv = serializeCsvDocument(headers, rows.map((row) =>
+      headers.map((header) => row[header] ?? "")
+    ));
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "class-promotion-manual-playtest-worksheet.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function handleDownloadPromotionSnapshotInventory() {
     if (snapshotInventoryRows.length === 0) return;
 
@@ -1111,6 +1224,20 @@ export function ClassPromotionSnapshotBench() {
             </select>
           </label>
           <span className="helper-text">実行結果: {completedMatrixCount}/21ケース</span>
+        </div>
+        <p className="helper-text">
+          実プレイ記録用テンプレートは、21ケースすべての候補・敵・条件を確認した後に出力できます。control／promotionの2枝で42行を作成し、観測結果・実施日時・実測seedなどの欄は空欄のままです。seed反復のシミュレーション結果は転記しません。データ区分は候補の自己申告であり、真正性を検証しません。
+        </p>
+        <div className="promotion-snapshot-matrix-actions">
+          <button
+            className="secondary-button"
+            type="button"
+            data-testid="promotion-playtest-manual-worksheet-export"
+            onClick={handleDownloadPromotionManualPlaytestWorksheet}
+            disabled={readyMatrixCount !== 21}
+          >
+            実プレイ記録用CSVテンプレートを書き出す
+          </button>
         </div>
         <div className="promotion-lab-table-wrap">
           <table className="promotion-lab-table promotion-snapshot-matrix-table" aria-label="21ケース統制評価の候補割当">
