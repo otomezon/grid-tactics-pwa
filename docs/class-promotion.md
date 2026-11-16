@@ -202,6 +202,12 @@ PR #163で出力した42行の記録用CSVを、ベンチ画面の「記入済�
 - 「条件一致ペア」は2枝の行と記載された共通条件の一致だけを意味する。実プレイ実施、記録の正確性、真正性、独立campaign、CP-04／05の数値承認を認定しない。「実プレイ由来」は引き続き利用者申告であり、classification_is_verifiedの値も認証には使わない。
 - ファイルはブラウザメモリ内でだけ解析し、明示的な破棄またはページ再読込で消える。GameState／RNG／IndexedDB／自動保存／saveVersion／network送信は変更しない。
 
+### 3.9 手動記録欄の完全性表示（PR #165）
+
+手動CSVの120列を `src/application/promotion-manual-playtest-worksheet-schema.ts` で一元管理し、出力側／取込監査側で共有する。監査では列不足をテンプレート構造エラーとして扱い、未入力値とは分ける。受理された枝ごとに入力済み／未入力の観測欄IDを展開でき、全受理枝行について列ごとの入力件数を一覧表示する。
+
+未入力項目は必須条件ではなく、任意・条件依存の観測欄を含む記入状況である。入力率で実プレイ完了・観測の正確性・真正性・独立campaign・CP-04／05の承認を判定しない。処理はブラウザメモリ内に限定し、CSV内容を永続化・送信せず、GameState／RNG／IndexedDB／saveVersionを変更しない。
+
 ## 4. 保存データ互換性の方針
 
 現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存のGameUnitフィールドだけを使う変更ではsaveVersionを上げずに済むが、現行saveVersion 10では、キャンペーン累計戦績・章間選択・キャンペーン戦闘履歴などもsnapshotに保持する。クラスチェンジ自体は既存のGameUnitフィールドを使い、専用の保存フィールドを追加していない。

@@ -13,6 +13,7 @@ import { getPromotionPlaytestEvidence, type PromotionPlaytestEvidence } from "..
 import { escapeCsvField } from "../application/escape-csv-field";
 import { serializeCsvDocument } from "../application/serialize-csv-document";
 import { auditPromotionManualPlaytestWorksheet, type PromotionManualPlaytestWorksheetAudit, type PromotionManualPlaytestBranchAudit } from "../application/audit-promotion-manual-playtest-worksheet";
+import { PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS } from "../application/promotion-manual-playtest-worksheet-schema";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
 
@@ -758,46 +759,7 @@ export function ClassPromotionSnapshotBench() {
     if (readyMatrixCount !== 21 || matrixRows.length !== 21) return;
     if (matrixRows.some((row) => !row.ready || !row.candidate || !row.target)) return;
 
-    const headers = [
-      "case_id", "planned_branch", "manual_record_status",
-      "basic_class", "promoted_class", "profile", "target_percentile",
-      "candidate_source_classification", "classification_is_verified",
-      "snapshot_fingerprint", "source_file", "source_save_version",
-      "normalized_save_version", "migration_applied", "exported_at",
-      "chapter_id", "snapshot_turn", "snapshot_phase", "snapshot_rng_state",
-      "unit_id", "unit_name", "candidate_position_x", "candidate_position_y",
-      "pre_level", "pre_experience", "pre_current_hp", "pre_max_hp",
-      "pre_hp", "pre_strength", "pre_magic", "pre_skill", "pre_speed",
-      "pre_luck", "pre_defense", "pre_resistance", "pre_equipped_weapon_id",
-      "movement_type", "move", "usable_weapon_types_json",
-      "enemy_id", "enemy_name", "enemy_class", "enemy_hp", "enemy_position",
-      "manual_session_id", "played_at", "branch_commit", "observed_start_rng_state",
-      "post_level", "post_experience", "post_current_hp", "post_max_hp",
-      "post_hp", "post_strength", "post_magic", "post_skill", "post_speed",
-      "post_luck", "post_defense", "post_resistance", "post_equipped_weapon_id",
-      "requested_hp_bonus", "requested_strength_bonus", "requested_magic_bonus",
-      "requested_skill_bonus", "requested_speed_bonus", "requested_luck_bonus",
-      "requested_defense_bonus", "requested_resistance_bonus",
-      "applied_hp_bonus", "applied_strength_bonus", "applied_magic_bonus",
-      "applied_skill_bonus", "applied_speed_bonus", "applied_luck_bonus",
-      "applied_defense_bonus", "applied_resistance_bonus",
-      "approved_cap_hp", "approved_cap_strength", "approved_cap_magic",
-      "approved_cap_skill", "approved_cap_speed", "approved_cap_luck",
-      "approved_cap_defense", "approved_cap_resistance",
-      "physical_effective_attack", "magical_effective_attack", "forecast_damage",
-      "actual_damage", "hit_count", "miss_count", "critical_count", "follow_up_count",
-      "damage_taken", "evasion_notes", "hp_after_battle", "survived",
-      "enemy_attacks_until_defeat", "healing_items_used",
-      "reachable_tiles_count", "reachable_tiles_notes",
-      "attackable_targets_count", "attackable_targets_notes", "objective_contribution",
-      "promotion_seal_consumed", "promotion_action_consumed",
-      "promotion_turn_lost_action_notes", "next_turn_effective_actions",
-      "kills", "damage_prevented",
-      "enemy_phase_actions", "enemy_phase_attacks", "selected_unit_targeted",
-      "selected_unit_damage_taken", "party_damage", "ally_defeats",
-      "party_wipe", "player_phase_advanced",
-      "observations", "retest_conditions"
-    ];
+    const headers = PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS;
 
     const rows: Array<Record<string, string | number | boolean>> = matrixRows.flatMap((row) => {
       const candidate = row.candidate!;
@@ -1065,8 +1027,18 @@ export function ClassPromotionSnapshotBench() {
             <tbody>{manualWorksheetAudit.cases.map((entry) => {
               const formatBranch = (branch: PromotionManualPlaytestBranchAudit | null) => {
                 if (!branch) return "行なし";
-                const observation = branch.observationFilledFieldCount === 0 ? "観測欄未入力" : "観測欄 " + branch.observationFilledFieldCount + "/" + branch.observationFieldCount + " 入力";
-                return (branch.manualRecordStatus || "状態空欄") + " · " + observation;
+                const observation = branch.observationFilledFieldCount + "/" + branch.observationFieldCount + "欄入力";
+                return (
+                  <div>
+                    <div>{(branch.manualRecordStatus || "状態空欄") + " · " + observation}</div>
+                    {branch.observationMissingFields.length > 0 && (
+                      <details className="promotion-manual-missing-fields">
+                        <summary>未入力欄 {branch.observationMissingFields.length}</summary>
+                        <ul>{branch.observationMissingFields.map((field) => <li key={field}><code>{field}</code></li>)}</ul>
+                      </details>
+                    )}
+                  </div>
+                );
               };
               const pairStatus = !entry.control || !entry.promotion ? "片枝不足" : entry.pairFieldMismatches.length > 0 ? "2枝あり・条件差" : "2枝あり・条件一致";
               const classification = entry.control?.candidateSourceClassification || entry.promotion?.candidateSourceClassification || "未記入";
@@ -1076,6 +1048,24 @@ export function ClassPromotionSnapshotBench() {
                 <td>{classification}</td></tr>;
             })}</tbody>
           </table></div>
+          <details className="promotion-manual-field-coverage" data-testid="promotion-manual-field-coverage">
+            <summary>観測欄ごとの入力状況（{manualWorksheetAudit.observationFieldCoverage.length}項目）</summary>
+            <p className="helper-text">受理できた枝行のうち、各CSV列に値が入力された件数です。空欄は一律の必須漏れではなく、項目ごとの収集状況を示します。状況に合わない項目は未記入のままで構いません。</p>
+            <div className="promotion-lab-table-wrap">
+              <table className="promotion-lab-table" aria-label="観測欄ごとの入力状況">
+                <thead><tr><th>CSV列</th><th>入力済み枝行</th><th>空欄枝行</th></tr></thead>
+                <tbody>
+                  {manualWorksheetAudit.observationFieldCoverage.map((entry) => (
+                    <tr key={entry.field}>
+                      <th scope="row"><code>{entry.field}</code></th>
+                      <td>{entry.populatedRows}/{manualWorksheetAudit.acceptedRowCount}</td>
+                      <td>{entry.emptyRows}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
           <div className="promotion-snapshot-matrix-actions"><button className="secondary-button" type="button" onClick={clearManualWorksheetAudit}>取り込んだCSVを破棄</button></div>
         </>}
       </section>

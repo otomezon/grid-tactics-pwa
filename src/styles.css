@@ -1815,6 +1815,22 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   min-height: 18px;
   accent-color: #8cc9b8;
 }
+.promotion-manual-missing-fields { margin-top: 5px; font-size: .66rem; }
+.promotion-manual-missing-fields summary,
+.promotion-manual-field-coverage > summary { color: #b9d8df; cursor: pointer; font-weight: 750; }
+.promotion-manual-missing-fields ul {
+  max-height: 150px; overflow: auto; margin: 6px 0 0; padding-left: 1.1rem;
+  color: var(--text-muted); line-height: 1.45; white-space: normal;
+}
+.promotion-manual-missing-fields code,
+.promotion-manual-field-coverage code { font-size: .66rem; overflow-wrap: anywhere; }
+.promotion-manual-field-coverage {
+  display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(120, 151, 170, .22);
+}
+.promotion-manual-field-coverage > summary { font-size: .78rem; }
+.promotion-manual-field-coverage .promotion-lab-table { min-width: 460px; }
+.promotion-manual-field-coverage .promotion-lab-table th,
+.promotion-manual-field-coverage .promotion-lab-table td { white-space: nowrap; }
 .promotion-snapshot-matrix-actions { align-items: center; }
 .promotion-snapshot-matrix-actions button { min-height: 42px; }
 .promotion-playtest-matrix-results { min-width: 0; }
