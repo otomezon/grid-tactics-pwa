@@ -954,3 +954,97 @@ test("updates the operation guide with the current tactical situation", async ({
   });
   await expectMobileViewport(page, input);
 });
+
+test("paginates long campaign battle histories without truncating filtered CSV exports", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const input: InteractionInput = testInfo.project.name === "webkit-mobile" ? "tap" : "click";
+  if (input === "tap") await page.setViewportSize({ width: 320, height: 720 });
+
+  await startCampaign(page, input);
+  const originalState = await readAutoSave(page) as SaveSnapshot;
+  const lastSequence = originalState.campaignBattleLog.reduce(
+    (maximum, entry) => typeof entry.sequence === "number" ? Math.max(maximum, entry.sequence) : maximum,
+    0
+  );
+  const addedEntries = Array.from({ length: 123 }, (_, index) => ({
+    sequence: lastSequence + index + 1,
+    chapterId: originalState.chapterId,
+    turn: originalState.turn,
+    kind: "player-action",
+    action: "wait",
+    actorId: "unit_001",
+    actorName: "主人公",
+    detail: "ページング試験 " + String(index + 1).padStart(3, "0")
+  }));
+  const populatedState: SaveSnapshot = {
+    ...originalState,
+    campaignBattleLog: [...originalState.campaignBattleLog, ...addedEntries]
+  };
+  await writeAutoSave(page, populatedState);
+  await page.reload();
+  await continueCampaign(page, input);
+
+  const totalEntries = populatedState.campaignBattleLog.length;
+  const historyToggle = page.getByRole("button", {
+    name: "キャンペーン戦闘記録 " + totalEntries + "件"
+  });
+  await expect(historyToggle).toBeVisible();
+  await activate(historyToggle, input);
+  const panel = page.getByTestId("campaign-battle-history");
+  await expect(panel).toBeVisible();
+  const rows = panel.getByTestId("campaign-battle-log-entry");
+  const pageStatus = panel.getByTestId("campaign-history-page-status");
+  const pagination = panel.getByTestId("campaign-battle-history-pagination");
+  const firstSequence = populatedState.campaignBattleLog[0]!.sequence;
+  const expectedAt = (index: number) => String(populatedState.campaignBattleLog[index]!.sequence);
+
+  await expect(rows).toHaveCount(50);
+  await expect(pageStatus).toContainText("1–50 / " + totalEntries + "件を表示");
+  await expect(rows.first()).toHaveAttribute("data-sequence", expectedAt(0));
+  await expect(rows.last()).toHaveAttribute("data-sequence", expectedAt(49));
+  await expect(pagination.getByRole("button", { name: "最初のページ" })).toBeDisabled();
+  await expect(pagination.getByRole("button", { name: "前のページ" })).toBeDisabled();
+
+  await activate(pagination.getByRole("button", { name: "次のページ" }), input);
+  await expect(rows).toHaveCount(50);
+  await expect(pageStatus).toContainText("51–100 / " + totalEntries + "件を表示");
+  await expect(rows.first()).toHaveAttribute("data-sequence", expectedAt(50));
+  await expect(rows.last()).toHaveAttribute("data-sequence", expectedAt(99));
+
+  await activate(pagination.getByRole("button", { name: "最後のページ" }), input);
+  await expect(rows).toHaveCount(totalEntries - 100);
+  await expect(pageStatus).toContainText("101–" + totalEntries + " / " + totalEntries + "件を表示");
+  await expect(rows.first()).toHaveAttribute("data-sequence", expectedAt(100));
+  await expect(rows.last()).toHaveAttribute("data-sequence", expectedAt(totalEntries - 1));
+  await expect(pagination.getByRole("button", { name: "次のページ" })).toBeDisabled();
+
+  await activate(pagination.getByRole("button", { name: "前のページ" }), input);
+  await expect(pageStatus).toContainText("51–100 / " + totalEntries + "件を表示");
+  const historySearch = panel.getByRole("searchbox", { name: "履歴内を検索" });
+  await historySearch.fill("ページング試験 123");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("ページング試験 123");
+  await expect(pageStatus).toContainText("1 / " + totalEntries + "件を表示");
+  await expect(pagination).toHaveCount(0);
+
+  await panel.getByRole("button", { name: "絞り込みを解除" }).click();
+  await expect(rows).toHaveCount(50);
+  await expect(pageStatus).toContainText("1–50 / " + totalEntries + "件を表示");
+  await expectMobileViewport(page, input);
+
+  const csvButton = panel.getByRole("button", { name: "時系列ログをCSV出力" });
+  const downloadPromise = page.waitForEvent("download");
+  await activate(csvButton, input);
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-\\d{4}-\\d{2}-\\d{2}\\.csv$/);
+  const downloadPath = await download.path();
+  if (!downloadPath) throw new Error("The campaign history CSV download has no temporary file path.");
+  const csv = await readFile(downloadPath, "utf8");
+  expect(csv.startsWith("\\uFEFF")).toBe(true);
+  expect(csv).toContain("ページング試験 001");
+  expect(csv).toContain("ページング試験 123");
+  expect(csv.split("ページング試験 ").length - 1).toBe(123);
+
+  expect(await readAutoSave(page)).toEqual(populatedState);
+  await expectMobileViewport(page, input);
+});
