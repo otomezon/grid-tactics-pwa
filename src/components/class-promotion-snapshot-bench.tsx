@@ -32,7 +32,7 @@ interface ImportedCandidate {
   fileName: string;
   fingerprint: string;
   /** Canonical save content plus unit ID; the same unit in a renamed file remains one candidate. */
-  snapshotIdentity: string;
+  unitSnapshotIdentity: string;
   snapshot: GameStateSnapshot;
   unit: GameUnit;
   eligible: boolean;
@@ -54,10 +54,10 @@ type MatrixDataClassification = "unconfirmed" | "actual-play" | "synthetic";
 interface PromotionPlaytestClassCoverage {
   candidateCount: number;
   eligibleCandidateCount: number;
-  distinctSnapshotCount: number;
-  eligibleDistinctSnapshotCount: number;
-  campaignHistorySnapshotCount: number;
-  unitBattleTotalsSnapshotCount: number;
+  distinctUnitSnapshotCount: number;
+  eligibleDistinctUnitSnapshotCount: number;
+  campaignHistoryUnitSnapshotCount: number;
+  unitBattleTotalsUnitSnapshotCount: number;
 }
 
 interface PromotionPlaytestMatrixResult {
@@ -149,7 +149,7 @@ function getCandidatesFromSnapshot(
 ): ImportedFileResult {
   const snapshot = importedSave.snapshot;
   const fingerprint = snapshotFingerprint(snapshot);
-  const snapshotIdentity = serializeSnapshotIdentity(snapshot);
+  const unitSnapshotIdentity = serializeSnapshotIdentity(snapshot);
   const candidates = snapshot.units
     .filter((unit) =>
       unit.faction === "player" &&
@@ -163,7 +163,7 @@ function getCandidatesFromSnapshot(
         key: fingerprint + ":" + unit.id + ":" + fileName,
         fileName,
         fingerprint,
-        snapshotIdentity: snapshotIdentity + "\u0000" + JSON.stringify(unit.id),
+        unitSnapshotIdentity: unitSnapshotIdentity + "\u0000" + JSON.stringify(unit.id),
         snapshot,
         unit,
         eligible: reasons.length === 0,
@@ -355,10 +355,10 @@ export function ClassPromotionSnapshotBench() {
           candidate.sourceSaveVersion
         );
         if (evidence.campaignLogTrackingAvailable && evidence.campaignLogEntries > 0) {
-          campaignHistorySnapshots.add(candidate.snapshotIdentity);
+          campaignHistorySnapshots.add(candidate.unitSnapshotIdentity);
         }
         if (evidence.unitBattleTotalsTrackingAvailable && evidence.selectedUnitBattleTotals) {
-          unitBattleTotalsSnapshots.add(candidate.snapshotIdentity);
+          unitBattleTotalsSnapshots.add(candidate.unitSnapshotIdentity);
         }
       }
 
@@ -366,10 +366,10 @@ export function ClassPromotionSnapshotBench() {
         classId: slot.classId,
         candidateCount: slot.candidateCount,
         eligibleCandidateCount: slot.eligibleCandidateCount,
-        distinctSnapshotCount: slot.distinctSnapshotCount,
-        eligibleDistinctSnapshotCount: slot.eligibleDistinctSnapshotCount,
-        campaignHistorySnapshotCount: campaignHistorySnapshots.size,
-        unitBattleTotalsSnapshotCount: unitBattleTotalsSnapshots.size
+        distinctUnitSnapshotCount: slot.distinctUnitSnapshotCount,
+        eligibleDistinctUnitSnapshotCount: slot.eligibleDistinctUnitSnapshotCount,
+        campaignHistoryUnitSnapshotCount: campaignHistorySnapshots.size,
+        unitBattleTotalsUnitSnapshotCount: unitBattleTotalsSnapshots.size
       };
     }), [matrixSlots]);
   const matrixCoverageByClass = new Map(matrixCoverageRows.map((row) => [row.classId, row] as const));
@@ -383,7 +383,7 @@ export function ClassPromotionSnapshotBench() {
     const usageCounts = new Map<string, number>();
     for (const entry of selectedCandidates) {
       if (!entry.candidate) continue;
-      const usageKey = entry.slot.classId + ":" + entry.candidate.snapshotIdentity;
+      const usageKey = entry.slot.classId + ":" + entry.candidate.unitSnapshotIdentity;
       usageCounts.set(usageKey, (usageCounts.get(usageKey) ?? 0) + 1);
     }
 
@@ -391,19 +391,19 @@ export function ClassPromotionSnapshotBench() {
       const targets = candidate ? getAttackableEnemyTargets(candidate) : [];
       const chosenTargetId = matrixTargetSelections[slot.id];
       const target = targets.find((enemy) => enemy.id === chosenTargetId) ?? targets[0];
-      const usageKey = candidate ? slot.classId + ":" + candidate.snapshotIdentity : "";
+      const usageKey = candidate ? slot.classId + ":" + candidate.unitSnapshotIdentity : "";
       const duplicateCandidate = candidate !== null && (usageCounts.get(usageKey) ?? 0) > 1;
       const confirmed = matrixConfirmations[slot.id] === true;
       const eligible = candidate?.eligible === true;
       const ready =
-        slot.eligibleDistinctSnapshotCount >= 3 &&
+        slot.eligibleDistinctUnitSnapshotCount >= 3 &&
         candidate !== null &&
         !duplicateCandidate &&
         eligible &&
         target !== undefined &&
         confirmed;
       let status = "実行可能";
-      if (slot.eligibleDistinctSnapshotCount < 3) status = "異なる有効snapshot不足（" + slot.eligibleDistinctSnapshotCount + "/3）";
+      if (slot.eligibleDistinctUnitSnapshotCount < 3) status = "異なる有効snapshot不足（" + slot.eligibleDistinctUnitSnapshotCount + "/3）";
       else if (!candidate) status = "候補未選択";
       else if (duplicateCandidate) status = "同一snapshot内容が複数profileに重複";
       else if (!eligible) status = candidate.reasons.join("／");
@@ -608,10 +608,10 @@ export function ClassPromotionSnapshotBench() {
         entry.exportedAt,
         entry.classCoverage.candidateCount,
         entry.classCoverage.eligibleCandidateCount,
-        entry.classCoverage.distinctSnapshotCount,
-        entry.classCoverage.eligibleDistinctSnapshotCount,
-        entry.classCoverage.campaignHistorySnapshotCount,
-        entry.classCoverage.unitBattleTotalsSnapshotCount,
+        entry.classCoverage.distinctUnitSnapshotCount,
+        entry.classCoverage.eligibleDistinctUnitSnapshotCount,
+        entry.classCoverage.campaignHistoryUnitSnapshotCount,
+        entry.classCoverage.unitBattleTotalsUnitSnapshotCount,
         entry.evidence.campaignLogTrackingAvailable ? "true" : "false",
         entry.evidence.unitBattleTotalsTrackingAvailable ? "true" : "false",
         entry.evidence.campaignLogEntries, entry.evidence.campaignChapterCount,
@@ -955,10 +955,10 @@ export function ClassPromotionSnapshotBench() {
                     <th scope="row">{getClassDisplayName(row.classId)}</th>
                     <td>{row.candidateCount}</td>
                     <td>{row.eligibleCandidateCount}</td>
-                    <td>{row.distinctSnapshotCount}</td>
-                    <td>{row.eligibleDistinctSnapshotCount}/3</td>
-                    <td>{row.campaignHistorySnapshotCount}</td>
-                    <td>{row.unitBattleTotalsSnapshotCount}</td>
+                    <td>{row.distinctUnitSnapshotCount}</td>
+                    <td>{row.eligibleDistinctUnitSnapshotCount}/3</td>
+                    <td>{row.campaignHistoryUnitSnapshotCount}</td>
+                    <td>{row.unitBattleTotalsUnitSnapshotCount}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1068,7 +1068,7 @@ export function ClassPromotionSnapshotBench() {
                       <input
                         type="checkbox"
                         checked={row.confirmed}
-                        disabled={!row.candidate || !row.target || !row.candidate.eligible || row.eligibleDistinctSnapshotCount < 3 || row.duplicateCandidate}
+                        disabled={!row.candidate || !row.target || !row.candidate.eligible || row.eligibleDistinctUnitSnapshotCount < 3 || row.duplicateCandidate}
                         onChange={(event) => {
                           setMatrixConfirmations((current) => ({ ...current, [row.id]: event.target.checked }));
                           setMatrixResults({});
