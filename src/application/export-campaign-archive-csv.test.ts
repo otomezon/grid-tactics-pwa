@@ -45,7 +45,7 @@ describe("buildCampaignBattleHistoryCsv", () => {
     expect(filteredCsv).toContain('"出力記録件数"');
     expect(filteredCsv).toContain('"絞り込み結果","1","3","5000","10","15","9","3","いいえ","chapter_01_map","player","all","主人公"');
     const allCsv = buildCampaignBattleHistoryCsv(retained, { ...context, scope: "all-retained" });
-    expect(allCsv).toContain('"保持ログ全件","3","3","5000","10","15","9","3","いいえ","chapter_01_map","player","主人公"');
+    expect(allCsv).toContain('"保持ログ全件","3","3","5000","10","15","9","3","いいえ","chapter_01_map","player","all","主人公"');
     expect(allCsv).toContain('"味方02"');
     expect(allCsv).toContain('"味方03"');
   });
