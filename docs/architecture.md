@@ -66,7 +66,7 @@ src/
 | domain/progression | EXP閾値、個別成長判定、クラス昇格条件・能力ボーナス適用 | 実装あり。クラス上限・昇格値は呼び出し側の仮設定データ |
 | application | プレイヤー／敵の攻撃、クラスチェンジ、章報酬付与、勝利後の次章state構築、出撃配置検証、出撃前の装備変更、敵AI／フェイズ進行、目標進行・地形情報・戦況ガイドの読み取り専用projection | 出撃前装備変更は既存のweapon ownership／class／type compatibilityを再利用し、active／reserveを不変更新。保存は既存の配置確定時のみ。報酬は章データで明示したアイテムのみ適用 |
 | ui | 出撃準備から戦闘・地形判断・ターン進行・保存を6段階で説明する任意表示の操作ガイド（`src/components/operation-guide.tsx`）と、現在状況に応じた次の操作案内・章内3項目チェックリストを含む。いずれも読み取り専用でセーブ非変更。章別マップ（狭幅画面では各40pxタイルの横スクロール領域）、目標進行・マス情報パネル、移動可能マスの累計コスト／経路プレビュー、戦闘予測／セッション内時系列戦闘履歴、装備／所持品／クラスチェンジ、結果／報酬、次章開始、出撃準備／候補詳細 | 試作実装。出撃候補の詳細パネルはPR #17でmainに実装済み。狭幅マップ操作はPR #44でmainに実装済み。PR #46／#47で320px幅の横スワイプとスワイプ後の右端ユニット選択をChromium E2Eで検証済み（実機未確認）。第2章は遷移検証用 |
-| persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1〜9→10 migration、JSON export/import、browser persistent-storage permission status/request | 3世代backup／復元、export/import、タイトル画面からの永続ストレージ要求を実装。永続化要求はDB schema／saveVersionを変更せず、利用者の明示操作時だけ実行する |
+| persistence | IndexedDB auto slot／backup-1〜backup-3、saveVersion 1〜9→10 migration、JSON export/import、browser persistent-storage permission status/request | 3世代backup／復元、export/import、タイトル画面からの永続ストレージ要求を実装。永続化要求はDB schema／saveVersionを変更せず、利用者の明示操作時だけ実行する。PR #177では既存backup dataを現在のvalidator／migrationで読み取り専用に投影し、各世代の章・ターン・フェイズ・勝敗・保存形式をタイトル／戦闘画面へ表示する。復元確認は同じ検証済みsnapshotを要約し、自動セーブの第1世代退避・復元元保持・3世代上限・stale revision拒否を説明する。新規保存項目やtransaction経路は追加しない |
 | pwa | manifest、静的アセットprecache、インストールプロンプト、standalone状態表示、更新待機・明示適用UI | `registerType: "prompt"`。Appの保存／進行状態projectionから安全画面だけ更新を許可。戦闘中はwaiting workerを保持して自動再読み込みしない |
 
 ## マップオブジェクトと既存イベントの関連付け
