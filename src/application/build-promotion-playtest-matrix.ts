@@ -90,7 +90,7 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
           left.percentile - right.percentile ||
           left.candidate.key.localeCompare(right.candidate.key)
         );
-      const usedSnapshotIdentities = new Set<string>();
+      const usedCandidateUnitIdentities = new Set<string>();
 
       return PROMOTION_PLAYTEST_PROFILES.map((profile) => {
         let suggestedCandidate: T | null = null;
@@ -98,7 +98,7 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
 
         if (eligibleDistinctUnitSnapshotCount >= 3) {
           const available = ranked
-            .filter((entry) => !usedSnapshotIdentities.has(getCandidateUnitIdentity(entry.candidate)))
+            .filter((entry) => !usedCandidateUnitIdentities.has(getCandidateUnitIdentity(entry.candidate)))
             .sort((left, right) =>
               Math.abs(left.percentile - profile.targetPercentile) -
                 Math.abs(right.percentile - profile.targetPercentile) ||
@@ -109,7 +109,7 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
           if (selected) {
             suggestedCandidate = selected.candidate;
             suggestedPercentile = selected.percentile;
-            usedSnapshotIdentities.add(getCandidateUnitIdentity(selected.candidate));
+            usedCandidateUnitIdentities.add(getCandidateUnitIdentity(selected.candidate));
           }
         }
 
