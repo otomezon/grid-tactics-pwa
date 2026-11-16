@@ -106,6 +106,20 @@ function getMatrixDataClassificationLabel(value: MatrixDataClassification): stri
 }
 
 /** A short deterministic label only; this is not a cryptographic hash. */
+/** Canonical, exact JSON identity: ignores object key ordering without relying on a short display hash. */
+function serializeSnapshotIdentity(value: unknown): string {
+  if (Array.isArray(value)) {
+    return "[" + value.map(serializeSnapshotIdentity).join(",") + "]";
+  }
+  if (typeof value === "object" && value !== null) {
+    const record = value as Record<string, unknown>;
+    return "{" + Object.keys(record).sort()
+      .map((key) => JSON.stringify(key) + ":" + serializeSnapshotIdentity(record[key]))
+      .join(",") + "}";
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
 function snapshotFingerprint(snapshot: GameStateSnapshot): string {
   const source = JSON.stringify(snapshot);
   let hash = 0x811c9dc5;
@@ -135,7 +149,7 @@ function getCandidatesFromSnapshot(
 ): ImportedFileResult {
   const snapshot = importedSave.snapshot;
   const fingerprint = snapshotFingerprint(snapshot);
-  const snapshotIdentity = JSON.stringify(snapshot);
+  const snapshotIdentity = serializeSnapshotIdentity(snapshot);
   const candidates = snapshot.units
     .filter((unit) =>
       unit.faction === "player" &&
