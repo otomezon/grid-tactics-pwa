@@ -747,6 +747,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(incomingArchive.getByTestId("campaign-incoming-strike-entry").first()).toBeVisible();
   await expect(incomingArchive).toContainText("被攻撃strike");
   await expect(incomingArchive).toContainText("被ダメージ");
+  await expectMobileViewport(page, input);
   if (input === "click") {
     const incomingDownloadPromise = page.waitForEvent("download");
     await incomingArchive.getByRole("button", { name: "被攻撃集計をCSV出力" }).click();
