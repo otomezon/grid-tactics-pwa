@@ -310,3 +310,12 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - 両枝に値があるペアのうち、既存比較ロジックで有限の数値差を算出できる件数と、値はあるが数値差を出せない件数を分ける。値や数値差を平均・順位化しない。
 - 条件メタデータ不一致の件数は独立した重複可能なカウントで、条件差のあるケースも入力状況の各分類に含まれる。実行コンテキスト（セッションID・日時・commit・実行時seed）は観測欄集計から除外する。
 - 集計CSVは利用者の明示操作によるローカルdownloadのみ。CSV入力・集計値はブラウザメモリ内で扱い、GameState／RNG／IndexedDB／自動保存／saveVersion 10／IndexedDB schema 1／ネットワーク送信を変更しない。
+
+
+## クロスタブのセーブ競合通知
+
+- 通常のauto-saveとバックアップ復元／JSON importが成功した後、同一オリジンの別タブへ既存 `savedAt` revisionだけをBroadcastChannelで通知する。
+- 古いタブが新しいrevisionを受け取ると、次の保存操作を待たず `conflict` 表示へ切り替えて操作をロックする。ユーザーは「最新のセーブを再読み込み」から最新状態へ戻れる。
+- channelは通知専用であり、通知内容はrevision metadataだけ。すべての保存・置換の正当性は従来どおりIndexedDB transaction内のrevision照合で検証する。BroadcastChannel非対応時も保存競合を上書きできない。
+- E2EはBroadcastChannelを使う即時通知経路に加えて、BroadcastChannelを無効化したtransaction-level fallbackでauto-save／backup restore／JSON importの拒否とデータ不変を検証する。
+- GameState saveVersion 10／IndexedDB schema 1を維持する。
