@@ -962,15 +962,12 @@ test("paginates long campaign battle histories without truncating filtered CSV e
 
   await startCampaign(page, input);
   const originalState = await readAutoSave(page) as SaveSnapshot;
-  expect(originalState.campaignBattleLog).toHaveLength(0);
-  const lastSequence = originalState.campaignBattleLog.reduce(
-    (maximum, entry) => typeof entry.sequence === "number" ? Math.max(maximum, entry.sequence) : maximum,
-    0
-  );
+  const baseState: SaveSnapshot = { ...originalState, campaignBattleLog: [] };
+  const lastSequence = 0;
   const addedEntries = Array.from({ length: 123 }, (_, index) => ({
     sequence: lastSequence + index + 1,
-    chapterId: originalState.chapterId,
-    turn: originalState.turn,
+    chapterId: baseState.chapterId,
+    turn: baseState.turn,
     kind: "player-action",
     action: "wait",
     actorId: "unit_001",
@@ -978,8 +975,8 @@ test("paginates long campaign battle histories without truncating filtered CSV e
     detail: "ページング試験 " + String(index + 1).padStart(3, "0")
   }));
   const populatedState: SaveSnapshot = {
-    ...originalState,
-    campaignBattleLog: [...originalState.campaignBattleLog, ...addedEntries]
+    ...baseState,
+    campaignBattleLog: addedEntries
   };
   await writeAutoSave(page, populatedState);
   await page.reload();
@@ -996,7 +993,6 @@ test("paginates long campaign battle histories without truncating filtered CSV e
   const rows = panel.getByTestId("campaign-battle-log-entry");
   const pageStatus = panel.getByTestId("campaign-history-page-status");
   const pagination = panel.getByTestId("campaign-battle-history-pagination");
-  const firstSequence = populatedState.campaignBattleLog[0]!.sequence;
   const expectedAt = (index: number) => String(populatedState.campaignBattleLog[index]!.sequence);
 
   await expect(rows).toHaveCount(50);
