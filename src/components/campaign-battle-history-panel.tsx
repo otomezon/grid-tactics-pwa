@@ -235,7 +235,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
             ))}
           </ul>
         ) : (
-          <p className="helper-text">表示中の記録に確定した撃破はありません。</p>
+          <p className="helper-text">絞り込み結果に確定した撃破はありません。</p>
         )}
       </section>
 
