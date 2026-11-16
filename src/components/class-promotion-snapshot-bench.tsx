@@ -372,7 +372,7 @@ export function ClassPromotionSnapshotBench() {
         unitBattleTotalsSnapshotCount: unitBattleTotalsSnapshots.size
       };
     }), [matrixSlots]);
-  const matrixCoverageByClass = new Map(matrixCoverageRows.map((row) => [row.classId, row]));
+  const matrixCoverageByClass = new Map(matrixCoverageRows.map((row) => [row.classId, row] as const));
   const matrixRows = useMemo(() => {
     const selectedCandidates = matrixSlots.map((slot) => {
       const selectedKey = matrixCandidateSelections[slot.id];
