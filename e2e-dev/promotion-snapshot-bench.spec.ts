@@ -1,6 +1,56 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
+function parseCsvRecords(content: string): string[][] {
+  const source = content.startsWith("\\ufeff") ? content.slice(1) : content;
+  const records: string[][] = [];
+  let record: string[] = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index]!;
+    if (quoted) {
+      if (character === '"' && source[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+      continue;
+    }
+
+    if (character === '"' && field.length === 0) {
+      quoted = true;
+    } else if (character === ",") {
+      record.push(field);
+      field = "";
+    } else if (character === "\\r" && source[index + 1] === "\\n") {
+      record.push(field);
+      records.push(record);
+      record = [];
+      field = "";
+      index += 1;
+    } else if (character === "\\n") {
+      record.push(field);
+      records.push(record);
+      record = [];
+      field = "";
+    } else {
+      field += character;
+    }
+  }
+
+  if (field.length > 0 || record.length > 0) {
+    record.push(field);
+    records.push(record);
+  }
+  if (quoted) throw new Error("CSV contains an unterminated quoted field.");
+  return records;
+}
+
 function makePromotionSnapshotFile() {
   const snapshot = {
     saveVersion: 10,
@@ -281,6 +331,12 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("enemy_phase_party_wipe_promotion_only");
   expect(csv).toContain("enemy_phase_player_phase_advance_promotion_minus_control_pt");
   expect(csv).toContain("未確認");
+  const csvRecords = parseCsvRecords(csv);
+  expect(csvRecords).toHaveLength(22);
+  expect(csvRecords[0]).toHaveLength(162);
+  for (const record of csvRecords.slice(1)) {
+    expect(record).toHaveLength(csvRecords[0]!.length);
+  }
 });
  
 test("imports an exported save locally and compares the actual unit snapshot with a detached promotion copy", async ({ page }) => {
