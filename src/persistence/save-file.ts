@@ -54,8 +54,15 @@ export function createSaveBackupFileName(
   return "grid-tactics-" + safeChapterId + "-backup-" + generation + "-" + date + ".json";
 }
 
-/** Reads the portable envelope. Game-state validation and migration happen separately. */
-export function parseSaveFileContent(content: string): unknown {
+/** Metadata retained when a portable save envelope is inspected. */
+export interface ParsedSaveFileEnvelope {
+  formatVersion: typeof SAVE_FILE_FORMAT_VERSION;
+  exportedAt: string;
+  data: unknown;
+}
+
+/** Reads and validates the portable envelope without assuming its game snapshot is current. */
+export function parseSaveFileEnvelopeContent(content: string): ParsedSaveFileEnvelope {
   let parsed: unknown;
   try {
     parsed = JSON.parse(content) as unknown;
@@ -74,5 +81,14 @@ export function parseSaveFileContent(content: string): unknown {
     throw new Error("Grid Tacticsの対応するセーブファイル形式ではありません。");
   }
 
-  return parsed.data;
+  return {
+    formatVersion: SAVE_FILE_FORMAT_VERSION,
+    exportedAt: parsed.exportedAt,
+    data: parsed.data
+  };
+}
+
+/** Reads the portable envelope. Game-state validation and migration happen separately. */
+export function parseSaveFileContent(content: string): unknown {
+  return parseSaveFileEnvelopeContent(content).data;
 }

@@ -254,7 +254,7 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 ## 実セーブsnapshotの取り込み・比較（開発専用）
 
 - 起動: `npm run dev` の後、`http://localhost:5173/?promotion-snapshots=1` を開く。
-- 入力: セーブ管理から書き出したJSON export（envelope version 1／現行GameState saveVersion 10）を複数選択する。旧saveVersion 1〜9のJSONも、取込時に既存migrationでv10へ変換してから検証する。ゲーム内でLv.10以上の基本職ユニットが自軍フェイズ・未移動・未行動のタイミングで書き出すと、昇格コマンドの比較候補になる。
+- 入力: セーブ管理から書き出したJSON export（envelope version 1／GameState saveVersion 1〜10）を複数選択する。旧saveVersion 1〜9は既存migrationでv10へ変換してから検証する。比較記録には元saveVersion、export日時、migration有無を残す。候補は生存中の出撃済み基本職Lv.10以上に限定する。
 - 検証: snapshotのchapterIdを既存registryから解決し、対象mapに対するsave validatorを通す。未登録章、不正JSON、旧／未知saveVersion、不正なunit／item／positionを拒否する。
 - profile整理: 基本職ごとに読み込んだLv.10+出撃ユニットの件数を集計する。3件以上でのみ8能力の同クラス内percentile rank平均を表示する。3件未満は分布データ不足とし、low／median／highを自動選定しない。候補を低／中央値／上位へ割り当てる判断は人が記録表で行う。
 - control／promotion: controlは元snapshot、promotionはコピーへ既存application commandを実行した結果。promotion_sealが元snapshotに無い場合は、比較コピーの所持品へだけ一時挿入し、コピー内で消費する。これは試験用で、章報酬／既存セーブの所持品へ反映しない。

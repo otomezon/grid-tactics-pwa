@@ -100,6 +100,40 @@ function makePromotionSnapshotFile() {
   };
 }
 
+
+function makeLegacyVersionNinePromotionSnapshotFile() {
+  const envelope = makePromotionSnapshotFile();
+  return { ...envelope, data: { ...envelope.data, saveVersion: 9 } };
+}
+
+function makeLegacyVersionOnePromotionSnapshotFile() {
+  const envelope = makePromotionSnapshotFile();
+  const {
+    saveVersion: _saveVersion,
+    rngState: _rngState,
+    reserveUnits: _reserveUnits,
+    campaignUnitBattleRecords: _campaignUnitBattleRecords,
+    firedMapEventIds: _firedMapEventIds,
+    acknowledgedMapEventIds: _acknowledgedMapEventIds,
+    mapEventChoices: _mapEventChoices,
+    campaignChoices: _campaignChoices,
+    campaignBattleLog: _campaignBattleLog,
+    ...legacy
+  } = envelope.data;
+
+  return {
+    ...envelope,
+    data: {
+      ...legacy,
+      saveVersion: 1,
+      units: legacy.units.map(({ equippedWeaponId: _equippedWeaponId, ...unit }) => ({
+        ...unit,
+        inventory: ["prototype_weapon"]
+      }))
+    }
+  };
+}
+
 function makePromotionMatrixSnapshotFile(classId: string, profileIndex: number) {
   const envelope = makePromotionSnapshotFile();
   const snapshot = structuredClone(envelope.data);
@@ -221,6 +255,10 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("promotion_selected_unit_survival_rate");
   expect(csv).toContain("control_battle_defeat_rate");
   expect(csv).toContain("control_party_wipe_rate");
+  expect(csv).toContain("source_save_version");
+  expect(csv).toContain("normalized_save_version");
+  expect(csv).toContain("migration_applied");
+  expect(csv).toContain("exported_at");
   expect(csv).toContain("未確認");
 });
  
@@ -283,6 +321,49 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   });
   expect(databases).toEqual([]);
 
+  await page.reload();
+  await expect(page.getByTestId("promotion-snapshot-bench")).toContainText("0候補");
+});
+
+
+test("imports v1 and v9 portable saves through in-memory migration and retains source provenance", async ({ page }) => {
+  await page.goto("/?promotion-snapshots=1");
+  const bench = page.getByTestId("promotion-snapshot-bench");
+  const files = [
+    {
+      name: "legacy-v1.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(makeLegacyVersionOnePromotionSnapshotFile()))
+    },
+    {
+      name: "legacy-v9.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(makeLegacyVersionNinePromotionSnapshotFile()))
+    }
+  ];
+
+  await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles(files);
+  await expect(bench).toContainText("2候補");
+
+  const selected = bench.getByTestId("promotion-snapshot-selected");
+  await expect(selected).toContainText("1 → 10（移行済み）");
+  await expect(selected).toContainText("export日時");
+  await expect(selected).toContainText("2026-11-12T00:00:00.000Z");
+
+  const candidateSelect = bench.getByLabel("比較するユニット");
+  const optionTexts = await candidateSelect.locator("option").allTextContents();
+  const v9Index = optionTexts.findIndex((option) => option.includes("legacy-v9.json"));
+  expect(v9Index).toBeGreaterThanOrEqual(0);
+  await candidateSelect.selectOption({ index: v9Index });
+  await expect(selected).toContainText("9 → 10（移行済み）");
+
+  const databases = await page.evaluate(async () => {
+    if (typeof indexedDB.databases !== "function") return [];
+    return (await indexedDB.databases())
+      .map((database) => database.name)
+      .filter((name): name is string => Boolean(name));
+  });
+  expect(databases).toEqual([]);
   await page.reload();
   await expect(page.getByTestId("promotion-snapshot-bench")).toContainText("0候補");
 });

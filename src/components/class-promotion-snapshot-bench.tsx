@@ -8,10 +8,10 @@ import { getPromotionCombatComparison } from "../application/get-promotion-comba
 import { getPromotionCombatSampleSummary, type PromotionCombatSampleSummary } from "../application/get-promotion-combat-sample-summary";
 import { getPromotionEnemyPhaseSampleSummary, type PromotionEnemyPhaseSampleSummary } from "../application/get-promotion-enemy-phase-sample-summary";
 import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../application/build-promotion-playtest-matrix";
+import { importPromotionPlaytestSaveContent, type ImportedPromotionPlaytestSave } from "../application/import-promotion-playtest-save";
+import { escapeCsvField } from "../application/escape-csv-field";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
-import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
-import { parseSaveFileContent } from "../persistence/save-file";
 
 const STAT_ROWS: readonly { key: keyof UnitStats; label: string }[] = [
   { key: "hp", label: "HP" },
@@ -35,6 +35,10 @@ interface ImportedCandidate {
   eligible: boolean;
   reasons: string[];
   testSealInjected: boolean;
+  sourceSaveVersion: number;
+  normalizedSaveVersion: number;
+  migrated: boolean;
+  exportedAt: string;
 }
 
 interface ImportedFileResult {
@@ -73,6 +77,10 @@ interface PromotionPlaytestMatrixResult {
   enemyCurrentHp: number;
   enemyPosition: string;
   dataClassification: MatrixDataClassification;
+  sourceSaveVersion: number;
+  normalizedSaveVersion: number;
+  migrationApplied: boolean;
+  exportedAt: string;
   summary: PromotionCombatSampleSummary;
   enemyPhaseSummary: PromotionEnemyPhaseSampleSummary;
 }
@@ -81,20 +89,6 @@ function getMatrixDataClassificationLabel(value: MatrixDataClassification): stri
   if (value === "actual-play") return "実プレイ由来（利用者申告）";
   if (value === "synthetic") return "合成fixture";
   return "未確認";
-}
-
-function escapeCsvField(value: string | number | null | undefined): string {
-  const text = value === null || value === undefined ? "" : String(value);
-  const first = text[0];
-  const safe = first === "=" || first === "+" || first === "-" ||
-    first === "@" || first === "\\t" || first === "\\r"
-    ? "'" + text
-    : text;
-  return '"' + safe.replace(/"/g, '""') + '"';
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** A short deterministic label only; this is not a cryptographic hash. */
@@ -123,24 +117,14 @@ function getCandidateEligibility(snapshot: GameStateSnapshot, unit: GameUnit): s
 
 function getCandidatesFromSnapshot(
   fileName: string,
-  value: unknown
+  importedSave: ImportedPromotionPlaytestSave
 ): ImportedFileResult {
-  if (!isRecord(value) || typeof value.chapterId !== "string") {
-    return { candidates: [], error: "セーブsnapshotの章IDを確認できません。" };
-  }
-  const chapter = getChapterById(value.chapterId);
-  if (!chapter) {
-    return { candidates: [], error: "未登録の章IDです: " + value.chapterId };
-  }
-  if (!isValidGameStateSnapshot(value, chapter.map)) {
-    return { candidates: [], error: `saveVersion ${SAVE_VERSION}または章マップ整合性の検証に失敗しました。` };
-  }
-
-  const snapshot = value;
+  const snapshot = importedSave.snapshot;
   const fingerprint = snapshotFingerprint(snapshot);
   const candidates = snapshot.units
     .filter((unit) =>
       unit.faction === "player" &&
+      unit.currentHp > 0 &&
       unit.level >= 10 &&
       BASIC_CLASS_IDS.includes(unit.classId)
     )
@@ -154,7 +138,11 @@ function getCandidatesFromSnapshot(
         unit,
         eligible: reasons.length === 0,
         reasons,
-        testSealInjected: !unit.inventory.includes(PROMOTION_ITEM_ID)
+        testSealInjected: !unit.inventory.includes(PROMOTION_ITEM_ID),
+        sourceSaveVersion: importedSave.sourceSaveVersion,
+        normalizedSaveVersion: importedSave.normalizedSaveVersion,
+        migrated: importedSave.migrated,
+        exportedAt: importedSave.exportedAt
       };
     });
 
@@ -411,6 +399,10 @@ export function ClassPromotionSnapshotBench() {
           enemyCurrentHp: row.target.currentHp,
           enemyPosition: formatUnitLocation(row.target),
           dataClassification: row.dataClassification,
+          sourceSaveVersion: row.candidate.sourceSaveVersion,
+          normalizedSaveVersion: row.candidate.normalizedSaveVersion,
+          migrationApplied: row.candidate.migrated,
+          exportedAt: row.candidate.exportedAt,
           summary,
           enemyPhaseSummary
         };
@@ -433,7 +425,8 @@ export function ClassPromotionSnapshotBench() {
 
     const headers = [
       "case_id", "basic_class", "promoted_class", "profile", "target_percentile",
-      "candidate_percentile", "source_file", "snapshot_fingerprint", "unit_id", "unit_name",
+      "candidate_percentile", "source_file", "source_save_version", "normalized_save_version",
+      "migration_applied", "exported_at", "snapshot_fingerprint", "unit_id", "unit_name",
       "control_hp", "control_strength", "control_magic", "control_skill", "control_speed", "control_luck", "control_defense", "control_resistance",
       "control_current_hp", "control_experience", "movement", "move", "weapon_types", "control_equipped_weapon",
       "promotion_hp", "promotion_strength", "promotion_magic", "promotion_skill", "promotion_speed", "promotion_luck", "promotion_defense", "promotion_resistance",
@@ -466,8 +459,9 @@ export function ClassPromotionSnapshotBench() {
       const promotion = entry.summary.promotion;
       return [
         entry.caseId, entry.classId, entry.promotedClassId, entry.profile,
-        entry.targetPercentile, entry.candidatePercentile, entry.fileName, entry.fingerprint,
-        entry.unitId, entry.unitName,
+        entry.targetPercentile, entry.candidatePercentile, entry.fileName,
+        entry.sourceSaveVersion, entry.normalizedSaveVersion, entry.migrationApplied ? "true" : "false",
+        entry.exportedAt, entry.fingerprint, entry.unitId, entry.unitName,
         stats.hp, stats.strength, stats.magic, stats.skill, stats.speed, stats.luck, stats.defense, stats.resistance,
         entry.currentHp, entry.experience, candidate?.unit.movementType ?? "", candidate?.unit.move ?? "",
         candidate?.unit.usableWeaponTypes.join("|") ?? "", entry.equippedWeaponId ?? "",
@@ -534,12 +528,12 @@ export function ClassPromotionSnapshotBench() {
     for (const file of files) {
       try {
         const content = await file.text();
-        const snapshot = parseSaveFileContent(content);
-        const result = getCandidatesFromSnapshot(file.name, snapshot);
+        const importedSave = importPromotionPlaytestSaveContent(content);
+        const result = getCandidatesFromSnapshot(file.name, importedSave);
         if (result.error) {
           nextErrors.push(file.name + ": " + result.error);
         } else if (result.candidates.length === 0) {
-          nextErrors.push(file.name + ": 昇格対象の基本職Lv.10以上ユニットが見つかりません。");
+          nextErrors.push(file.name + ": 生存中で昇格対象の基本職Lv.10以上ユニットが見つかりません。");
         } else {
           imported.push(...result.candidates);
         }
@@ -607,7 +601,7 @@ export function ClassPromotionSnapshotBench() {
           />
         </label>
         <p className="helper-text">
-          現在のJSON書き出し形式（envelope v1／GameState saveVersion {SAVE_VERSION}）のみ対応します。読み込んだ内容はメモリ上だけに保持し、ページ再読み込みで消えます。
+          JSON export（envelope v1／GameState saveVersion 1〜{SAVE_VERSION}）に対応します。v1〜v9はこのベンチ内のコピーだけをsaveVersion {SAVE_VERSION}へ移行し、元ファイルは変更しません。読み込んだ内容はメモリ上だけに保持し、ページ再読み込みで消えます。
         </p>
         {errors.length > 0 && (
           <div className="promotion-snapshot-errors" role="alert">
@@ -693,6 +687,8 @@ export function ClassPromotionSnapshotBench() {
           <div className="promotion-snapshot-selected" data-testid="promotion-snapshot-selected">
             <dl>
               <div><dt>snapshot</dt><dd>{selectedCandidate.fileName}</dd></div>
+              <div><dt>元saveVersion</dt><dd>{selectedCandidate.sourceSaveVersion} → {selectedCandidate.normalizedSaveVersion}（{selectedCandidate.migrated ? "移行済み" : "移行なし"}）</dd></div>
+              <div><dt>export日時</dt><dd>{selectedCandidate.exportedAt}</dd></div>
               <div><dt>fingerprint</dt><dd>{selectedCandidate.fingerprint}</dd></div>
               <div><dt>章／turn</dt><dd>{selectedCandidate.snapshot.chapterId} · 第{selectedCandidate.snapshot.turn}ターン</dd></div>
               <div><dt>ユニット</dt><dd>{selectedCandidate.unit.name}（{selectedCandidate.unit.id}）</dd></div>
@@ -1164,7 +1160,7 @@ export function ClassPromotionSnapshotBench() {
           <li>射程内に生存敵がいる場合は、既存performAttackを使った単一seedの比較と、20／100／250個の同一seedペアによる独立1戦闘反復を表示します。集計は命中率・必殺率・平均ダメージ・対象撃破率・反撃被ダメージ・生存率です。HPや撃破を試行間で持ち越さず、複数ターンの攻略率・敵AI・移動・21ケースの実プレイを代替しません。</li>
           <li>21ケースマトリクスでは、各基本職3件以上の候補からlow／median／upper相当を参考選出し、利用者が候補・敵・条件を確認した後に一括反復・CSV出力できます。実プレイ由来かどうかは利用者申告として保存し、自動判定しません。</li>
           <li>21ケースの集計には既存の敵軍フェイズ解決を使った1 phase比較も含みます。control／promotionの双方で選択ユニットは行動済みにしてphaseを進め、敵AIの移動・攻撃・生存・被ダメージを集計します。複数turnの戦闘やキャンペーン勝率ではありません。</li>
-          <li>読み込みはsaveVersion {SAVE_VERSION}のJSON exportだけです。旧版の自動migration、IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
+          <li>envelope v1のsaveVersion 1〜{SAVE_VERSION}を読み込みます。旧版は元の書き出しversion・export日時・v{SAVE_VERSION}へのmigration有無を記録してから、メモリ上のコピーだけを検証・比較します。IndexedDBへの読書き、ファイルのアップロード、サーバー送信はしません。</li>
           <li>現行クラス上限・ボーナスは仮値のままです。実データの比較はできてもCP-04／05の承認にはなりません。</li>
         </ul>
       </section>
