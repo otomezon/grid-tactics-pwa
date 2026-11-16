@@ -22,14 +22,6 @@ export interface PromotionManualPlaytestObservationCoverage {
   metadataMismatchCaseCount: number;
 }
 
-type CoverageBranch = { values: Readonly<Record<string, string>> };
-type CoverageCase = {
-  caseId: string;
-  control: CoverageBranch | null;
-  promotion: CoverageBranch | null;
-  pairFieldMismatches: readonly string[];
-};
-
 type CoverageAudit = Pick<PromotionManualPlaytestWorksheetAudit, "cases" | "observationColumns">;
 
 /**
