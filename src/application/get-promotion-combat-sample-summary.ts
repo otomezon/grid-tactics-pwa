@@ -1,6 +1,7 @@
 import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
 import { nextRandomUint32 } from "../domain/random/xorshift32";
 import { getPromotionCombatComparison } from "./get-promotion-combat-comparison";
+import { getWilsonScoreInterval, type WilsonScoreInterval } from "./wilson-score-interval";
 
 export interface PromotionCombatSampleMetrics {
   attackAttempts: number;
@@ -13,6 +14,7 @@ export interface PromotionCombatSampleMetrics {
   averageAttackDamagePerHit: number;
   enemyDefeats: number;
   enemyDefeatRate: number;
+  enemyDefeatRateInterval95: WilsonScoreInterval;
   counterAttempts: number;
   counterHits: number;
   counterHitRate: number;
@@ -20,6 +22,7 @@ export interface PromotionCombatSampleMetrics {
   averageCounterDamagePerBattle: number;
   attackerSurvivals: number;
   attackerSurvivalRate: number;
+  attackerSurvivalRateInterval95: WilsonScoreInterval;
   averageAttackerHpRemaining: number;
   averageDefenderHpRemaining: number;
 }
@@ -142,6 +145,7 @@ function finishMetrics(metrics: MutableMetrics, sampleCount: number): PromotionC
       : roundOne(metrics.totalAttackDamage / metrics.attackHits),
     enemyDefeats: metrics.enemyDefeats,
     enemyDefeatRate: rate(metrics.enemyDefeats, sampleCount),
+    enemyDefeatRateInterval95: getWilsonScoreInterval(metrics.enemyDefeats, sampleCount),
     counterAttempts: metrics.counterAttempts,
     counterHits: metrics.counterHits,
     counterHitRate: rate(metrics.counterHits, metrics.counterAttempts),
@@ -149,6 +153,7 @@ function finishMetrics(metrics: MutableMetrics, sampleCount: number): PromotionC
     averageCounterDamagePerBattle: roundOne(metrics.totalCounterDamage / sampleCount),
     attackerSurvivals: metrics.attackerSurvivals,
     attackerSurvivalRate: rate(metrics.attackerSurvivals, sampleCount),
+    attackerSurvivalRateInterval95: getWilsonScoreInterval(metrics.attackerSurvivals, sampleCount),
     averageAttackerHpRemaining: roundOne(metrics.totalAttackerHpRemaining / sampleCount),
     averageDefenderHpRemaining: roundOne(metrics.totalDefenderHpRemaining / sampleCount)
   };
