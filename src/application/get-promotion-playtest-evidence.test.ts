@@ -97,6 +97,11 @@ describe("getPromotionPlaytestEvidence", () => {
       campaignLogTrackingAvailable: true,
       unitBattleTotalsTrackingAvailable: true,
       campaignLogEntries: 4,
+      campaignLogRetentionLimit: 5000,
+      campaignLogAtRetentionLimit: false,
+      campaignLogFirstSequence: 1,
+      campaignLogLastSequence: 4,
+      campaignLogSequenceGapCount: 0,
       campaignChapterCount: 2,
       playerActionEntries: 1,
       playerAttackEntries: 1,
@@ -127,6 +132,11 @@ describe("getPromotionPlaytestEvidence", () => {
       campaignLogTrackingAvailable: false,
       unitBattleTotalsTrackingAvailable: false,
       campaignLogEntries: 0,
+      campaignLogRetentionLimit: 5000,
+      campaignLogAtRetentionLimit: false,
+      campaignLogFirstSequence: null,
+      campaignLogLastSequence: null,
+      campaignLogSequenceGapCount: 0,
       campaignChapterCount: 0,
       playerActionEntries: 0,
       playerAttackEntries: 0,
@@ -142,5 +152,51 @@ describe("getPromotionPlaytestEvidence", () => {
     const currentTotalsOnly = getPromotionPlaytestEvidence(snapshot, "unit-1", 8);
     expect(currentTotalsOnly.campaignLogTrackingAvailable).toBe(false);
     expect(currentTotalsOnly.unitBattleTotalsTrackingAvailable).toBe(true);
+  });
+
+  it("counts missing campaign-log sequence numbers without inferring what those entries contained", () => {
+    const snapshot = {
+      campaignBattleLog: [3, 4, 7].map((sequence) => ({
+        sequence,
+        chapterId: "chapter_01_map",
+        turn: 2,
+        kind: "player-action",
+        action: "wait",
+        actorId: "unit-1",
+        actorName: "Ally",
+        detail: "Waited"
+      }))
+    } as unknown as GameStateSnapshot;
+
+    const evidence = getPromotionPlaytestEvidence(snapshot, "unit-1", 10);
+    expect(evidence.campaignLogEntries).toBe(3);
+    expect(evidence.campaignLogRetentionLimit).toBe(5000);
+    expect(evidence.campaignLogAtRetentionLimit).toBe(false);
+    expect(evidence.campaignLogFirstSequence).toBe(3);
+    expect(evidence.campaignLogLastSequence).toBe(7);
+    expect(evidence.campaignLogSequenceGapCount).toBe(4);
+  });
+
+  it("flags the bounded log retention limit separately from confirmed sequence gaps", () => {
+    const snapshot = {
+      campaignBattleLog: Array.from({ length: 5000 }, (_, index) => ({
+        sequence: index + 1,
+        chapterId: "chapter_01_map",
+        turn: 2,
+        kind: "player-action",
+        action: "wait",
+        actorId: "unit-1",
+        actorName: "Ally",
+        detail: "Waited"
+      }))
+    } as unknown as GameStateSnapshot;
+
+    const evidence = getPromotionPlaytestEvidence(snapshot, "unit-1", 10);
+    expect(evidence.campaignLogEntries).toBe(5000);
+    expect(evidence.campaignLogRetentionLimit).toBe(5000);
+    expect(evidence.campaignLogAtRetentionLimit).toBe(true);
+    expect(evidence.campaignLogFirstSequence).toBe(1);
+    expect(evidence.campaignLogLastSequence).toBe(5000);
+    expect(evidence.campaignLogSequenceGapCount).toBe(0);
   });
 });
