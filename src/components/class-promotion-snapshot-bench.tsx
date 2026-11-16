@@ -573,7 +573,9 @@ export function ClassPromotionSnapshotBench() {
       "class_eligible_distinct_unit_snapshot_count", "class_campaign_history_unit_snapshot_count",
       "class_unit_battle_totals_unit_snapshot_count",
       "campaign_log_tracking_available", "unit_battle_totals_tracking_available",
-      "campaign_log_entries", "campaign_chapter_count", "campaign_player_action_entries",
+      "campaign_log_entries", "campaign_log_retention_limit", "campaign_log_at_retention_limit",
+      "campaign_log_first_sequence", "campaign_log_last_sequence", "campaign_log_sequence_gap_count",
+      "campaign_chapter_count", "campaign_player_action_entries",
       "campaign_player_attack_entries", "campaign_enemy_action_entries", "campaign_chapter_result_entries",
       "selected_unit_action_entries", "selected_unit_attack_entries", "selected_unit_targeted_enemy_action_entries",
       "selected_unit_attack_strikes", "selected_unit_record_attacks", "selected_unit_record_strikes",
@@ -646,7 +648,10 @@ export function ClassPromotionSnapshotBench() {
         entry.classCoverage.unitBattleTotalsUnitSnapshotCount,
         entry.evidence.campaignLogTrackingAvailable ? "true" : "false",
         entry.evidence.unitBattleTotalsTrackingAvailable ? "true" : "false",
-        entry.evidence.campaignLogEntries, entry.evidence.campaignChapterCount,
+        entry.evidence.campaignLogEntries, entry.evidence.campaignLogRetentionLimit,
+        entry.evidence.campaignLogAtRetentionLimit ? "true" : "false",
+        entry.evidence.campaignLogFirstSequence ?? "", entry.evidence.campaignLogLastSequence ?? "",
+        entry.evidence.campaignLogSequenceGapCount, entry.evidence.campaignChapterCount,
         entry.evidence.playerActionEntries, entry.evidence.playerAttackEntries,
         entry.evidence.enemyActionEntries, entry.evidence.chapterResultEntries,
         entry.evidence.selectedUnitActionEntries, entry.evidence.selectedUnitAttackEntries,
@@ -757,7 +762,9 @@ export function ClassPromotionSnapshotBench() {
       "stat_hp", "stat_strength", "stat_magic", "stat_skill", "stat_speed", "stat_luck", "stat_defense", "stat_resistance",
       "movement_type", "move", "usable_weapon_types_json", "equipped_weapon_id", "inventory_json",
       "campaign_log_tracking_available_for_all_imports", "campaign_log_tracking_available_for_any_import",
-      "campaign_log_entries", "campaign_chapter_count",
+      "campaign_log_entries", "campaign_log_retention_limit", "campaign_log_at_retention_limit",
+      "campaign_log_first_sequence", "campaign_log_last_sequence", "campaign_log_sequence_gap_count",
+      "campaign_chapter_count",
       "campaign_player_action_entries", "campaign_player_attack_entries", "campaign_enemy_action_entries",
       "campaign_chapter_result_entries", "selected_unit_action_entries", "selected_unit_attack_entries",
       "selected_unit_targeted_enemy_action_entries", "selected_unit_attack_strikes",
@@ -795,7 +802,10 @@ export function ClassPromotionSnapshotBench() {
         candidate.unit.equippedWeaponId, JSON.stringify(candidate.unit.inventory),
         imports.every((entry) => entry.campaignLogTrackingAvailable),
         imports.some((entry) => entry.campaignLogTrackingAvailable),
-        evidence.campaignLogEntries, evidence.campaignChapterCount,
+        evidence.campaignLogEntries, evidence.campaignLogRetentionLimit,
+        evidence.campaignLogAtRetentionLimit, evidence.campaignLogFirstSequence ?? "",
+        evidence.campaignLogLastSequence ?? "", evidence.campaignLogSequenceGapCount,
+        evidence.campaignChapterCount,
         evidence.playerActionEntries, evidence.playerAttackEntries, evidence.enemyActionEntries,
         evidence.chapterResultEntries, evidence.selectedUnitActionEntries,
         evidence.selectedUnitAttackEntries, evidence.selectedUnitTargetedEnemyActionEntries,
@@ -1019,11 +1029,15 @@ export function ClassPromotionSnapshotBench() {
                 </p>
                 <dl>
                   <div><dt>campaignBattleLog（元saveVersion 9以上）</dt><dd>{selectedEvidence.campaignLogTrackingAvailable ? "追跡対象 · " + selectedEvidence.campaignLogEntries + "件" : "未追跡（この元saveVersionでは記録対象外）"}</dd></div>
+                  <div><dt>ログ保管件数／上限</dt><dd>{selectedEvidence.campaignLogTrackingAvailable ? selectedEvidence.campaignLogEntries + "／" + selectedEvidence.campaignLogRetentionLimit + "件" : "未追跡"}</dd></div>
+                  <div><dt>sequence範囲／欠番</dt><dd>{!selectedEvidence.campaignLogTrackingAvailable ? "未追跡" : selectedEvidence.campaignLogFirstSequence === null ? "記録なし" : selectedEvidence.campaignLogFirstSequence + "–" + selectedEvidence.campaignLogLastSequence + " · 欠番 " + selectedEvidence.campaignLogSequenceGapCount + "件"}</dd></div>
+                  <div><dt>上限状態</dt><dd>{!selectedEvidence.campaignLogTrackingAvailable ? "未追跡" : selectedEvidence.campaignLogAtRetentionLimit ? "最大保管件数に到達（古い記録が切り捨てられたかは、この値だけでは判定できません）" : "上限未到達"}</dd></div>
                   <div><dt>記録のある章数</dt><dd>{selectedEvidence.campaignChapterCount}</dd></div>
                   <div><dt>履歴の内訳</dt><dd>味方行動 {selectedEvidence.playerActionEntries} · 味方攻撃 {selectedEvidence.playerAttackEntries} · 敵行動 {selectedEvidence.enemyActionEntries} · 章結果 {selectedEvidence.chapterResultEntries}</dd></div>
                   <div><dt>対象ユニットの履歴</dt><dd>行動 {selectedEvidence.selectedUnitActionEntries} · 攻撃 {selectedEvidence.selectedUnitAttackEntries} · 被標的 {selectedEvidence.selectedUnitTargetedEnemyActionEntries} · 攻撃strike {selectedEvidence.selectedUnitAttackStrikes}</dd></div>
                   <div><dt>味方別累計（元saveVersion 3以上）</dt><dd>{!selectedEvidence.unitBattleTotalsTrackingAvailable ? "未追跡（この元saveVersionでは記録対象外）" : selectedEvidence.selectedUnitBattleTotals ? "攻撃 " + selectedEvidence.selectedUnitBattleTotals.attacks + " · strike " + selectedEvidence.selectedUnitBattleTotals.strikes + " · 命中 " + selectedEvidence.selectedUnitBattleTotals.hits + " · 与ダメージ " + selectedEvidence.selectedUnitBattleTotals.damageDealt + " · 撃破 " + selectedEvidence.selectedUnitBattleTotals.enemiesDefeated + " · EXP " + selectedEvidence.selectedUnitBattleTotals.experienceAwarded : "対象ユニットの累計レコードなし"}</dd></div>
                 </dl>
+                <p className="helper-text">sequence欠番は保存配列内で確認できる連番の欠けた数で、欠落した行動の内容は推測しません。最大5,000件に達した場合も、上限到達だけでは古い履歴の切り捨て有無を確定できません。</p>
                 <p className="helper-text">記録が空でも未プレイとは限りません。旧バージョンでは戦闘履歴が保存されていない場合があり、途中の記録欠落・改変の有無も判定しません。</p>
               </section>
             )}
@@ -1296,6 +1310,7 @@ export function ClassPromotionSnapshotBench() {
                         <td>
                           {result.evidence.campaignLogTrackingAvailable ? "ログ " + result.evidence.campaignLogEntries + "件" : "ログ: 未追跡"} · {result.evidence.campaignChapterCount}章
                           <small>対象ユニット: 行動 {result.evidence.selectedUnitActionEntries}／攻撃 {result.evidence.selectedUnitAttackEntries}／被標的 {result.evidence.selectedUnitTargetedEnemyActionEntries}</small>
+                          <small>ログ保管: {result.evidence.campaignLogEntries}/{result.evidence.campaignLogRetentionLimit}件 · 欠番 {result.evidence.campaignLogSequenceGapCount}件{result.evidence.campaignLogAtRetentionLimit ? " · 上限到達" : ""}</small>
                           <small>{result.evidence.unitBattleTotalsTrackingAvailable ? "味方別累計: " + (result.evidence.selectedUnitBattleTotals?.attacks ?? 0) + "攻撃" : "味方別累計: 未追跡"}</small>
                         </td>
                         <td>{getMatrixDataClassificationLabel(result.dataClassification)}</td>
