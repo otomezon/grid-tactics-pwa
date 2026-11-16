@@ -1,4 +1,4 @@
-import type { CampaignUnitBattleRecord, GameStateSnapshot } from "../domain/models/game";
+import { MAX_CAMPAIGN_BATTLE_LOG_ENTRIES, type CampaignUnitBattleRecord, type GameStateSnapshot } from "../domain/models/game";
 
 export interface PromotionPlaytestEvidence {
   /** campaignBattleLog was introduced in saveVersion 9. */
@@ -6,6 +6,11 @@ export interface PromotionPlaytestEvidence {
   /** campaignUnitBattleRecords was introduced in saveVersion 3. */
   unitBattleTotalsTrackingAvailable: boolean;
   campaignLogEntries: number;
+  campaignLogRetentionLimit: number;
+  campaignLogAtRetentionLimit: boolean;
+  campaignLogFirstSequence: number | null;
+  campaignLogLastSequence: number | null;
+  campaignLogSequenceGapCount: number;
   campaignChapterCount: number;
   playerActionEntries: number;
   playerAttackEntries: number;
@@ -31,6 +36,12 @@ export function getPromotionPlaytestEvidence(
   sourceSaveVersion: number
 ): PromotionPlaytestEvidence {
   const entries = snapshot.campaignBattleLog ?? [];
+  let previousSequence = 0;
+  let campaignLogSequenceGapCount = 0;
+  for (const entry of entries) {
+    campaignLogSequenceGapCount += Math.max(0, entry.sequence - previousSequence - 1);
+    previousSequence = entry.sequence;
+  }
   const playerActions = entries.filter((entry) => entry.kind === "player-action");
   const playerAttacks = entries.filter((entry) => entry.kind === "player-attack");
   const enemyActions = entries.filter((entry) => entry.kind === "enemy-action");
@@ -45,6 +56,11 @@ export function getPromotionPlaytestEvidence(
     campaignLogTrackingAvailable: sourceSaveVersion >= 9,
     unitBattleTotalsTrackingAvailable: sourceSaveVersion >= 3,
     campaignLogEntries: entries.length,
+    campaignLogRetentionLimit: MAX_CAMPAIGN_BATTLE_LOG_ENTRIES,
+    campaignLogAtRetentionLimit: entries.length >= MAX_CAMPAIGN_BATTLE_LOG_ENTRIES,
+    campaignLogFirstSequence: entries[0]?.sequence ?? null,
+    campaignLogLastSequence: entries[entries.length - 1]?.sequence ?? null,
+    campaignLogSequenceGapCount,
     campaignChapterCount: new Set(entries.map((entry) => entry.chapterId)).size,
     playerActionEntries: playerActions.length,
     playerAttackEntries: playerAttacks.length,
