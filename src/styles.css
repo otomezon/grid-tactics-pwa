@@ -3309,3 +3309,29 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
     width: 100%;
   }
 }
+
+
+/* Case-pair coverage for manually entered promotion observations. */
+.promotion-manual-pair-coverage {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  min-width: 0;
+}
+.promotion-manual-pair-coverage > summary {
+  cursor: pointer;
+  color: #dbe8ec;
+  font-size: .8rem;
+  font-weight: 800;
+}
+.promotion-manual-pair-coverage-table {
+  min-width: 900px;
+}
+.promotion-manual-pair-coverage-table th,
+.promotion-manual-pair-coverage-table td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.promotion-manual-pair-coverage-table th:first-child {
+  min-width: 180px;
+}

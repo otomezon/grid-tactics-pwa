@@ -14,6 +14,7 @@ import { escapeCsvField } from "../application/escape-csv-field";
 import { serializeCsvDocument } from "../application/serialize-csv-document";
 import { auditPromotionManualPlaytestWorksheet, type PromotionManualPlaytestWorksheetAudit, type PromotionManualPlaytestBranchAudit } from "../application/audit-promotion-manual-playtest-worksheet";
 import { getPromotionManualPlaytestObservationComparisons } from "../application/get-promotion-manual-playtest-observation-comparisons";
+import { getPromotionManualPlaytestObservationCoverage } from "../application/get-promotion-manual-playtest-observation-coverage";
 import { PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS } from "../application/promotion-manual-playtest-worksheet-schema";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
@@ -322,6 +323,12 @@ export function ClassPromotionSnapshotBench() {
   const activeManualWorksheetComparisonField = manualWorksheetComparisonFields.includes(manualWorksheetComparisonField)
     ? manualWorksheetComparisonField
     : manualWorksheetComparisonFields[0] ?? "";
+  const manualWorksheetObservationCoverage = useMemo(
+    () => manualWorksheetAudit
+      ? getPromotionManualPlaytestObservationCoverage(manualWorksheetAudit)
+      : [],
+    [manualWorksheetAudit]
+  );
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
@@ -1001,6 +1008,47 @@ export function ClassPromotionSnapshotBench() {
     setManualWorksheetComparisonField("");
   }
 
+  function handleDownloadManualWorksheetObservationCoverage() {
+    if (!manualWorksheetAudit || manualWorksheetObservationCoverage.length === 0) return;
+
+    const headers = [
+      "observation_field",
+      "expected_case_count",
+      "paired_case_count",
+      "missing_branch_case_count",
+      "both_values_present_case_count",
+      "control_only_value_case_count",
+      "promotion_only_value_case_count",
+      "both_values_empty_case_count",
+      "numeric_delta_available_pair_count",
+      "both_values_without_numeric_delta_pair_count",
+      "metadata_mismatch_case_count"
+    ];
+    const rows = manualWorksheetObservationCoverage.map((entry) => [
+      entry.field,
+      entry.expectedCaseCount,
+      entry.pairedCaseCount,
+      entry.missingBranchCaseCount,
+      entry.bothValuesPresentCaseCount,
+      entry.controlOnlyValueCaseCount,
+      entry.promotionOnlyValueCaseCount,
+      entry.bothValuesEmptyCaseCount,
+      entry.numericDeltaAvailablePairCount,
+      entry.bothValuesWithoutNumericDeltaPairCount,
+      entry.metadataMismatchCaseCount
+    ]);
+    const csv = serializeCsvDocument(headers, rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "class-promotion-manual-playtest-observation-coverage.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function handleDownloadManualWorksheetComparisons() {
     if (!manualWorksheetAudit || manualWorksheetComparisons.length === 0) return;
 
@@ -1226,6 +1274,42 @@ export function ClassPromotionSnapshotBench() {
               );
             })}
           </section>
+          <details className="promotion-manual-pair-coverage" data-testid="promotion-manual-pair-coverage">
+            <summary>観測欄ごとのペア充足状況（{manualWorksheetObservationCoverage.length}項目）</summary>
+            <p className="helper-text">
+              各観測欄について21ケースを単位に、両枝入力・controlのみ・promotionのみ・両枝空欄・枝不足を分けて数えます。数値差が算出できるペア数と、条件記載差があるペア数も併記します。条件記載差は値の有無とは独立した件数で、他の列と重複します。
+            </p>
+            <div className="promotion-lab-table-wrap">
+              <table className="promotion-lab-table promotion-manual-pair-coverage-table" aria-label="観測欄ごとのペア充足状況">
+                <thead><tr>
+                  <th>観測欄</th>
+                  <th>両枝記録</th>
+                  <th>controlのみ</th>
+                  <th>promotionのみ</th>
+                  <th>両枝空欄</th>
+                  <th>枝不足</th>
+                  <th>数値差算出可</th>
+                  <th>両枝記録・数値差なし</th>
+                  <th>条件記載差</th>
+                </tr></thead>
+                <tbody>
+                  {manualWorksheetObservationCoverage.map((entry) => (
+                    <tr key={entry.field} data-testid={"promotion-manual-pair-coverage-" + entry.field}>
+                      <th scope="row"><code>{entry.field}</code></th>
+                      <td>{entry.bothValuesPresentCaseCount}/{entry.pairedCaseCount}</td>
+                      <td>{entry.controlOnlyValueCaseCount}</td>
+                      <td>{entry.promotionOnlyValueCaseCount}</td>
+                      <td>{entry.bothValuesEmptyCaseCount}</td>
+                      <td>{entry.missingBranchCaseCount}/{entry.expectedCaseCount}</td>
+                      <td>{entry.numericDeltaAvailablePairCount}</td>
+                      <td>{entry.bothValuesWithoutNumericDeltaPairCount}</td>
+                      <td>{entry.metadataMismatchCaseCount}/{entry.pairedCaseCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
           <details className="promotion-manual-field-coverage" data-testid="promotion-manual-field-coverage">
             <summary>観測欄ごとの入力状況（{manualWorksheetAudit.observationFieldCoverage.length}項目）</summary>
             <p className="helper-text">受理できた枝行のうち、各CSV列に値が入力された件数です。空欄は一律の必須漏れではなく、項目ごとの収集状況を示します。状況に合わない項目は未記入のままで構いません。</p>
@@ -1247,6 +1331,9 @@ export function ClassPromotionSnapshotBench() {
           <div className="promotion-snapshot-matrix-actions">
             <button className="secondary-button" type="button" onClick={handleDownloadManualWorksheetComparisons} disabled={manualWorksheetComparisons.length === 0}>
               記録値の比較CSVを出力（{manualWorksheetComparisons.length}項目）
+            </button>
+            <button className="secondary-button" type="button" onClick={handleDownloadManualWorksheetObservationCoverage} disabled={manualWorksheetObservationCoverage.length === 0}>
+              観測欄ペア充足CSVを書き出す
             </button>
             <button className="secondary-button" type="button" onClick={clearManualWorksheetAudit}>取り込んだCSVを破棄</button>
           </div>

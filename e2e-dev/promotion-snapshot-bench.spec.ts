@@ -483,6 +483,34 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(fieldCoverage.locator("tr").filter({ hasText: "actual_damage" })).toContainText("42/42");
   await expect(fieldCoverage.locator("tr").filter({ hasText: "post_level" })).toContainText("0/42");
 
+  const pairCoverage = worksheetAudit.getByTestId("promotion-manual-pair-coverage");
+  await pairCoverage.locator("summary").click();
+  const actualDamagePairCoverage = pairCoverage.getByTestId("promotion-manual-pair-coverage-actual_damage");
+  await expect(actualDamagePairCoverage.locator("td").nth(0)).toHaveText("21/21");
+  await expect(actualDamagePairCoverage.locator("td").nth(5)).toHaveText("21");
+  await expect(actualDamagePairCoverage.locator("td").nth(7)).toHaveText("0/21");
+  const postStrengthPairCoverage = pairCoverage.getByTestId("promotion-manual-pair-coverage-post_strength");
+  await expect(postStrengthPairCoverage.locator("td").nth(1)).toHaveText("21");
+  await expect(pairCoverage.getByTestId("promotion-manual-pair-coverage-manual_session_id")).toHaveCount(0);
+
+  const pairCoverageDownloadPromise = page.waitForEvent("download");
+  await worksheetAudit.getByRole("button", { name: "観測欄ペア充足CSVを書き出す" }).click();
+  const pairCoverageDownload = await pairCoverageDownloadPromise;
+  expect(pairCoverageDownload.suggestedFilename()).toBe("class-promotion-manual-playtest-observation-coverage.csv");
+  const pairCoverageDownloadPath = await pairCoverageDownload.path();
+  if (!pairCoverageDownloadPath) throw new Error("Manual observation coverage CSV download path was not available.");
+  const pairCoverageRecords = parseCsvRecords(await readFile(pairCoverageDownloadPath, "utf8"));
+  const pairCoverageHeaders = pairCoverageRecords[0]!;
+  const pairCoverageColumn = (name: string) => pairCoverageHeaders.indexOf(name);
+  const actualDamageCoverageRecord = pairCoverageRecords.slice(1).find((record) =>
+    record[pairCoverageColumn("observation_field")] === "actual_damage"
+  );
+  expect(actualDamageCoverageRecord).toBeDefined();
+  expect(actualDamageCoverageRecord![pairCoverageColumn("both_values_present_case_count")]).toBe("21");
+  expect(actualDamageCoverageRecord![pairCoverageColumn("numeric_delta_available_pair_count")]).toBe("21");
+  expect(actualDamageCoverageRecord![pairCoverageColumn("metadata_mismatch_case_count")]).toBe("0");
+
+
   const observationMatrix = worksheetAudit.getByTestId("promotion-manual-observation-matrix");
   await expect(observationMatrix.locator("tbody tr")).toHaveCount(21);
   const comparisonFieldSelect = observationMatrix.getByLabel("比較する観測欄");
@@ -557,6 +585,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   const mismatchedMatrix = worksheetAudit.getByTestId("promotion-manual-observation-matrix");
   await mismatchedMatrix.getByLabel("比較する観測欄").selectOption("actual_damage");
   await expect(mismatchedMatrix.getByTestId("promotion-manual-observation-matrix-row-swordsman-low")).toContainText("条件の記載に差あり");
+  const mismatchedPairCoverage = worksheetAudit.getByTestId("promotion-manual-pair-coverage");
+  await mismatchedPairCoverage.locator("summary").click();
+  await expect(mismatchedPairCoverage.getByTestId("promotion-manual-pair-coverage-actual_damage").locator("td").nth(8)).toHaveText("1/21");
 
   const firstSelectedSnapshot = await caseRows.nth(0).locator("select").nth(0).inputValue();
   await caseRows.nth(1).locator("select").nth(0).selectOption(firstSelectedSnapshot);

@@ -302,3 +302,11 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 
 
 - Backup restore safety: the pre-restore auto-save is retained as generation 1 in the same IndexedDB readwrite transaction that restores the selected generation. The selected restore source and newest other backup remain available within the three-slot limit. A failed transaction preserves the previous auto-save and backup list.
+
+
+## 手動昇格プレイテストの観測欄別ペア充足レポート（PR #168）
+
+- getPromotionManualPlaytestObservationCoverage は受理されたworksheetの観測欄ごとに、21ケースを単位とした両枝記録／controlのみ／promotionのみ／両枝空欄／枝不足の件数を算出する。行不足とセル空欄は別々に扱う。
+- 両枝に値があるペアのうち、既存比較ロジックで有限の数値差を算出できる件数と、値はあるが数値差を出せない件数を分ける。値や数値差を平均・順位化しない。
+- 条件メタデータ不一致の件数は独立した重複可能なカウントで、条件差のあるケースも入力状況の各分類に含まれる。実行コンテキスト（セッションID・日時・commit・実行時seed）は観測欄集計から除外する。
+- 集計CSVは利用者の明示操作によるローカルdownloadのみ。CSV入力・集計値はブラウザメモリ内で扱い、GameState／RNG／IndexedDB／自動保存／saveVersion 10／IndexedDB schema 1／ネットワーク送信を変更しない。
