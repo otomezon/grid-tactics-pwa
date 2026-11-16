@@ -93,7 +93,7 @@ describe("browser storage durability", () => {
   });
 
   it("rejects incomplete or invalid estimates", async () => {
-    const invalidEstimates = [
+    const invalidEstimates: Array<{ usage?: number; quota?: number }> = [
       { usage: Number.NaN, quota: 100 },
       { usage: -1, quota: 100 },
       { usage: 10, quota: Number.POSITIVE_INFINITY },
