@@ -52,10 +52,33 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("すべての章");
     expect(html).toContain("味方の行動・攻撃");
     expect(html).toContain("1 / 1件を表示");
-    expect(html).toContain("撃破者別記録（表示中）");
+    expect(html).toContain("撃破者別記録（絞り込み結果全体）");
     expect(html).toContain("時系列ログ");
     expect(html).toContain("味方別累計");
     expect(html).toContain('aria-label="時系列ログをCSV出力"');
+  });
+
+  it("renders only the first 50 chronological entries when the filtered timeline spans multiple pages", () => {
+    const manyEntries: CampaignBattleHistoryEntry[] = Array.from({ length: 51 }, (_, index) => ({
+      ...entries[0]!,
+      sequence: index + 1
+    }));
+    const html = renderToStaticMarkup(createElement(CampaignBattleHistoryPanel, {
+      entries: manyEntries,
+      unitRecords: [],
+      onClose: vi.fn()
+    }));
+    const renderedEntries = html.match(/data-testid="campaign-battle-log-entry"/g) ?? [];
+
+    expect(renderedEntries).toHaveLength(50);
+    expect(html).toContain('data-sequence="1"');
+    expect(html).toContain('data-sequence="50"');
+    expect(html).not.toContain('data-sequence="51"');
+    expect(html).toContain("1–50 / 51件を表示");
+    expect(html).toContain("ページ 1 / 2");
+    expect(html).toContain('aria-label="時系列ログのページ送り"');
+    expect(html).toContain('aria-label="次のページ"');
+    expect(html).toContain("撃破者別記録（絞り込み結果全体）");
   });
 
   it("renders an empty defeat summary", () => {
