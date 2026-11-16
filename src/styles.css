@@ -3434,3 +3434,42 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .save-conflict-notice button {
   justify-self: start;
 }
+
+
+/* Read-only retention and sequence continuity of the saved campaign timeline. */
+.campaign-battle-history-coverage {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(104, 137, 155, .4);
+  border-radius: 9px;
+  background: rgba(11, 23, 33, .52);
+}
+.campaign-battle-history-coverage-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.campaign-battle-history-coverage-heading strong {
+  color: #e5eef1;
+  font-size: .78rem;
+}
+.campaign-battle-history-coverage-heading span,
+.campaign-battle-history-coverage > p {
+  color: var(--text-muted);
+  font-size: .7rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.campaign-battle-history-coverage > p { margin: 0; }
+.campaign-battle-history-coverage-note {
+  color: #d7c79f !important;
+}
+@media (max-width: 420px) {
+  .campaign-battle-history-coverage { padding: 9px 10px; }
+  .campaign-battle-history-coverage-heading { align-items: flex-start; }
+}
