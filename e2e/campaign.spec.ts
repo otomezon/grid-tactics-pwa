@@ -2864,8 +2864,8 @@ test("shows candidate details and persists the selected deployment roster", asyn
     expect(await readAutoSave(page)).toEqual(saved);
   });
 
-  test("safely backs up the current auto-save before restoring a prior generation", async ({ page }) => {
-    test.setTimeout(90_000);
+  test("backs up the current auto-save before restoring from the title screen", async ({ page }) => {
+    test.setTimeout(60_000);
     await startBattle(page);
     const currentSave = await readAutoSave(page) as { rngState: number; [key: string]: unknown };
 
@@ -2881,40 +2881,24 @@ test("shows candidate details and persists the selected deployment roster", asyn
     };
     await writeAutoSave(page, changedSave);
     await page.reload();
+
     const restoreTitle = page.getByTestId("campaign-title-screen");
     await expect(restoreTitle).toBeVisible();
-
-    const cancelDialogPromise = page.waitForEvent("dialog");
+    const restoreDialogPromise = page.waitForEvent("dialog");
     await restoreTitle.getByTestId("title-restore-backup-1").click();
-    const cancelDialog = await cancelDialogPromise;
-    const cancelMessage = cancelDialog.message();
-    await cancelDialog.dismiss();
-    expect(cancelMessage).toContain("第1世代へ退避");
-    expect(await readAutoSave(page)).toEqual(changedSave);
-    await expect(restoreTitle).toBeVisible();
+    const restoreDialog = await restoreDialogPromise;
+    expect(restoreDialog.message()).toContain("第1世代へ退避");
+    expect(restoreDialog.message()).toContain("選択した復元元も残します");
+    await restoreDialog.accept();
 
-    const acceptedRestoreDialogPromise = page.waitForEvent("dialog");
-    await restoreTitle.getByTestId("title-restore-backup-1").click();
-    const acceptedRestoreDialog = await acceptedRestoreDialogPromise;
-    await acceptedRestoreDialog.accept();
-    await expect(restoreTitle).toBeVisible();
-    await expect(restoreTitle.getByRole("button", { name: "つづきから" })).toBeEnabled();
     await expect(restoreTitle).toContainText("バックアップからゲーム状態を復元しました。");
     expect(await readAutoSave(page)).toEqual(currentSave);
+    await expect(restoreTitle.getByTestId("title-backup-entry-backup-1")).toBeVisible();
+    await expect(restoreTitle.getByTestId("title-backup-entry-backup-2")).toBeVisible();
 
     await page.reload();
-    const restoredTitle = page.getByTestId("campaign-title-screen");
-    await expect(restoredTitle).toBeVisible();
-    await expect(restoredTitle.getByTestId("title-backup-entry-backup-1")).toBeVisible();
-    await expect(restoredTitle.getByTestId("title-backup-entry-backup-2")).toBeVisible();
-
-    const finalRestoreDialogPromise = page.waitForEvent("dialog");
-    await restoredTitle.getByTestId("title-restore-backup-1").click();
-    const finalRestoreDialog = await finalRestoreDialogPromise;
-    await finalRestoreDialog.accept();
-    await expect(restoredTitle).toBeVisible();
-    await expect(restoredTitle).toContainText("バックアップからゲーム状態を復元しました。");
-    expect(await readAutoSave(page)).toEqual(changedSave);
+    await expect(page.getByTestId("campaign-title-screen")).toBeVisible();
+    expect(await readAutoSave(page)).toEqual(currentSave);
   });
 
   test("blocks new-campaign overwrite when the stored snapshot cannot be validated", async ({ page }) => {

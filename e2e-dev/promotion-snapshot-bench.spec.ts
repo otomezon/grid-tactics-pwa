@@ -644,7 +644,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(results).toContainText("試行結果（21/21件）");
   await expect(matrix.getByTestId("promotion-playtest-coverage-swordsman")).toContainText("3/3");
   await expect(results.locator('tr[data-testid^="promotion-playtest-result-"]')).toHaveCount(21);
-  await expect(results).toContainText("未確認");
+  await expect(results).toContainText("合成fixture");
+  await expect(results).not.toContainText("未確認");
   await expect(results).toContainText("敵軍行動数");
   await expect(results).toContainText("本人が狙われた割合");
   await expect(results).toContainText("敵軍phase本人生存率");
