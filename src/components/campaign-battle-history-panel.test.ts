@@ -58,6 +58,7 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain('aria-label="時系列ログをCSV出力"');
     expect(html).toContain("保持件数: 1 / 5,000件");
     expect(html).toContain("連番範囲: 1–1");
+    expect(html).toContain("先頭より前の未保持連番: 0件");
     expect(html).toContain("保持範囲内の連番欠番: 0件");
   });
 
@@ -97,7 +98,9 @@ describe("CampaignBattleHistoryPanel", () => {
     }));
 
     expect(html).toContain("連番範囲: 10–15");
+    expect(html).toContain("先頭より前の未保持連番: 9件");
     expect(html).toContain("保持範囲内の連番欠番: 3件");
+    expect(html).toContain("この集計だけでは、その理由や行動内容を判断できません。");
     expect(html).toContain("欠けた行動内容は推測で補いません。");
   });
 
@@ -113,6 +116,7 @@ describe("CampaignBattleHistoryPanel", () => {
     }));
 
     expect(html).toContain("保持件数: 5,000 / 5,000件");
+    expect(html).toContain("先頭より前の未保持連番: 100件");
     expect(html).toContain("保存上限の5,000件を保持しています。");
     expect(html).toContain("上限到達だけでは過去記録が削除済みとは断定できません。");
   });
