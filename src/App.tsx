@@ -72,17 +72,20 @@ import { migrateGameStateSnapshot } from "./persistence/migrations";
 import {
   createGameStateBackup,
   loadGameState,
+  loadGameStateRecord,
   loadGameStateBackup,
   loadGameStateBackups,
   restoreGameStateBackup,
   replaceGameStateWithBackup,
   saveGameState,
+  SaveConflictError,
   type SaveBackupRecord
 } from "./persistence/save-repository";
 import { createSaveBackupFileName, createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 import { getStorageOperationErrorMessage } from "./persistence/storage-error";
 import { OperationGuide } from "./components/operation-guide";
 import { CampaignTitleScreen } from "./components/campaign-title-screen";
+import { SaveConflictNotice } from "./components/save-conflict-notice";
 import { BattleContributionPanel } from "./components/battle-contribution-panel";
 import { CampaignUnitBattleRecordPanel, CampaignUnitBattleRecordsSummary } from "./components/campaign-unit-battle-records";
 import { DeploymentUnitComparison } from "./components/deployment-unit-comparison";
@@ -97,7 +100,7 @@ import {
   performMapInteraction
 } from "./application/perform-map-interaction";
 
-type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
+type SaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid" | "conflict";
 
 type PlayerActionHistoryKind = "movement" | "weapon-change" | "item-use" | "class-change" | "map-interaction" | "wait";
 
@@ -133,7 +136,8 @@ const SAVE_STATUS_LABELS: Record<SaveStatus, string> = {
   saved: "保存済み",
   unavailable: "保存機能を利用できません",
   failed: "保存に失敗",
-  invalid: "保存データを確認してください"
+  invalid: "保存データを確認してください",
+  conflict: "別タブで更新"
 };
 
 const DEPLOYMENT_STAT_LABELS: ReadonlyArray<{ key: keyof UnitStats; label: string }> = [
@@ -435,6 +439,13 @@ function CampaignApp() {
   const phaseEndButtonRef = useRef<HTMLButtonElement>(null);
   const lastMapInputWasTouchRef = useRef(false);
   const touchMoveConfirmationPositionRef = useRef<Position | null>(null);
+  const autoSaveRevisionRef = useRef<number | null>(null);
+
+  async function saveAutoSave(state: GameStateSnapshot): Promise<number> {
+    const nextRevision = await saveGameState(state, autoSaveRevisionRef.current);
+    autoSaveRevisionRef.current = nextRevision;
+    return nextRevision;
+  }
 
   useEffect(() => {
     setIsMapEventHistoryOpen(false);
@@ -483,8 +494,10 @@ function CampaignApp() {
 
     async function restoreSave(): Promise<void> {
       try {
-        const stored = await loadGameState();
+        const storedRecord = await loadGameStateRecord();
         if (cancelled) return;
+        autoSaveRevisionRef.current = storedRecord?.savedAt ?? null;
+        const stored = storedRecord?.data ?? null;
 
         if (stored === null) {
           const freshState = {
@@ -532,7 +545,7 @@ function CampaignApp() {
         if (migration.migrated || restoredState !== migration.snapshot) {
           setSaveStatus("saving");
           try {
-            await saveGameState(restoredState);
+            await saveAutoSave(restoredState);
             if (!cancelled) {
               setSaveStatus("saved");
               setMessage(migration.migrated
@@ -541,18 +554,19 @@ function CampaignApp() {
             }
           } catch (error) {
             if (!cancelled) {
-              setSaveStatus("failed");
+              setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
               const storageErrorMessage = getStorageOperationErrorMessage(error);
               setMessage(storageErrorMessage
                 ? "セーブデータは読み込みましたが、新形式への保存に失敗しました。" + storageErrorMessage
                 : "セーブデータは読み込みましたが、新形式への保存に失敗しました。次の行動時に再保存します。");
             }
+            if (error instanceof SaveConflictError) return;
           }
         }
 
         if (restoredState.phase === "enemy") {
           if (getPendingMapEventMessages(restoredState, restoredChapter.map).length > 0) {
-            setSaveStatus((current) => current === "failed" ? "failed" : "saved");
+            setSaveStatus((current) => current === "failed" || current === "conflict" ? current : "saved");
             setMessage("未確認のイベントがあります。内容を確認すると敵軍フェイズが進みます。");
             return;
           }
@@ -571,14 +585,14 @@ function CampaignApp() {
             setBattleHistory([{ sequence: 0, turn: enemyPhaseTurn, kind: "enemy-phase", actions: enemyPhase.actions }]);
           }
           try {
-            await saveGameState(restoredState);
+            await saveAutoSave(restoredState);
             if (!cancelled) {
               setSaveStatus("saved");
               setMessage(formatEnemyPhaseSummary(enemyPhase, restoredChapter.map));
             }
           } catch (error) {
             if (!cancelled) {
-              setSaveStatus("failed");
+              setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
               const storageErrorMessage = getStorageOperationErrorMessage(error);
               setMessage(storageErrorMessage
                 ? "敵軍フェイズを解決しましたが、自動保存に失敗しました。" + storageErrorMessage
@@ -588,7 +602,7 @@ function CampaignApp() {
           return;
         }
 
-        setSaveStatus((current) => current === "failed" ? "failed" : "saved");
+        setSaveStatus((current) => current === "failed" || current === "conflict" ? current : "saved");
         const restoredOutcome = evaluateBattleOutcome(restoredState, restoredChapter.map);
         setMessage(restoredOutcome === "victory"
           ? "勝利条件を達成しています。"
@@ -793,7 +807,7 @@ function CampaignApp() {
   }, [pwaUpdateSafe, setPwaUpdateSafety]);
   useEffect(() => () => setPwaUpdateSafety(false), [setPwaUpdateSafety]);
 
-  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && !loadBlocked && !backupActionPending &&
+  const interactive = saveStatus !== "loading" && saveStatus !== "saving" && saveStatus !== "conflict" && !loadBlocked && !backupActionPending &&
     pendingMapEventMessages.length === 0 && !deploymentPending &&
     gameState.phase === "player" && battleOutcome === "playing";
   const reachableKeys = useMemo(
@@ -910,12 +924,12 @@ function CampaignApp() {
       const eventExecution = resolveMapEventTransition(previousState, nextState, currentMap);
       stateToSave = appendCampaignChapterResultIfMissing(eventExecution.nextState, currentMap);
       setGameState(stateToSave);
-      await saveGameState(stateToSave);
+      await saveAutoSave(stateToSave);
       setSaveStatus("saved");
       setMessage(successMessage);
       return { saved: true, state: stateToSave };
     } catch (error) {
-      setSaveStatus("failed");
+      setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
       const storageErrorMessage = getStorageOperationErrorMessage(error);
       setMessage(storageErrorMessage
         ? "行動は画面に反映されましたが、自動保存に失敗しました。" + storageErrorMessage
@@ -960,7 +974,7 @@ function CampaignApp() {
   }
 
   async function handleAcknowledgeMapEvent(eventId: string): Promise<void> {
-    if (saveStatus === "loading" || saveStatus === "saving" || backupActionPending) return;
+    if (saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict" || backupActionPending) return;
     const acknowledgedState = acknowledgeMapEvent(gameState, currentMap, eventId);
     if (acknowledgedState === gameState) return;
 
@@ -970,17 +984,18 @@ function CampaignApp() {
     } else {
       setSaveStatus("saving");
       try {
-        await saveGameState(acknowledgedState);
+        await saveAutoSave(acknowledgedState);
         setGameState(acknowledgedState);
         setSaveStatus("saved");
         setMessage("イベントを確認しました。");
       } catch (error) {
         setGameState(acknowledgedState);
-        setSaveStatus("failed");
+        setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
         const storageErrorMessage = getStorageOperationErrorMessage(error);
         setMessage(storageErrorMessage
           ? "イベントの確認状態を保存できませんでした。再読み込み後に再表示される場合があります。" + storageErrorMessage
           : "イベントの確認状態を保存できませんでした。再読み込み後に再表示される場合があります。");
+        if (error instanceof SaveConflictError) return;
       }
     }
 
@@ -995,7 +1010,7 @@ function CampaignApp() {
 
 
   async function handleChooseMapEventOption(eventId: string, choiceId: string): Promise<void> {
-    if (saveStatus === "loading" || saveStatus === "saving" || backupActionPending) return;
+    if (saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict" || backupActionPending) return;
     try {
       const execution = chooseMapEventOption(gameState, currentMap, eventId, choiceId);
       const chosenState = execution.nextState;
@@ -1007,13 +1022,13 @@ function CampaignApp() {
       } else {
         setSaveStatus("saving");
         try {
-          await saveGameState(chosenState);
+          await saveAutoSave(chosenState);
           setGameState(chosenState);
           setSaveStatus("saved");
           setMessage(selectedMessage);
         } catch (error) {
           setGameState(chosenState);
-          setSaveStatus("failed");
+          setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
           const storageErrorMessage = getStorageOperationErrorMessage(error);
           setMessage(storageErrorMessage
             ? "選択結果を保存できませんでした。再読み込み後は選択前に戻る場合があります。" + storageErrorMessage
@@ -1133,7 +1148,7 @@ function CampaignApp() {
   }
 
   async function handleRestoreSaveBackup(slotId: string): Promise<void> {
-    if (backupActionPending || saveStatus === "loading" || saveStatus === "saving") return;
+    if (backupActionPending || saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict") return;
 
     let backup: SaveBackupRecord;
     let chapter: ReturnType<typeof getChapterById>;
@@ -1197,6 +1212,7 @@ function CampaignApp() {
       }
 
       const safetyBackup = await restoreGameStateBackup(backup, restoredState);
+      autoSaveRevisionRef.current = (await loadGameStateRecord())?.savedAt ?? null;
       let backupRefreshNotice = "";
       try {
         setSaveBackups(await loadGameStateBackups());
@@ -1226,7 +1242,7 @@ function CampaignApp() {
       setHasSavedCampaign(true);
       setMessage(restoreMessage);
     } catch (error) {
-      setSaveStatus("failed");
+      setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
       setMessage("バックアップの復元に失敗しました。既存の自動セーブは変更されていません。" + getErrorMessage(error));
     } finally {
       setBackupActionPending(false);
@@ -1234,7 +1250,7 @@ function CampaignApp() {
   }
 
   async function handleImportSaveFile(file: File | null): Promise<void> {
-    if (!file || backupActionPending) return;
+    if (!file || backupActionPending || saveStatus === "conflict") return;
 
     if (file.size > MAX_SAVE_FILE_BYTES) {
       setMessage("セーブファイルが大きすぎます。1 MiB以下のJSONファイルを選択してください。");
@@ -1306,6 +1322,7 @@ function CampaignApp() {
       }
 
       const safetyBackup = await replaceGameStateWithBackup(importedState);
+      autoSaveRevisionRef.current = (await loadGameStateRecord())?.savedAt ?? null;
       let backupRefreshNotice = "";
       try {
         setSaveBackups(await loadGameStateBackups());
@@ -1335,7 +1352,7 @@ function CampaignApp() {
         : " 退避できる自動セーブはありませんでした。";
       setMessage(importMessage + backupRefreshNotice);
     } catch (error) {
-      setSaveStatus("failed");
+      setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
       setMessage("セーブファイルの保存に失敗しました。既存の自動セーブとバックアップは変更されていません。" + getErrorMessage(error));
     } finally {
       setBackupActionPending(false);
@@ -1448,13 +1465,13 @@ function CampaignApp() {
   }
 
   function handleContinueCampaign(): void {
-    if (!hasSavedCampaign || loadBlocked || saveStatus === "loading" || saveStatus === "saving") return;
+    if (!hasSavedCampaign || loadBlocked || saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict") return;
     setIsTitleScreenVisible(false);
     setMessage("保存されたキャンペーンを再開しました。");
   }
 
   function handleStartNewCampaign(): void {
-    if (loadBlocked || saveStatus === "loading" || saveStatus === "saving") return;
+    if (loadBlocked || saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict") return;
     const freshState: GameStateSnapshot = {
       ...INITIAL_CHAPTER.initialState,
       rngState: createRandomSeed()
@@ -1894,12 +1911,12 @@ function CampaignApp() {
       setSaveStatus("saving");
 
       try {
-        await saveGameState(stateToSave);
+        await saveAutoSave(stateToSave);
         setSaveStatus("saved");
         setHasSavedCampaign(true);
         setMessage("出撃配置を確定し、自動保存しました。戦闘を開始できます。");
       } catch (error) {
-        setSaveStatus("failed");
+        setSaveStatus(error instanceof SaveConflictError ? "conflict" : "failed");
         const storageErrorMessage = getStorageOperationErrorMessage(error);
         setMessage(storageErrorMessage
           ? "出撃配置は確定しましたが、自動保存に失敗しました。" + storageErrorMessage
@@ -1930,7 +1947,7 @@ function CampaignApp() {
           ? "敵軍フェイズを開始します。" + recoverySummary + "。"
           : "敵軍フェイズを開始します。"
       );
-      if (getPendingMapEventMessages(checkpoint.state, currentMap).length > 0) return;
+      if (!checkpoint.saved || getPendingMapEventMessages(checkpoint.state, currentMap).length > 0) return;
 
       await resolveEnemyPhaseAndPersist(checkpoint.state);
     } catch (error) {
@@ -1946,6 +1963,7 @@ function CampaignApp() {
       battleOutcome !== "victory" ||
       saveStatus === "saving" ||
       saveStatus === "loading" ||
+      saveStatus === "conflict" ||
       loadBlocked ||
       isStartingNextChapter
     ) return;
@@ -2081,7 +2099,8 @@ function CampaignApp() {
   if (isTitleScreenVisible) {
     return (
       <CampaignTitleScreen
-        isLoading={saveStatus === "loading" || saveStatus === "saving"}
+        isLoading={saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict"}
+        saveConflict={saveStatus === "conflict"}
         hasSavedCampaign={hasSavedCampaign}
         saveBlocked={loadBlocked}
         canExportSave={hasSavedCampaign && !loadBlocked && saveStatus === "saved"}
@@ -2207,7 +2226,7 @@ function CampaignApp() {
           <button
             className="secondary-button save-file-button"
             type="button"
-            disabled={saveStatus === "loading" || saveStatus === "saving"}
+            disabled={saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict"}
             onClick={() => importSaveFileInput.current?.click()}
           >
             セーブを読み込む
@@ -2240,6 +2259,7 @@ function CampaignApp() {
           )}
         </div>
       </header>
+      {saveStatus === "conflict" && <SaveConflictNotice />}
 
       <div className="prototype-notice">
         <strong>開発プロトタイプ</strong>
@@ -3319,7 +3339,7 @@ function CampaignApp() {
         <MapEventDialog
           event={pendingMapEventMessages[0]!}
           remainingCount={pendingMapEventMessages.length}
-          disabled={saveStatus === "saving" || backupActionPending}
+          disabled={saveStatus === "saving" || saveStatus === "conflict" || backupActionPending}
           onAcknowledge={(eventId) => void handleAcknowledgeMapEvent(eventId)}
           onChooseChoice={(eventId, choiceId) => void handleChooseMapEventOption(eventId, choiceId)}
         />

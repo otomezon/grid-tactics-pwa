@@ -47,7 +47,7 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   background: rgba(25, 38, 51, .88); font-size: .76rem; font-weight: 700; white-space: nowrap;
 }
 .save-saved { border-color: #3f796f; color: #9de4d8; }
-.save-failed, .save-invalid, .save-unavailable { border-color: #8b5d56; color: #ffc0b1; }
+.save-failed, .save-invalid, .save-unavailable, .save-conflict { border-color: #8b5d56; color: #ffc0b1; }
 .prototype-notice {
   display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding: 11px 14px;
   border: 1px solid #65583c; border-radius: 12px; color: #e9d9b4;
@@ -3334,4 +3334,13 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 }
 .promotion-manual-pair-coverage-table th:first-child {
   min-width: 180px;
+}
+
+
+.save-conflict-notice {
+  margin: 0 auto 16px;
+  width: min(100%, 1120px);
+}
+.save-conflict-notice button {
+  justify-self: start;
 }

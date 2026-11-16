@@ -41,6 +41,10 @@ describe("canApplyPwaUpdate", () => {
     })).toBe(false);
   });
 
+  it("waits when another tab has written a newer auto-save", () => {
+    expect(canApplyPwaUpdate({ ...safeTitleScreen, saveStatus: "conflict" })).toBe(false);
+  });
+
   it.each(["loading", "saving", "unavailable", "failed", "invalid"] as const)(
     "waits while save status is %s",
     (saveStatus) => expect(canApplyPwaUpdate({ ...safeTitleScreen, saveStatus })).toBe(false)

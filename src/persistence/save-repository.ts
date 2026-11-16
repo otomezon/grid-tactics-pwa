@@ -64,54 +64,131 @@ function transactionCompleted(transaction: IDBTransaction): Promise<void> {
   });
 }
 
-export async function loadGameState(
+export interface LoadedGameStateRecord {
+  savedAt: number;
+  data: unknown;
+}
+
+/** Reads save data and its existing savedAt revision for optimistic concurrency. */
+export async function loadGameStateRecord(
   slotId: string = AUTO_SAVE_SLOT
-): Promise<unknown | null> {
+): Promise<LoadedGameStateRecord | null> {
   const database = await openDatabase();
   const transaction = database.transaction(SAVE_STORE, "readonly");
   const completed = transactionCompleted(transaction);
   const request = transaction.objectStore(SAVE_STORE).get(slotId);
 
   const [record] = await Promise.all([
-    new Promise<SaveRecord | undefined>((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result as SaveRecord | undefined);
-      request.onerror = () => {
-        reject(request.error ?? new Error("Failed to read save data."));
-      };
+    new Promise<unknown>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error("Failed to read save data."));
     }),
     completed
   ]);
 
   if (record === undefined) return null;
-
   if (
-    typeof record !== "object" ||
-    record === null ||
+    !isStoredRecord(record) ||
     record.slotId !== slotId ||
+    typeof record.savedAt !== "number" ||
+    !Number.isFinite(record.savedAt) ||
     typeof record.data !== "object" ||
     record.data === null
   ) {
     throw new Error("The stored save record has an invalid format.");
   }
-
-  return record.data;
+  return { savedAt: record.savedAt, data: record.data };
 }
 
+export async function loadGameState(
+  slotId: string = AUTO_SAVE_SLOT
+): Promise<unknown | null> {
+  const record = await loadGameStateRecord(slotId);
+  return record?.data ?? null;
+}
+
+export class SaveConflictError extends Error {
+  readonly expectedSavedAt: number | null;
+  readonly actualSavedAt: number | null;
+
+  constructor(expectedSavedAt: number | null, actualSavedAt: number | null) {
+    super("Another tab saved a newer campaign state.");
+    this.name = "SaveConflictError";
+    this.expectedSavedAt = expectedSavedAt;
+    this.actualSavedAt = actualSavedAt;
+  }
+}
+
+/** Compare a tab's last-loaded revision with the current record in its write transaction. */
+export function assertAutoSaveRevisionMatches(
+  expectedSavedAt: number | null,
+  actualSavedAt: number | null
+): void {
+  if (expectedSavedAt !== actualSavedAt) {
+    throw new SaveConflictError(expectedSavedAt, actualSavedAt);
+  }
+}
+
+/** Uses the existing savedAt field as a strictly increasing revision. */
+export function getNextAutoSaveTimestamp(now: number, previousSavedAt: number | null): number {
+  return previousSavedAt === null ? now : Math.max(now, previousSavedAt + 1);
+}
+
+/** Read, compare, and write are serialized by one IndexedDB readwrite transaction. */
 export async function saveGameState(
   data: GameStateSnapshot,
-  slotId: string = AUTO_SAVE_SLOT
-): Promise<void> {
+  expectedSavedAt: number | null
+): Promise<number> {
   const database = await openDatabase();
   const transaction = database.transaction(SAVE_STORE, "readwrite");
   const completed = transactionCompleted(transaction);
-  const record: SaveRecord = {
-    slotId,
-    savedAt: Date.now(),
-    data
-  };
+  const store = transaction.objectStore(SAVE_STORE);
+  const request = store.get(AUTO_SAVE_SLOT);
+  let operationError: Error | undefined;
 
-  transaction.objectStore(SAVE_STORE).put(record);
-  await completed;
+  const operation = new Promise<number>((resolve, reject) => {
+    request.onsuccess = () => {
+      try {
+        const current = request.result as unknown;
+        let actualSavedAt: number | null = null;
+        if (current !== undefined) {
+          if (
+            !isStoredRecord(current) ||
+            current.slotId !== AUTO_SAVE_SLOT ||
+            typeof current.savedAt !== "number" ||
+            !Number.isFinite(current.savedAt) ||
+            typeof current.data !== "object" ||
+            current.data === null
+          ) {
+            throw new Error("The stored auto-save record has an invalid format.");
+          }
+          actualSavedAt = current.savedAt;
+        }
+
+        assertAutoSaveRevisionMatches(expectedSavedAt, actualSavedAt);
+        const savedAt = getNextAutoSaveTimestamp(Date.now(), actualSavedAt);
+        store.put({ slotId: AUTO_SAVE_SLOT, savedAt, data } satisfies SaveRecord);
+        resolve(savedAt);
+      } catch (error) {
+        operationError = error instanceof Error ? error : new Error("Failed to save campaign state.");
+        try { transaction.abort(); } catch { /* The transaction may already have aborted. */ }
+        reject(operationError);
+      }
+    };
+    request.onerror = () => {
+      operationError = request.error instanceof Error
+        ? request.error
+        : new Error("Failed to read the current auto-save revision.");
+      reject(operationError);
+    };
+  });
+
+  try {
+    const [savedAt] = await Promise.all([operation, completed]);
+    return savedAt;
+  } catch (error) {
+    throw operationError ?? error;
+  }
 }
 
 

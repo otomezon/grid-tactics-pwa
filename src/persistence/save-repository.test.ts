@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { SaveBackupRecord } from "./save-repository";
 import {
   getBackupRecordsToPreserveAfterReplacement,
-  getBackupRecordsToPreserveAfterRestore
+  getBackupRecordsToPreserveAfterRestore,
+  assertAutoSaveRevisionMatches,
+  getNextAutoSaveTimestamp,
+  SaveConflictError
 } from "./save-repository";
 
 function createBackups(): SaveBackupRecord[] {
@@ -70,5 +73,26 @@ describe("getBackupRecordsToPreserveAfterReplacement", () => {
     const before = JSON.stringify(backups);
     getBackupRecordsToPreserveAfterReplacement(backups);
     expect(JSON.stringify(backups)).toBe(before);
+  });
+});
+
+
+describe("auto-save concurrency revision", () => {
+  it("accepts the revision that was actually loaded, including an empty slot", () => {
+    expect(() => assertAutoSaveRevisionMatches(null, null)).not.toThrow();
+    expect(() => assertAutoSaveRevisionMatches(1_000, 1_000)).not.toThrow();
+  });
+
+  it("rejects a stale tab when another tab has already saved", () => {
+    expect(() => assertAutoSaveRevisionMatches(1_000, 1_001)).toThrow(SaveConflictError);
+    expect(() => assertAutoSaveRevisionMatches(null, 1_000)).toThrow(SaveConflictError);
+    expect(() => assertAutoSaveRevisionMatches(1_000, null)).toThrow(SaveConflictError);
+  });
+
+  it("keeps the existing savedAt field strictly increasing within one millisecond", () => {
+    expect(getNextAutoSaveTimestamp(5_000, null)).toBe(5_000);
+    expect(getNextAutoSaveTimestamp(5_000, 4_999)).toBe(5_000);
+    expect(getNextAutoSaveTimestamp(5_000, 5_000)).toBe(5_001);
+    expect(getNextAutoSaveTimestamp(4_000, 5_000)).toBe(5_001);
   });
 });

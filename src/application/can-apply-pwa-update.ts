@@ -1,4 +1,4 @@
-export type PwaUpdateSaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid";
+export type PwaUpdateSaveStatus = "loading" | "ready" | "saving" | "saved" | "unavailable" | "failed" | "invalid" | "conflict";
 
 export interface PwaUpdateSafetyInput {
   isTitleScreenVisible: boolean;

@@ -17,6 +17,8 @@ export function getStorageOperationErrorMessage(error: unknown): string | undefi
       return "ブラウザーの保存容量が不足しています。タイトル画面からセーブJSONを書き出して保管し、空き容量を確保してから再試行してください。";
     case "SecurityError":
       return "ブラウザーがこのサイトのローカル保存を制限しています。プライベートブラウズやサイトデータの制限を確認し、通常の閲覧モードで再試行してください。";
+    case "SaveConflictError":
+      return "別のタブで新しいセーブが保存されています。このタブからの上書きは停止しました。最新のセーブを読み込むため、ページを再読み込みしてください。";
     default:
       return undefined;
   }

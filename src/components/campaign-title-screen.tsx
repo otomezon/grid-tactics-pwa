@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { StorageDurabilityPanel } from "./storage-durability-panel";
+import { SaveConflictNotice } from "./save-conflict-notice";
 
 export interface CampaignBackupView {
   slotId: string;
@@ -12,6 +13,7 @@ export interface CampaignBackupView {
 
 export interface CampaignTitleScreenProps {
   isLoading: boolean;
+  saveConflict: boolean;
   hasSavedCampaign: boolean;
   saveBlocked: boolean;
   canExportSave: boolean;
@@ -39,6 +41,7 @@ export interface CampaignTitleScreenProps {
 
 export function CampaignTitleScreen({
   isLoading,
+  saveConflict,
   hasSavedCampaign,
   saveBlocked,
   canExportSave,
@@ -99,6 +102,7 @@ export function CampaignTitleScreen({
           </div>
         </header>
 
+        {saveConflict && <SaveConflictNotice />}
         <div className="campaign-title-grid">
           <section className="campaign-title-card campaign-title-main-card" aria-labelledby="campaign-title-heading">
             <p className="eyebrow">CAMPAIGN</p>
