@@ -335,12 +335,14 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(matrix).toContainText("19/21 実行準備完了");
   await expect(runButton).toBeDisabled();
   await caseRows.nth(1).locator("select").nth(0).selectOption("");
+  await caseRows.nth(1).getByRole("checkbox").check();
   await expect(matrix).toContainText("21/21 実行準備完了");
   await expect(runButton).toBeEnabled();
   await runButton.click();
 
   const results = matrix.getByTestId("promotion-playtest-matrix-results");
   await expect(results).toContainText("試行結果（21/21件）");
+  await expect(matrix.getByTestId("promotion-playtest-coverage-swordsman")).toContainText("3/3");
   await expect(results.locator('tr[data-testid^="promotion-playtest-result-"]')).toHaveCount(21);
   await expect(results).toContainText("未確認");
   await expect(results).toContainText("敵軍行動数");
