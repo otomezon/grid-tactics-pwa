@@ -35,7 +35,7 @@ export function getWilsonScoreInterval(
     denominator;
 
   return {
-    lower: Math.max(0, (center - margin) * 100),
-    upper: Math.min(100, (center + margin) * 100)
+    lower: successes === 0 ? 0 : Math.min(100, Math.max(0, (center - margin) * 100)),
+    upper: successes === trials ? 100 : Math.min(100, Math.max(0, (center + margin) * 100))
   };
 }
