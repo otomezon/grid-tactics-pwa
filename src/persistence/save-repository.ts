@@ -433,6 +433,12 @@ export async function restoreGameStateBackup(
         const currentAutoSave = records.find((record) =>
           isStoredRecord(record) && record.slotId === AUTO_SAVE_SLOT
         );
+        const currentSavedAt = isStoredRecord(currentAutoSave) &&
+          typeof currentAutoSave.savedAt === "number" &&
+          Number.isFinite(currentAutoSave.savedAt)
+          ? currentAutoSave.savedAt
+          : null;
+        const nextAutoSaveSavedAt = getNextAutoSaveTimestamp(Date.now(), currentSavedAt);
         let safetyBackup: SaveBackupRecord | null = null;
 
         if (isStoredRecord(currentAutoSave) && Object.hasOwn(currentAutoSave, "data")) {
@@ -473,7 +479,7 @@ export async function restoreGameStateBackup(
           });
         }
 
-        store.put({ slotId: AUTO_SAVE_SLOT, savedAt: Date.now(), data });
+        store.put({ slotId: AUTO_SAVE_SLOT, savedAt: nextAutoSaveSavedAt, data });
         resolve(safetyBackup);
       } catch (error) {
         operationError = error instanceof Error ? error : new Error("Failed to restore the selected save backup.");
@@ -517,6 +523,12 @@ export async function replaceGameStateWithBackup(
         const currentAutoSave = records.find((record) =>
           isStoredRecord(record) && record.slotId === AUTO_SAVE_SLOT
         );
+        const currentSavedAt = isStoredRecord(currentAutoSave) &&
+          typeof currentAutoSave.savedAt === "number" &&
+          Number.isFinite(currentAutoSave.savedAt)
+          ? currentAutoSave.savedAt
+          : null;
+        const nextAutoSaveSavedAt = getNextAutoSaveTimestamp(Date.now(), currentSavedAt);
         let safetyBackup: SaveBackupRecord | null = null;
 
         if (isStoredRecord(currentAutoSave) && Object.hasOwn(currentAutoSave, "data")) {
@@ -554,7 +566,7 @@ export async function replaceGameStateWithBackup(
           });
         }
 
-        store.put({ slotId: AUTO_SAVE_SLOT, savedAt: Date.now(), data });
+        store.put({ slotId: AUTO_SAVE_SLOT, savedAt: nextAutoSaveSavedAt, data });
         resolve(safetyBackup);
       } catch (error) {
         operationError = error instanceof Error
