@@ -1036,11 +1036,11 @@ test("paginates long campaign battle histories without truncating filtered CSV e
   const downloadPromise = page.waitForEvent("download");
   await activate(csvButton, input);
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-\\d{4}-\\d{2}-\\d{2}\\.csv$/);
+  expect(download.suggestedFilename()).toMatch(/^campaign-battle-history-\d{4}-\d{2}-\d{2}\.csv$/);
   const downloadPath = await download.path();
   if (!downloadPath) throw new Error("The campaign history CSV download has no temporary file path.");
   const csv = await readFile(downloadPath, "utf8");
-  expect(csv.startsWith("\\uFEFF")).toBe(true);
+  expect(csv.startsWith("\uFEFF")).toBe(true);
   expect(csv).toContain("ページング試験 001");
   expect(csv).toContain("ページング試験 123");
   expect(csv.split("ページング試験 ").length - 1).toBe(123);
