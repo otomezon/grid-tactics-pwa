@@ -3385,6 +3385,13 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   flex: 0 0 auto;
 }
 
+.campaign-battle-history-export-note {
+  margin: -2px 0 10px;
+  color: var(--text-muted);
+  font-size: .72rem;
+  line-height: 1.55;
+}
+
 .campaign-unit-record-archive-header {
   display: flex;
   flex-wrap: wrap;

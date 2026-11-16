@@ -1,5 +1,6 @@
 import type { CampaignBattleStrikeRecord, CampaignUnitBattleRecord } from "../domain/models/game";
-import type { CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
+import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
+import type { CampaignBattleHistoryCategory } from "./filter-campaign-battle-history";
 
 type CsvCell = string | number | null | undefined;
 
@@ -27,15 +28,33 @@ function serializeCsv(rows: readonly (readonly CsvCell[])[]): string {
   return "\uFEFF" + rows.map((row) => row.map(escapeCsvCell).join(",")).join("\r\n") + "\r\n";
 }
 
+export type CampaignBattleHistoryCsvExportScope = "filtered" | "all-retained";
+
+export interface CampaignBattleHistoryCsvExportContext {
+  scope: CampaignBattleHistoryCsvExportScope;
+  /** The full retained timeline, before any on-screen filters are applied. */
+  retainedEntries: readonly Pick<CampaignBattleHistoryEntry, "sequence">[];
+  filters: { chapterId: string; category: CampaignBattleHistoryCategory; query: string };
+}
+
+function getExportMetadata(entries: readonly CampaignBattleHistoryEntry[], context: CampaignBattleHistoryCsvExportContext): CsvCell[] {
+  const coverage = getCampaignBattleLogCoverage(context.retainedEntries);
+  return [context.scope === "all-retained" ? "保持ログ全件" : "絞り込み結果", entries.length, coverage.retainedCount, coverage.retentionLimit, coverage.firstSequence ?? "", coverage.lastSequence ?? "", coverage.unretainedLeadingSequenceCount, coverage.missingSequenceCount, coverage.reachedRetentionLimit ? "はい" : "いいえ", context.filters.chapterId, context.filters.category, context.filters.query];
+}
+
 /** Exports confirmed campaign-log facts only. Each saved actual strike gets its own row. */
-export function buildCampaignBattleHistoryCsv(entries: readonly CampaignBattleHistoryEntry[]): string {
-  const rows: CsvCell[][] = [[
+export function buildCampaignBattleHistoryCsv(entries: readonly CampaignBattleHistoryEntry[], context?: CampaignBattleHistoryCsvExportContext): string {
+  const metadataHeaders = context ? ["出力範囲", "出力記録件数", "保持ログ件数", "保持上限件数", "保持先頭連番", "保持末尾連番", "先頭より前の未保持連番", "保持範囲内の連番欠番", "保持上限到達", "画面の章フィルター", "画面の記録種別フィルター", "画面のキーワードフィルター"] : [];
+  const headers: CsvCell[] = [...(context ? ["CSV行種別"] : []),
     "連番", "章ID", "章番号", "章名", "ターン", "記録種別", "行動",
     "行動者ID", "行動者名", "対象ID", "対象名", "詳細", "対象残HP", "獲得EXP",
     "勝敗", "勝敗理由", "勝利目標", "生存味方数", "生存敵数", "移動先X", "移動先Y",
     "strike番号", "strike種別", "strike行動者ID", "strike行動者名", "strike対象ID",
-    "strike対象名", "武器", "strike結果", "ダメージ", "対象HP（攻撃前）", "対象HP（攻撃後）"
-  ]];
+    "strike対象名", "武器", "strike結果", "ダメージ", "対象HP（攻撃前）", "対象HP（攻撃後）", ...metadataHeaders
+  ];
+  const rows: CsvCell[][] = [headers];
+  const exportMetadata = context ? getExportMetadata(entries, context) : [];
+  if (context && entries.length === 0) rows.push(["エクスポート情報", ...Array<CsvCell>(headers.length - metadataHeaders.length - 1).fill(""), ...exportMetadata]);
 
   for (const entry of entries) {
     let recordKind = "";
@@ -101,6 +120,7 @@ export function buildCampaignBattleHistoryCsv(entries: readonly CampaignBattleHi
     for (let index = 0; index < Math.max(strikes.length, 1); index += 1) {
       const strike = strikes[index] ?? null;
       rows.push([
+        ...(context ? ["戦闘ログ"] : []),
         entry.sequence, entry.chapterId, entry.chapterNumber ?? "", entry.chapterTitle, entry.turn,
         recordKind, action, actorId, actorName, targetId, targetName, detail,
         targetRemainingHp, experienceAwarded, outcome, reason, objective,
@@ -109,7 +129,7 @@ export function buildCampaignBattleHistoryCsv(entries: readonly CampaignBattleHi
         strike?.actorId ?? "", strike?.actorName ?? "", strike?.targetId ?? "",
         strike?.targetName ?? "", strike?.weaponName ?? "",
         strike ? STRIKE_OUTCOME_LABELS[strike.outcome] : "",
-        strike?.damage ?? "", strike?.targetHpBefore ?? "", strike?.targetHpAfter ?? ""
+        strike?.damage ?? "", strike?.targetHpBefore ?? "", strike?.targetHpAfter ?? "", ...exportMetadata
       ]);
     }
   }

@@ -33,6 +33,30 @@ describe("buildCampaignBattleHistoryCsv", () => {
     expect(csv).not.toContain("AI");
   });
 
+  it("records export scope and full retained-log coverage, not filtered coverage", () => {
+    const retained: CampaignBattleHistoryEntry[] = [
+      { ...chapter, sequence: 10, kind: "player-action", action: "wait", actorId: "unit_001", actorName: "主人公", detail: "待機" },
+      { ...chapter, sequence: 12, kind: "player-action", action: "wait", actorId: "unit_002", actorName: "味方02", detail: "待機" },
+      { ...chapter, sequence: 15, kind: "player-action", action: "wait", actorId: "unit_003", actorName: "味方03", detail: "待機" }
+    ];
+    const context = { scope: "filtered" as const, retainedEntries: retained, filters: { chapterId: "chapter_01_map", category: "player" as const, query: "主人公" } };
+    const filteredCsv = buildCampaignBattleHistoryCsv([retained[0]!], context);
+    expect(filteredCsv).toContain('"出力範囲"');
+    expect(filteredCsv).toContain('"出力記録件数"');
+    expect(filteredCsv).toContain('"絞り込み結果","1","3","5000","10","15","9","3","いいえ","chapter_01_map","player","主人公"');
+    const allCsv = buildCampaignBattleHistoryCsv(retained, { ...context, scope: "all-retained" });
+    expect(allCsv).toContain('"保持ログ全件","3","3","5000","10","15","9","3","いいえ","chapter_01_map","player","主人公"');
+    expect(allCsv).toContain('"味方02"');
+    expect(allCsv).toContain('"味方03"');
+  });
+
+  it("retains export metadata for an empty filtered result", () => {
+    const retained: CampaignBattleHistoryEntry[] = [{ ...chapter, sequence: 1, kind: "player-action", action: "wait", actorId: "unit_001", actorName: "主人公", detail: "待機" }];
+    const csv = buildCampaignBattleHistoryCsv([], { scope: "filtered", retainedEntries: retained, filters: { chapterId: "all", category: "all", query: "一致なし" } });
+    expect(csv).toContain('"エクスポート情報"');
+    expect(csv).toContain('"絞り込み結果","0","1","5000","1","1","0","0","いいえ","all","all","一致なし"');
+  });
+
   it("quotes comma, quote, and newline characters and neutralizes formula-like strings", () => {
     const entry: CampaignBattleHistoryEntry = {
       ...chapter, sequence: 1, kind: "player-action", action: "wait", actorId: "unit_001",

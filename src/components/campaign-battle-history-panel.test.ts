@@ -55,7 +55,9 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("撃破者別記録（絞り込み結果全体）");
     expect(html).toContain("時系列ログ");
     expect(html).toContain("味方別累計");
-    expect(html).toContain('aria-label="時系列ログをCSV出力"');
+    expect(html).toContain('aria-label="絞り込み結果をCSV出力"');
+    expect(html).toContain('aria-label="保持ログ全件をCSV出力"');
+    expect(html).toContain("画面の絞り込みに関係なく保存中の最大5,000件");
     expect(html).toContain("保持件数: 1 / 5,000件");
     expect(html).toContain("連番範囲: 1–1");
     expect(html).toContain("先頭より前の未保持連番: 0件");

@@ -6,7 +6,7 @@ import {
 } from "../application/get-campaign-battle-history";
 import type { CampaignUnitBattleRecord } from "../domain/models/game";
 import { CampaignUnitBattleRecordsArchive } from "./campaign-unit-battle-records";
-import { buildCampaignBattleHistoryCsv } from "../application/export-campaign-archive-csv";
+import { buildCampaignBattleHistoryCsv, type CampaignBattleHistoryCsvExportScope } from "../application/export-campaign-archive-csv";
 import { downloadCsv } from "./download-csv";
 import {
   filterCampaignBattleHistory,
@@ -144,6 +144,16 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
     setPageIndex(0);
   }
 
+  function exportTimeline(scope: CampaignBattleHistoryCsvExportScope): void {
+    const exportEntries = scope === "all-retained" ? entries : filteredEntries;
+    const suffix = scope === "all-retained" ? "all-retained" : "filtered";
+    downloadCsv(buildCampaignBattleHistoryCsv(exportEntries, {
+      scope,
+      retainedEntries: entries,
+      filters: { chapterId: chapterFilter, category: categoryFilter, query: query.trim() }
+    }), "campaign-battle-history-" + suffix + "-" + new Date().toISOString().slice(0, 10) + ".csv");
+  }
+
   return (
     <section
       id="campaign-battle-history-panel"
@@ -253,19 +263,16 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
         >
           絞り込みを解除
         </button>
-        <button
-          className="secondary-button campaign-battle-history-reset campaign-battle-history-export"
-          type="button"
-          aria-label="時系列ログをCSV出力"
-          disabled={filteredEntries.length === 0}
-          onClick={() => downloadCsv(
-            buildCampaignBattleHistoryCsv(filteredEntries),
-            "campaign-battle-history-" + new Date().toISOString().slice(0, 10) + ".csv"
-          )}
-        >
-          CSV出力
+        <button className="secondary-button campaign-battle-history-reset campaign-battle-history-export" type="button" aria-label="絞り込み結果をCSV出力" disabled={filteredEntries.length === 0} onClick={() => exportTimeline("filtered")}>
+          絞り込み結果をCSV出力
+        </button>
+        <button className="secondary-button campaign-battle-history-reset campaign-battle-history-export" type="button" aria-label="保持ログ全件をCSV出力" disabled={entries.length === 0} onClick={() => exportTimeline("all-retained")}>
+          保持ログ全件をCSV出力
         </button>
       </div>
+      <p className="campaign-battle-history-export-note">
+        「絞り込み結果」は現在の条件に一致した記録のみ、「保持ログ全件」は画面の絞り込みに関係なく保存中の最大5,000件を出力します。CSVには出力範囲と、絞り込み前の保持状況・連番監査値も記録します。
+      </p>
 
       <section className="campaign-battle-defeats" aria-labelledby="campaign-battle-defeats-title">
         <h3 id="campaign-battle-defeats-title">撃破者別記録（絞り込み結果全体）</h3>
