@@ -48,10 +48,16 @@ function CampaignBattleHistoryCoverage({ coverage }: { coverage: CampaignBattleL
       {coverage.retainedCount > 0 ? (
         <>
           <p>連番範囲: {coverage.firstSequence?.toLocaleString("ja-JP")}–{coverage.lastSequence?.toLocaleString("ja-JP")}</p>
+          <p>先頭より前の未保持連番: {coverage.unretainedLeadingSequenceCount.toLocaleString("ja-JP")}件</p>
           <p>保持範囲内の連番欠番: {coverage.missingSequenceCount.toLocaleString("ja-JP")}件</p>
         </>
       ) : (
         <p>キャンペーン戦闘記録はまだありません。</p>
+      )}
+      {coverage.unretainedLeadingSequenceCount > 0 && (
+        <p className="campaign-battle-history-coverage-note">
+          sequenceは1から採番されます。最初に保持された記録より前の番号は現在のログに含まれません。この集計だけでは、その理由や行動内容を判断できません。
+        </p>
       )}
       {coverage.missingSequenceCount > 0 && (
         <p className="campaign-battle-history-coverage-note">
