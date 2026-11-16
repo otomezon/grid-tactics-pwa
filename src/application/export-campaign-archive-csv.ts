@@ -35,17 +35,17 @@ export interface CampaignBattleHistoryCsvExportContext {
   scope: CampaignBattleHistoryCsvExportScope;
   /** The full retained timeline, before any on-screen filters are applied. */
   retainedEntries: readonly Pick<CampaignBattleHistoryEntry, "sequence">[];
-  filters: { chapterId: string; category: CampaignBattleHistoryCategory; query: string };
+  filters: { chapterId: string; category: CampaignBattleHistoryCategory; unitId: string; query: string };
 }
 
 function getExportMetadata(entries: readonly CampaignBattleHistoryEntry[], context: CampaignBattleHistoryCsvExportContext): CsvCell[] {
   const coverage = getCampaignBattleLogCoverage(context.retainedEntries);
-  return [context.scope === "all-retained" ? "保持ログ全件" : "絞り込み結果", entries.length, coverage.retainedCount, coverage.retentionLimit, coverage.firstSequence ?? "", coverage.lastSequence ?? "", coverage.unretainedLeadingSequenceCount, coverage.missingSequenceCount, coverage.reachedRetentionLimit ? "はい" : "いいえ", context.filters.chapterId, context.filters.category, context.filters.query];
+  return [context.scope === "all-retained" ? "保持ログ全件" : "絞り込み結果", entries.length, coverage.retainedCount, coverage.retentionLimit, coverage.firstSequence ?? "", coverage.lastSequence ?? "", coverage.unretainedLeadingSequenceCount, coverage.missingSequenceCount, coverage.reachedRetentionLimit ? "はい" : "いいえ", context.filters.chapterId, context.filters.category, context.filters.unitId, context.filters.query];
 }
 
 /** Exports confirmed campaign-log facts only. Each saved actual strike gets its own row. */
 export function buildCampaignBattleHistoryCsv(entries: readonly CampaignBattleHistoryEntry[], context?: CampaignBattleHistoryCsvExportContext): string {
-  const metadataHeaders = context ? ["出力範囲", "出力記録件数", "保持ログ件数", "保持上限件数", "保持先頭連番", "保持末尾連番", "先頭より前の未保持連番", "保持範囲内の連番欠番", "保持上限到達", "画面の章フィルター", "画面の記録種別フィルター", "画面のキーワードフィルター"] : [];
+  const metadataHeaders = context ? ["出力範囲", "出力記録件数", "保持ログ件数", "保持上限件数", "保持先頭連番", "保持末尾連番", "先頭より前の未保持連番", "保持範囲内の連番欠番", "保持上限到達", "画面の章フィルター", "画面の記録種別フィルター", "画面の味方ユニットフィルター", "画面のキーワードフィルター"] : [];
   const headers: CsvCell[] = [...(context ? ["CSV行種別"] : []),
     "連番", "章ID", "章番号", "章名", "ターン", "記録種別", "行動",
     "行動者ID", "行動者名", "対象ID", "対象名", "詳細", "対象残HP", "獲得EXP",
