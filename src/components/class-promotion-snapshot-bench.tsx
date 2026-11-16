@@ -1070,7 +1070,7 @@ export function ClassPromotionSnapshotBench() {
                           <small>同一seed: {formatPairedOutcomeBreakdown(result.enemyPhaseSummary.pairedOutcomes.playerPhaseAdvanced)}</small>
                         </td>
                         <td>
-                          ログ {result.evidence.campaignLogEntries}件・{result.evidence.campaignChapterCount}章
+                          {result.evidence.campaignLogTrackingAvailable ? "ログ " + result.evidence.campaignLogEntries + "件" : "ログ: 未追跡"} · {result.evidence.campaignChapterCount}章
                           <small>対象ユニット: 行動 {result.evidence.selectedUnitActionEntries}／攻撃 {result.evidence.selectedUnitAttackEntries}／被標的 {result.evidence.selectedUnitTargetedEnemyActionEntries}</small>
                           <small>{result.evidence.unitBattleTotalsTrackingAvailable ? "味方別累計: " + (result.evidence.selectedUnitBattleTotals?.attacks ?? 0) + "攻撃" : "味方別累計: 未追跡"}</small>
                         </td>
