@@ -993,6 +993,10 @@ test("paginates long campaign battle histories without truncating filtered CSV e
   const rows = panel.getByTestId("campaign-battle-log-entry");
   const pageStatus = panel.getByTestId("campaign-history-page-status");
   const pagination = panel.getByTestId("campaign-battle-history-pagination");
+  const coverage = panel.getByTestId("campaign-battle-history-coverage");
+  await expect(coverage).toContainText("保持件数: 123 / 5,000件");
+  await expect(coverage).toContainText("連番範囲: 1–123");
+  await expect(coverage).toContainText("保持範囲内の連番欠番: 0件");
   const expectedAt = (index: number) => String(populatedState.campaignBattleLog[index]!.sequence);
 
   await expect(rows).toHaveCount(50);

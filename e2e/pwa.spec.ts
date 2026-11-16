@@ -897,7 +897,7 @@ test.describe("production PWA shell", () => {
     const legacyRestoreDialog = await legacyRestoreDialogPromise;
     expect(legacyRestoreDialog.message()).toContain("第1世代へ退避");
     expect(legacyRestoreDialog.message()).toContain("選択した復元元も残します");
-    expect(legacyRestoreDialog.message()).toContain("保存形式: v9 → v10");
+    expect(legacyRestoreDialog.message()).toContain("保存形式: v2 → v10");
     await legacyRestoreDialog.accept();
     await expect(page.getByRole("status")).toContainText("旧形式のバックアップを変換して復元しました。");
     const migratedAutoSave = await readAutoSave(page) as {
