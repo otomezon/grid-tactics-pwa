@@ -233,6 +233,16 @@ function makeLegacyVersionOnePromotionSnapshotFile() {
   };
 }
 
+function reverseObjectKeyOrder(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reverseObjectKeyOrder);
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .reverse()
+      .map(([key, entry]) => [key, reverseObjectKeyOrder(entry)])
+  );
+}
+
 function makePromotionMatrixSnapshotFile(classId: string, profileIndex: number) {
   const envelope = makePromotionSnapshotFile();
   const snapshot = structuredClone(envelope.data);
@@ -403,12 +413,14 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
 test("does not count renamed copies of one save as three distinct promotion samples", async ({ page }) => {
   await page.goto("/?promotion-snapshots=1");
   const bench = page.getByTestId("promotion-snapshot-bench");
-  const sameSave = JSON.stringify(makePromotionSnapshotFile());
+  const sameSave = makePromotionSnapshotFile();
+  const sameSaveText = JSON.stringify(sameSave);
+  const reorderedSaveText = JSON.stringify(reverseObjectKeyOrder(sameSave));
   await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles(
-    [1, 2, 3].map((index) => ({
-      name: "same-save-copy-" + index + ".json",
+    [sameSaveText, sameSaveText, reorderedSaveText].map((content, index) => ({
+      name: "same-save-copy-" + (index + 1) + ".json",
       mimeType: "application/json",
-      buffer: Buffer.from(sameSave)
+      buffer: Buffer.from(content)
     }))
   );
 
