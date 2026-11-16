@@ -76,6 +76,15 @@ describe("promotion enemy-phase sample summary", () => {
 
     expect(summary).toEqual(repeated);
     expect(summary.sampleCount).toBe(12);
+    for (const paired of Object.values(summary.pairedOutcomes)) {
+      expect(
+        paired.controlOnlyCount + paired.promotionOnlyCount + paired.bothCount + paired.neitherCount
+      ).toBe(summary.sampleCount);
+      expect(paired.promotionMinusControlPercentagePoints).toBeCloseTo(
+        ((paired.promotionOnlyCount - paired.controlOnlyCount) / summary.sampleCount) * 100,
+        1
+      );
+    }
     expect(summary.firstSeed).not.toBe(0);
     expect(summary.lastSeed).not.toBe(0);
     for (const branch of [summary.control, summary.promotion]) {
