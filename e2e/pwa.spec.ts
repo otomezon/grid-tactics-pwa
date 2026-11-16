@@ -426,7 +426,7 @@ test.describe("production PWA shell", () => {
             return true;
           },
           estimate: async () => ({
-            usage: testWindow.__storageUsageBytes,
+            usage: testWindow.__storageUsageBytes ?? 0,
             quota: 50 * 1024 * 1024
           })
         }
