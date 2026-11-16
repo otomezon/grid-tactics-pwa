@@ -10,7 +10,7 @@ function makeCandidate(
   key: string,
   classId: string,
   stat: number,
-  snapshotIdentity = key,
+  unitSnapshotIdentity = key,
   eligible = true
 ) {
   const stats: UnitStats = {
@@ -25,7 +25,7 @@ function makeCandidate(
   };
   return {
     key,
-    snapshotIdentity,
+    unitSnapshotIdentity,
     eligible,
     unit: {
       classId,
@@ -95,8 +95,8 @@ describe("buildPromotionPlaytestMatrix", () => {
 
     expect(slots.every((slot) => slot.candidateCount === 3)).toBe(true);
     expect(slots.every((slot) => slot.eligibleCandidateCount === 3)).toBe(true);
-    expect(slots.every((slot) => slot.distinctSnapshotCount === 1)).toBe(true);
-    expect(slots.every((slot) => slot.eligibleDistinctSnapshotCount === 1)).toBe(true);
+    expect(slots.every((slot) => slot.distinctUnitSnapshotCount === 1)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleDistinctUnitSnapshotCount === 1)).toBe(true);
     expect(slots.every((slot) => slot.suggestedCandidate === null)).toBe(true);
   });
 
@@ -108,9 +108,9 @@ describe("buildPromotionPlaytestMatrix", () => {
     ];
 
     const slots = buildPromotionPlaytestMatrix(candidates).filter((slot) => slot.classId === "swordsman");
-    expect(slots.every((slot) => slot.distinctSnapshotCount === 3)).toBe(true);
-    expect(slots.every((slot) => slot.eligibleDistinctSnapshotCount === 3)).toBe(true);
-    expect(new Set(slots.map((slot) => slot.suggestedCandidate?.snapshotIdentity)).size).toBe(3);
+    expect(slots.every((slot) => slot.distinctUnitSnapshotCount === 3)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleDistinctUnitSnapshotCount === 3)).toBe(true);
+    expect(new Set(slots.map((slot) => slot.suggestedCandidate?.unitSnapshotIdentity)).size).toBe(3);
   });
 
   it("suggests only eligible candidates from three distinct snapshot contents", () => {
@@ -126,10 +126,10 @@ describe("buildPromotionPlaytestMatrix", () => {
 
     expect(slots.every((slot) => slot.candidateCount === 4)).toBe(true);
     expect(slots.every((slot) => slot.eligibleCandidateCount === 3)).toBe(true);
-    expect(slots.every((slot) => slot.distinctSnapshotCount === 4)).toBe(true);
-    expect(slots.every((slot) => slot.eligibleDistinctSnapshotCount === 3)).toBe(true);
+    expect(slots.every((slot) => slot.distinctUnitSnapshotCount === 4)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleDistinctUnitSnapshotCount === 3)).toBe(true);
     expect(selected.every((candidate) => candidate !== null && candidate.eligible)).toBe(true);
-    expect(new Set(selected.map((candidate) => candidate?.snapshotIdentity)).size).toBe(3);
+    expect(new Set(selected.map((candidate) => candidate?.unitSnapshotIdentity)).size).toBe(3);
   });
 
 });
