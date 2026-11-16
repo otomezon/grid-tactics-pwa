@@ -393,6 +393,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
 
   await matrix.getByLabel("21ケースの乱数試行回数").selectOption("20");
   for (let index = 0; index < 21; index += 1) {
+    // Synthetic fixtures must be explicitly classified before exporting manual evidence.
+    await caseRows.nth(index).locator('select[aria-label$="データ区分"]').selectOption("synthetic");
     await caseRows.nth(index).getByRole("checkbox").check();
   }
   await expect(matrix).toContainText("21/21 実行準備完了");
@@ -455,8 +457,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
       ["played_at", "2026-11-16T10:00:00+09:00"],
       ["branch_commit", "abcdef1234567890"],
       ["observed_start_rng_state", "305419896"],
-      ["post_strength", "14"],
-      ["actual_damage", "8"]
+      ["post_strength", manualValueAt(record, "planned_branch") === "control" ? "14" : ""],
+      ["actual_damage", manualValueAt(record, "planned_branch") === "promotion" ? "11" : "8"]
     ]);
     for (const [name, value] of values) next[auditColumn(name)] = value;
     return next;
@@ -481,6 +483,46 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(fieldCoverage.locator("tr").filter({ hasText: "actual_damage" })).toContainText("42/42");
   await expect(fieldCoverage.locator("tr").filter({ hasText: "post_level" })).toContainText("0/42");
 
+  const swordsmanLowComparison = worksheetAudit.getByTestId("promotion-manual-audit-comparison-swordsman-low");
+  await swordsmanLowComparison.locator("summary").click();
+  await expect(swordsmanLowComparison).toContainText("actual_damage");
+  await expect(swordsmanLowComparison).toContainText("8");
+  await expect(swordsmanLowComparison).toContainText("11");
+  await expect(swordsmanLowComparison).toContainText("+3");
+  await expect(swordsmanLowComparison).toContainText("post_strength");
+  await expect(swordsmanLowComparison).toContainText("未記入");
+  await expect(swordsmanLowComparison).toContainText("空欄あり。0とは扱わない");
+
+  const comparisonDownloadPromise = page.waitForEvent("download");
+  await worksheetAudit.getByRole("button", { name: /記録値の比較CSVを出力/ }).click();
+  const comparisonDownload = await comparisonDownloadPromise;
+  expect(comparisonDownload.suggestedFilename()).toBe("class-promotion-manual-playtest-comparison.csv");
+  const comparisonDownloadPath = await comparisonDownload.path();
+  if (!comparisonDownloadPath) throw new Error("Manual comparison CSV download path was not available.");
+  const comparisonRecords = parseCsvRecords(await readFile(comparisonDownloadPath, "utf8"));
+  const comparisonHeaders = comparisonRecords[0]!;
+  const comparisonColumn = (name: string) => comparisonHeaders.indexOf(name);
+  expect(comparisonHeaders).toContain("promotion_minus_control");
+  expect(comparisonHeaders).toContain("pair_condition_status");
+  const actualDamageComparison = comparisonRecords.slice(1).find((record) =>
+    record[comparisonColumn("case_id")] === "swordsman:low" &&
+    record[comparisonColumn("observation_field")] === "actual_damage"
+  );
+  expect(actualDamageComparison).toBeDefined();
+  expect(actualDamageComparison![comparisonColumn("control_value")]).toBe("8");
+  expect(actualDamageComparison![comparisonColumn("promotion_value")]).toBe("11");
+  expect(actualDamageComparison![comparisonColumn("promotion_minus_control")]).toBe("3");
+  expect(actualDamageComparison![comparisonColumn("numeric_delta_available")]).toBe("true");
+  const blankComparison = comparisonRecords.slice(1).find((record) =>
+    record[comparisonColumn("case_id")] === "swordsman:low" &&
+    record[comparisonColumn("observation_field")] === "post_strength"
+  );
+  expect(blankComparison).toBeDefined();
+  expect(blankComparison![comparisonColumn("control_value")]).toBe("14");
+  expect(blankComparison![comparisonColumn("promotion_value")]).toBe("");
+  expect(blankComparison![comparisonColumn("promotion_minus_control")]).toBe("");
+  expect(blankComparison![comparisonColumn("numeric_delta_available")]).toBe("false");
+
   const mismatchedWorksheet = completedWorksheet.map((record) => [...record]);
   const mismatchRow = mismatchedWorksheet.findIndex((record, index) =>
     index > 0 &&
@@ -495,6 +537,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   });
   await expect(worksheetAudit).toContainText("20/21 条件一致ペア");
   await expect(worksheetAudit.getByTestId("promotion-manual-audit-case-swordsman-low")).toContainText("2枝あり・条件差");
+  const mismatchedComparison = worksheetAudit.getByTestId("promotion-manual-audit-comparison-swordsman-low");
+  await mismatchedComparison.locator("summary").click();
+  await expect(mismatchedComparison).toContainText("条件の記載に差があります");
 
   const firstSelectedSnapshot = await caseRows.nth(0).locator("select").nth(0).inputValue();
   await caseRows.nth(1).locator("select").nth(0).selectOption(firstSelectedSnapshot);

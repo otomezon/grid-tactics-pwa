@@ -13,6 +13,7 @@ import { getPromotionPlaytestEvidence, type PromotionPlaytestEvidence } from "..
 import { escapeCsvField } from "../application/escape-csv-field";
 import { serializeCsvDocument } from "../application/serialize-csv-document";
 import { auditPromotionManualPlaytestWorksheet, type PromotionManualPlaytestWorksheetAudit, type PromotionManualPlaytestBranchAudit } from "../application/audit-promotion-manual-playtest-worksheet";
+import { getPromotionManualPlaytestObservationComparisons } from "../application/get-promotion-manual-playtest-observation-comparisons";
 import { PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS } from "../application/promotion-manual-playtest-worksheet-schema";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
@@ -282,6 +283,16 @@ function getStrikeLabel(kind: "initial" | "counter" | "follow-up"): string {
   return "追撃";
 }
 
+function formatManualObservationDelta(
+  value: number | null,
+  controlValue: string,
+  promotionValue: string
+): string {
+  if (value !== null) return (value > 0 ? "+" : "") + String(value);
+  if (controlValue.length === 0 || promotionValue.length === 0) return "未算出（空欄あり。0とは扱わない）";
+  return "数値比較対象外";
+}
+
 export function ClassPromotionSnapshotBench() {
   const [candidates, setCandidates] = useState<ImportedCandidate[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -297,6 +308,12 @@ export function ClassPromotionSnapshotBench() {
   const [manualWorksheetFileName, setManualWorksheetFileName] = useState("");
   const [manualWorksheetAudit, setManualWorksheetAudit] = useState<PromotionManualPlaytestWorksheetAudit | null>(null);
   const [manualWorksheetImportError, setManualWorksheetImportError] = useState("");
+  const manualWorksheetComparisons = useMemo(() =>
+    manualWorksheetAudit
+      ? getPromotionManualPlaytestObservationComparisons(manualWorksheetAudit)
+      : [],
+    [manualWorksheetAudit]
+  );
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
@@ -974,6 +991,45 @@ export function ClassPromotionSnapshotBench() {
     setManualWorksheetImportError("");
   }
 
+  function handleDownloadManualWorksheetComparisons() {
+    if (!manualWorksheetAudit || manualWorksheetComparisons.length === 0) return;
+
+    const headers = [
+      "case_id",
+      "pair_condition_status",
+      "pair_condition_mismatches",
+      "control_csv_row",
+      "promotion_csv_row",
+      "observation_field",
+      "control_value",
+      "promotion_value",
+      "promotion_minus_control",
+      "numeric_delta_available"
+    ];
+    const rows = manualWorksheetComparisons.map((comparison) => [
+      comparison.caseId,
+      comparison.pairConditionsMatch ? "記載上の条件一致" : "記載上の条件不一致",
+      comparison.pairFieldMismatches.join("／"),
+      comparison.controlRowNumber,
+      comparison.promotionRowNumber,
+      comparison.field,
+      comparison.controlValue,
+      comparison.promotionValue,
+      comparison.numericDelta,
+      comparison.numericDelta !== null
+    ]);
+    const csv = serializeCsvDocument(headers, rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "class-promotion-manual-playtest-comparison.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   const classCounts = BASIC_CLASS_IDS.map((classId) => ({
     classId,
     count: candidates.filter((candidate) => candidate.unit.classId === classId).length
@@ -1048,6 +1104,53 @@ export function ClassPromotionSnapshotBench() {
                 <td>{classification}</td></tr>;
             })}</tbody>
           </table></div>
+          <section className="promotion-manual-comparisons" aria-label="control／promotionの手動記録比較">
+            <h3>control／promotionの記録値比較</h3>
+            <p className="helper-text">
+              両枝に入力された値を項目ごとに並べます。数値差は両方のセルが有限数値として読める場合だけ promotion − control で計算し、空欄を0として補完しません。条件の記載に差があるペアも表示しますが、その差分は記録値の説明に限られます。
+            </p>
+            {manualWorksheetAudit.cases.map((entry) => {
+              if (!entry.control || !entry.promotion) return null;
+              const comparisons = manualWorksheetComparisons.filter((comparison) => comparison.caseId === entry.caseId);
+              return (
+                <details
+                  key={entry.caseId}
+                  className="promotion-manual-comparison-case"
+                  data-testid={"promotion-manual-audit-comparison-" + entry.caseId.replace(":", "-")}
+                >
+                  <summary>{entry.caseId} · 比較項目 {comparisons.length}</summary>
+                  <p className="helper-text">
+                    {entry.pairFieldMismatches.length > 0
+                      ? "条件の記載に差があります（" + entry.pairFieldMismatches.join("／") + "）。以下は条件一致を前提にしない参考表示です。"
+                      : "条件メタデータはCSVの記載上で一致しています。実プレイの同一条件や記録の真正性を検証したものではありません。"}
+                  </p>
+                  {comparisons.length === 0 ? (
+                    <p className="helper-text">両枝とも比較対象の観測欄は空欄です。</p>
+                  ) : (
+                    <div className="promotion-lab-table-wrap">
+                      <table className="promotion-lab-table promotion-manual-comparison-table" aria-label={entry.caseId + "の記録値比較"}>
+                        <thead><tr><th>観測欄</th><th>control</th><th>promotion</th><th>差（promotion − control）</th></tr></thead>
+                        <tbody>
+                          {comparisons.map((comparison) => (
+                            <tr key={comparison.field}>
+                              <th scope="row"><code>{comparison.field}</code></th>
+                              <td>{comparison.controlValue || "未記入"}</td>
+                              <td>{comparison.promotionValue || "未記入"}</td>
+                              <td>{formatManualObservationDelta(
+                                comparison.numericDelta,
+                                comparison.controlValue,
+                                comparison.promotionValue
+                              )}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </details>
+              );
+            })}
+          </section>
           <details className="promotion-manual-field-coverage" data-testid="promotion-manual-field-coverage">
             <summary>観測欄ごとの入力状況（{manualWorksheetAudit.observationFieldCoverage.length}項目）</summary>
             <p className="helper-text">受理できた枝行のうち、各CSV列に値が入力された件数です。空欄は一律の必須漏れではなく、項目ごとの収集状況を示します。状況に合わない項目は未記入のままで構いません。</p>
@@ -1066,7 +1169,12 @@ export function ClassPromotionSnapshotBench() {
               </table>
             </div>
           </details>
-          <div className="promotion-snapshot-matrix-actions"><button className="secondary-button" type="button" onClick={clearManualWorksheetAudit}>取り込んだCSVを破棄</button></div>
+          <div className="promotion-snapshot-matrix-actions">
+            <button className="secondary-button" type="button" onClick={handleDownloadManualWorksheetComparisons} disabled={manualWorksheetComparisons.length === 0}>
+              記録値の比較CSVを出力（{manualWorksheetComparisons.length}項目）
+            </button>
+            <button className="secondary-button" type="button" onClick={clearManualWorksheetAudit}>取り込んだCSVを破棄</button>
+          </div>
         </>}
       </section>
 
