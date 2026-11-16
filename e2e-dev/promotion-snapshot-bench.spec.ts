@@ -200,6 +200,37 @@ function makePromotionSnapshotWithCampaignHistoryFile() {
   };
 }
 
+function makeThreeSwordsmanCandidatesFromOneSaveFile() {
+  const envelope = makePromotionSnapshotFile();
+  const first = envelope.data.units[0]!;
+  const makeCandidateUnit = (id: string, name: string, x: number, strengthBonus: number) => ({
+    ...structuredClone(first),
+    id,
+    name,
+    classId: "swordsman",
+    stats: { ...first.stats, strength: first.stats.strength + strengthBonus },
+    currentHp: first.currentHp,
+    usableWeaponTypes: ["sword"],
+    inventory: ["iron_sword"],
+    equippedWeaponId: "iron_sword",
+    position: { x, y: 8 },
+    hasMoved: false,
+    hasActed: false
+  });
+
+  return {
+    ...envelope,
+    data: {
+      ...envelope.data,
+      units: [
+        ...envelope.data.units,
+        makeCandidateUnit("unit_002", "剣士候補02", 3, 2),
+        makeCandidateUnit("unit_003", "剣士候補03", 5, 4)
+      ]
+    }
+  };
+}
+
 function makeLegacyVersionNinePromotionSnapshotFile() {
   const envelope = makePromotionSnapshotFile();
   return { ...envelope, data: { ...envelope.data, saveVersion: 9 } };
@@ -385,9 +416,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("source_save_version");
   expect(csv).toContain("normalized_save_version");
   expect(csv).toContain("migration_applied");
-  expect(csv).toContain("class_distinct_snapshot_count");
-  expect(csv).toContain("class_eligible_distinct_snapshot_count");
-  expect(csv).toContain("class_campaign_history_snapshot_count");
+  expect(csv).toContain("class_distinct_unit_snapshot_count");
+  expect(csv).toContain("class_eligible_distinct_unit_snapshot_count");
+  expect(csv).toContain("class_campaign_history_unit_snapshot_count");
   expect(csv).toContain("campaign_log_entries");
   expect(csv).toContain("selected_unit_record_damage_dealt");
   expect(csv).toContain("exported_at");
@@ -410,6 +441,23 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   }
 });
  
+test("allows three different candidate units from one save as separate unit snapshots", async ({ page }) => {
+  await page.goto("/?promotion-snapshots=1");
+  const bench = page.getByTestId("promotion-snapshot-bench");
+  await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles({
+    name: "one-campaign-three-swordsmen.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(makeThreeSwordsmanCandidatesFromOneSaveFile()))
+  });
+
+  await expect(bench).toContainText("3候補");
+  const coverage = bench.getByTestId("promotion-playtest-coverage-swordsman");
+  await expect(coverage).toContainText("3/3");
+  const matrix = bench.getByTestId("promotion-playtest-matrix");
+  const firstCase = matrix.locator('tr[data-testid^="promotion-playtest-case-"]').first();
+  await expect(firstCase.locator("select").nth(0).locator("option")).toHaveCount(4);
+});
+
 test("does not count renamed copies of one save as three distinct promotion samples", async ({ page }) => {
   await page.goto("/?promotion-snapshots=1");
   const bench = page.getByTestId("promotion-snapshot-bench");
