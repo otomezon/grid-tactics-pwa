@@ -2,6 +2,7 @@ import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game
 import { createPromotionCombatSampleSeeds } from "./get-promotion-combat-sample-summary";
 import { beginEnemyPhase, runEnemyPhase } from "./resolve-enemy-phase";
 import type { EnemyActionKind } from "./resolve-enemy-phase";
+import { getWilsonScoreInterval, type WilsonScoreInterval } from "./wilson-score-interval";
 
 export interface PromotionEnemyPhaseMetrics {
   totalEnemyActions: number;
@@ -11,8 +12,10 @@ export interface PromotionEnemyPhaseMetrics {
   enemyWaitActions: number;
   selectedUnitTargetedPhases: number;
   selectedUnitTargetedPhaseRate: number;
+  selectedUnitTargetedPhaseRateInterval95: WilsonScoreInterval;
   selectedUnitSurvivals: number;
   selectedUnitSurvivalRate: number;
+  selectedUnitSurvivalRateInterval95: WilsonScoreInterval;
   selectedUnitTotalDamage: number;
   selectedUnitAverageDamagePerPhase: number;
   averageSelectedUnitHpAfterActions: number;
@@ -23,10 +26,13 @@ export interface PromotionEnemyPhaseMetrics {
   averageTotalPlayerDamagePerPhase: number;
   battleDefeats: number;
   battleDefeatRate: number;
+  battleDefeatRateInterval95: WilsonScoreInterval;
   partyWipes: number;
   partyWipeRate: number;
+  partyWipeRateInterval95: WilsonScoreInterval;
   playerPhaseAdvances: number;
   playerPhaseAdvanceRate: number;
+  playerPhaseAdvanceRateInterval95: WilsonScoreInterval;
 }
 
 export interface PromotionEnemyPhaseSampleSummary {
@@ -239,8 +245,10 @@ function finishMetrics(metrics: MutableMetrics, sampleCount: number): PromotionE
     enemyWaitActions: metrics.enemyWaitActions,
     selectedUnitTargetedPhases: metrics.selectedUnitTargetedPhases,
     selectedUnitTargetedPhaseRate: rate(metrics.selectedUnitTargetedPhases, sampleCount),
+    selectedUnitTargetedPhaseRateInterval95: getWilsonScoreInterval(metrics.selectedUnitTargetedPhases, sampleCount),
     selectedUnitSurvivals: metrics.selectedUnitSurvivals,
     selectedUnitSurvivalRate: rate(metrics.selectedUnitSurvivals, sampleCount),
+    selectedUnitSurvivalRateInterval95: getWilsonScoreInterval(metrics.selectedUnitSurvivals, sampleCount),
     selectedUnitTotalDamage: metrics.selectedUnitTotalDamage,
     selectedUnitAverageDamagePerPhase: roundOne(metrics.selectedUnitTotalDamage / sampleCount),
     averageSelectedUnitHpAfterActions: roundOne(metrics.totalSelectedUnitHpAfterActions / sampleCount),
@@ -251,10 +259,13 @@ function finishMetrics(metrics: MutableMetrics, sampleCount: number): PromotionE
     averageTotalPlayerDamagePerPhase: roundOne(metrics.totalPlayerDamage / sampleCount),
     battleDefeats: metrics.battleDefeats,
     battleDefeatRate: rate(metrics.battleDefeats, sampleCount),
+    battleDefeatRateInterval95: getWilsonScoreInterval(metrics.battleDefeats, sampleCount),
     partyWipes: metrics.partyWipes,
     partyWipeRate: rate(metrics.partyWipes, sampleCount),
+    partyWipeRateInterval95: getWilsonScoreInterval(metrics.partyWipes, sampleCount),
     playerPhaseAdvances: metrics.playerPhaseAdvances,
-    playerPhaseAdvanceRate: rate(metrics.playerPhaseAdvances, sampleCount)
+    playerPhaseAdvanceRate: rate(metrics.playerPhaseAdvances, sampleCount),
+    playerPhaseAdvanceRateInterval95: getWilsonScoreInterval(metrics.playerPhaseAdvances, sampleCount)
   };
 }
 
