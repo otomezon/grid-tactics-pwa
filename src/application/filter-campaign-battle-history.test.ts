@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
-import { filterCampaignBattleHistory } from "./filter-campaign-battle-history";
+import { filterCampaignBattleHistory, getCampaignBattleHistoryUnitOptions } from "./filter-campaign-battle-history";
 
 const entries: CampaignBattleHistoryEntry[] = [
   {
@@ -41,54 +41,67 @@ const entries: CampaignBattleHistoryEntry[] = [
 
 describe("filterCampaignBattleHistory", () => {
   it("returns all entries in chronological order when no filter is active", () => {
-    const result = filterCampaignBattleHistory(entries, { chapterId: "all", category: "all", query: "" });
+    const result = filterCampaignBattleHistory(entries, { chapterId: "all", category: "all", unitId: "all", query: "" });
     expect(result).toEqual(entries);
     expect(result.map((entry) => entry.sequence)).toEqual([1, 2, 3, 4]);
   });
 
   it("filters by chapter without mixing entries", () => {
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "chapter_02_map", category: "all", query: ""
+      chapterId: "chapter_02_map", category: "all", unitId: "all", query: ""
     }).map((entry) => entry.sequence)).toEqual([3, 4]);
   });
 
   it("separates player, enemy, and chapter-result categories", () => {
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "all", category: "player", query: ""
+      chapterId: "all", category: "player", unitId: "all", query: ""
     }).map((entry) => entry.sequence)).toEqual([1, 2]);
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "all", category: "enemy", query: ""
+      chapterId: "all", category: "enemy", unitId: "all", query: ""
     }).map((entry) => entry.sequence)).toEqual([3]);
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "all", category: "result", query: ""
+      chapterId: "all", category: "result", unitId: "all", query: ""
     }).map((entry) => entry.sequence)).toEqual([4]);
   });
 
   it("searches action details and nested strike names, weapons, and targets", () => {
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "all", category: "all", query: "HP +7"
+      chapterId: "all", category: "all", unitId: "all", query: "HP +7"
     }).map((entry) => entry.sequence)).toEqual([1]);
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "all", category: "player", query: "主人公 鉄の剣"
+      chapterId: "all", category: "player", unitId: "all", query: "主人公 鉄の剣"
     }).map((entry) => entry.sequence)).toEqual([2]);
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "chapter_02_map", category: "enemy", query: "敵兵 鉄の弓"
+      chapterId: "chapter_02_map", category: "enemy", unitId: "all", query: "敵兵 鉄の弓"
     }).map((entry) => entry.sequence)).toEqual([3]);
   });
 
   it("combines every active filter and returns no entries for unmatched terms", () => {
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "chapter_02_map", category: "enemy", query: "主人公 鉄の弓"
+      chapterId: "chapter_02_map", category: "enemy", unitId: "all", query: "主人公 鉄の弓"
     }).map((entry) => entry.sequence)).toEqual([3]);
     expect(filterCampaignBattleHistory(entries, {
-      chapterId: "chapter_02_map", category: "enemy", query: "存在しない語"
+      chapterId: "chapter_02_map", category: "enemy", unitId: "all", query: "存在しない語"
     })).toEqual([]);
+  });
+
+  it("filters recorded ally actions, attacks, and enemy actions targeting that ally", () => {
+    const filtered = filterCampaignBattleHistory(entries, {
+      chapterId: "all", category: "all", unitId: "unit_001", query: ""
+    });
+    expect(filtered.map((entry) => entry.sequence)).toEqual([1, 2, 3]);
+    expect(filterCampaignBattleHistory(entries, {
+      chapterId: "all", category: "all", unitId: "missing-unit", query: ""
+    })).toEqual([]);
+    expect(getCampaignBattleHistoryUnitOptions(entries)).toEqual([
+      { unitId: "unit_001", unitName: "主人公" }
+    ]);
   });
 
   it("does not mutate source entries", () => {
     const snapshot = structuredClone(entries);
     filterCampaignBattleHistory(entries, {
-      chapterId: "chapter_01_map", category: "player", query: "主人公"
+      chapterId: "chapter_01_map", category: "player", unitId: "all", query: "主人公"
     });
     expect(entries).toEqual(snapshot);
   });

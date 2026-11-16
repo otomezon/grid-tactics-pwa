@@ -80,8 +80,10 @@ describe("CampaignUnitBattleRecordsArchive", () => {
     expect(html).toContain("2 / 2名を表示");
     expect(html).toContain("味方01");
     expect(html).toContain("味方02");
-    expect(html).toContain("敵の反撃は含まず");
-    expect(html).toContain('aria-label="味方別累計をCSV出力"');
+    expect(html).toContain("敵の反撃は含みません");
+    expect(html).toContain('aria-label="検索結果をCSV出力"');
+    expect(html).toContain('aria-label="累計全員をCSV出力"');
+    expect(html).toContain("現在の並び順で出力します");
   });
 
   it("distinguishes a campaign without attack records from a search with no matches", () => {

@@ -2990,6 +2990,13 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   font-size: .9rem;
 }
 .campaign-unit-record-archive-header p { margin: 3px 0 0; }
+.campaign-unit-record-archive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  justify-content: flex-end;
+}
 .campaign-unit-record-archive-filters {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto;
 }
@@ -3009,7 +3016,7 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 .campaign-battle-history-note { margin: 5px 0 0; }
 .campaign-battle-history-filters {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(180px, 1.35fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(180px, 1.35fr) auto;
   align-items: end;
   gap: 9px;
   min-width: 0;

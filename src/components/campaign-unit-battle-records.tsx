@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { getCampaignUnitBattleRecordsArchive, type CampaignUnitBattleRecordSort } from "../application/get-campaign-unit-battle-records-archive";
 import type { CampaignUnitBattleRecord, UnitStats } from "../domain/models/game";
-import { buildCampaignUnitBattleRecordsCsv } from "../application/export-campaign-archive-csv";
+import { buildCampaignUnitBattleRecordsCsv, type CampaignUnitBattleRecordsCsvExportScope } from "../application/export-campaign-archive-csv";
 import { downloadCsv } from "./download-csv";
 
 interface CampaignUnitBattleRecordPanelProps {
@@ -99,7 +99,22 @@ export function CampaignUnitBattleRecordsArchive({
     () => getCampaignUnitBattleRecordsArchive(records, query, sortBy),
     [records, query, sortBy]
   );
+  const allSortedRecords = useMemo(
+    () => getCampaignUnitBattleRecordsArchive(records, "", sortBy),
+    [records, sortBy]
+  );
   const hasQuery = query.trim().length > 0;
+
+  function exportRecords(scope: CampaignUnitBattleRecordsCsvExportScope): void {
+    const recordsToExport = scope === "all-records" ? allSortedRecords : visibleRecords;
+    const suffix = scope === "all-records" ? "all-records" : "filtered";
+    downloadCsv(buildCampaignUnitBattleRecordsCsv(recordsToExport, {
+      scope,
+      totalRecordCount: records.length,
+      query: query.trim(),
+      sortBy
+    }), "campaign-unit-records-" + suffix + "-" + new Date().toISOString().slice(0, 10) + ".csv");
+  }
 
   return (
     <section
@@ -112,18 +127,26 @@ export function CampaignUnitBattleRecordsArchive({
           <h3 id="campaign-unit-record-archive-title">味方別の累計戦績</h3>
           <p className="helper-text">{visibleRecords.length} / {records.length}名を表示</p>
         </div>
-        <button
-          className="secondary-button campaign-unit-record-archive-export"
-          type="button"
-          aria-label="味方別累計をCSV出力"
-          disabled={visibleRecords.length === 0}
-          onClick={() => downloadCsv(
-            buildCampaignUnitBattleRecordsCsv(visibleRecords),
-            "campaign-unit-records-" + new Date().toISOString().slice(0, 10) + ".csv"
-          )}
-        >
-          CSV出力
-        </button>
+        <div className="campaign-unit-record-archive-actions" role="group" aria-label="味方別累計のCSV出力">
+          <button
+            className="secondary-button campaign-unit-record-archive-export"
+            type="button"
+            aria-label="検索結果をCSV出力"
+            disabled={records.length === 0}
+            onClick={() => exportRecords("filtered")}
+          >
+            検索結果をCSV出力
+          </button>
+          <button
+            className="secondary-button campaign-unit-record-archive-export"
+            type="button"
+            aria-label="累計全員をCSV出力"
+            disabled={records.length === 0}
+            onClick={() => exportRecords("all-records")}
+          >
+            累計全員をCSV出力
+          </button>
+        </div>
       </header>
 
       <div className="campaign-battle-history-filters campaign-unit-record-archive-filters" role="group" aria-label="味方戦績の絞り込み">
@@ -184,7 +207,7 @@ export function CampaignUnitBattleRecordsArchive({
       )}
 
       <p className="helper-text campaign-unit-record-note">
-        確定した味方開始攻撃の累計です。敵の反撃は含まず、記録の閲覧・検索・並べ替えでセーブは変わりません。
+        確定した味方開始攻撃の累計です。敵の反撃は含みません。「検索結果」は名前検索後の味方、「累計全員」は検索を無視して全記録を現在の並び順で出力します。CSVには出力範囲・人数・検索語・並べ替えを記録します。閲覧・検索・並べ替え・出力でセーブは変わりません。
       </p>
     </section>
   );

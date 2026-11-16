@@ -39,22 +39,22 @@ describe("buildCampaignBattleHistoryCsv", () => {
       { ...chapter, sequence: 12, kind: "player-action", action: "wait", actorId: "unit_002", actorName: "味方02", detail: "待機" },
       { ...chapter, sequence: 15, kind: "player-action", action: "wait", actorId: "unit_003", actorName: "味方03", detail: "待機" }
     ];
-    const context = { scope: "filtered" as const, retainedEntries: retained, filters: { chapterId: "chapter_01_map", category: "player" as const, query: "主人公" } };
+    const context = { scope: "filtered" as const, retainedEntries: retained, filters: { chapterId: "chapter_01_map", category: "player" as const, unitId: "all", query: "主人公" } };
     const filteredCsv = buildCampaignBattleHistoryCsv([retained[0]!], context);
     expect(filteredCsv).toContain('"出力範囲"');
     expect(filteredCsv).toContain('"出力記録件数"');
-    expect(filteredCsv).toContain('"絞り込み結果","1","3","5000","10","15","9","3","いいえ","chapter_01_map","player","主人公"');
+    expect(filteredCsv).toContain('"絞り込み結果","1","3","5000","10","15","9","3","いいえ","chapter_01_map","player","all","主人公"');
     const allCsv = buildCampaignBattleHistoryCsv(retained, { ...context, scope: "all-retained" });
-    expect(allCsv).toContain('"保持ログ全件","3","3","5000","10","15","9","3","いいえ","chapter_01_map","player","主人公"');
+    expect(allCsv).toContain('"保持ログ全件","3","3","5000","10","15","9","3","いいえ","chapter_01_map","player","all","主人公"');
     expect(allCsv).toContain('"味方02"');
     expect(allCsv).toContain('"味方03"');
   });
 
   it("retains export metadata for an empty filtered result", () => {
     const retained: CampaignBattleHistoryEntry[] = [{ ...chapter, sequence: 1, kind: "player-action", action: "wait", actorId: "unit_001", actorName: "主人公", detail: "待機" }];
-    const csv = buildCampaignBattleHistoryCsv([], { scope: "filtered", retainedEntries: retained, filters: { chapterId: "all", category: "all", query: "一致なし" } });
+    const csv = buildCampaignBattleHistoryCsv([], { scope: "filtered", retainedEntries: retained, filters: { chapterId: "all", category: "all", unitId: "all", query: "一致なし" } });
     expect(csv).toContain('"エクスポート情報"');
-    expect(csv).toContain('"絞り込み結果","0","1","5000","1","1","0","0","いいえ","all","all","一致なし"');
+    expect(csv).toContain('"絞り込み結果","0","1","5000","1","1","0","0","いいえ","all","all","all","一致なし"');
   });
 
   it("quotes comma, quote, and newline characters and neutralizes formula-like strings", () => {
@@ -95,6 +95,40 @@ describe("buildCampaignUnitBattleRecordsCsv", () => {
     expect(csv).toContain('"HP上昇"');
     expect(csv).toContain('"魔防上昇"');
     expect(csv).toContain('"70"');
+  });
+
+  it("exports either the searched subset or every ally and records the active sort", () => {
+    const second = { ...record, unitId: "unit_002", unitName: "斥候", damageDealt: 40 };
+    const filtered = buildCampaignUnitBattleRecordsCsv([record], {
+      scope: "filtered",
+      totalRecordCount: 2,
+      query: "主人公",
+      sortBy: "enemiesDefeated"
+    });
+    expect(filtered).toContain('"検索結果","1","2","主人公","撃破数順"');
+    expect(filtered).toContain('"CSV行種別"');
+    expect(filtered).toContain('"味方累計"');
+    expect(filtered).not.toContain('"斥候"');
+    const all = buildCampaignUnitBattleRecordsCsv([second, record], {
+      scope: "all-records",
+      totalRecordCount: 2,
+      query: "主人公",
+      sortBy: "enemiesDefeated"
+    });
+    expect(all).toContain('"累計全員","2","2","主人公","撃破数順"');
+    expect(all).toContain('"斥候"');
+    expect(all).toContain('"主人公"');
+  });
+
+  it("retains export metadata when a name search returns no records", () => {
+    const csv = buildCampaignUnitBattleRecordsCsv([], {
+      scope: "filtered",
+      totalRecordCount: 1,
+      query: "一致なし",
+      sortBy: "damageDealt"
+    });
+    expect(csv).toContain('"エクスポート情報"');
+    expect(csv).toContain('"検索結果","0","1","一致なし","与ダメージ順"');
   });
 
   it("does not mutate source records", () => {

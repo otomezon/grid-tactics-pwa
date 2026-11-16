@@ -10,6 +10,7 @@ import { buildCampaignBattleHistoryCsv, type CampaignBattleHistoryCsvExportScope
 import { downloadCsv } from "./download-csv";
 import {
   filterCampaignBattleHistory,
+  getCampaignBattleHistoryUnitOptions,
   type CampaignBattleHistoryCategory
 } from "../application/filter-campaign-battle-history";
 import type { CampaignBattleLogEntry, CampaignBattleStrikeRecord } from "../domain/models/game";
@@ -101,6 +102,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
   const [activeView, setActiveView] = useState<"timeline" | "units">("timeline");
   const [chapterFilter, setChapterFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState<CampaignBattleHistoryCategory>("all");
+  const [unitFilter, setUnitFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
   const logCoverage = useMemo(() => getCampaignBattleLogCoverage(entries), [entries]);
@@ -119,11 +121,13 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
     return [...byId.values()];
   }, [entries]);
 
+  const unitOptions = useMemo(() => getCampaignBattleHistoryUnitOptions(entries), [entries]);
   const filteredEntries = useMemo(() => filterCampaignBattleHistory(entries, {
     chapterId: chapterFilter,
     category: categoryFilter,
+    unitId: unitFilter,
     query
-  }), [entries, chapterFilter, categoryFilter, query]);
+  }), [entries, chapterFilter, categoryFilter, unitFilter, query]);
   const defeatCounts = useMemo(() => buildDefeatCounts(filteredEntries), [filteredEntries]);
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE));
   const currentPageIndex = Math.min(pageIndex, totalPages - 1);
@@ -135,11 +139,12 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
   const pageRangeLabel = filteredEntries.length > CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE
     ? `${pageStartIndex + 1}–${pageStartIndex + pageEntries.length} / ${filteredEntries.length}件を表示 · 全${entries.length}件`
     : `${filteredEntries.length} / ${entries.length}件を表示 · 発生順`;
-  const hasActiveFilter = chapterFilter !== "all" || categoryFilter !== "all" || query.trim().length > 0;
+  const hasActiveFilter = chapterFilter !== "all" || categoryFilter !== "all" || unitFilter !== "all" || query.trim().length > 0;
 
   function clearFilters() {
     setChapterFilter("all");
     setCategoryFilter("all");
+    setUnitFilter("all");
     setQuery("");
     setPageIndex(0);
   }
@@ -150,7 +155,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
     downloadCsv(buildCampaignBattleHistoryCsv(exportEntries, {
       scope,
       retainedEntries: entries,
-      filters: { chapterId: chapterFilter, category: categoryFilter, query: query.trim() }
+      filters: { chapterId: chapterFilter, category: categoryFilter, unitId: unitFilter, query: query.trim() }
     }), "campaign-battle-history-" + suffix + "-" + new Date().toISOString().slice(0, 10) + ".csv");
   }
 
@@ -242,6 +247,24 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
             <option value="result">章結果</option>
           </select>
         </label>
+        <label className="campaign-battle-history-filter">
+          <span>味方ユニット</span>
+          <select
+            aria-label="味方ユニットで絞り込み"
+            value={unitFilter}
+            onChange={(event) => {
+              setUnitFilter(event.currentTarget.value);
+              setPageIndex(0);
+            }}
+          >
+            <option value="all">すべての味方</option>
+            {unitOptions.map((unit) => (
+              <option key={unit.unitId} value={unit.unitId}>
+                {unit.unitName}（{unit.unitId}）
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="campaign-battle-history-filter campaign-battle-history-search">
           <span>キーワード</span>
           <input
@@ -271,7 +294,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
         </button>
       </div>
       <p className="campaign-battle-history-export-note">
-        「絞り込み結果」は現在の条件に一致した記録のみ、「保持ログ全件」は画面の絞り込みに関係なく保存中の最大5,000件を出力します。CSVには出力範囲と、絞り込み前の保持状況・連番監査値も記録します。
+        「絞り込み結果」は章・種別・味方ユニット・キーワードに一致した記録のみ、「保持ログ全件」は画面の絞り込みに関係なく保存中の最大5,000件を出力します。CSVには出力範囲と、選択中の絞り込み条件、絞り込み前の保持状況・連番監査値を記録します。
       </p>
 
       <section className="campaign-battle-defeats" aria-labelledby="campaign-battle-defeats-title">
