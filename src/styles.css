@@ -3218,6 +3218,56 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
 }
 
 
+/* Read-only estimate reported by the browser for this site's origin. */
+.campaign-storage-usage {
+  display: grid;
+  gap: 6px;
+  padding: 9px 0 11px;
+  border-bottom: 1px solid var(--line);
+}
+.campaign-storage-usage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.campaign-storage-usage-heading h4 {
+  margin: 0;
+  color: #e5eef1;
+  font-size: .76rem;
+}
+.campaign-storage-usage-heading strong {
+  color: #c6e5db;
+  font-size: .74rem;
+  font-variant-numeric: tabular-nums;
+}
+.campaign-storage-usage > p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .7rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.campaign-storage-usage-meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .11);
+}
+.campaign-storage-usage-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #75b7a5, #a8dece);
+  transition: width .18s ease;
+}
+.campaign-storage-usage .campaign-secondary-button {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: .72rem;
+}
+
 /* Context-aware battle coach embedded in the operation guide. */
 .operation-guide-live {
   display: grid;
