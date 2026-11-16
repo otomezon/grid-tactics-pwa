@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
 import type { CampaignUnitBattleRecord } from "../domain/models/game";
-import { buildCampaignBattleHistoryCsv, buildCampaignIncomingStrikeSummaryCsv, buildCampaignUnitBattleRecordsCsv } from "./export-campaign-archive-csv";
+import { buildCampaignBattleHistoryCsv, buildCampaignEnemyStrikeSummaryCsv, buildCampaignIncomingStrikeSummaryCsv, buildCampaignUnitBattleRecordsCsv } from "./export-campaign-archive-csv";
 import { getCampaignBattleLogCoverage } from "./get-campaign-battle-history";
 import type { CampaignIncomingStrikeSummary } from "./get-campaign-incoming-strike-summary";
+import type { CampaignEnemyStrikeSummary } from "./get-campaign-enemy-strike-summary";
 
 const chapter = { chapterId: "chapter_01_map", chapterNumber: 1, chapterTitle: "第1章・試作マップ", turn: 3 } as const;
 
@@ -162,6 +163,33 @@ describe("buildCampaignIncomingStrikeSummaryCsv", () => {
   it("keeps coverage metadata for an empty summary", () => {
     const coverage = getCampaignBattleLogCoverage([{ sequence: 1 }]);
     const csv = buildCampaignIncomingStrikeSummaryCsv([], coverage);
+    expect(csv).toContain('"エクスポート情報"');
+    expect(csv).toContain('"1","5000","1","1","0","0","いいえ"');
+  });
+});
+
+
+describe("buildCampaignEnemyStrikeSummaryCsv", () => {
+  const summaries: CampaignEnemyStrikeSummary[] = [{
+    chapterId: "chapter_01_map", chapterNumber: 1, chapterTitle: "第1章・試作マップ",
+    enemyId: "enemy_001", enemyName: "=敵01", attackStrikes: 3, hits: 2, misses: 1,
+    criticalHits: 1, damageDealt: 11, targetCount: 2, alliesDefeated: 1, lastSequence: 12
+  }];
+
+  it("exports chapter-scoped enemy metrics, coverage, and formula-safe text", () => {
+    const coverage = getCampaignBattleLogCoverage([{ sequence: 10 }, { sequence: 12 }]);
+    const csv = buildCampaignEnemyStrikeSummaryCsv(summaries, coverage);
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(csv).toContain('"章ID"');
+    expect(csv).toContain('"攻撃strike数"');
+    expect(csv).toContain("'=敵01");
+    expect(csv).toContain('"敵攻撃集計","chapter_01_map","1","第1章・試作マップ","enemy_001"');
+    expect(csv).toContain('"3","2","1","1","11","2","1","12","2","5000","10","12","9","1","いいえ"');
+  });
+
+  it("keeps retained-log coverage metadata when there are no enemy attacks", () => {
+    const coverage = getCampaignBattleLogCoverage([{ sequence: 1 }]);
+    const csv = buildCampaignEnemyStrikeSummaryCsv([], coverage);
     expect(csv).toContain('"エクスポート情報"');
     expect(csv).toContain('"1","5000","1","1","0","0","いいえ"');
   });

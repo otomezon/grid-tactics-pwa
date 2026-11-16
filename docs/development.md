@@ -106,3 +106,8 @@ Chromium／WebKitの3章キャンペーン履歴テストでは、章／種別�
 ## 11. キャンペーンの被攻撃集計
 
 「被攻撃集計」は保持中のcampaignBattleLogだけから、敵軍行動の敵側strikeと味方攻撃イベントに含まれる敵側カウンターstrikeを味方単位で集計する。味方自身の初撃／追撃は被攻撃に含めず、missも被攻撃strike数として数える。被弾数・miss数・被必殺数・被ダメージ・攻撃者数・最新sequenceは保存済み実strike記録から算出し、履歴がない味方のゼロ行や欠落した行動を補完しない。最大5,000件の保持範囲を超えるキャンペーン通算値とは断定せず、欠番／先頭未保持連番／上限到達があれば不完全な保持ログからの集計であることを示す。CSVには保持ログ件数・上限・sequence範囲・欠番・上限到達状態を含める。application／component testで反撃・敵軍strike・味方の初撃除外・miss／critical／damage計算・空結果・formula-safe CSVを確認し、Chromium／320px WebKit E2Eで画面・CSV出力とIndexedDB自動保存不変を検証する。GameState／RNG／IndexedDB／saveVersionは変更しない。
+
+
+### キャンペーン敵攻撃集計の回帰テスト
+
+「敵攻撃集計」は保持中のcampaignBattleLogから実際の敵strikeだけを章ID＋敵ユニットIDで集計する。敵軍フェイズの敵攻撃と、味方攻撃イベントに記録された敵ディフェンダーのカウンターを対象とし、味方の初撃／追撃・予測値・AI評価は除外する。strike数にはミスを含め、命中／ミス／必殺／実ダメージ／攻撃対象味方数／味方撃破数／最新sequenceを表示する。上限・欠番・先頭より前の未保持連番を警告・CSVへ残し、不在の行動や0件ユニットを作らない。敵IDの章をまたぐ再利用は章IDで分離する。Application unit testsで章別ID衝突、敵カウンター、ミス、撃破条件、味方攻撃除外、入力不変を確認し、component／Chromium／320px WebKit E2Eで表示、CSV、オートセーブ不変を確認する。読み取り専用で、GameState、RNG、IndexedDB、saveVersion 10を変更しない。
