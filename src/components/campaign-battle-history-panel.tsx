@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
-import type { CampaignBattleHistoryEntry } from "../application/get-campaign-battle-history";
+import {
+  getCampaignBattleLogCoverage,
+  type CampaignBattleHistoryEntry,
+  type CampaignBattleLogCoverage
+} from "../application/get-campaign-battle-history";
 import type { CampaignUnitBattleRecord } from "../domain/models/game";
 import { CampaignUnitBattleRecordsArchive } from "./campaign-unit-battle-records";
 import { buildCampaignBattleHistoryCsv } from "../application/export-campaign-archive-csv";
@@ -34,6 +38,35 @@ const ENEMY_ACTION_LABELS: Record<Extract<CampaignBattleLogEntry, { kind: "enemy
   waited: "待機"
 };
 
+function CampaignBattleHistoryCoverage({ coverage }: { coverage: CampaignBattleLogCoverage }) {
+  return (
+    <section className="campaign-battle-history-coverage" aria-label="保存された戦闘記録の保持状況" data-testid="campaign-battle-history-coverage">
+      <div className="campaign-battle-history-coverage-heading">
+        <strong>保存された時系列記録</strong>
+        <span>保持件数: {coverage.retainedCount.toLocaleString("ja-JP")} / {coverage.retentionLimit.toLocaleString("ja-JP")}件</span>
+      </div>
+      {coverage.retainedCount > 0 ? (
+        <>
+          <p>連番範囲: {coverage.firstSequence?.toLocaleString("ja-JP")}–{coverage.lastSequence?.toLocaleString("ja-JP")}</p>
+          <p>保持範囲内の連番欠番: {coverage.missingSequenceCount.toLocaleString("ja-JP")}件</p>
+        </>
+      ) : (
+        <p>キャンペーン戦闘記録はまだありません。</p>
+      )}
+      {coverage.missingSequenceCount > 0 && (
+        <p className="campaign-battle-history-coverage-note">
+          保持範囲内で連番の欠番を検出しました。欠けた行動内容は推測で補いません。
+        </p>
+      )}
+      {coverage.reachedRetentionLimit && (
+        <p className="campaign-battle-history-coverage-note">
+          保存上限の5,000件を保持しています。より古い記録が保持対象に含まれない可能性がありますが、上限到達だけでは過去記録が削除済みとは断定できません。
+        </p>
+      )}
+    </section>
+  );
+}
+
 function strikeLabel(strike: CampaignBattleStrikeRecord): string {
   const outcome = strike.outcome === "miss" ? "ミス" : strike.outcome === "critical" ? "必殺" : "命中";
   return `${strike.actorName} → ${strike.targetName} · ${strike.weaponName} · ${outcome} · ${strike.damage}ダメージ · HP ${strike.targetHpBefore} → ${strike.targetHpAfter}`;
@@ -64,6 +97,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
   const [categoryFilter, setCategoryFilter] = useState<CampaignBattleHistoryCategory>("all");
   const [query, setQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
+  const logCoverage = useMemo(() => getCampaignBattleLogCoverage(entries), [entries]);
 
   const chapters = useMemo(() => {
     const byId = new Map<string, { id: string; chapterNumber: number | null; title: string }>();
@@ -154,6 +188,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
 
       {activeView === "timeline" ? (
         <>
+      <CampaignBattleHistoryCoverage coverage={logCoverage} />
       <div className="campaign-battle-history-filters" role="group" aria-label="戦闘記録の絞り込み">
         <label className="campaign-battle-history-filter">
           <span>章</span>
