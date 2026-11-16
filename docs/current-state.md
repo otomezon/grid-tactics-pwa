@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-2026-11-16更新: PR #156（旧saveVersion 1〜9のsnapshotベンチ内メモリ移行）、PR #157（seed単位binary outcomeの95% Wilson区間）、PR #158（同一seedのpaired outcome内訳）がmainへマージ済み。後続PRでは、元saveVersionに応じたキャンペーン履歴の追跡可否、ログ／章／対象ユニットの既存行動件数、味方別累計を昇格ベンチ画面・CSVへ読み取り専用で表示する。真正性判定ではなく、saveVersion 10／IndexedDB schema 1を維持する。
+2026-11-16更新: PR #156（旧saveVersion 1〜9のsnapshotベンチ内メモリ移行）、PR #157（seed単位binary outcomeの95% Wilson区間）、PR #158（同一seedのpaired outcome内訳）がmainへマージ済み。今回の改善では、元saveVersionに応じたキャンペーン履歴の追跡可否、ログ／章／対象ユニットの既存行動件数、味方別累計を昇格ベンチ画面・CSVへ読み取り専用で表示する。真正性判定ではなく、saveVersion 10／IndexedDB schema 1を維持する。
 
 ## 1. 監査スナップショット
 
