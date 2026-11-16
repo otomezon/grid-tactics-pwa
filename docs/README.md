@@ -82,3 +82,6 @@ PR #92の作業内容: 起動時タイトル画面から新規開始／続きか
 
 
 - [キャンペーン記録CSV出力](campaign-archive-export.md): 現在表示中の時系列ログ／味方別累計のCSV出力仕様。
+
+
+クロスタブのセーブ競合保護は、BroadcastChannelでrevision番号のみを通知して古いタブを即時ロックする。保存本文は送信せず、最終的な拒否判断はIndexedDB transaction内で行う。詳細は [architecture.md](architecture.md)、[security.md](security.md)、[development.md](development.md) を参照。
