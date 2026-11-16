@@ -31,6 +31,8 @@ interface ImportedCandidate {
   key: string;
   fileName: string;
   fingerprint: string;
+  /** Canonical save content plus unit ID; the same unit in a renamed file remains one candidate. */
+  unitSnapshotIdentity: string;
   snapshot: GameStateSnapshot;
   unit: GameUnit;
   eligible: boolean;
@@ -49,7 +51,17 @@ interface ImportedFileResult {
 
 type MatrixDataClassification = "unconfirmed" | "actual-play" | "synthetic";
 
+interface PromotionPlaytestClassCoverage {
+  candidateCount: number;
+  eligibleCandidateCount: number;
+  distinctUnitSnapshotCount: number;
+  eligibleDistinctUnitSnapshotCount: number;
+  campaignHistoryUnitSnapshotCount: number;
+  unitBattleTotalsUnitSnapshotCount: number;
+}
+
 interface PromotionPlaytestMatrixResult {
+  classCoverage: PromotionPlaytestClassCoverage;
   caseId: string;
   classId: string;
   promotedClassId: string;
@@ -94,6 +106,20 @@ function getMatrixDataClassificationLabel(value: MatrixDataClassification): stri
 }
 
 /** A short deterministic label only; this is not a cryptographic hash. */
+/** Canonical, exact JSON identity: ignores object key ordering without relying on a short display hash. */
+function serializeSnapshotIdentity(value: unknown): string {
+  if (Array.isArray(value)) {
+    return "[" + value.map(serializeSnapshotIdentity).join(",") + "]";
+  }
+  if (typeof value === "object" && value !== null) {
+    const record = value as Record<string, unknown>;
+    return "{" + Object.keys(record).sort()
+      .map((key) => JSON.stringify(key) + ":" + serializeSnapshotIdentity(record[key]))
+      .join(",") + "}";
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
 function snapshotFingerprint(snapshot: GameStateSnapshot): string {
   const source = JSON.stringify(snapshot);
   let hash = 0x811c9dc5;
@@ -123,6 +149,7 @@ function getCandidatesFromSnapshot(
 ): ImportedFileResult {
   const snapshot = importedSave.snapshot;
   const fingerprint = snapshotFingerprint(snapshot);
+  const unitSnapshotIdentity = serializeSnapshotIdentity(snapshot);
   const candidates = snapshot.units
     .filter((unit) =>
       unit.faction === "player" &&
@@ -136,6 +163,7 @@ function getCandidatesFromSnapshot(
         key: fingerprint + ":" + unit.id + ":" + fileName,
         fileName,
         fingerprint,
+        unitSnapshotIdentity: unitSnapshotIdentity + "\u0000" + JSON.stringify(unit.id),
         snapshot,
         unit,
         eligible: reasons.length === 0,
@@ -313,6 +341,38 @@ export function ClassPromotionSnapshotBench() {
     () => buildPromotionPlaytestMatrix(candidates),
     [candidates]
   );
+  const matrixCoverageRows = useMemo(() => matrixSlots
+    .filter((slot) => slot.profile === "low")
+    .map((slot) => {
+      const eligibleCandidates = slot.candidatePool.filter((candidate) => candidate.eligible);
+      const campaignHistorySnapshots = new Set<string>();
+      const unitBattleTotalsSnapshots = new Set<string>();
+
+      for (const candidate of eligibleCandidates) {
+        const evidence = getPromotionPlaytestEvidence(
+          candidate.snapshot,
+          candidate.unit.id,
+          candidate.sourceSaveVersion
+        );
+        if (evidence.campaignLogTrackingAvailable && evidence.campaignLogEntries > 0) {
+          campaignHistorySnapshots.add(candidate.unitSnapshotIdentity);
+        }
+        if (evidence.unitBattleTotalsTrackingAvailable && evidence.selectedUnitBattleTotals) {
+          unitBattleTotalsSnapshots.add(candidate.unitSnapshotIdentity);
+        }
+      }
+
+      return {
+        classId: slot.classId,
+        candidateCount: slot.candidateCount,
+        eligibleCandidateCount: slot.eligibleCandidateCount,
+        distinctUnitSnapshotCount: slot.distinctUnitSnapshotCount,
+        eligibleDistinctUnitSnapshotCount: slot.eligibleDistinctUnitSnapshotCount,
+        campaignHistoryUnitSnapshotCount: campaignHistorySnapshots.size,
+        unitBattleTotalsUnitSnapshotCount: unitBattleTotalsSnapshots.size
+      };
+    }), [matrixSlots]);
+  const matrixCoverageByClass = new Map(matrixCoverageRows.map((row) => [row.classId, row] as const));
   const matrixRows = useMemo(() => {
     const selectedCandidates = matrixSlots.map((slot) => {
       const selectedKey = matrixCandidateSelections[slot.id];
@@ -323,7 +383,7 @@ export function ClassPromotionSnapshotBench() {
     const usageCounts = new Map<string, number>();
     for (const entry of selectedCandidates) {
       if (!entry.candidate) continue;
-      const usageKey = entry.slot.classId + ":" + entry.candidate.key;
+      const usageKey = entry.slot.classId + ":" + entry.candidate.unitSnapshotIdentity;
       usageCounts.set(usageKey, (usageCounts.get(usageKey) ?? 0) + 1);
     }
 
@@ -331,21 +391,21 @@ export function ClassPromotionSnapshotBench() {
       const targets = candidate ? getAttackableEnemyTargets(candidate) : [];
       const chosenTargetId = matrixTargetSelections[slot.id];
       const target = targets.find((enemy) => enemy.id === chosenTargetId) ?? targets[0];
-      const usageKey = candidate ? slot.classId + ":" + candidate.key : "";
+      const usageKey = candidate ? slot.classId + ":" + candidate.unitSnapshotIdentity : "";
       const duplicateCandidate = candidate !== null && (usageCounts.get(usageKey) ?? 0) > 1;
       const confirmed = matrixConfirmations[slot.id] === true;
       const eligible = candidate?.eligible === true;
       const ready =
-        slot.candidateCount >= 3 &&
+        slot.eligibleDistinctUnitSnapshotCount >= 3 &&
         candidate !== null &&
         !duplicateCandidate &&
         eligible &&
         target !== undefined &&
         confirmed;
       let status = "実行可能";
-      if (slot.candidateCount < 3) status = "候補数不足（" + slot.candidateCount + "/3）";
+      if (slot.eligibleDistinctUnitSnapshotCount < 3) status = "異なる有効snapshot不足（" + slot.eligibleDistinctUnitSnapshotCount + "/3）";
       else if (!candidate) status = "候補未選択";
-      else if (duplicateCandidate) status = "同一候補が重複";
+      else if (duplicateCandidate) status = "同一snapshot内容が複数profileに重複";
       else if (!eligible) status = candidate.reasons.join("／");
       else if (!target) status = "射程内の生存敵なし";
       else if (!confirmed) status = "候補・敵条件の確認待ち";
@@ -408,6 +468,8 @@ export function ClassPromotionSnapshotBench() {
           row.candidate.unit.id,
           sampleCount
         );
+        const classCoverage = matrixCoverageByClass.get(row.classId);
+        if (!classCoverage) throw new Error(row.classId + ": 候補snapshotの集計を解決できません。");
         const requestedBonuses = promotion.statPreview.changes.reduce<Partial<UnitStats>>(
           (values, change) => ({ ...values, [change.key]: change.requestedBonus }),
           {}
@@ -445,6 +507,7 @@ export function ClassPromotionSnapshotBench() {
           normalizedSaveVersion: row.candidate.normalizedSaveVersion,
           migrationApplied: row.candidate.migrated,
           exportedAt: row.candidate.exportedAt,
+          classCoverage,
           evidence: getPromotionPlaytestEvidence(
             row.candidate.snapshot,
             row.candidate.unit.id,
@@ -474,6 +537,9 @@ export function ClassPromotionSnapshotBench() {
       "case_id", "basic_class", "promoted_class", "profile", "target_percentile",
       "candidate_percentile", "source_file", "source_save_version", "normalized_save_version",
       "migration_applied", "exported_at",
+      "class_candidate_count", "class_eligible_candidate_count", "class_distinct_unit_snapshot_count",
+      "class_eligible_distinct_unit_snapshot_count", "class_campaign_history_unit_snapshot_count",
+      "class_unit_battle_totals_unit_snapshot_count",
       "campaign_log_tracking_available", "unit_battle_totals_tracking_available",
       "campaign_log_entries", "campaign_chapter_count", "campaign_player_action_entries",
       "campaign_player_attack_entries", "campaign_enemy_action_entries", "campaign_chapter_result_entries",
@@ -540,6 +606,12 @@ export function ClassPromotionSnapshotBench() {
         entry.targetPercentile, entry.candidatePercentile, entry.fileName,
         entry.sourceSaveVersion, entry.normalizedSaveVersion, entry.migrationApplied ? "true" : "false",
         entry.exportedAt,
+        entry.classCoverage.candidateCount,
+        entry.classCoverage.eligibleCandidateCount,
+        entry.classCoverage.distinctUnitSnapshotCount,
+        entry.classCoverage.eligibleDistinctUnitSnapshotCount,
+        entry.classCoverage.campaignHistoryUnitSnapshotCount,
+        entry.classCoverage.unitBattleTotalsUnitSnapshotCount,
         entry.evidence.campaignLogTrackingAvailable ? "true" : "false",
         entry.evidence.unitBattleTotalsTrackingAvailable ? "true" : "false",
         entry.evidence.campaignLogEntries, entry.evidence.campaignChapterCount,
@@ -859,6 +931,41 @@ export function ClassPromotionSnapshotBench() {
         <p className="helper-text">
           各基本職の実測候補から低位25%・中央値50%・上位90%に近い個体を仮選出します。各行で候補と射程内の敵を確認し、条件確認チェックを入れてください。percentileは8能力順位の平均であり、成長率そのものではありません。実プレイ由来かどうかは自動判定できないため、各ケースのデータ区分を別途指定します。
         </p>
+        <div className="promotion-playtest-coverage" data-testid="promotion-playtest-coverage">
+          <h3>基本職別の候補snapshotカバレッジ</h3>
+          <p className="helper-text">
+            各基本職で、実行条件を満たす異なるユニットsnapshotが3件必要です。同じセーブ・同じunit IDを別ファイル名やJSONキー順で読み込んでも1件として数え、同じユニットを複数profileへ割り当てません。同じセーブ内の異なるunit IDは別候補にできますが、別キャンペーン／別プレイの証明ではありません。ログや累計の件数も真正性の自動判定ではありません。
+          </p>
+          <div className="promotion-lab-table-wrap">
+            <table className="promotion-lab-table" aria-label="基本職別の候補snapshotカバレッジ">
+              <thead>
+                <tr>
+                  <th>基本職</th>
+                  <th>候補ユニット</th>
+                  <th>昇格比較可能</th>
+                  <th>異なるユニットsnapshot</th>
+                  <th>有効ユニットsnapshot</th>
+                  <th>履歴ログあり候補</th>
+                  <th>味方別累計あり候補</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrixCoverageRows.map((row) => (
+                  <tr key={row.classId} data-testid={"promotion-playtest-coverage-" + row.classId}>
+                    <th scope="row">{getClassDisplayName(row.classId)}</th>
+                    <td>{row.candidateCount}</td>
+                    <td>{row.eligibleCandidateCount}</td>
+                    <td>{row.distinctUnitSnapshotCount}</td>
+                    <td>{row.eligibleDistinctUnitSnapshotCount}/3</td>
+                    <td>{row.campaignHistoryUnitSnapshotCount}</td>
+                    <td>{row.unitBattleTotalsUnitSnapshotCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="helper-text">percentileは読み込んだ同クラス候補の8能力順位の平均です。自己申告の「実プレイ由来」区分は別途各ケースで指定してください。</p>
+        </div>
         <div className="promotion-snapshot-matrix-controls">
           <label className="promotion-snapshot-candidate-label">
             <span>各ケースのseed試行回数</span>
@@ -961,7 +1068,7 @@ export function ClassPromotionSnapshotBench() {
                       <input
                         type="checkbox"
                         checked={row.confirmed}
-                        disabled={!row.candidate || !row.target || !row.candidate.eligible || row.candidateCount < 3 || row.duplicateCandidate}
+                        disabled={!row.candidate || !row.target || !row.candidate.eligible || row.eligibleDistinctUnitSnapshotCount < 3 || row.duplicateCandidate}
                         onChange={(event) => {
                           setMatrixConfirmations((current) => ({ ...current, [row.id]: event.target.checked }));
                           setMatrixResults({});
