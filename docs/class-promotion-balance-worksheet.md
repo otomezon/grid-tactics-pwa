@@ -249,6 +249,7 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 - 21行それぞれでcandidateと射程内enemyを選び直し、条件を確認してチェックを入れる。候補の重複や昇格不可、攻撃対象なし、候補不足の行は実行可能扱いにしない。profilesは相対分布上の選定目安で、growth rate／正式cap近傍の判定ではない。
 - 一括実行は各caseのcontrol／promotionを同一seedペアで20／100／250回反復する単発combat sampleと、別枠の敵軍phase 1回のsampleであり、各試行を元snapshotから再開する。敵phase／移動／複数turn／map clearは再現しない。
 - 敵撃破・攻撃側生存、および敵軍phaseの標的率・生存率・敗北／全滅率・次phase進行率は、seed単位の二値結果から95% Wilson score区間を表示する。strike単位の命中率／必殺率は同一戦闘内の複数strikeが独立でないため、この区間を付けない。区間はcontrol／promotion各枝の固定条件での試行数による幅であり、両枝の差の信頼区間／有意差判定ではない。実プレイの不確実性や別の戦場条件を表さない。
+- 各二値指標は対応するseed pairを「controlのみ／promotionのみ／両方／どちらもなし」に分けて件数化し、promotionのみ−controlのみのpercentage-point差を表示／CSVへ記録する。これはイベント発生のペア内訳であり、発生が望ましいかは指標によって異なる（敗北／全滅では発生件数が少ない方が望ましい）。差の信頼区間／有意差判定ではない。
 - 各caseのデータ区分は「未確認」「実プレイ由来（利用者申告）」「合成fixture」。実プレイ由来はユーザーの申告をCSVに残すもので、アプリはファイルの真正性・出所を検証しない。合成fixtureまたは未確認データを実プレイ結果としてWorksheetへ転記しない。
 - 21件完了後に手動CSV downloadが可能。CSVにはprofile／候補fingerprint／unit／control・promotionの8能力／現在HP／EXP／装備／要求・実適用ボーナス／map／enemy／seed range／sample count／combat metrics／data classificationを含める。昇格後能力・ボーナスは現在の仮prototype dataに基づく。CSV以外の永続記録や自動送信は行わない。
 
