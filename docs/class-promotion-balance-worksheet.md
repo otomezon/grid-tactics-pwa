@@ -259,5 +259,5 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 - 検証: snapshotのchapterIdを既存registryから解決し、対象mapに対するsave validatorを通す。未登録章、不正JSON、旧／未知saveVersion、不正なunit／item／positionを拒否する。
 - profile整理: 基本職ごとに読み込んだLv.10+出撃ユニットの件数を集計する。3件以上でのみ8能力の同クラス内percentile rank平均を表示する。3件未満は分布データ不足とし、low／median／highを自動選定しない。候補を低／中央値／上位へ割り当てる判断は人が記録表で行う。
 - control／promotion: controlは元snapshot、promotionはコピーへ既存application commandを実行した結果。promotion_sealが元snapshotに無い場合は、比較コピーの所持品へだけ一時挿入し、コピー内で消費する。これは試験用で、章報酬／既存セーブの所持品へ反映しない。
-- 限界: 統計的に十分なサンプル数を保証せず、戦闘解決もしない。ダメージ・命中・追撃・生存・移動／射程の実戦比較は別途必要。実プレイ21ケースの完了・CP-04／05の承認根拠とは数えない。
+- 限界: 固定条件の試行数による推定幅を95% Wilson score区間で示すが、サンプル数20／100／250で統計的に十分とは限らず、別の初期配置・実プレイヤーの行動・複数ターンの攻略を表さない。strike単位の命中／必殺率には、1試行内の複数strikeが独立でないためWilson区間を付けない。実プレイ21ケースの完了・CP-04／05の承認根拠とは数えない。
 - 分離: 読み込みはブラウザメモリだけ。IndexedDB／GameState／RNG／自動保存／saveVersionへ書き込まない。再読み込みまたは画面の破棄操作でクリア。本番ビルドではroute無効。
