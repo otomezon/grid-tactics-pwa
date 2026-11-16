@@ -115,4 +115,4 @@ Chromium／WebKitの3章キャンペーン履歴テストでは、章／種別�
 
 ### キャンペーン記録ビューのアクセシブルな切替
 
-キャンペーン戦闘記録の4ビューはARIA tablist／tab／tabpanelで構成し、選択中のタブのみをTab順に含める。左右矢印キーで循環、Home／Endで先頭／末尾へ移動し、キー移動後もフォーカスと選択タブを一致させる。Component testsではロール・関連付け・選択／Tab順状態・キー移動関数を確認し、Chromium E2Eでは4ビューの循環、Home／End、パネルのaria-labelledbyを検証する。WebKit touch E2Eでは従来のタッチ切替を維持する。ビュー切替はUI状態のみを更新し、campaignBattleLog、GameState、RNG、IndexedDB、saveVersionを変更しない。
+キャンペーン戦闘記録の4ビューはARIA tablist／tab／tabpanelで構成し、選択中のタブのみをTab順に含める。左右矢印キーは全ビュー間を循環し、Home／Endはどのビューからでも先頭／末尾へ移動する。キー移動後はフォーカス、aria-selected、roving tabIndex、tabpanelのaria-labelledbyを一致させる。Tab／Shift+Tabは選択中タブとtabpanel間を移動し、Escapeで閉じると開く操作を行ったボタンへフォーカスを復帰する。Component testsでは4ビューそれぞれを起点にすべてのキー移動関数と対象外キーを検証する。Chromium E2Eでは4ビューの循環・端点・選択属性・パネル関連付け・Tab順・Escape後のフォーカス復帰を検証し、WebKit touch E2Eでは従来のタッチ切替と320px幅のレイアウトを維持する。ビュー切替はUI状態のみを更新し、campaignBattleLog、GameState、RNG、IndexedDB、saveVersionを変更しない。
