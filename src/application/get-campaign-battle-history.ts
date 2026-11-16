@@ -28,18 +28,21 @@ export interface CampaignBattleLogCoverage {
   firstSequence: number | null;
   lastSequence: number | null;
   missingSequenceCount: number;
+  unretainedLeadingSequenceCount: number;
   reachedRetentionLimit: boolean;
 }
 
 /**
- * Describes only the retained log's internal sequence range.
- * A full retention limit does not prove that earlier records were dropped,
- * and missing sequence values do not reveal the actions that may be absent.
+ * Describes only sequence numbers absent from the retained log.
+ * Sequences start at 1, so numbers before the first retained entry are counted
+ * separately from gaps inside the retained range. Neither count identifies a
+ * cause or reveals the contents of any action that is not present.
  */
 export function getCampaignBattleLogCoverage(
   entries: readonly Pick<CampaignBattleLogEntry, "sequence">[]
 ): CampaignBattleLogCoverage {
   const sequences = entries.map((entry) => entry.sequence).sort((left, right) => left - right);
+  const firstSequence = sequences[0] ?? null;
   let missingSequenceCount = 0;
 
   for (let index = 1; index < sequences.length; index += 1) {
@@ -49,9 +52,10 @@ export function getCampaignBattleLogCoverage(
   return {
     retainedCount: entries.length,
     retentionLimit: MAX_CAMPAIGN_BATTLE_LOG_ENTRIES,
-    firstSequence: sequences[0] ?? null,
+    firstSequence,
     lastSequence: sequences.at(-1) ?? null,
     missingSequenceCount,
+    unretainedLeadingSequenceCount: firstSequence === null ? 0 : firstSequence - 1,
     reachedRetentionLimit: entries.length >= MAX_CAMPAIGN_BATTLE_LOG_ENTRIES
   };
 }

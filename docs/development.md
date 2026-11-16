@@ -80,4 +80,4 @@ Chromium E2Eでは、タイトル画面と戦闘中のバックアップ一覧�
 
 ### キャンペーン戦闘ログの保持状況・連番監査テスト
 
-application testでは空ログ、入力配列の順序を変更しないsequence範囲、保持範囲内の欠番数、5,000件の上限状態を検証する。component testでは連番欠番の表示と、5,000件到達だけでは削除済みと断定しない案内を確認する。Chromium／320px WebKit mobile E2Eでは123件の保存ログについて保持件数・連番範囲・欠番0件を表示し、ページ移動／検索／CSV出力後もIndexedDBの自動セーブが不変であることを確認する。集計は絞り込み前のログ全体を対象とし、GameState／RNG／IndexedDB／saveVersionを変更しない。
+application testでは空ログ、入力配列の順序を変更しないsequence範囲、先頭sequenceより前の未保持連番数、保持範囲内の欠番数、5,000件の上限状態を検証する。component testでは先頭より前の未保持連番と保持範囲内の欠番を別々に表示し、5,000件到達だけでは削除済みと断定しない案内を確認する。Chromium／320px WebKit mobile E2Eでは123件の保存ログについて保持件数・連番範囲・先頭より前の未保持連番0件・保持範囲内の欠番0件を表示し、ページ移動／検索／CSV出力後もIndexedDBの自動セーブが不変であることを確認する。集計は絞り込み前のログ全体を対象とし、不在の理由や行動内容は推測せず、GameState／RNG／IndexedDB／saveVersionを変更しない。
