@@ -88,7 +88,7 @@ describe("CampaignBattleHistoryPanel", () => {
       onClose: vi.fn()
     }));
     expect(html).toContain("0 / 0件を表示");
-    expect(html).toContain("表示中の記録に確定した撃破はありません。");
+    expect(html).toContain("絞り込み結果に確定した撃破はありません。");
     expect(html).toContain("条件に一致する戦闘記録はありません。");
     expect(html).toContain("絞り込みを解除");
   });
