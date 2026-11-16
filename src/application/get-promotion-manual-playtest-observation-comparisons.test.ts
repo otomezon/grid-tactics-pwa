@@ -58,8 +58,8 @@ describe("getPromotionManualPlaytestObservationComparisons", () => {
     promotion.post_strength = "";
     control.observations = "命中";
     promotion.observations = "回避";
-    control.damage_taken = "-2.5";
-    promotion.damage_taken = "1.25";
+    control.damage_taken = "2.5";
+    promotion.damage_taken = "6.25";
 
     const audit = auditPromotionManualPlaytestWorksheet(toCsv(rows));
     const comparisons = getPromotionManualPlaytestObservationComparisons(audit);
