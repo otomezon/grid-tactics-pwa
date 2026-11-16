@@ -588,7 +588,7 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(mismatchedMatrix.getByTestId("promotion-manual-observation-matrix-row-swordsman-low")).toContainText("条件の記載に差あり");
   const mismatchedPairCoverage = worksheetAudit.getByTestId("promotion-manual-pair-coverage");
   await mismatchedPairCoverage.locator("summary").click();
-  await expect(mismatchedPairCoverage.getByTestId("promotion-manual-pair-coverage-actual_damage").locator("td").nth(8)).toHaveText("1/21");
+  await expect(mismatchedPairCoverage.getByTestId("promotion-manual-pair-coverage-actual_damage").locator("td").nth(7)).toHaveText("1/21");
 
   const partialWorksheet = completedWorksheet.filter((record, index) =>
     !(index > 0 &&
