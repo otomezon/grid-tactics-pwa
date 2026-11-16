@@ -264,7 +264,7 @@ export function buildCampaignEnemyStrikeSummaryCsv(
 
   if (summaries.length === 0) {
     rows.push([
-      "エクスポート情報", "", "", "", "", "", "", "", "", "", "", "", "", "",
+      "エクスポート情報", "", "", "", "", "", "", "", "", "", "", "", "",
       ...coverageValues
     ]);
   }
