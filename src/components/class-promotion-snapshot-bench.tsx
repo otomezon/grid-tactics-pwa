@@ -308,12 +308,22 @@ export function ClassPromotionSnapshotBench() {
   const [manualWorksheetFileName, setManualWorksheetFileName] = useState("");
   const [manualWorksheetAudit, setManualWorksheetAudit] = useState<PromotionManualPlaytestWorksheetAudit | null>(null);
   const [manualWorksheetImportError, setManualWorksheetImportError] = useState("");
+  const [manualWorksheetComparisonField, setManualWorksheetComparisonField] = useState("");
   const manualWorksheetComparisons = useMemo(() =>
     manualWorksheetAudit
       ? getPromotionManualPlaytestObservationComparisons(manualWorksheetAudit)
       : [],
     [manualWorksheetAudit]
   );
+  const manualWorksheetComparisonFields = useMemo(() =>
+    manualWorksheetAudit?.observationFieldCoverage
+      .filter((entry) => entry.populatedRows > 0)
+      .map((entry) => entry.field) ?? [],
+    [manualWorksheetAudit]
+  );
+  const activeManualWorksheetComparisonField = manualWorksheetComparisonFields.includes(manualWorksheetComparisonField)
+    ? manualWorksheetComparisonField
+    : manualWorksheetComparisonFields[0] ?? "";
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
@@ -976,6 +986,7 @@ export function ClassPromotionSnapshotBench() {
     setManualWorksheetFileName(file.name);
     setManualWorksheetAudit(null);
     setManualWorksheetImportError("");
+    setManualWorksheetComparisonField("");
     try {
       if (file.size > 5 * 1024 * 1024) throw new Error("CSVは5MB以下のファイルを選択してください。");
       setManualWorksheetAudit(auditPromotionManualPlaytestWorksheet(await file.text()));
@@ -989,6 +1000,7 @@ export function ClassPromotionSnapshotBench() {
     setManualWorksheetFileName("");
     setManualWorksheetAudit(null);
     setManualWorksheetImportError("");
+    setManualWorksheetComparisonField("");
   }
 
   function handleDownloadManualWorksheetComparisons() {
@@ -1104,6 +1116,71 @@ export function ClassPromotionSnapshotBench() {
                 <td>{classification}</td></tr>;
             })}</tbody>
           </table></div>
+          <section className="promotion-manual-observation-matrix" data-testid="promotion-manual-observation-matrix">
+            <div className="promotion-manual-comparison-heading">
+              <h3>観測項目別・21ケース比較マトリクス</h3>
+              {manualWorksheetComparisonFields.length > 0 && (
+                <label className="promotion-manual-comparison-field">
+                  <span>比較する観測欄</span>
+                  <select
+                    aria-label="比較する観測欄"
+                    value={activeManualWorksheetComparisonField}
+                    onChange={(event) => setManualWorksheetComparisonField(event.target.value)}
+                  >
+                    {manualWorksheetComparisonFields.map((field) => <option key={field} value={field}>{field}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+            <p className="helper-text">
+              観測欄を1つ選び、全21ケースのcontrol／promotion値を同じ列で確認できます。枝が不足するケースも行として残し、入力のない値は未記入と表示します。数値差は両枝が有限数値の場合だけ算出します。
+            </p>
+            {manualWorksheetComparisonFields.length === 0 ? (
+              <p className="helper-text">受理された行に入力済みの観測欄がないため、項目別比較はまだ表示できません。</p>
+            ) : (
+              <>
+                <p className="helper-text">
+                  {activeManualWorksheetComparisonField} · 入力済み {manualWorksheetAudit.observationFieldCoverage.find((entry) => entry.field === activeManualWorksheetComparisonField)?.populatedRows ?? 0}/{manualWorksheetAudit.acceptedRowCount}枝行
+                </p>
+                <div className="promotion-lab-table-wrap">
+                  <table className="promotion-lab-table promotion-manual-observation-matrix-table" aria-label={activeManualWorksheetComparisonField + "の21ケース比較"}>
+                    <thead><tr><th>ケース</th><th>ペア状態</th><th>control</th><th>promotion</th><th>差（promotion − control）</th></tr></thead>
+                    <tbody>
+                      {manualWorksheetAudit.cases.map((entry) => {
+                        const comparison = manualWorksheetComparisons.find((item) =>
+                          item.caseId === entry.caseId && item.field === activeManualWorksheetComparisonField
+                        );
+                        const controlValue = entry.control?.values[activeManualWorksheetComparisonField]?.trim() ?? "";
+                        const promotionValue = entry.promotion?.values[activeManualWorksheetComparisonField]?.trim() ?? "";
+                        const pairStatus = !entry.control || !entry.promotion
+                          ? "片枝不足"
+                          : entry.pairFieldMismatches.length > 0
+                            ? "条件の記載に差あり"
+                            : "CSV記載条件一致";
+                        const delta = !entry.control || !entry.promotion
+                          ? "未算出（ペア不足）"
+                          : comparison
+                            ? formatManualObservationDelta(comparison.numericDelta, controlValue, promotionValue)
+                            : "未記入（両枝空欄）";
+                        return (
+                          <tr key={entry.caseId} data-testid={"promotion-manual-observation-matrix-row-" + entry.caseId.replace(":", "-")}>
+                            <th scope="row">{entry.caseId}</th>
+                            <td>
+                              {pairStatus}
+                              {entry.pairFieldMismatches.length > 0 && <small>{entry.pairFieldMismatches.join("／")}</small>}
+                            </td>
+                            <td>{controlValue || (entry.control ? "未記入" : "行なし")}</td>
+                            <td>{promotionValue || (entry.promotion ? "未記入" : "行なし")}</td>
+                            <td>{delta}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </section>
           <section className="promotion-manual-comparisons" aria-label="control／promotionの手動記録比較">
             <h3>control／promotionの記録値比較</h3>
             <p className="helper-text">
