@@ -1,8 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { CampaignBattleHistoryEntry } from "../application/get-campaign-battle-history";
-import { CampaignBattleHistoryPanel } from "./campaign-battle-history-panel";
+import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "../application/get-campaign-battle-history";
+import { getCampaignIncomingStrikeSummary } from "../application/get-campaign-incoming-strike-summary";
+import { CampaignBattleHistoryPanel, CampaignIncomingStrikeSummaryView } from "./campaign-battle-history-panel";
 
 const entries: CampaignBattleHistoryEntry[] = [{
   sequence: 1,
@@ -177,6 +178,48 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("生存味方 3名");
     expect(html).toContain("保護対象の敗北");
     expect(html).toContain("生存敵 4体");
+  });
+
+
+  it("renders actual incoming-strike totals and marks incomplete retained history", () => {
+    const incomingEntries: CampaignBattleHistoryEntry[] = [
+      {
+        sequence: 10, chapterId: "chapter_01_map", chapterNumber: 1,
+        chapterTitle: "第1章・試作マップ", turn: 2, kind: "enemy-action",
+        enemyId: "enemy_001", enemyName: "敵01", actionKind: "attacked",
+        targetId: "unit_001", targetName: "主人公",
+        strikes: [{
+          actorId: "enemy_001", actorName: "敵01", targetId: "unit_001",
+          targetName: "主人公", kind: "initial", weaponName: "鉄の剣",
+          outcome: "critical", damage: 8, targetHpBefore: 20, targetHpAfter: 12
+        }]
+      }
+    ];
+    const html = renderToStaticMarkup(createElement(CampaignIncomingStrikeSummaryView, {
+      summaries: getCampaignIncomingStrikeSummary(incomingEntries),
+      coverage: {
+        retainedCount: 1, retentionLimit: 5000, firstSequence: 10, lastSequence: 10,
+        missingSequenceCount: 0, unretainedLeadingSequenceCount: 9,
+        reachedRetentionLimit: false
+      },
+      onExport: vi.fn()
+    }));
+    expect(html).toContain("味方が受けた攻撃");
+    expect(html).toContain("主人公");
+    expect(html).toContain("被攻撃strike");
+    expect(html).toContain("被ダメージ");
+    expect(html).toContain("8");
+    expect(html).toContain("先頭より前の未保持連番 9件");
+    expect(html).toContain('aria-label="被攻撃集計をCSV出力"');
+  });
+
+  it("renders a clear empty state when no incoming enemy strikes are retained", () => {
+    const html = renderToStaticMarkup(createElement(CampaignIncomingStrikeSummaryView, {
+      summaries: [],
+      coverage: getCampaignBattleLogCoverage([]),
+      onExport: vi.fn()
+    }));
+    expect(html).toContain("保持中のログに、味方が受けた敵軍strikeはありません。");
   });
 
 });

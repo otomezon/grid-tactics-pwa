@@ -1069,7 +1069,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     if (!filteredPath) throw new Error("The filtered campaign CSV was not saved to a temporary path.");
     const filteredCsv = await readFile(filteredPath, "utf8");
     expect(filteredDownload.suggestedFilename()).toContain("filtered");
-    expect(filteredCsv).toContain('"絞り込み結果","1","2","5000","1","2","0","0","いいえ","all","all","主人公"');
+    expect(filteredCsv).toContain('"絞り込み結果","1","2","5000","1","2","0","0","いいえ","all","all","all","主人公"');
     expect(filteredCsv).not.toContain('"味方04"');
     const allDownloadPromise = page.waitForEvent("download");
     await panel.getByRole("button", { name: "保持ログ全件をCSV出力" }).click();
@@ -1078,7 +1078,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     if (!allPath) throw new Error("The full retained campaign CSV was not saved to a temporary path.");
     const allCsv = await readFile(allPath, "utf8");
     expect(allDownload.suggestedFilename()).toContain("all-retained");
-    expect(allCsv).toContain('"保持ログ全件","2","2","5000","1","2","0","0","いいえ","all","all","主人公"');
+    expect(allCsv).toContain('"保持ログ全件","2","2","5000","1","2","0","0","いいえ","all","all","all","主人公"');
     expect(allCsv).toContain('"味方04"');
     expect(await readAutoSave(page)).toEqual(savedBeforeExport);
   });

@@ -1,5 +1,7 @@
 # ドキュメント目次
 
+PR #182（merge commit `6d8b5fcb65a868d521cd2794102876291c499b60`）では、キャンペーン記録の時系列ログを味方ユニットで絞り込めるようにし、味方別累計CSVの検索結果／累計全員出力と条件メタデータを追加した。PR CI run #1793とmain post-merge run #1794は型チェック・単体テスト・本番ビルド成功、Chromium E2E 1件は追加CSV列の期待値不足で失敗。PR #183ではこの期待値を修正し、保存済み実strikeから味方別の被攻撃集計を導出する読み取り専用ビューを追加する。
+
 PR #174（merge commit `af1508fb83820dfa6740a179a565c158da96fc4f`）では、同一ブラウザー内の古いタブへ自動セーブrevisionの変更を即時通知する機能を追加した。通知内容は `savedAt` revisionのみで、IndexedDB transaction内のrevision照合を最終防衛線として維持する。
 
 PR #175（merge commit `9bc31f37d4808f04fc4675bee889e9f85f3b654e`）では、StorageManagerの推定使用量／割当量をサイト単位の概算として読み取り専用で表示し、手動更新を追加した。永続ストレージ要求は初回取得や再取得では実行せず、saveVersion 10／IndexedDB schema 1を維持する。

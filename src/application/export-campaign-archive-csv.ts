@@ -1,4 +1,5 @@
 import type { CampaignBattleStrikeRecord, CampaignUnitBattleRecord } from "../domain/models/game";
+import type { CampaignIncomingStrikeSummary } from "./get-campaign-incoming-strike-summary";
 import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
 import type { CampaignBattleHistoryCategory } from "./filter-campaign-battle-history";
 import type { CampaignUnitBattleRecordSort } from "./get-campaign-unit-battle-records-archive";
@@ -199,5 +200,43 @@ export function buildCampaignUnitBattleRecordsCsv(
       ...exportMetadata
     ]);
   }
+  return serializeCsv(rows);
+}
+
+
+/** Exports recorded incoming enemy strikes from the currently retained campaign log. */
+export function buildCampaignIncomingStrikeSummaryCsv(
+  summaries: readonly CampaignIncomingStrikeSummary[],
+  coverage: ReturnType<typeof getCampaignBattleLogCoverage>
+): string {
+  const headers: CsvCell[] = [
+    "CSV行種別", "味方ID", "味方名", "被攻撃strike数", "被弾数", "ミス数",
+    "被必殺数", "被ダメージ", "攻撃者数", "最終記録連番",
+    "保持ログ件数", "保持上限件数", "保持先頭連番", "保持末尾連番",
+    "先頭より前の未保持連番", "保持範囲内の連番欠番", "保持上限到達"
+  ];
+  const coverageValues: CsvCell[] = [
+    coverage.retainedCount, coverage.retentionLimit, coverage.firstSequence ?? "",
+    coverage.lastSequence ?? "", coverage.unretainedLeadingSequenceCount,
+    coverage.missingSequenceCount, coverage.reachedRetentionLimit ? "はい" : "いいえ"
+  ];
+  const rows: CsvCell[][] = [headers];
+
+  if (summaries.length === 0) {
+    rows.push([
+      "エクスポート情報", "", "", "", "", "", "", "", "", "",
+      ...coverageValues
+    ]);
+  }
+
+  for (const summary of summaries) {
+    rows.push([
+      "被攻撃集計", summary.unitId, summary.unitName, summary.receivedStrikes,
+      summary.hitsReceived, summary.missesAvoided, summary.criticalHitsReceived,
+      summary.damageReceived, summary.attackerCount, summary.lastSequence,
+      ...coverageValues
+    ]);
+  }
+
   return serializeCsv(rows);
 }

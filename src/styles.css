@@ -3487,3 +3487,108 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   .campaign-battle-history-coverage { padding: 9px 10px; }
   .campaign-battle-history-coverage-heading { align-items: flex-start; }
 }
+
+
+/* Read-only incoming-strike summaries derived from retained campaign battle logs. */
+.campaign-incoming-strike-summary {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.campaign-incoming-strike-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.campaign-incoming-strike-header h3 {
+  margin: 0;
+  color: #e8f1f4;
+  font-size: .88rem;
+}
+.campaign-incoming-strike-header p,
+.campaign-incoming-strike-footnote,
+.campaign-incoming-strike-warning {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: .72rem;
+  line-height: 1.55;
+}
+.campaign-incoming-strike-header .campaign-battle-history-export {
+  min-height: 38px;
+}
+.campaign-incoming-strike-warning {
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(196, 164, 103, .45);
+  border-radius: 8px;
+  color: #e3cfa6;
+  background: rgba(70, 52, 25, .22);
+}
+.campaign-incoming-strike-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.campaign-incoming-strike-card {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(104, 137, 155, .4);
+  border-radius: 9px;
+  background: rgba(11, 23, 33, .52);
+}
+.campaign-incoming-strike-card > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.campaign-incoming-strike-card > header strong {
+  color: #edf4f6;
+  font-size: .82rem;
+}
+.campaign-incoming-strike-card > header span {
+  color: var(--text-muted);
+  font-size: .66rem;
+}
+.campaign-incoming-strike-card dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+.campaign-incoming-strike-card dl > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .045);
+}
+.campaign-incoming-strike-card dt {
+  color: var(--text-muted);
+  font-size: .64rem;
+}
+.campaign-incoming-strike-card dd {
+  margin: 0;
+  color: #e6f0f3;
+  font-size: .78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.campaign-incoming-strike-footnote {
+  margin: 0;
+  padding-top: 7px;
+  border-top: 1px solid rgba(104, 137, 155, .35);
+}
+@media (max-width: 420px) {
+  .campaign-incoming-strike-card { padding: 9px; }
+  .campaign-incoming-strike-card dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

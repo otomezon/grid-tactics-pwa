@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { CampaignBattleHistoryEntry } from "./get-campaign-battle-history";
 import type { CampaignUnitBattleRecord } from "../domain/models/game";
-import { buildCampaignBattleHistoryCsv, buildCampaignUnitBattleRecordsCsv } from "./export-campaign-archive-csv";
+import { buildCampaignBattleHistoryCsv, buildCampaignIncomingStrikeSummaryCsv, buildCampaignUnitBattleRecordsCsv } from "./export-campaign-archive-csv";
+import { getCampaignBattleLogCoverage } from "./get-campaign-battle-history";
+import type { CampaignIncomingStrikeSummary } from "./get-campaign-incoming-strike-summary";
 
 const chapter = { chapterId: "chapter_01_map", chapterNumber: 1, chapterTitle: "第1章・試作マップ", turn: 3 } as const;
 
@@ -136,5 +138,31 @@ describe("buildCampaignUnitBattleRecordsCsv", () => {
     const before = JSON.stringify(source);
     buildCampaignUnitBattleRecordsCsv(source);
     expect(JSON.stringify(source)).toBe(before);
+  });
+});
+
+
+describe("buildCampaignIncomingStrikeSummaryCsv", () => {
+  const summaries: CampaignIncomingStrikeSummary[] = [{
+    unitId: "unit_001", unitName: "=主人公", receivedStrikes: 3,
+    hitsReceived: 2, missesAvoided: 1, criticalHitsReceived: 1,
+    damageReceived: 11, attackerCount: 2, lastSequence: 12
+  }];
+
+  it("exports retained-log coverage and formula-safe incoming-strike metrics", () => {
+    const coverage = getCampaignBattleLogCoverage([{ sequence: 10 }, { sequence: 12 }]);
+    const csv = buildCampaignIncomingStrikeSummaryCsv(summaries, coverage);
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(csv).toContain('"被攻撃strike数"');
+    expect(csv).toContain("'=主人公");
+    expect(csv).toContain('"被攻撃集計","unit_001"');
+    expect(csv).toContain('"3","2","1","1","11","2","12","2","5000","10","12","9","1","いいえ"');
+  });
+
+  it("keeps coverage metadata for an empty summary", () => {
+    const coverage = getCampaignBattleLogCoverage([{ sequence: 1 }]);
+    const csv = buildCampaignIncomingStrikeSummaryCsv([], coverage);
+    expect(csv).toContain('"エクスポート情報"');
+    expect(csv).toContain('"1","5000","1","1","0","0","いいえ"');
   });
 });
