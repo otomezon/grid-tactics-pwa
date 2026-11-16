@@ -1815,6 +1815,44 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   min-height: 18px;
   accent-color: #8cc9b8;
 }
+.promotion-manual-comparisons {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.promotion-manual-comparisons > h3 {
+  margin: 0;
+  color: #e7f0f3;
+  font-size: .86rem;
+}
+.promotion-manual-comparison-case {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(104, 137, 155, .35);
+  border-radius: 9px;
+  background: rgba(8, 22, 31, .34);
+}
+.promotion-manual-comparison-case > summary {
+  color: #c9e1e2;
+  cursor: pointer;
+  font-size: .73rem;
+  font-weight: 800;
+}
+.promotion-manual-comparison-case > .helper-text {
+  margin-top: 8px;
+}
+.promotion-manual-comparison-table {
+  min-width: 620px;
+}
+.promotion-manual-comparison-table td {
+  max-width: 340px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.promotion-manual-comparison-table code {
+  overflow-wrap: anywhere;
+  font-size: .68rem;
+}
 .promotion-manual-missing-fields { margin-top: 5px; font-size: .66rem; }
 .promotion-manual-missing-fields summary,
 .promotion-manual-field-coverage > summary { color: #b9d8df; cursor: pointer; font-weight: 750; }
