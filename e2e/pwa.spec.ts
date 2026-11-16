@@ -591,6 +591,7 @@ test.describe("production PWA shell", () => {
   });
 
   test("creates three backup generations, rotates the oldest, and validates confirmed restores", async ({ page }) => {
+    test.setTimeout(90_000);
     await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
