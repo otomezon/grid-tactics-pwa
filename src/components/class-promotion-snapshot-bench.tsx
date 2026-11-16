@@ -10,6 +10,7 @@ import { getPromotionEnemyPhaseSampleSummary, type PromotionEnemyPhaseSampleSumm
 import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../application/build-promotion-playtest-matrix";
 import { importPromotionPlaytestSaveContent, type ImportedPromotionPlaytestSave } from "../application/import-promotion-playtest-save";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
+import { escapeCsvField } from "../application/escape-csv-field";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
 
 const STAT_ROWS: readonly { key: keyof UnitStats; label: string }[] = [
@@ -90,15 +91,7 @@ function getMatrixDataClassificationLabel(value: MatrixDataClassification): stri
   return "未確認";
 }
 
-function escapeCsvField(value: string | number | null | undefined): string {
-  const text = value === null || value === undefined ? "" : String(value);
-  const first = text[0];
-  const safe = first === "=" || first === "+" || first === "-" ||
-    first === "@" || first === "\\t" || first === "\\r"
-    ? "'" + text
-    : text;
-  return '"' + safe.replace(/"/g, '""') + '"';
-}
+
 
 /** A short deterministic label only; this is not a cryptographic hash. */
 function snapshotFingerprint(snapshot: GameStateSnapshot): string {
