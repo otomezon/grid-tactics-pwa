@@ -100,6 +100,19 @@ describe("buildPromotionPlaytestMatrix", () => {
     expect(slots.every((slot) => slot.suggestedCandidate === null)).toBe(true);
   });
 
+  it("allows different candidate unit IDs from one save as separate unit snapshots", () => {
+    const candidates = [
+      makeCandidate("unit-a", "swordsman", 10, "same-save:unit-a"),
+      makeCandidate("unit-b", "swordsman", 20, "same-save:unit-b"),
+      makeCandidate("unit-c", "swordsman", 30, "same-save:unit-c")
+    ];
+
+    const slots = buildPromotionPlaytestMatrix(candidates).filter((slot) => slot.classId === "swordsman");
+    expect(slots.every((slot) => slot.distinctSnapshotCount === 3)).toBe(true);
+    expect(slots.every((slot) => slot.eligibleDistinctSnapshotCount === 3)).toBe(true);
+    expect(new Set(slots.map((slot) => slot.suggestedCandidate?.snapshotIdentity)).size).toBe(3);
+  });
+
   it("suggests only eligible candidates from three distinct snapshot contents", () => {
     const candidates = [
       makeCandidate("ineligible", "swordsman", 5, "save-0", false),
