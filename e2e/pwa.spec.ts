@@ -240,6 +240,8 @@ test.describe("production PWA shell", () => {
     await staleTab.goto("/");
     const title = staleTab.getByTestId("campaign-title-screen");
     await expect(title.getByTestId("title-restore-backup-1")).toBeEnabled();
+    await expect(title.getByTestId("title-backup-entry-backup-1")).toContainText("第1ターン · 自軍フェイズ · 進行中");
+    await expect(title.getByTestId("title-backup-entry-backup-1")).toContainText("保存形式: v10");
     const backupsBeforeRestore = await readBackupRecords(staleTab);
 
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
