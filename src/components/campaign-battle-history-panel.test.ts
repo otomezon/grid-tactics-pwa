@@ -48,6 +48,9 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("最大5,000件");
     expect(html).toContain('aria-label="章で絞り込み"');
     expect(html).toContain('aria-label="記録種別で絞り込み"');
+    expect(html).toContain('aria-label="味方ユニットで絞り込み"');
+    expect(html).toContain("すべての味方");
+    expect(html).toContain("主人公（unit_001）");
     expect(html).toContain('aria-label="履歴内を検索"');
     expect(html).toContain("すべての章");
     expect(html).toContain("味方の行動・攻撃");

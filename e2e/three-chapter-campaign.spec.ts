@@ -745,6 +745,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
 
   const chapterFilter = battleHistoryPanel.getByRole("combobox", { name: "章で絞り込み" });
   const categoryFilter = battleHistoryPanel.getByRole("combobox", { name: "記録種別で絞り込み" });
+  const allyFilter = battleHistoryPanel.getByRole("combobox", { name: "味方ユニットで絞り込み" });
   const historySearch = battleHistoryPanel.getByRole("searchbox", { name: "履歴内を検索" });
 
   await chapterFilter.selectOption("chapter_02_map");
@@ -759,6 +760,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
 
   await categoryFilter.selectOption("all");
   await historySearch.fill("HP +7");
+  await allyFilter.selectOption("unit_001");
   await expect(battleLogEntries).toHaveCount(1);
   await expect(battleLogEntries.first()).toContainText("HP +7");
   await expect(battleHistoryPanel).toContainText("1 / 12件を表示");
@@ -775,6 +777,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("HP +7");
     expect(csv).toContain("主人公");
+    expect(csv).toContain('"all","all","unit_001","HP +7"');
     expect(csv).not.toContain("敵02");
   }
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
