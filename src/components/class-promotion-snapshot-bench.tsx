@@ -1232,15 +1232,12 @@ export function ClassPromotionSnapshotBench() {
                             </tr>
                             <tr>
                               <th scope="row">この敵の撃破率</th>
+                              <td>{formatRateWithConfidenceInterval(combatSamples.control.enemyDefeatRate, combatSamples.control.enemyDefeatRateInterval95)}（{combatSamples.control.enemyDefeats}/{combatSamples.sampleCount}）</td>
+                              <td>{formatRateWithConfidenceInterval(combatSamples.promotion.enemyDefeatRate, combatSamples.promotion.enemyDefeatRateInterval95)}（{combatSamples.promotion.enemyDefeats}/{combatSamples.sampleCount}）</td>
                               <td>
-                                {formatRateWithConfidenceInterval(combatSamples.control.enemyDefeatRate, combatSamples.control.enemyDefeatRateInterval95)}（{combatSamples.control.enemyDefeats}/{combatSamples.sampleCount}）
+                                {formatDelta(combatSamples.promotion.enemyDefeatRate - combatSamples.control.enemyDefeatRate, "pt")}
                                 <small>同一seed: {formatPairedOutcomeBreakdown(combatSamples.pairedOutcomes.enemyDefeat)}</small>
                               </td>
-                              <td>
-                                {formatRateWithConfidenceInterval(combatSamples.promotion.enemyDefeatRate, combatSamples.promotion.enemyDefeatRateInterval95)}（{combatSamples.promotion.enemyDefeats}/{combatSamples.sampleCount}）
-                                <small>同一seed: {formatPairedOutcomeBreakdown(combatSamples.pairedOutcomes.enemyDefeat)}</small>
-                              </td>
-                              <td>{formatDelta(combatSamples.promotion.enemyDefeatRate - combatSamples.control.enemyDefeatRate, "pt")}</td>
                             </tr>
                             <tr>
                               <th scope="row">平均反撃被ダメージ／戦闘</th>
@@ -1252,7 +1249,10 @@ export function ClassPromotionSnapshotBench() {
                               <th scope="row">反撃後の生存率</th>
                               <td>{formatRateWithConfidenceInterval(combatSamples.control.attackerSurvivalRate, combatSamples.control.attackerSurvivalRateInterval95)}（{combatSamples.control.attackerSurvivals}/{combatSamples.sampleCount}）</td>
                               <td>{formatRateWithConfidenceInterval(combatSamples.promotion.attackerSurvivalRate, combatSamples.promotion.attackerSurvivalRateInterval95)}（{combatSamples.promotion.attackerSurvivals}/{combatSamples.sampleCount}）</td>
-                              <td>{formatDelta(combatSamples.promotion.attackerSurvivalRate - combatSamples.control.attackerSurvivalRate, "pt")}</td>
+                              <td>
+                                {formatDelta(combatSamples.promotion.attackerSurvivalRate - combatSamples.control.attackerSurvivalRate, "pt")}
+                                <small>同一seed: {formatPairedOutcomeBreakdown(combatSamples.pairedOutcomes.attackerSurvival)}</small>
+                              </td>
                             </tr>
                             <tr>
                               <th scope="row">平均戦闘後HP</th>
