@@ -152,7 +152,7 @@ describe("buildCampaignIncomingStrikeSummaryCsv", () => {
   it("exports retained-log coverage and formula-safe incoming-strike metrics", () => {
     const coverage = getCampaignBattleLogCoverage([{ sequence: 10 }, { sequence: 12 }]);
     const csv = buildCampaignIncomingStrikeSummaryCsv(summaries, coverage);
-    expect(csv.startsWith("\\uFEFF")).toBe(true);
+    expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain('"被攻撃strike数"');
     expect(csv).toContain("'=主人公");
     expect(csv).toContain('"被攻撃集計","unit_001"');
