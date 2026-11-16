@@ -409,6 +409,52 @@ test.describe("production PWA shell", () => {
     await expect(page.getByTestId("pwa-install-help")).toBeVisible();
   });
 
+  test("shows and refreshes the browser-reported origin storage estimate without requesting persistence", async ({ page }) => {
+    await page.addInitScript(() => {
+      const testWindow = window as Window & {
+        __storageUsageBytes?: number;
+        __storagePersistRequests?: number;
+      };
+      testWindow.__storageUsageBytes = 5 * 1024 * 1024;
+      testWindow.__storagePersistRequests = 0;
+      Object.defineProperty(navigator, "storage", {
+        configurable: true,
+        value: {
+          persisted: async () => false,
+          persist: async () => {
+            testWindow.__storagePersistRequests = (testWindow.__storagePersistRequests ?? 0) + 1;
+            return true;
+          },
+          estimate: async () => ({
+            usage: testWindow.__storageUsageBytes ?? 0,
+            quota: 50 * 1024 * 1024
+          })
+        }
+      });
+    });
+
+    await page.goto("/");
+    const panel = page.getByTestId("storage-durability-panel");
+    const summary = panel.getByTestId("storage-usage-summary");
+    const meter = panel.getByRole("progressbar", { name: "サイトのストレージ使用率" });
+    await expect(summary).toContainText("5 MiB");
+    await expect(summary).toContainText("50 MiB");
+    await expect(meter).toHaveAttribute("aria-valuenow", "10");
+    expect(await page.evaluate(
+      () => (window as Window & { __storagePersistRequests?: number }).__storagePersistRequests
+    )).toBe(0);
+
+    await page.evaluate(() => {
+      (window as Window & { __storageUsageBytes?: number }).__storageUsageBytes = 10 * 1024 * 1024;
+    });
+    await panel.getByTestId("refresh-storage-usage").click();
+    await expect(summary).toContainText("10 MiB");
+    await expect(meter).toHaveAttribute("aria-valuenow", "20");
+    expect(await page.evaluate(
+      () => (window as Window & { __storagePersistRequests?: number }).__storagePersistRequests
+    )).toBe(0);
+  });
+
   test("requests persistent browser storage only after explicit user action", async ({ page }) => {
     await page.addInitScript(() => {
       const testWindow = window as Window & { __storagePersistRequests?: number };
