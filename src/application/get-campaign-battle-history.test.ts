@@ -34,3 +34,55 @@ describe("getCampaignBattleHistory", () => {
     });
   });
 });
+
+
+describe("getCampaignBattleLogCoverage", () => {
+  it("returns an empty range for a campaign with no retained timeline entries", () => {
+    expect(getCampaignBattleLogCoverage([])).toEqual({
+      retainedCount: 0,
+      retentionLimit: 5000,
+      firstSequence: null,
+      lastSequence: null,
+      missingSequenceCount: 0,
+      reachedRetentionLimit: false
+    });
+  });
+
+  it("sorts a copy to describe the retained sequence range without changing input order", () => {
+    const input = [{ sequence: 12 }, { sequence: 10 }, { sequence: 11 }];
+    expect(getCampaignBattleLogCoverage(input)).toMatchObject({
+      retainedCount: 3,
+      firstSequence: 10,
+      lastSequence: 12,
+      missingSequenceCount: 0,
+      reachedRetentionLimit: false
+    });
+    expect(input.map((entry) => entry.sequence)).toEqual([12, 10, 11]);
+  });
+
+  it("counts only missing sequence values within the retained first-to-last range", () => {
+    expect(getCampaignBattleLogCoverage([
+      { sequence: 15 },
+      { sequence: 10 },
+      { sequence: 12 }
+    ])).toMatchObject({
+      retainedCount: 3,
+      firstSequence: 10,
+      lastSequence: 15,
+      missingSequenceCount: 3,
+      reachedRetentionLimit: false
+    });
+  });
+
+  it("marks a full retention limit without claiming earlier history was deleted", () => {
+    const entries = Array.from({ length: 5000 }, (_, index) => ({ sequence: index + 101 }));
+    expect(getCampaignBattleLogCoverage(entries)).toMatchObject({
+      retainedCount: 5000,
+      retentionLimit: 5000,
+      firstSequence: 101,
+      lastSequence: 5100,
+      missingSequenceCount: 0,
+      reachedRetentionLimit: true
+    });
+  });
+});
