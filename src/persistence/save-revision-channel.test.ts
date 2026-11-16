@@ -42,7 +42,7 @@ describe("createSaveRevisionChannel", () => {
     const onRemoteRevision = vi.fn();
     createSaveRevisionChannel(onRemoteRevision);
 
-    const channel = FakeBroadcastChannel.instances[0];
+    const channel = FakeBroadcastChannel.instances[0]!;
     expect(channel.name).toBe("grid-tactics-pwa:auto-save-revision:v1");
     channel.dispatch({ kind: "auto-save-revision-changed", savedAt: 1_700_000_000_000 });
     channel.dispatch({ kind: "other-message", savedAt: 1_700_000_000_001 });
@@ -57,7 +57,7 @@ describe("createSaveRevisionChannel", () => {
   it("announces only the revision number and ignores invalid outbound values", () => {
     vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
     const revisionChannel = createSaveRevisionChannel(() => undefined)!;
-    const channel = FakeBroadcastChannel.instances[0];
+    const channel = FakeBroadcastChannel.instances[0]!;
 
     revisionChannel.announce(1_700_000_000_010);
     revisionChannel.announce(0);
@@ -73,7 +73,7 @@ describe("createSaveRevisionChannel", () => {
     vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
     const onRemoteRevision = vi.fn();
     const revisionChannel = createSaveRevisionChannel(onRemoteRevision)!;
-    const channel = FakeBroadcastChannel.instances[0];
+    const channel = FakeBroadcastChannel.instances[0]!;
 
     revisionChannel.close();
     channel.dispatch({ kind: "auto-save-revision-changed", savedAt: 1_700_000_000_020 });
