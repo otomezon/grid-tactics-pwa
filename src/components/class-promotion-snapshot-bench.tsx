@@ -304,6 +304,8 @@ export function ClassPromotionSnapshotBench() {
         normalizedSaveVersion: number;
         migrated: boolean;
         exportedAt: string;
+        campaignLogTrackingAvailable: boolean;
+        unitBattleTotalsTrackingAvailable: boolean;
       }>;
     }>();
 
@@ -313,7 +315,9 @@ export function ClassPromotionSnapshotBench() {
         sourceSaveVersion: candidate.sourceSaveVersion,
         normalizedSaveVersion: candidate.normalizedSaveVersion,
         migrated: candidate.migrated,
-        exportedAt: candidate.exportedAt
+        exportedAt: candidate.exportedAt,
+        campaignLogTrackingAvailable: candidate.sourceSaveVersion >= 9,
+        unitBattleTotalsTrackingAvailable: candidate.sourceSaveVersion >= 3
       };
       const existing = grouped.get(candidate.unitSnapshotIdentity);
       if (existing) existing.imports.push(source);
@@ -752,11 +756,13 @@ export function ClassPromotionSnapshotBench() {
       "position_x", "position_y", "eligible", "eligibility_reasons", "promotion_seal_added_to_comparison_copy",
       "stat_hp", "stat_strength", "stat_magic", "stat_skill", "stat_speed", "stat_luck", "stat_defense", "stat_resistance",
       "movement_type", "move", "usable_weapon_types_json", "equipped_weapon_id", "inventory_json",
-      "campaign_log_tracking_available", "campaign_log_entries", "campaign_chapter_count",
+      "campaign_log_tracking_available_for_all_imports", "campaign_log_tracking_available_for_any_import",
+      "campaign_log_entries", "campaign_chapter_count",
       "campaign_player_action_entries", "campaign_player_attack_entries", "campaign_enemy_action_entries",
       "campaign_chapter_result_entries", "selected_unit_action_entries", "selected_unit_attack_entries",
       "selected_unit_targeted_enemy_action_entries", "selected_unit_attack_strikes",
-      "unit_battle_totals_tracking_available", "selected_unit_battle_totals_present",
+      "unit_battle_totals_tracking_available_for_all_imports",
+      "unit_battle_totals_tracking_available_for_any_import", "selected_unit_battle_totals_present",
       "selected_unit_record_attacks", "selected_unit_record_strikes", "selected_unit_record_hits",
       "selected_unit_record_damage_dealt", "selected_unit_record_enemies_defeated",
       "selected_unit_record_experience_awarded"
@@ -787,12 +793,15 @@ export function ClassPromotionSnapshotBench() {
         candidate.unit.stats.defense, candidate.unit.stats.resistance,
         candidate.unit.movementType, candidate.unit.move, JSON.stringify(candidate.unit.usableWeaponTypes),
         candidate.unit.equippedWeaponId, JSON.stringify(candidate.unit.inventory),
-        evidence.campaignLogTrackingAvailable, evidence.campaignLogEntries, evidence.campaignChapterCount,
+        imports.every((entry) => entry.campaignLogTrackingAvailable),
+        imports.some((entry) => entry.campaignLogTrackingAvailable),
+        evidence.campaignLogEntries, evidence.campaignChapterCount,
         evidence.playerActionEntries, evidence.playerAttackEntries, evidence.enemyActionEntries,
         evidence.chapterResultEntries, evidence.selectedUnitActionEntries,
         evidence.selectedUnitAttackEntries, evidence.selectedUnitTargetedEnemyActionEntries,
-        evidence.selectedUnitAttackStrikes, evidence.unitBattleTotalsTrackingAvailable,
-        totals !== null, totals?.attacks ?? "", totals?.strikes ?? "", totals?.hits ?? "",
+        evidence.selectedUnitAttackStrikes,
+        imports.every((entry) => entry.unitBattleTotalsTrackingAvailable),
+        imports.some((entry) => entry.unitBattleTotalsTrackingAvailable), totals !== null, totals?.attacks ?? "", totals?.strikes ?? "", totals?.hits ?? "",
         totals?.damageDealt ?? "", totals?.enemiesDefeated ?? "", totals?.experienceAwarded ?? ""
       ];
     });
