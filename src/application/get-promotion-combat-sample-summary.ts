@@ -2,6 +2,7 @@ import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game
 import { nextRandomUint32 } from "../domain/random/xorshift32";
 import { getPromotionCombatComparison } from "./get-promotion-combat-comparison";
 import { getWilsonScoreInterval, type WilsonScoreInterval } from "./wilson-score-interval";
+import { summarizePairedBinaryOutcomes, type PairedBinaryOutcome, type PairedBinaryOutcomeSummary } from "./paired-binary-outcomes";
 
 export interface PromotionCombatSampleMetrics {
   attackAttempts: number;
@@ -33,6 +34,10 @@ export interface PromotionCombatSampleSummary {
   lastSeed: number;
   control: PromotionCombatSampleMetrics;
   promotion: PromotionCombatSampleMetrics;
+  pairedOutcomes: {
+    enemyDefeat: PairedBinaryOutcomeSummary;
+    attackerSurvival: PairedBinaryOutcomeSummary;
+  };
 }
 
 interface MutableMetrics {
@@ -179,6 +184,8 @@ export function getPromotionCombatSampleSummary(
   const seeds = createPromotionCombatSampleSeeds(controlSnapshot.rngState, sampleCount);
   const controlMetrics = createMutableMetrics();
   const promotionMetrics = createMutableMetrics();
+  const enemyDefeatPairs: PairedBinaryOutcome[] = [];
+  const attackerSurvivalPairs: PairedBinaryOutcome[] = [];
 
   for (const seed of seeds) {
     const seededControl: GameStateSnapshot = { ...controlSnapshot, rngState: seed };
@@ -207,6 +214,15 @@ export function getPromotionCombatSampleSummary(
       comparison.promotion.result.attackerHp,
       comparison.promotion.result.defenderHp
     );
+
+    enemyDefeatPairs.push({
+      control: comparison.control.result.defenderHp <= 0,
+      promotion: comparison.promotion.result.defenderHp <= 0
+    });
+    attackerSurvivalPairs.push({
+      control: comparison.control.result.attackerHp > 0,
+      promotion: comparison.promotion.result.attackerHp > 0
+    });
   }
 
   return {
@@ -214,6 +230,10 @@ export function getPromotionCombatSampleSummary(
     firstSeed: seeds[0]!,
     lastSeed: seeds[seeds.length - 1]!,
     control: finishMetrics(controlMetrics, sampleCount),
-    promotion: finishMetrics(promotionMetrics, sampleCount)
+    promotion: finishMetrics(promotionMetrics, sampleCount),
+    pairedOutcomes: {
+      enemyDefeat: summarizePairedBinaryOutcomes(enemyDefeatPairs),
+      attackerSurvival: summarizePairedBinaryOutcomes(attackerSurvivalPairs)
+    }
   };
 }
