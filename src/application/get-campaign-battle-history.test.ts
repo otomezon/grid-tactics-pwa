@@ -44,6 +44,7 @@ describe("getCampaignBattleLogCoverage", () => {
       firstSequence: null,
       lastSequence: null,
       missingSequenceCount: 0,
+      unretainedLeadingSequenceCount: 0,
       reachedRetentionLimit: false
     });
   });
@@ -55,6 +56,7 @@ describe("getCampaignBattleLogCoverage", () => {
       firstSequence: 10,
       lastSequence: 12,
       missingSequenceCount: 0,
+      unretainedLeadingSequenceCount: 9,
       reachedRetentionLimit: false
     });
     expect(input.map((entry) => entry.sequence)).toEqual([12, 10, 11]);
@@ -70,6 +72,7 @@ describe("getCampaignBattleLogCoverage", () => {
       firstSequence: 10,
       lastSequence: 15,
       missingSequenceCount: 3,
+      unretainedLeadingSequenceCount: 9,
       reachedRetentionLimit: false
     });
   });
@@ -82,6 +85,7 @@ describe("getCampaignBattleLogCoverage", () => {
       firstSequence: 101,
       lastSequence: 5100,
       missingSequenceCount: 0,
+      unretainedLeadingSequenceCount: 100,
       reachedRetentionLimit: true
     });
   });
