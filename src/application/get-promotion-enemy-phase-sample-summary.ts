@@ -3,6 +3,7 @@ import { createPromotionCombatSampleSeeds } from "./get-promotion-combat-sample-
 import { beginEnemyPhase, runEnemyPhase } from "./resolve-enemy-phase";
 import type { EnemyActionKind } from "./resolve-enemy-phase";
 import { getWilsonScoreInterval, type WilsonScoreInterval } from "./wilson-score-interval";
+import { summarizePairedBinaryOutcomes, type PairedBinaryOutcome, type PairedBinaryOutcomeSummary } from "./paired-binary-outcomes";
 
 export interface PromotionEnemyPhaseMetrics {
   totalEnemyActions: number;
@@ -41,6 +42,13 @@ export interface PromotionEnemyPhaseSampleSummary {
   lastSeed: number;
   control: PromotionEnemyPhaseMetrics;
   promotion: PromotionEnemyPhaseMetrics;
+  pairedOutcomes: {
+    selectedUnitTargeted: PairedBinaryOutcomeSummary;
+    selectedUnitSurvived: PairedBinaryOutcomeSummary;
+    battleDefeat: PairedBinaryOutcomeSummary;
+    partyWipe: PairedBinaryOutcomeSummary;
+    playerPhaseAdvanced: PairedBinaryOutcomeSummary;
+  };
 }
 
 interface MutableMetrics {
@@ -59,6 +67,14 @@ interface MutableMetrics {
   battleDefeats: number;
   partyWipes: number;
   playerPhaseAdvances: number;
+}
+
+interface EnemyPhaseBinaryOutcomes {
+  selectedUnitTargeted: boolean;
+  selectedUnitSurvived: boolean;
+  battleDefeat: boolean;
+  partyWipe: boolean;
+  playerPhaseAdvanced: boolean;
 }
 
 function roundOne(value: number): number {
@@ -169,7 +185,7 @@ function addEnemyPhaseToMetrics(
   initial: GameStateSnapshot,
   resolved: ReturnType<typeof runEnemyPhase>,
   selectedUnitId: string
-): void {
+): EnemyPhaseBinaryOutcomes {
   metrics.totalEnemyActions += resolved.actions.length;
   const actionKinds: readonly EnemyActionKind[] = ["attacked", "moved-and-attacked", "moved", "waited"];
   for (const kind of actionKinds) {
@@ -182,9 +198,8 @@ function addEnemyPhaseToMetrics(
     else metrics.enemyWaitActions += count;
   }
 
-  if (resolved.actions.some((action) => action.targetId === selectedUnitId)) {
-    metrics.selectedUnitTargetedPhases += 1;
-  }
+  const selectedUnitTargeted = resolved.actions.some((action) => action.targetId === selectedUnitId);
+  if (selectedUnitTargeted) metrics.selectedUnitTargetedPhases += 1;
 
   // runEnemyPhase returns recovery applied when the next player phase starts.
   // Subtracting it isolates HP immediately after enemy actions, before that recovery.
@@ -226,14 +241,23 @@ function addEnemyPhaseToMetrics(
 
   metrics.playerUnitDefeats += defeatedPlayers;
   metrics.totalPlayerDamage += phaseDamage;
-  if (resolved.outcome === "defeat") metrics.battleDefeats += 1;
-  if (initialPlayers.length > 0 && initialPlayers.every((player) => {
+  const battleDefeat = resolved.outcome === "defeat";
+  if (battleDefeat) metrics.battleDefeats += 1;
+  const partyWipe = initialPlayers.length > 0 && initialPlayers.every((player) => {
     const after = resolvedUnits.get(player.id);
     return !after || after.currentHp <= 0;
-  })) metrics.partyWipes += 1;
-  if (resolved.nextState.phase === "player" && resolved.nextState.turn === initial.turn + 1) {
-    metrics.playerPhaseAdvances += 1;
-  }
+  });
+  if (partyWipe) metrics.partyWipes += 1;
+  const playerPhaseAdvanced = resolved.nextState.phase === "player" && resolved.nextState.turn === initial.turn + 1;
+  if (playerPhaseAdvanced) metrics.playerPhaseAdvances += 1;
+
+  return {
+    selectedUnitTargeted,
+    selectedUnitSurvived: Boolean(selectedBefore && !selectedDefeated),
+    battleDefeat,
+    partyWipe,
+    playerPhaseAdvanced
+  };
 }
 
 function finishMetrics(metrics: MutableMetrics, sampleCount: number): PromotionEnemyPhaseMetrics {
@@ -293,6 +317,19 @@ export function getPromotionEnemyPhaseSampleSummary(
   const seeds = createPromotionCombatSampleSeeds(controlSnapshot.rngState, sampleCount);
   const controlMetrics = createMutableMetrics();
   const promotionMetrics = createMutableMetrics();
+  const pairedOutcomes: {
+    selectedUnitTargeted: PairedBinaryOutcome[];
+    selectedUnitSurvived: PairedBinaryOutcome[];
+    battleDefeat: PairedBinaryOutcome[];
+    partyWipe: PairedBinaryOutcome[];
+    playerPhaseAdvanced: PairedBinaryOutcome[];
+  } = {
+    selectedUnitTargeted: [],
+    selectedUnitSurvived: [],
+    battleDefeat: [],
+    partyWipe: [],
+    playerPhaseAdvanced: []
+  };
 
   for (const seed of seeds) {
     const seededControl = createControlWaitCopy(controlSnapshot, selectedUnitId, seed);
@@ -302,8 +339,14 @@ export function getPromotionEnemyPhaseSampleSummary(
     const controlResult = runEnemyPhase(controlPhase.nextState, map);
     const promotionResult = runEnemyPhase(promotionPhase.nextState, map);
 
-    addEnemyPhaseToMetrics(controlMetrics, seededControl, controlResult, selectedUnitId);
-    addEnemyPhaseToMetrics(promotionMetrics, seededPromotion, promotionResult, selectedUnitId);
+    const controlOutcomes = addEnemyPhaseToMetrics(controlMetrics, seededControl, controlResult, selectedUnitId);
+    const promotionOutcomes = addEnemyPhaseToMetrics(promotionMetrics, seededPromotion, promotionResult, selectedUnitId);
+    for (const key of Object.keys(pairedOutcomes) as Array<keyof typeof pairedOutcomes>) {
+      pairedOutcomes[key].push({
+        control: controlOutcomes[key],
+        promotion: promotionOutcomes[key]
+      });
+    }
   }
 
   return {
@@ -311,6 +354,13 @@ export function getPromotionEnemyPhaseSampleSummary(
     firstSeed: seeds[0]!,
     lastSeed: seeds[seeds.length - 1]!,
     control: finishMetrics(controlMetrics, sampleCount),
-    promotion: finishMetrics(promotionMetrics, sampleCount)
+    promotion: finishMetrics(promotionMetrics, sampleCount),
+    pairedOutcomes: {
+      selectedUnitTargeted: summarizePairedBinaryOutcomes(pairedOutcomes.selectedUnitTargeted),
+      selectedUnitSurvived: summarizePairedBinaryOutcomes(pairedOutcomes.selectedUnitSurvived),
+      battleDefeat: summarizePairedBinaryOutcomes(pairedOutcomes.battleDefeat),
+      partyWipe: summarizePairedBinaryOutcomes(pairedOutcomes.partyWipe),
+      playerPhaseAdvanced: summarizePairedBinaryOutcomes(pairedOutcomes.playerPhaseAdvanced)
+    }
   };
 }

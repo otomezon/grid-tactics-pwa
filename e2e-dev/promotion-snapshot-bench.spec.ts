@@ -1,6 +1,56 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
+function parseCsvRecords(content: string): string[][] {
+  const source = content.startsWith("\ufeff") ? content.slice(1) : content;
+  const records: string[][] = [];
+  let record: string[] = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index]!;
+    if (quoted) {
+      if (character === '"' && source[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+      continue;
+    }
+
+    if (character === '"' && field.length === 0) {
+      quoted = true;
+    } else if (character === ",") {
+      record.push(field);
+      field = "";
+    } else if (character === "\r" && source[index + 1] === "\n") {
+      record.push(field);
+      records.push(record);
+      record = [];
+      field = "";
+      index += 1;
+    } else if (character === "\n") {
+      record.push(field);
+      records.push(record);
+      record = [];
+      field = "";
+    } else {
+      field += character;
+    }
+  }
+
+  if (field.length > 0 || record.length > 0) {
+    record.push(field);
+    records.push(record);
+  }
+  if (quoted) throw new Error("CSV contains an unterminated quoted field.");
+  return records;
+}
+
 function makePromotionSnapshotFile() {
   const snapshot = {
     saveVersion: 10,
@@ -239,6 +289,12 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(results).toContainText("本人が狙われた割合");
   await expect(results).toContainText("敵軍phase本人生存率");
   await expect(results).toContainText("95%区間");
+  await expect(results).toContainText("同一seed:");
+  await expect(results).toContainText("昇格のみ");
+  await expect(results).toContainText("非昇格のみ");
+  await expect(results).toContainText("同一seed:");
+  await expect(results).toContainText("昇格のみ");
+  await expect(results).toContainText("非昇格のみ");
 
   const downloadPromise = page.waitForEvent("download");
   await matrix.getByRole("button", { name: "21ケース結果CSVを書き出す" }).click();
@@ -264,7 +320,19 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("promotion_enemy_defeat_rate_95ci_upper");
   expect(csv).toContain("control_selected_unit_survival_rate_95ci_lower");
   expect(csv).toContain("promotion_player_phase_advance_rate_95ci_upper");
+  expect(csv).toContain("combat_enemy_defeat_control_only");
+  expect(csv).toContain("combat_enemy_defeat_promotion_only");
+  expect(csv).toContain("enemy_phase_targeted_control_only");
+  expect(csv).toContain("enemy_phase_party_wipe_control_only");
+  expect(csv).toContain("enemy_phase_party_wipe_promotion_only");
+  expect(csv).toContain("enemy_phase_player_phase_advance_promotion_minus_control_pt");
   expect(csv).toContain("未確認");
+  const csvRecords = parseCsvRecords(csv);
+  expect(csvRecords).toHaveLength(22);
+  expect(csvRecords[0]).toHaveLength(162);
+  for (const record of csvRecords.slice(1)) {
+    expect(record).toHaveLength(csvRecords[0]!.length);
+  }
 });
  
 test("imports an exported save locally and compares the actual unit snapshot with a detached promotion copy", async ({ page }) => {
@@ -314,6 +382,8 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   await expect(samples).toContainText("攻撃命中率");
   await expect(samples).toContainText("この敵の撃破率");
   await expect(samples).toContainText("95%区間");
+  await expect(samples).toContainText("同一seed:");
+  await expect(samples).toContainText("同一seed:");
   await samples.getByLabel("乱数試行回数").selectOption("20");
   await expect(samples).toContainText("20試行");
   await samples.getByLabel("乱数試行回数").selectOption("250");
