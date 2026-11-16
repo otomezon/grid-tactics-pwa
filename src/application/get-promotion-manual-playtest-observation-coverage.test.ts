@@ -1,8 +1,36 @@
 import { describe, expect, it } from "vitest";
+import type {
+  PromotionManualPlaytestBranchAudit,
+  PromotionManualPlaytestCaseAudit
+} from "./audit-promotion-manual-playtest-worksheet";
 import { getPromotionManualPlaytestObservationCoverage } from "./get-promotion-manual-playtest-observation-coverage";
 
-function branch(values: Record<string, string>) {
-  return { values };
+function branch(values: Record<string, string>): PromotionManualPlaytestBranchAudit {
+  const observationFilledFields = Object.entries(values)
+    .filter(([, value]) => value.trim().length > 0)
+    .map(([field]) => field);
+  const observationMissingFields = Object.keys(values)
+    .filter((field) => !observationFilledFields.includes(field));
+  return {
+    rowNumber: 2,
+    values,
+    observationFilledFieldCount: observationFilledFields.length,
+    observationFieldCount: Object.keys(values).length,
+    observationFilledFields,
+    observationMissingFields,
+    manualRecordStatus: "記録済み",
+    candidateSourceClassification: "未確認",
+    classificationIsVerifiedValue: "false"
+  };
+}
+
+function caseRow(
+  caseId: string,
+  control: PromotionManualPlaytestBranchAudit | null,
+  promotion: PromotionManualPlaytestBranchAudit | null,
+  pairFieldMismatches: string[] = []
+): PromotionManualPlaytestCaseAudit {
+  return { caseId, control, promotion, pairFieldMismatches, duplicateBranchCount: 0 };
 }
 
 describe("getPromotionManualPlaytestObservationCoverage", () => {
@@ -17,36 +45,22 @@ describe("getPromotionManualPlaytestObservationCoverage", () => {
         "observed_start_rng_state"
       ],
       cases: [
-        {
-          caseId: "swordsman:low",
-          control: branch({ actual_damage: "8", observations: "control note" }),
-          promotion: branch({ actual_damage: "11", observations: "promotion note" }),
-          pairFieldMismatches: []
-        },
-        {
-          caseId: "mercenary:low",
-          control: branch({ actual_damage: "", observations: "control only" }),
-          promotion: branch({ actual_damage: "9", observations: "" }),
-          pairFieldMismatches: ["snapshot fingerprint"]
-        },
-        {
-          caseId: "fighter:low",
-          control: branch({ actual_damage: "1e308", observations: "" }),
-          promotion: branch({ actual_damage: "-1e308", observations: "" }),
-          pairFieldMismatches: []
-        },
-        {
-          caseId: "soldier:low",
-          control: branch({ actual_damage: "not-a-number", observations: "" }),
-          promotion: branch({ actual_damage: "2", observations: "" }),
-          pairFieldMismatches: []
-        },
-        {
-          caseId: "cavalry:low",
-          control: branch({ actual_damage: "4", observations: "" }),
-          promotion: null,
-          pairFieldMismatches: []
-        }
+        caseRow("swordsman:low",
+          branch({ actual_damage: "8", observations: "control note" }),
+          branch({ actual_damage: "11", observations: "promotion note" })),
+        caseRow("mercenary:low",
+          branch({ actual_damage: "", observations: "control only" }),
+          branch({ actual_damage: "9", observations: "" }),
+          ["snapshot fingerprint"]),
+        caseRow("fighter:low",
+          branch({ actual_damage: "1e308", observations: "" }),
+          branch({ actual_damage: "-1e308", observations: "" })),
+        caseRow("soldier:low",
+          branch({ actual_damage: "not-a-number", observations: "" }),
+          branch({ actual_damage: "2", observations: "" })),
+        caseRow("cavalry:low",
+          branch({ actual_damage: "4", observations: "" }),
+          null)
       ]
     };
 
@@ -91,12 +105,11 @@ describe("getPromotionManualPlaytestObservationCoverage", () => {
         "observed_start_rng_state",
         "retest_conditions"
       ],
-      cases: [{
-        caseId: "swordsman:low",
-        control: branch({ actual_damage: "4", retest_conditions: "再試験" }),
-        promotion: branch({ actual_damage: "6", retest_conditions: "再試験" }),
-        pairFieldMismatches: []
-      }]
+      cases: [caseRow(
+        "swordsman:low",
+        branch({ actual_damage: "4", retest_conditions: "再試験" }),
+        branch({ actual_damage: "6", retest_conditions: "再試験" })
+      )]
     });
 
     expect(coverage.map((entry) => entry.field)).toEqual([
@@ -110,18 +123,8 @@ describe("getPromotionManualPlaytestObservationCoverage", () => {
     const coverage = getPromotionManualPlaytestObservationCoverage({
       observationColumns: ["actual_damage"],
       cases: [
-        {
-          caseId: "swordsman:low",
-          control: branch({ actual_damage: "1e999" }),
-          promotion: branch({ actual_damage: "2" }),
-          pairFieldMismatches: []
-        },
-        {
-          caseId: "mercenary:low",
-          control: branch({ actual_damage: "1e308" }),
-          promotion: branch({ actual_damage: "-1e308" }),
-          pairFieldMismatches: []
-        }
+        caseRow("swordsman:low", branch({ actual_damage: "1e999" }), branch({ actual_damage: "2" })),
+        caseRow("mercenary:low", branch({ actual_damage: "1e308" }), branch({ actual_damage: "-1e308" }))
       ]
     });
 

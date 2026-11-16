@@ -30,9 +30,7 @@ type CoverageCase = {
   pairFieldMismatches: readonly string[];
 };
 
-type CoverageAudit = Pick<PromotionManualPlaytestWorksheetAudit, "observationColumns"> & {
-  cases: readonly CoverageCase[];
-};
+type CoverageAudit = Pick<PromotionManualPlaytestWorksheetAudit, "cases" | "observationColumns">;
 
 /**
  * Summarizes manual observation presence per expected case without combining
@@ -42,10 +40,7 @@ type CoverageAudit = Pick<PromotionManualPlaytestWorksheetAudit, "observationCol
 export function getPromotionManualPlaytestObservationCoverage(
   audit: CoverageAudit
 ): PromotionManualPlaytestObservationCoverage[] {
-  const comparisons = getPromotionManualPlaytestObservationComparisons({
-    cases: audit.cases as PromotionManualPlaytestWorksheetAudit["cases"],
-    observationColumns: [...audit.observationColumns]
-  });
+  const comparisons = getPromotionManualPlaytestObservationComparisons(audit);
   const comparisonsByCaseAndField = new Map(
     comparisons.map((comparison) => [
       comparison.caseId + "\u0000" + comparison.field,
