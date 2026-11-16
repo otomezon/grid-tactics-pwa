@@ -463,7 +463,7 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
     for (const [name, value] of values) next[auditColumn(name)] = value;
     return next;
   });
-  await bench.getByLabel("記入済み実プレイ記録CSV").setInputFiles({
+  await bench.locator('input[aria-label="記入済み実プレイ記録CSV"]').setInputFiles({
     name: "completed-manual-playtest.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(serializeCsvRecords(completedWorksheet))
@@ -482,6 +482,20 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await fieldCoverage.locator("summary").click();
   await expect(fieldCoverage.locator("tr").filter({ hasText: "actual_damage" })).toContainText("42/42");
   await expect(fieldCoverage.locator("tr").filter({ hasText: "post_level" })).toContainText("0/42");
+
+  const observationMatrix = worksheetAudit.getByTestId("promotion-manual-observation-matrix");
+  await expect(observationMatrix.locator("tbody tr")).toHaveCount(21);
+  const comparisonFieldSelect = observationMatrix.getByLabel("比較する観測欄");
+  const comparisonFieldOptions = await comparisonFieldSelect.locator("option").allTextContents();
+  expect(comparisonFieldOptions).toContain("actual_damage");
+  expect(comparisonFieldOptions).not.toContain("manual_session_id");
+  expect(comparisonFieldOptions).not.toContain("played_at");
+  await comparisonFieldSelect.selectOption("actual_damage");
+  const swordsmanLowMatrixRow = observationMatrix.getByTestId("promotion-manual-observation-matrix-row-swordsman-low");
+  await expect(swordsmanLowMatrixRow).toContainText("CSV記載条件一致");
+  await expect(swordsmanLowMatrixRow).toContainText("8");
+  await expect(swordsmanLowMatrixRow).toContainText("11");
+  await expect(swordsmanLowMatrixRow).toContainText("+3");
 
   const swordsmanLowComparison = worksheetAudit.getByTestId("promotion-manual-audit-comparison-swordsman-low");
   await swordsmanLowComparison.locator("summary").click();
@@ -530,7 +544,7 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
     record[auditColumn("planned_branch")] === "promotion"
   );
   mismatchedWorksheet[mismatchRow]![auditColumn("snapshot_fingerprint")] = "different-fingerprint";
-  await bench.getByLabel("記入済み実プレイ記録CSV").setInputFiles({
+  await bench.locator('input[aria-label="記入済み実プレイ記録CSV"]').setInputFiles({
     name: "mismatched-manual-playtest.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(serializeCsvRecords(mismatchedWorksheet))
@@ -540,6 +554,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   const mismatchedComparison = worksheetAudit.getByTestId("promotion-manual-audit-comparison-swordsman-low");
   await mismatchedComparison.locator("summary").click();
   await expect(mismatchedComparison).toContainText("条件の記載に差があります");
+  const mismatchedMatrix = worksheetAudit.getByTestId("promotion-manual-observation-matrix");
+  await mismatchedMatrix.getByLabel("比較する観測欄").selectOption("actual_damage");
+  await expect(mismatchedMatrix.getByTestId("promotion-manual-observation-matrix-row-swordsman-low")).toContainText("条件の記載に差あり");
 
   const firstSelectedSnapshot = await caseRows.nth(0).locator("select").nth(0).inputValue();
   await caseRows.nth(1).locator("select").nth(0).selectOption(firstSelectedSnapshot);
