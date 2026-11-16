@@ -8,6 +8,10 @@ export interface CampaignBackupView {
   savedAt: number;
   chapterTitle: string;
   chapterId: string;
+  turn: number | null;
+  phaseLabel: string;
+  outcomeLabel: string;
+  saveFormatLabel: string;
   restorable: boolean;
 }
 
@@ -204,6 +208,10 @@ export function CampaignTitleScreen({
                       <div>
                         <strong>第{backup.generation}世代 · {new Date(backup.savedAt).toLocaleString()}</strong>
                         <span>{backup.chapterTitle}（{backup.chapterId}）</span>
+                        <div className="save-backup-snapshot-details">
+                          <span>{backup.turn === null ? "ターン不明" : "第" + backup.turn + "ターン"} · {backup.phaseLabel} · {backup.outcomeLabel}</span>
+                          <span>保存形式: {backup.saveFormatLabel}</span>
+                        </div>
                       </div>
                       <div className="campaign-backup-actions">
                         <button

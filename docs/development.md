@@ -71,3 +71,8 @@ Chromium E2Eでは味方の移動・装備変更・アイテム使用・クラ�
 ### キャンペーン戦闘記録のページ送り回帰テスト
 
 キャンペーン戦闘ログは最大5,000件を保持するため、画面では50件単位でページ送りする。component testでは51件のfixtureに対して最初の50件だけが描画され、次ページの表示範囲とボタンのアクセシブル名があることを検証する。Chromium／320px WebKit mobile E2Eでは123件以上のログを読み込み、最初／次／最後／前ページ、ページ末尾、検索条件変更時の先頭復帰、絞り込み解除、CSVへの絞り込み全件出力を確認する。これらの操作後もIndexedDBのauto saveが不変で、WebKit mobile profileでもdocument横幅が320pxを超えないことを検証する。ページ状態はReactの一時UI状態で、GameState／RNG／IndexedDB／saveVersionは変更しない。
+
+
+### バックアップ世代の表示・復元前プレビュー回帰テスト
+
+Chromium E2Eでは、タイトル画面と戦闘中のバックアップ一覧が既存のbackup snapshotから章・ターン・フェイズ・勝敗・保存形式を表示することを検証する。現在形式はv10、旧形式は検証後の移行先（例: v9 → v10）を区別する。復元確認には対象ターン／フェイズ／勝敗／形式に加え、現在の自動セーブを第1世代へ退避すること、選択した復元元を保持すること、3世代を超える場合の整理、別タブでrevisionが進んだ場合の復元拒否を表示する。キャンセル・stale-tab拒否・正常復元・旧形式復元の既存E2Eを維持し、auto saveとbackup slotの実データを確認する。プレビューは読み取り専用で、GameState saveVersion 10、IndexedDB schema 1、revision照合transactionを変更しない。
