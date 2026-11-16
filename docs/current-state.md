@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-2026-11-16更新: PR #156（旧saveVersion 1〜9のsnapshotベンチ内メモリ移行）、PR #157（seed単位binary outcomeの95% Wilson区間）、PR #158（同一seedのpaired outcome内訳）、PR #159（保存済みキャンペーン履歴の読み取り専用根拠表示）がmainへマージ済み。昇格ベンチは、元saveVersionに応じたキャンペーン履歴の追跡可否、ログ／章／対象ユニットの既存行動件数、味方別累計を画面・CSVへ読み取り専用で表示する。21ケース評価では、同じsnapshot内容の重複読み込みを除外し、7基本職ごとに少なくとも3つの異なる有効snapshotを使うカバレッジ表を表示する。真正性判定ではなく、saveVersion 10／IndexedDB schema 1を維持する。
+2026-11-16更新: PR #156（旧saveVersion 1〜9のsnapshotベンチ内メモリ移行）、PR #157（seed単位binary outcomeの95% Wilson区間）、PR #158（同一seedのpaired outcome内訳）、PR #159（保存済みキャンペーン履歴の読み取り専用根拠表示）がmainへマージ済み。昇格ベンチは、元saveVersionに応じたキャンペーン履歴の追跡可否、ログ／章／対象ユニットの既存行動件数、味方別累計を画面・CSVへ読み取り専用で表示する。21ケース評価では、同じセーブ・同じunit IDの重複読み込みを除外し、7基本職ごとに少なくとも3つの異なる有効ユニットsnapshotを使うカバレッジ表を表示する。同一セーブ内の異なるunit IDは別候補として扱う。真正性判定ではなく、saveVersion 10／IndexedDB schema 1を維持する。
 
 ## 1. 監査スナップショット
 
