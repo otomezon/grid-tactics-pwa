@@ -92,6 +92,16 @@ describe("promotion enemy-phase sample summary", () => {
       expect(branch.partyWipeRate).toBeLessThanOrEqual(100);
       expect(branch.playerPhaseAdvanceRate).toBeGreaterThanOrEqual(0);
       expect(branch.playerPhaseAdvanceRate).toBeLessThanOrEqual(100);
+      expect(branch.selectedUnitTargetedPhaseRateInterval95.lower).toBeLessThanOrEqual(branch.selectedUnitTargetedPhaseRate);
+      expect(branch.selectedUnitTargetedPhaseRateInterval95.upper).toBeGreaterThanOrEqual(branch.selectedUnitTargetedPhaseRate);
+      expect(branch.selectedUnitSurvivalRateInterval95.lower).toBeLessThanOrEqual(branch.selectedUnitSurvivalRate);
+      expect(branch.selectedUnitSurvivalRateInterval95.upper).toBeGreaterThanOrEqual(branch.selectedUnitSurvivalRate);
+      expect(branch.battleDefeatRateInterval95.lower).toBeLessThanOrEqual(branch.battleDefeatRate);
+      expect(branch.battleDefeatRateInterval95.upper).toBeGreaterThanOrEqual(branch.battleDefeatRate);
+      expect(branch.partyWipeRateInterval95.lower).toBeLessThanOrEqual(branch.partyWipeRate);
+      expect(branch.partyWipeRateInterval95.upper).toBeGreaterThanOrEqual(branch.partyWipeRate);
+      expect(branch.playerPhaseAdvanceRateInterval95.lower).toBeLessThanOrEqual(branch.playerPhaseAdvanceRate);
+      expect(branch.playerPhaseAdvanceRateInterval95.upper).toBeGreaterThanOrEqual(branch.playerPhaseAdvanceRate);
       expect(branch.selectedUnitTotalDamage).toBeLessThanOrEqual(17 * 12);
     }
 
