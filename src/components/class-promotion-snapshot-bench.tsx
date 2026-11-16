@@ -1310,7 +1310,7 @@ export function ClassPromotionSnapshotBench() {
                         <td>
                           {result.evidence.campaignLogTrackingAvailable ? "ログ " + result.evidence.campaignLogEntries + "件" : "ログ: 未追跡"} · {result.evidence.campaignChapterCount}章
                           <small>対象ユニット: 行動 {result.evidence.selectedUnitActionEntries}／攻撃 {result.evidence.selectedUnitAttackEntries}／被標的 {result.evidence.selectedUnitTargetedEnemyActionEntries}</small>
-                          <small>ログ保管: {result.evidence.campaignLogEntries}/{result.evidence.campaignLogRetentionLimit}件 · 欠番 {result.evidence.campaignLogSequenceGapCount}件{result.evidence.campaignLogAtRetentionLimit ? " · 上限到達" : ""}</small>
+                          <small>{result.evidence.campaignLogTrackingAvailable ? "ログ保管: " + result.evidence.campaignLogEntries + "/" + result.evidence.campaignLogRetentionLimit + "件 · 欠番 " + result.evidence.campaignLogSequenceGapCount + "件" + (result.evidence.campaignLogAtRetentionLimit ? " · 上限到達" : "") : "ログ保管: 未追跡"}</small>
                           <small>{result.evidence.unitBattleTotalsTrackingAvailable ? "味方別累計: " + (result.evidence.selectedUnitBattleTotals?.attacks ?? 0) + "攻撃" : "味方別累計: 未追跡"}</small>
                         </td>
                         <td>{getMatrixDataClassificationLabel(result.dataClassification)}</td>
