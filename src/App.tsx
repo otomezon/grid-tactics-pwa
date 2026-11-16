@@ -447,6 +447,14 @@ function CampaignApp() {
     return nextRevision;
   }
 
+  async function syncAutoSaveRevision(expectedState: GameStateSnapshot): Promise<void> {
+    const currentRecord = await loadGameStateRecord();
+    if (!currentRecord || JSON.stringify(currentRecord.data) !== JSON.stringify(expectedState)) {
+      throw new SaveConflictError(autoSaveRevisionRef.current, currentRecord?.savedAt ?? null);
+    }
+    autoSaveRevisionRef.current = currentRecord.savedAt;
+  }
+
   useEffect(() => {
     setIsMapEventHistoryOpen(false);
     setIsCampaignChoiceHistoryOpen(false);
@@ -1212,7 +1220,7 @@ function CampaignApp() {
       }
 
       const safetyBackup = await restoreGameStateBackup(backup, restoredState);
-      autoSaveRevisionRef.current = (await loadGameStateRecord())?.savedAt ?? null;
+      await syncAutoSaveRevision(restoredState);
       let backupRefreshNotice = "";
       try {
         setSaveBackups(await loadGameStateBackups());
@@ -1322,7 +1330,7 @@ function CampaignApp() {
       }
 
       const safetyBackup = await replaceGameStateWithBackup(importedState);
-      autoSaveRevisionRef.current = (await loadGameStateRecord())?.savedAt ?? null;
+      await syncAutoSaveRevision(importedState);
       let backupRefreshNotice = "";
       try {
         setSaveBackups(await loadGameStateBackups());
