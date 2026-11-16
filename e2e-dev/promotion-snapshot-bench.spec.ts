@@ -393,6 +393,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
 
   await matrix.getByLabel("21ケースの乱数試行回数").selectOption("20");
   for (let index = 0; index < 21; index += 1) {
+    // Synthetic fixtures must be explicitly classified before exporting manual evidence.
+    await caseRows.nth(index).locator('select[aria-label$="データ区分"]').selectOption("synthetic");
     await caseRows.nth(index).getByRole("checkbox").check();
   }
   await expect(matrix).toContainText("21/21 実行準備完了");
