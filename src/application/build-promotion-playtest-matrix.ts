@@ -2,14 +2,7 @@ import { CLASS_PROMOTION_TARGETS } from "../content/classes";
 import type { GameUnit, UnitStats } from "../domain/models/game";
 
 const STAT_KEYS: readonly (keyof UnitStats)[] = [
-  "hp",
-  "strength",
-  "magic",
-  "skill",
-  "speed",
-  "luck",
-  "defense",
-  "resistance"
+  "hp", "strength", "magic", "skill", "speed", "luck", "defense", "resistance"
 ];
 
 export type PromotionPlaytestProfile = "low" | "median" | "upper";
@@ -27,6 +20,10 @@ export const PROMOTION_PLAYTEST_PROFILES: readonly {
 export interface PromotionPlaytestCandidateLike {
   key: string;
   unit: Pick<GameUnit, "classId" | "stats">;
+  /** Exact serialized snapshot content; display fingerprints are not collision-safe identities. */
+  snapshotIdentity?: string;
+  /** Candidates that cannot currently be used for promotion comparison are excluded from selection. */
+  eligible?: boolean;
 }
 
 export interface PromotionPlaytestMatrixSlot<T extends PromotionPlaytestCandidateLike> {
@@ -37,9 +34,16 @@ export interface PromotionPlaytestMatrixSlot<T extends PromotionPlaytestCandidat
   profileLabel: string;
   targetPercentile: number;
   candidateCount: number;
+  eligibleCandidateCount: number;
+  distinctSnapshotCount: number;
+  eligibleDistinctSnapshotCount: number;
   candidatePool: readonly T[];
   suggestedCandidate: T | null;
   suggestedPercentile: number | null;
+}
+
+function getSnapshotIdentity(candidate: PromotionPlaytestCandidateLike): string {
+  return candidate.snapshotIdentity ?? candidate.key;
 }
 
 /**
@@ -73,7 +77,10 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
       if (!promotedClassId) return [];
 
       const classCandidates = candidates.filter((candidate) => candidate.unit.classId === classId);
-      const ranked = classCandidates
+      const eligibleCandidates = classCandidates.filter((candidate) => candidate.eligible !== false);
+      const distinctSnapshotCount = new Set(classCandidates.map(getSnapshotIdentity)).size;
+      const eligibleDistinctSnapshotCount = new Set(eligibleCandidates.map(getSnapshotIdentity)).size;
+      const ranked = eligibleCandidates
         .map((candidate) => ({
           candidate,
           percentile: getAverageClassStatPercentile(candidate, classCandidates)
@@ -83,15 +90,15 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
           left.percentile - right.percentile ||
           left.candidate.key.localeCompare(right.candidate.key)
         );
-      const used = new Set<string>();
+      const usedSnapshotIdentities = new Set<string>();
 
       return PROMOTION_PLAYTEST_PROFILES.map((profile) => {
         let suggestedCandidate: T | null = null;
         let suggestedPercentile: number | null = null;
 
-        if (ranked.length >= 3) {
+        if (eligibleDistinctSnapshotCount >= 3) {
           const available = ranked
-            .filter((entry) => !used.has(entry.candidate.key))
+            .filter((entry) => !usedSnapshotIdentities.has(getSnapshotIdentity(entry.candidate)))
             .sort((left, right) =>
               Math.abs(left.percentile - profile.targetPercentile) -
                 Math.abs(right.percentile - profile.targetPercentile) ||
@@ -102,7 +109,7 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
           if (selected) {
             suggestedCandidate = selected.candidate;
             suggestedPercentile = selected.percentile;
-            used.add(selected.candidate.key);
+            usedSnapshotIdentities.add(getSnapshotIdentity(selected.candidate));
           }
         }
 
@@ -114,6 +121,9 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
           profileLabel: profile.label,
           targetPercentile: profile.targetPercentile,
           candidateCount: classCandidates.length,
+          eligibleCandidateCount: eligibleCandidates.length,
+          distinctSnapshotCount,
+          eligibleDistinctSnapshotCount,
           candidatePool: classCandidates,
           suggestedCandidate,
           suggestedPercentile
