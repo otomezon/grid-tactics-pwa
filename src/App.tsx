@@ -311,6 +311,21 @@ function getErrorMessage(error: unknown): string {
     (error instanceof Error ? error.message : "戦闘操作に失敗しました。");
 }
 
+function getBackupSaveFormatLabel(
+  storedData: unknown,
+  migration: ReturnType<typeof migrateGameStateSnapshot>
+): string {
+  if (!migration) return "検証不可";
+  const sourceVersion = typeof storedData === "object" && storedData !== null &&
+    "saveVersion" in storedData && typeof storedData.saveVersion === "number" &&
+    Number.isInteger(storedData.saveVersion)
+    ? storedData.saveVersion
+    : null;
+  if (!migration.migrated) return "v" + migration.snapshot.saveVersion;
+  return (sourceVersion === null ? "旧形式" : "v" + sourceVersion) +
+    " → v" + migration.snapshot.saveVersion;
+}
+
 function formatFortRecoverySummary(recoveries: FortRecoveryRecord[]): string {
   if (recoveries.length === 0) return "";
   return "砦の効果で" + recoveries
@@ -696,12 +711,20 @@ function CampaignApp() {
       : null;
     const chapter = chapterId ? getChapterById(chapterId) : undefined;
     const migration = chapter ? migrateGameStateSnapshot(storedData, chapter.map) : null;
+    const snapshot = migration?.snapshot ?? null;
+    const outcome = snapshot && chapter ? evaluateBattleOutcome(snapshot, chapter.map) : null;
 
     return {
       ...backup,
       generation: Number(backup.slotId.slice("backup-".length)),
       chapterId: chapterId ?? "不明",
       chapterTitle: chapter?.title ?? "不明な章",
+      turn: snapshot?.turn ?? null,
+      phaseLabel: snapshot
+        ? snapshot.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ"
+        : "検証不可",
+      outcomeLabel: outcome === "victory" ? "勝利" : outcome === "defeat" ? "敗北" : outcome === "playing" ? "進行中" : "検証不可",
+      saveFormatLabel: getBackupSaveFormatLabel(storedData, migration),
       restorable: Boolean(migration)
     };
   });
@@ -1217,10 +1240,24 @@ function CampaignApp() {
       return;
     }
 
-    const confirmed = window.confirm(
-      "「" + chapter.title + "」の第" + slotId.slice("backup-".length) +
-      "世代バックアップを復元します。復元前に現在の自動セーブがあれば新しい第1世代へ退避し、選択した復元元も残します。3世代を超える場合は、ほかの古い世代を整理します。続行しますか？"
-    );
+    const previewOutcome = evaluateBattleOutcome(migration.snapshot, chapter.map);
+    const previewOutcomeLabel = previewOutcome === "victory"
+      ? "勝利"
+      : previewOutcome === "defeat" ? "敗北" : "進行中";
+    const previewPhaseLabel = migration.snapshot.phase === "player" ? "自軍フェイズ" : "敵軍フェイズ";
+    const saveFormatLabel = getBackupSaveFormatLabel(backup.data, migration);
+    const confirmed = window.confirm([
+      "「" + chapter.title + "」の第" + slotId.slice("backup-".length) + "世代バックアップを復元します。",
+      "復元対象: 第" + migration.snapshot.turn + "ターン・" + previewPhaseLabel + "・" + previewOutcomeLabel,
+      "保存形式: " + saveFormatLabel,
+      "復元前に現在の自動セーブがあれば新しい第1世代へ退避し、選択した復元元も残します。",
+      "3世代を超える場合は、ほかの古い世代を整理します。",
+      "別タブで自動セーブが更新されている場合は、保存データとバックアップ世代を変更せず復元を拒否します。",
+      ...(migration.snapshot.phase === "enemy"
+        ? ["復元後、敵軍フェイズは既存ルールに従って直ちに再開します。"]
+        : []),
+      "続行しますか？"
+    ].join("\n"));
     if (!confirmed) return;
 
     setBackupActionPending(true);
@@ -3353,6 +3390,10 @@ function CampaignApp() {
                     <div className="save-backup-meta">
                       <strong>第{backup.generation}世代 · {new Date(backup.savedAt).toLocaleString()}</strong>
                       <span>{backup.chapterTitle}（章ID: {backup.chapterId}）</span>
+                    </div>
+                    <div className="save-backup-snapshot-details">
+                      <span>{backup.turn === null ? "ターン不明" : "第" + backup.turn + "ターン"} · {backup.phaseLabel} · {backup.outcomeLabel}</span>
+                      <span>保存形式: {backup.saveFormatLabel}</span>
                     </div>
                     <p className="helper-text">{backup.restorable ? "保存形式と章マップを検証済みです。" : "保存形式または章IDを検証できません。復元は拒否されます。"}</p>
                     <div className="save-backup-actions">
