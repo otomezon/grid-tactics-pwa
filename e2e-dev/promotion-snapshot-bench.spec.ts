@@ -473,8 +473,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(worksheetAudit).toContainText("42／42");
   await expect(worksheetAudit).toContainText("観測欄入力済みセル");
   const swordsmanLowAudit = worksheetAudit.getByTestId("promotion-manual-audit-case-swordsman-low");
-  await expect(swordsmanLowAudit.locator("td").nth(1)).toContainText("6/76欄入力");
-  await expect(swordsmanLowAudit.locator("td").nth(2)).toContainText("5/76欄入力");
+  await expect(swordsmanLowAudit.locator("td").nth(0)).toContainText("6/76欄入力");
+  await expect(swordsmanLowAudit.locator("td").nth(1)).toContainText("5/76欄入力");
   await swordsmanLowAudit.locator("td").nth(1).locator("summary").click();
   await expect(swordsmanLowAudit.locator("td").nth(1)).toContainText("post_level");
   await expect(worksheetAudit).toContainText("真正性");
@@ -609,9 +609,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   const missingPromotionMatrixRow = worksheetAudit
     .getByTestId("promotion-manual-observation-matrix")
     .getByTestId("promotion-manual-observation-matrix-row-mage-upper");
-  await expect(missingPromotionMatrixRow.locator("td").nth(1)).toHaveText("片枝不足");
-  await expect(missingPromotionMatrixRow.locator("td").nth(3)).toHaveText("行なし");
-  await expect(missingPromotionMatrixRow.locator("td").nth(4)).toHaveText("未算出（ペア不足）");
+  await expect(missingPromotionMatrixRow.locator("td").nth(0)).toHaveText("片枝不足");
+  await expect(missingPromotionMatrixRow.locator("td").nth(2)).toHaveText("行なし");
+  await expect(missingPromotionMatrixRow.locator("td").nth(3)).toHaveText("未算出（ペア不足）");
 
   const partialCoverageDownloadPromise = page.waitForEvent("download");
   await worksheetAudit.getByRole("button", { name: "観測欄ペア充足CSVを書き出す" }).click();
