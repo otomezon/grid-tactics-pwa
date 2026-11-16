@@ -1,6 +1,6 @@
 # クラスチェンジ仕様・未決定事項と実装計画
 
-- 更新日: 2026-11-15
+- 更新日: 2026-11-16
 - 状態: CP-01〜03／06／07〜14／15／16の非数値方針は採択済み（2026-11-12）。CP-04／05の数値表と初回の証の具体的な配布内容は未決定
 - 根拠: `docs/game-design.md` §5.4–§5.5、`docs/progression.md` §7、現行ソース／テスト
 - 関連実装: `src/content/class-definitions.ts`、`src/content/classes.ts`（互換projection）、`src/content/items.ts`、`src/domain/progression/class-change.ts`、`src/application/perform-class-change.ts`、`src/App.tsx`
@@ -150,7 +150,7 @@ CP-12により昇格はその自軍フェイズの行動を消費する。した
 
 この結果は現行戦闘ロジック上の単一seed比較サンプルであり、合成E2E fixtureは実プレイデータではない。全21ケースの実プレイ統制評価やCP-04／05の数値承認を代替せず、現行の昇格値・クラス上限・武器性能・戦闘距離の試作設定も正式化しない。両枝ともブラウザ内の開発用メモリコピーだけで処理し、import元snapshot、GameState、IndexedDB、RNG永続値は変更しない。
 
-### セーブ内プレイ履歴の根拠サマリー
+### セーブ内プレイ履歴の根拠サマリー（実装）
 
 snapshotベンチは読み込んだsnapshotの既存記録から、キャンペーン戦闘ログの件数・記録章数・行動／攻撃／敵行動／章結果の内訳と、選択ユニットの行動／攻撃／被標的件数を集計する。加えて、`campaignUnitBattleRecords`の選択ユニット分（攻撃・strike・命中・与ダメージ・撃破・EXP）を表示／CSVへ記録する。比較候補の出所を人が評価するための補助であり、ファイルの真正性、改変有無、完全な実プレイ履歴を自動認定するものではない。
 
