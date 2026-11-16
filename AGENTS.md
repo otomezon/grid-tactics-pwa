@@ -202,3 +202,6 @@ See `docs/architecture.md`, `docs/combat.md`, and `docs/enemy-ai.md`.
 
 
 - Campaign enemy-strike summaries must be derived only from retained, recorded enemy strikes: enemy-action strikes must match the acting enemy ID; player-attack entries may contribute only the defender's counterstrikes against the initiating ally. Exclude allied opening/follow-up strikes, forecasts, AI evaluations, inferred actions, and zero rows for unseen enemies. Key aggregates by chapter ID plus enemy unit ID so reused enemy IDs across chapters never merge. Include retained-log coverage and never claim completeness when gaps, a missing leading range, or the retention cap apply. Keep the projection/export read-only: no GameState, RNG, IndexedDB, autosave, saveVersion, or schema changes.
+
+
+- The four campaign battle-history views must use an accessible horizontal tablist with one selected tab in the Tab sequence. ArrowLeft/ArrowRight cycle through the tabs; Home/End select the first/last tab. Keep focus on the newly selected tab, associate the active tab with its tabpanel via aria-controls/aria-labelledby, and preserve click/touch selection. View switching is presentation-only and must not mutate GameState, RNG, campaign logs, IndexedDB, autosave, or saveVersion.

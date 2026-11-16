@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   getCampaignBattleLogCoverage,
   type CampaignBattleHistoryEntry,
@@ -24,6 +24,31 @@ export interface CampaignBattleHistoryPanelProps {
 }
 
 const CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE = 50;
+const CAMPAIGN_BATTLE_HISTORY_VIEWS = ["timeline", "units", "incoming", "enemy"] as const;
+
+export type CampaignBattleHistoryView = typeof CAMPAIGN_BATTLE_HISTORY_VIEWS[number];
+
+/** Returns the next view for the standard horizontal tab keyboard contract. */
+export function getNextCampaignBattleHistoryView(
+  currentView: CampaignBattleHistoryView,
+  key: string
+): CampaignBattleHistoryView | null {
+  const currentIndex = CAMPAIGN_BATTLE_HISTORY_VIEWS.indexOf(currentView);
+  switch (key) {
+    case "ArrowRight":
+      return CAMPAIGN_BATTLE_HISTORY_VIEWS[(currentIndex + 1) % CAMPAIGN_BATTLE_HISTORY_VIEWS.length]!;
+    case "ArrowLeft":
+      return CAMPAIGN_BATTLE_HISTORY_VIEWS[
+        (currentIndex - 1 + CAMPAIGN_BATTLE_HISTORY_VIEWS.length) % CAMPAIGN_BATTLE_HISTORY_VIEWS.length
+      ]!;
+    case "Home":
+      return CAMPAIGN_BATTLE_HISTORY_VIEWS[0];
+    case "End":
+      return CAMPAIGN_BATTLE_HISTORY_VIEWS[CAMPAIGN_BATTLE_HISTORY_VIEWS.length - 1];
+    default:
+      return null;
+  }
+}
 
 const PLAYER_ACTION_LABELS: Record<Extract<CampaignBattleLogEntry, { kind: "player-action" }>["action"], string> = {
   movement: "移動",
@@ -248,7 +273,13 @@ export function CampaignEnemyStrikeSummaryView({
 }
 
 export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: CampaignBattleHistoryPanelProps) {
-  const [activeView, setActiveView] = useState<"timeline" | "units" | "incoming" | "enemy">("timeline");
+  const [activeView, setActiveView] = useState<CampaignBattleHistoryView>("timeline");
+  const viewTabRefs = useRef<Record<CampaignBattleHistoryView, HTMLButtonElement | null>>({
+    timeline: null,
+    units: null,
+    incoming: null,
+    enemy: null
+  });
   const [chapterFilter, setChapterFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState<CampaignBattleHistoryCategory>("all");
   const [unitFilter, setUnitFilter] = useState("all");
@@ -324,6 +355,15 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
     );
   }
 
+  function handleViewTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, currentView: CampaignBattleHistoryView): void {
+    const nextView = getNextCampaignBattleHistoryView(currentView, event.key);
+    if (nextView === null) return;
+
+    event.preventDefault();
+    setActiveView(nextView);
+    viewTabRefs.current[nextView]?.focus();
+  }
+
   return (
     <section
       id="campaign-battle-history-panel"
@@ -357,41 +397,72 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
         </button>
       </header>
 
-      <div className="campaign-battle-history-tabs" role="group" aria-label="キャンペーン記録の表示切替">
+      <div className="campaign-battle-history-tabs" role="tablist" aria-label="キャンペーン記録の表示切替" aria-orientation="horizontal">
         <button
+          id="campaign-battle-history-tab-timeline"
+          ref={(element) => { viewTabRefs.current.timeline = element; }}
           className="secondary-button"
           type="button"
-          aria-pressed={activeView === "timeline"}
+          role="tab"
+          aria-selected={activeView === "timeline"}
+          aria-controls="campaign-battle-history-tabpanel"
+          tabIndex={activeView === "timeline" ? 0 : -1}
           onClick={() => setActiveView("timeline")}
+          onKeyDown={(event) => handleViewTabKeyDown(event, "timeline")}
         >
           時系列ログ
         </button>
         <button
+          id="campaign-battle-history-tab-units"
+          ref={(element) => { viewTabRefs.current.units = element; }}
           className="secondary-button"
           type="button"
-          aria-pressed={activeView === "units"}
+          role="tab"
+          aria-selected={activeView === "units"}
+          aria-controls="campaign-battle-history-tabpanel"
+          tabIndex={activeView === "units" ? 0 : -1}
           onClick={() => setActiveView("units")}
+          onKeyDown={(event) => handleViewTabKeyDown(event, "units")}
         >
           味方別累計
         </button>
         <button
+          id="campaign-battle-history-tab-incoming"
+          ref={(element) => { viewTabRefs.current.incoming = element; }}
           className="secondary-button"
           type="button"
-          aria-pressed={activeView === "incoming"}
+          role="tab"
+          aria-selected={activeView === "incoming"}
+          aria-controls="campaign-battle-history-tabpanel"
+          tabIndex={activeView === "incoming" ? 0 : -1}
           onClick={() => setActiveView("incoming")}
+          onKeyDown={(event) => handleViewTabKeyDown(event, "incoming")}
         >
           被攻撃集計
         </button>
         <button
+          id="campaign-battle-history-tab-enemy"
+          ref={(element) => { viewTabRefs.current.enemy = element; }}
           className="secondary-button"
           type="button"
-          aria-pressed={activeView === "enemy"}
+          role="tab"
+          aria-selected={activeView === "enemy"}
+          aria-controls="campaign-battle-history-tabpanel"
+          tabIndex={activeView === "enemy" ? 0 : -1}
           onClick={() => setActiveView("enemy")}
+          onKeyDown={(event) => handleViewTabKeyDown(event, "enemy")}
         >
           敵攻撃集計
         </button>
       </div>
 
+      <div
+        id="campaign-battle-history-tabpanel"
+        className="campaign-battle-history-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`campaign-battle-history-tab-${activeView}`}
+        tabIndex={0}
+      >
       {activeView === "timeline" ? (
         <>
       <CampaignBattleHistoryCoverage coverage={logCoverage} />
@@ -606,6 +677,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
           onExport={exportEnemySummary}
         />
       )}
+      </div>
     </section>
   );
 }

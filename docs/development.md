@@ -111,3 +111,8 @@ Chromium／WebKitの3章キャンペーン履歴テストでは、章／種別�
 ### キャンペーン敵攻撃集計の回帰テスト
 
 「敵攻撃集計」は保持中のcampaignBattleLogから実際の敵strikeだけを章ID＋敵ユニットIDで集計する。敵軍フェイズの敵攻撃と、味方攻撃イベントに記録された敵ディフェンダーのカウンターを対象とし、味方の初撃／追撃・予測値・AI評価は除外する。strike数にはミスを含め、命中／ミス／必殺／実ダメージ／攻撃対象味方数／味方撃破数／最新sequenceを表示する。上限・欠番・先頭より前の未保持連番を警告・CSVへ残し、不在の行動や0件ユニットを作らない。敵IDの章をまたぐ再利用は章IDで分離する。Application unit testsで章別ID衝突、敵カウンター、ミス、撃破条件、味方攻撃除外、入力不変を確認し、component／Chromium／320px WebKit E2Eで表示、CSV、オートセーブ不変を確認する。読み取り専用で、GameState、RNG、IndexedDB、saveVersion 10を変更しない。
+
+
+### キャンペーン記録ビューのアクセシブルな切替
+
+キャンペーン戦闘記録の4ビューはARIA tablist／tab／tabpanelで構成し、選択中のタブのみをTab順に含める。左右矢印キーで循環、Home／Endで先頭／末尾へ移動し、キー移動後もフォーカスと選択タブを一致させる。Component testsではロール・関連付け・選択／Tab順状態・キー移動関数を確認し、Chromium E2Eでは4ビューの循環、Home／End、パネルのaria-labelledbyを検証する。WebKit touch E2Eでは従来のタッチ切替を維持する。ビュー切替はUI状態のみを更新し、campaignBattleLog、GameState、RNG、IndexedDB、saveVersionを変更しない。

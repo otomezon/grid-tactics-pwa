@@ -2957,6 +2957,11 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   gap: 10px;
 }
 .campaign-battle-history-header h2 { margin: 0; }
+.campaign-battle-history-tabpanel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
 .campaign-battle-history-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -2967,7 +2972,7 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   min-width: 112px;
   min-height: 42px;
 }
-.campaign-battle-history-tabs button[aria-pressed="true"] {
+.campaign-battle-history-tabs button[aria-selected="true"] {
   border-color: rgba(131, 189, 187, .8);
   background: rgba(85, 137, 137, .28);
   color: #e4f5f1;

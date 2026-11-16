@@ -691,7 +691,35 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expect(battleHistoryPanel).toContainText("HP +7");
   const savedBeforeBattleHistory = await readAutoSave(page);
 
-  const allyTotalsTab = battleHistoryPanel.getByRole("button", { name: "味方別累計" });
+  if (input === "click") {
+    const timelineTab = battleHistoryPanel.getByRole("tab", { name: "時系列ログ" });
+    const allyTotalsKeyboardTab = battleHistoryPanel.getByRole("tab", { name: "味方別累計" });
+    const incomingKeyboardTab = battleHistoryPanel.getByRole("tab", { name: "被攻撃集計" });
+    const enemyKeyboardTab = battleHistoryPanel.getByRole("tab", { name: "敵攻撃集計" });
+    await timelineTab.focus();
+    await timelineTab.press("ArrowRight");
+    await expect(allyTotalsKeyboardTab).toBeFocused();
+    await expect(allyTotalsKeyboardTab).toHaveAttribute("aria-selected", "true");
+    await allyTotalsKeyboardTab.press("ArrowRight");
+    await expect(incomingKeyboardTab).toBeFocused();
+    await incomingKeyboardTab.press("ArrowRight");
+    await expect(enemyKeyboardTab).toBeFocused();
+    await enemyKeyboardTab.press("ArrowRight");
+    await expect(timelineTab).toBeFocused();
+    await timelineTab.press("ArrowLeft");
+    await expect(enemyKeyboardTab).toBeFocused();
+    await enemyKeyboardTab.press("Home");
+    await expect(timelineTab).toBeFocused();
+    await timelineTab.press("End");
+    await expect(enemyKeyboardTab).toBeFocused();
+    await enemyKeyboardTab.press("Home");
+    const tabPanel = battleHistoryPanel.getByRole("tabpanel");
+    await expect(tabPanel).toHaveAttribute("aria-labelledby", "campaign-battle-history-tab-timeline");
+    await expect(timelineTab).toHaveAttribute("tabindex", "0");
+    await expect(enemyKeyboardTab).toHaveAttribute("tabindex", "-1");
+  }
+
+  const allyTotalsTab = battleHistoryPanel.getByRole("tab", { name: "味方別累計" });
   await activate(allyTotalsTab, input);
   const allyArchive = battleHistoryPanel.getByTestId("campaign-unit-battle-records-archive");
   await expect(allyArchive).toBeVisible();
@@ -740,7 +768,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await expectMobileViewport(page, input);
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
 
-  const incomingSummaryTab = battleHistoryPanel.getByRole("button", { name: "被攻撃集計" });
+  const incomingSummaryTab = battleHistoryPanel.getByRole("tab", { name: "被攻撃集計" });
   await activate(incomingSummaryTab, input);
   const incomingArchive = battleHistoryPanel.getByTestId("campaign-incoming-strikes");
   await expect(incomingArchive).toBeVisible();
@@ -761,7 +789,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   }
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
 
-  const enemySummaryTab = battleHistoryPanel.getByRole("button", { name: "敵攻撃集計" });
+  const enemySummaryTab = battleHistoryPanel.getByRole("tab", { name: "敵攻撃集計" });
   await activate(enemySummaryTab, input);
   const enemyArchive = battleHistoryPanel.getByTestId("campaign-enemy-strikes");
   await expect(enemyArchive).toBeVisible();
@@ -784,7 +812,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   }
   expect(await readAutoSave(page)).toEqual(savedBeforeBattleHistory);
 
-  await activate(battleHistoryPanel.getByRole("button", { name: "時系列ログ" }), input);
+  await activate(battleHistoryPanel.getByRole("tab", { name: "時系列ログ" }), input);
   await expect(battleLogEntries).toHaveCount(12);
 
   const chapterFilter = battleHistoryPanel.getByRole("combobox", { name: "章で絞り込み" });
@@ -854,7 +882,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await activate(legacyHistoryToggle, input);
   const legacyHistoryPanel = page.getByTestId("campaign-battle-history");
   await expect(legacyHistoryPanel).toContainText("0 / 0件を表示");
-  await activate(legacyHistoryPanel.getByRole("button", { name: "味方別累計" }), input);
+  await activate(legacyHistoryPanel.getByRole("tab", { name: "味方別累計" }), input);
   await expect(legacyHistoryPanel.getByTestId("campaign-unit-record-entry")).toHaveCount(2);
   await expectMobileViewport(page, input);
   expect(await readAutoSave(page)).toEqual(migratedLegacySave);
