@@ -328,6 +328,15 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   }
   await expect(matrix).toContainText("21/21 実行準備完了");
   await expect(runButton).toBeEnabled();
+
+  const firstSelectedSnapshot = await caseRows.nth(0).locator("select").nth(0).inputValue();
+  await caseRows.nth(1).locator("select").nth(0).selectOption(firstSelectedSnapshot);
+  await expect(caseRows.nth(0)).toContainText("同一snapshot内容が複数profileに重複");
+  await expect(matrix).toContainText("19/21 実行準備完了");
+  await expect(runButton).toBeDisabled();
+  await caseRows.nth(1).locator("select").nth(0).selectOption("");
+  await expect(matrix).toContainText("21/21 実行準備完了");
+  await expect(runButton).toBeEnabled();
   await runButton.click();
 
   const results = matrix.getByTestId("promotion-playtest-matrix-results");
@@ -364,6 +373,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("source_save_version");
   expect(csv).toContain("normalized_save_version");
   expect(csv).toContain("migration_applied");
+  expect(csv).toContain("class_distinct_snapshot_count");
+  expect(csv).toContain("class_eligible_distinct_snapshot_count");
+  expect(csv).toContain("class_campaign_history_snapshot_count");
   expect(csv).toContain("campaign_log_entries");
   expect(csv).toContain("selected_unit_record_damage_dealt");
   expect(csv).toContain("exported_at");
@@ -380,12 +392,35 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("未確認");
   const csvRecords = parseCsvRecords(csv);
   expect(csvRecords).toHaveLength(22);
-  expect(csvRecords[0]).toHaveLength(180);
+  expect(csvRecords[0]).toHaveLength(186);
   for (const record of csvRecords.slice(1)) {
     expect(record).toHaveLength(csvRecords[0]!.length);
   }
 });
  
+test("does not count renamed copies of one save as three distinct promotion samples", async ({ page }) => {
+  await page.goto("/?promotion-snapshots=1");
+  const bench = page.getByTestId("promotion-snapshot-bench");
+  const sameSave = JSON.stringify(makePromotionSnapshotFile());
+  await bench.getByLabel("対応するセーブJSON（複数選択可）").setInputFiles(
+    [1, 2, 3].map((index) => ({
+      name: "same-save-copy-" + index + ".json",
+      mimeType: "application/json",
+      buffer: Buffer.from(sameSave)
+    }))
+  );
+
+  await expect(bench).toContainText("3候補");
+  const matrix = bench.getByTestId("promotion-playtest-matrix");
+  const coverage = matrix.getByTestId("promotion-playtest-coverage-swordsman");
+  await expect(coverage).toContainText("3");
+  await expect(coverage).toContainText("1/3");
+  const firstCase = matrix.locator('tr[data-testid^="promotion-playtest-case-"]').first();
+  await expect(firstCase).toContainText("異なる有効snapshot不足（1/3）");
+  const runButton = matrix.getByRole("button", { name: "21ケースのseed反復を実行" });
+  await expect(runButton).toBeDisabled();
+});
+
 test("shows saved campaign-history evidence without claiming save authenticity", async ({ page }) => {
   await page.goto("/?promotion-snapshots=1");
   const bench = page.getByTestId("promotion-snapshot-bench");
