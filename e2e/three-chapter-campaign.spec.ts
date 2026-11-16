@@ -674,6 +674,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   await activate(battleHistoryToggle, input);
   const battleHistoryPanel = page.getByTestId("campaign-battle-history");
   await expect(battleHistoryPanel).toBeVisible();
+  if (input === "click") await expect(battleHistoryToggle).toBeFocused();
   const battleLogEntries = battleHistoryPanel.getByTestId("campaign-battle-log-entry");
   await expect(battleLogEntries).toHaveCount(12);
   await expect(battleHistoryPanel).toContainText("第1章 · 第1章・試作マップ");
