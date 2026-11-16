@@ -16,6 +16,8 @@ export interface CampaignBattleHistoryPanelProps {
   onClose: () => void;
 }
 
+const CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE = 50;
+
 const PLAYER_ACTION_LABELS: Record<Extract<CampaignBattleLogEntry, { kind: "player-action" }>["action"], string> = {
   movement: "移動",
   "weapon-change": "武器変更",
@@ -61,6 +63,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
   const [chapterFilter, setChapterFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState<CampaignBattleHistoryCategory>("all");
   const [query, setQuery] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
 
   const chapters = useMemo(() => {
     const byId = new Map<string, { id: string; chapterNumber: number | null; title: string }>();
@@ -82,12 +85,23 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
     query
   }), [entries, chapterFilter, categoryFilter, query]);
   const defeatCounts = useMemo(() => buildDefeatCounts(filteredEntries), [filteredEntries]);
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE));
+  const currentPageIndex = Math.min(pageIndex, totalPages - 1);
+  const pageStartIndex = currentPageIndex * CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE;
+  const pageEntries = filteredEntries.slice(
+    pageStartIndex,
+    pageStartIndex + CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE
+  );
+  const pageRangeLabel = filteredEntries.length > CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE
+    ? `${pageStartIndex + 1}–${pageStartIndex + pageEntries.length} / ${filteredEntries.length}件を表示 · 全${entries.length}件`
+    : `${filteredEntries.length} / ${entries.length}件を表示 · 発生順`;
   const hasActiveFilter = chapterFilter !== "all" || categoryFilter !== "all" || query.trim().length > 0;
 
   function clearFilters() {
     setChapterFilter("all");
     setCategoryFilter("all");
     setQuery("");
+    setPageIndex(0);
   }
 
   return (
@@ -108,9 +122,9 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
         <div>
           <p className="eyebrow">CAMPAIGN BATTLE LOG</p>
           <h2 id="campaign-battle-history-title">キャンペーン戦闘記録</h2>
-          <p className="campaign-battle-history-note" aria-live="polite">
+          <p className="campaign-battle-history-note" aria-live="polite" data-testid="campaign-history-page-status">
             {activeView === "timeline"
-              ? `${filteredEntries.length} / ${entries.length}件を表示 · 発生順`
+              ? pageRangeLabel
               : `${unitRecords.length}名 · 味方別の累計戦績`}
           </p>
         </div>
@@ -146,7 +160,10 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
           <select
             aria-label="章で絞り込み"
             value={chapterFilter}
-            onChange={(event) => setChapterFilter(event.currentTarget.value)}
+            onChange={(event) => {
+              setChapterFilter(event.currentTarget.value);
+              setPageIndex(0);
+            }}
           >
             <option value="all">すべての章</option>
             {chapters.map((chapter) => (
@@ -163,7 +180,10 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
           <select
             aria-label="記録種別で絞り込み"
             value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.currentTarget.value as CampaignBattleHistoryCategory)}
+            onChange={(event) => {
+              setCategoryFilter(event.currentTarget.value as CampaignBattleHistoryCategory);
+              setPageIndex(0);
+            }}
           >
             <option value="all">すべての記録</option>
             <option value="player">味方の行動・攻撃</option>
@@ -178,7 +198,10 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
             aria-label="履歴内を検索"
             placeholder="ユニット名・武器・内容"
             value={query}
-            onChange={(event) => setQuery(event.currentTarget.value)}
+            onChange={(event) => {
+              setQuery(event.currentTarget.value);
+              setPageIndex(0);
+            }}
           />
         </label>
         <button
@@ -204,7 +227,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
       </div>
 
       <section className="campaign-battle-defeats" aria-labelledby="campaign-battle-defeats-title">
-        <h3 id="campaign-battle-defeats-title">撃破者別記録（表示中）</h3>
+        <h3 id="campaign-battle-defeats-title">撃破者別記録（絞り込み結果全体）</h3>
         {defeatCounts.length > 0 ? (
           <ul>
             {defeatCounts.map((record) => (
@@ -212,13 +235,55 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
             ))}
           </ul>
         ) : (
-          <p className="helper-text">表示中の記録に確定した撃破はありません。</p>
+          <p className="helper-text">絞り込み結果に確定した撃破はありません。</p>
         )}
       </section>
 
+      {filteredEntries.length > CAMPAIGN_BATTLE_HISTORY_PAGE_SIZE && (
+        <nav className="campaign-battle-history-pagination" aria-label="時系列ログのページ送り" data-testid="campaign-battle-history-pagination">
+          <button
+            className="secondary-button"
+            type="button"
+            aria-label="最初のページ"
+            disabled={currentPageIndex === 0}
+            onClick={() => setPageIndex(0)}
+          >
+            最初
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            aria-label="前のページ"
+            disabled={currentPageIndex === 0}
+            onClick={() => setPageIndex(Math.max(0, currentPageIndex - 1))}
+          >
+            前へ
+          </button>
+          <span aria-live="polite">ページ {currentPageIndex + 1} / {totalPages}</span>
+          <button
+            className="secondary-button"
+            type="button"
+            aria-label="次のページ"
+            disabled={currentPageIndex >= totalPages - 1}
+            onClick={() => setPageIndex(Math.min(totalPages - 1, currentPageIndex + 1))}
+          >
+            次へ
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            aria-label="最後のページ"
+            disabled={currentPageIndex >= totalPages - 1}
+            onClick={() => setPageIndex(totalPages - 1)}
+          >
+            最後
+          </button>
+        </nav>
+      )}
+
       {filteredEntries.length > 0 ? (
         <ol className="campaign-battle-history-list" aria-label="絞り込み後のキャンペーン戦闘記録">
-          {filteredEntries.map((entry) => (
+          {pageEntries.map((entry) => (
             <li key={entry.sequence}>
               <article className="campaign-battle-history-entry" data-testid="campaign-battle-log-entry" data-sequence={entry.sequence}>
                 <div className="campaign-battle-history-entry-heading">
