@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   readStorageDurabilityStatus,
   requestStorageDurability,
+  readStorageUsageEstimate,
   type StoragePersistenceApi
 } from "./storage-durability";
 
@@ -59,5 +60,50 @@ describe("browser storage durability", () => {
 
   it("reports request errors without throwing", async () => {
     await expect(requestStorageDurability(createStorageApi({ requestThrows: true }))).resolves.toBe("error");
+  });
+
+  it("reads the origin usage and quota estimate without requesting persistence", async () => {
+    let persistCalls = 0;
+    const api: StoragePersistenceApi = {
+      persisted: async () => false,
+      persist: async () => {
+        persistCalls += 1;
+        return true;
+      },
+      estimate: async () => ({ usage: 12_345, quota: 98_765 })
+    };
+
+    await expect(readStorageUsageEstimate(api)).resolves.toEqual({
+      status: "available",
+      usageBytes: 12_345,
+      quotaBytes: 98_765
+    });
+    expect(persistCalls).toBe(0);
+  });
+
+  it("reports unsupported when the estimate method is unavailable", async () => {
+    await expect(readStorageUsageEstimate(undefined)).resolves.toEqual({ status: "unsupported" });
+    await expect(readStorageUsageEstimate({ persisted: async () => false })).resolves.toEqual({ status: "unsupported" });
+  });
+
+  it("reports estimate failures without throwing", async () => {
+    await expect(readStorageUsageEstimate({
+      estimate: async () => { throw new Error("Estimate unavailable."); }
+    })).resolves.toEqual({ status: "error" });
+  });
+
+  it("rejects incomplete or invalid estimates", async () => {
+    const invalidEstimates = [
+      { usage: Number.NaN, quota: 100 },
+      { usage: -1, quota: 100 },
+      { usage: 10, quota: Number.POSITIVE_INFINITY },
+      { usage: 10, quota: 0 },
+      { usage: 10 }
+    ];
+    for (const estimate of invalidEstimates) {
+      await expect(readStorageUsageEstimate({
+        estimate: async () => estimate
+      })).resolves.toEqual({ status: "error" });
+    }
   });
 });
