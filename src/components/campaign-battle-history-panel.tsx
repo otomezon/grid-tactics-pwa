@@ -255,7 +255,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
             type="button"
             aria-label="前のページ"
             disabled={currentPageIndex === 0}
-            onClick={() => setPageIndex((current) => Math.max(0, currentPageIndex - 1))}
+            onClick={() => setPageIndex(Math.max(0, currentPageIndex - 1))}
           >
             前へ
           </button>
@@ -265,7 +265,7 @@ export function CampaignBattleHistoryPanel({ entries, unitRecords, onClose }: Ca
             type="button"
             aria-label="次のページ"
             disabled={currentPageIndex >= totalPages - 1}
-            onClick={() => setPageIndex((current) => Math.min(totalPages - 1, currentPageIndex + 1))}
+            onClick={() => setPageIndex(Math.min(totalPages - 1, currentPageIndex + 1))}
           >
             次へ
           </button>
