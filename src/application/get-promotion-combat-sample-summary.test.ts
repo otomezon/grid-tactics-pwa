@@ -91,6 +91,15 @@ describe("promotion combat sample summary", () => {
 
     expect(summary).toEqual(repeated);
     expect(summary.sampleCount).toBe(25);
+    for (const paired of [summary.pairedOutcomes.enemyDefeat, summary.pairedOutcomes.attackerSurvival]) {
+      expect(
+        paired.controlOnlyCount + paired.promotionOnlyCount + paired.bothCount + paired.neitherCount
+      ).toBe(summary.sampleCount);
+      expect(paired.promotionMinusControlPercentagePoints).toBeCloseTo(
+        ((paired.promotionOnlyCount - paired.controlOnlyCount) / summary.sampleCount) * 100,
+        1
+      );
+    }
     expect(summary.firstSeed).not.toBe(0);
     expect(summary.lastSeed).not.toBe(0);
     expect(summary.control.attackAttempts).toBeGreaterThanOrEqual(25);
