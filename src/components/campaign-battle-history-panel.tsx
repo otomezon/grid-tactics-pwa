@@ -44,7 +44,7 @@ export function getNextCampaignBattleHistoryView(
     case "Home":
       return CAMPAIGN_BATTLE_HISTORY_VIEWS[0];
     case "End":
-      return CAMPAIGN_BATTLE_HISTORY_VIEWS[CAMPAIGN_BATTLE_HISTORY_VIEWS.length - 1];
+      return CAMPAIGN_BATTLE_HISTORY_VIEWS[CAMPAIGN_BATTLE_HISTORY_VIEWS.length - 1]!;
     default:
       return null;
   }
