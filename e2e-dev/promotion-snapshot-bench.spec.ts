@@ -473,7 +473,8 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(worksheetAudit).toContainText("42／42");
   await expect(worksheetAudit).toContainText("観測欄入力済みセル");
   const swordsmanLowAudit = worksheetAudit.getByTestId("promotion-manual-audit-case-swordsman-low");
-  await expect(swordsmanLowAudit).toContainText("観測欄 6/");
+  await expect(swordsmanLowAudit.locator("td").nth(1)).toContainText("6/76欄入力");
+  await expect(swordsmanLowAudit.locator("td").nth(2)).toContainText("5/76欄入力");
   await swordsmanLowAudit.locator("td").nth(1).locator("summary").click();
   await expect(swordsmanLowAudit.locator("td").nth(1)).toContainText("post_level");
   await expect(worksheetAudit).toContainText("真正性");
@@ -588,6 +589,45 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   const mismatchedPairCoverage = worksheetAudit.getByTestId("promotion-manual-pair-coverage");
   await mismatchedPairCoverage.locator("summary").click();
   await expect(mismatchedPairCoverage.getByTestId("promotion-manual-pair-coverage-actual_damage").locator("td").nth(8)).toHaveText("1/21");
+
+  const partialWorksheet = completedWorksheet.filter((record, index) =>
+    !(index > 0 &&
+      record[auditColumn("case_id")] === "mage:upper" &&
+      record[auditColumn("planned_branch")] === "promotion")
+  );
+  await bench.locator('input[aria-label="記入済み実プレイ記録CSV"]').setInputFiles({
+    name: "partial-manual-playtest.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(serializeCsvRecords(partialWorksheet))
+  });
+  await expect(worksheetAudit).toContainText("control／promotion両枝あり20/21");
+  const partialPairCoverage = worksheetAudit.getByTestId("promotion-manual-pair-coverage");
+  await partialPairCoverage.locator("summary").click();
+  const partialDamageCoverage = partialPairCoverage.getByTestId("promotion-manual-pair-coverage-actual_damage");
+  await expect(partialDamageCoverage.locator("td").nth(0)).toHaveText("20/20");
+  await expect(partialDamageCoverage.locator("td").nth(4)).toHaveText("1/21");
+  const missingPromotionMatrixRow = worksheetAudit
+    .getByTestId("promotion-manual-observation-matrix")
+    .getByTestId("promotion-manual-observation-matrix-row-mage-upper");
+  await expect(missingPromotionMatrixRow.locator("td").nth(1)).toHaveText("片枝不足");
+  await expect(missingPromotionMatrixRow.locator("td").nth(3)).toHaveText("行なし");
+  await expect(missingPromotionMatrixRow.locator("td").nth(4)).toHaveText("未算出（ペア不足）");
+
+  const partialCoverageDownloadPromise = page.waitForEvent("download");
+  await worksheetAudit.getByRole("button", { name: "観測欄ペア充足CSVを書き出す" }).click();
+  const partialCoverageDownload = await partialCoverageDownloadPromise;
+  const partialCoveragePath = await partialCoverageDownload.path();
+  if (!partialCoveragePath) throw new Error("Partial coverage CSV download path was not available.");
+  const partialCoverageRecords = parseCsvRecords(await readFile(partialCoveragePath, "utf8"));
+  const partialCoverageHeaders = partialCoverageRecords[0]!;
+  const partialCoverageColumn = (name: string) => partialCoverageHeaders.indexOf(name);
+  const partialDamageRecord = partialCoverageRecords.slice(1).find((record) =>
+    record[partialCoverageColumn("observation_field")] === "actual_damage"
+  );
+  expect(partialDamageRecord).toBeDefined();
+  expect(partialDamageRecord![partialCoverageColumn("paired_case_count")]).toBe("20");
+  expect(partialDamageRecord![partialCoverageColumn("missing_branch_case_count")]).toBe("1");
+  expect(partialDamageRecord![partialCoverageColumn("both_values_present_case_count")]).toBe("20");
 
   const firstSelectedSnapshot = await caseRows.nth(0).locator("select").nth(0).inputValue();
   await caseRows.nth(1).locator("select").nth(0).selectOption(firstSelectedSnapshot);
