@@ -280,19 +280,27 @@ describe("CampaignBattleHistoryPanel", () => {
 
 
 describe("getNextCampaignBattleHistoryView", () => {
-  it("cycles through all four archive views with horizontal arrow keys", () => {
-    expect(getNextCampaignBattleHistoryView("timeline", "ArrowRight")).toBe("units");
-    expect(getNextCampaignBattleHistoryView("units", "ArrowRight")).toBe("incoming");
-    expect(getNextCampaignBattleHistoryView("incoming", "ArrowRight")).toBe("enemy");
-    expect(getNextCampaignBattleHistoryView("enemy", "ArrowRight")).toBe("timeline");
-    expect(getNextCampaignBattleHistoryView("timeline", "ArrowLeft")).toBe("enemy");
-    expect(getNextCampaignBattleHistoryView("enemy", "ArrowLeft")).toBe("incoming");
+  const views = ["timeline", "units", "incoming", "enemy"] as const;
+
+  it("cycles left and right from every archive view, including both wraparound edges", () => {
+    for (const [index, view] of views.entries()) {
+      expect(getNextCampaignBattleHistoryView(view, "ArrowRight"))
+        .toBe(views[(index + 1) % views.length]);
+      expect(getNextCampaignBattleHistoryView(view, "ArrowLeft"))
+        .toBe(views[(index - 1 + views.length) % views.length]);
+    }
   });
 
-  it("moves to the first and last archive views and ignores unrelated keys", () => {
-    expect(getNextCampaignBattleHistoryView("incoming", "Home")).toBe("timeline");
-    expect(getNextCampaignBattleHistoryView("timeline", "End")).toBe("enemy");
-    expect(getNextCampaignBattleHistoryView("units", "Tab")).toBeNull();
-    expect(getNextCampaignBattleHistoryView("enemy", "Escape")).toBeNull();
+  it("moves every archive view to the first or last tab for Home and End", () => {
+    for (const view of views) {
+      expect(getNextCampaignBattleHistoryView(view, "Home")).toBe("timeline");
+      expect(getNextCampaignBattleHistoryView(view, "End")).toBe("enemy");
+    }
+  });
+
+  it("ignores keys outside the tab navigation contract", () => {
+    for (const key of ["Tab", "Enter", " ", "Escape", "ArrowUp", "ArrowDown"]) {
+      expect(getNextCampaignBattleHistoryView("units", key)).toBeNull();
+    }
   });
 });
