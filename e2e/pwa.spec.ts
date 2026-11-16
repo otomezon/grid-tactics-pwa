@@ -190,6 +190,79 @@ test.describe("production PWA shell", () => {
 
     await staleTab.close();
   });
+  test("does not restore a backup from a stale title tab over newer campaign progress", async ({ page }) => {
+    await startBattle(page);
+    await page.getByTestId("create-save-backup").click();
+    await expect(page.getByRole("status")).toContainText("バックアップを作成しました。");
+
+    const staleTab = await page.context().newPage();
+    await staleTab.goto("/");
+    const title = staleTab.getByTestId("campaign-title-screen");
+    await expect(title.getByTestId("title-restore-backup-1")).toBeEnabled();
+    const backupsBeforeRestore = await readBackupRecords(staleTab);
+
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
+    const newestRecord = await readAutoSaveRecord(page);
+    expect(newestRecord).not.toBeNull();
+
+    const restoreDialogPromise = staleTab.waitForEvent("dialog");
+    await title.getByTestId("title-restore-backup-1").click();
+    const restoreDialog = await restoreDialogPromise;
+    expect(restoreDialog.message()).toContain("第1世代へ退避");
+    await restoreDialog.accept();
+
+    await expect(title.getByTestId("save-conflict-notice"))
+      .toContainText("このタブが読み込んだ後にセーブデータが変更されました");
+    expect(await readAutoSaveRecord(staleTab)).toEqual(newestRecord);
+    expect(await readBackupRecords(staleTab)).toEqual(backupsBeforeRestore);
+    const persisted = newestRecord!.data as { units: Array<{ id: string; hasActed: boolean }> };
+    expect(persisted.units.find((unit) => unit.id === "unit_001")?.hasActed).toBe(true);
+
+    await staleTab.close();
+  });
+
+  test("does not import an older JSON save from a stale tab over newer campaign progress", async ({ page }) => {
+    await startBattle(page);
+    const staleTab = await page.context().newPage();
+    await staleTab.goto("/");
+    const title = staleTab.getByTestId("campaign-title-screen");
+    await expect(title).toBeVisible();
+
+    const exportPromise = staleTab.waitForEvent("download");
+    await title.getByRole("button", { name: "セーブを書き出す" }).click();
+    const exportDownload = await exportPromise;
+    const oldSavePath = await exportDownload.path();
+    expect(oldSavePath).toBeTruthy();
+
+    await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("主人公は待機しました。");
+    await page.locator(".map-grid").getByRole("button", { name: /味方04/ }).click();
+    await page.getByRole("button", { name: "待機", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("味方04は待機しました。");
+    const newestRecord = await readAutoSaveRecord(page);
+    expect(newestRecord).not.toBeNull();
+    const backupsBeforeImport = await readBackupRecords(page);
+
+    const importDialogPromise = staleTab.waitForEvent("dialog");
+    await title.locator('[data-testid="title-save-import-input"]').setInputFiles(oldSavePath!);
+    const importDialog = await importDialogPromise;
+    expect(importDialog.message()).toContain("第1世代バックアップへ退避");
+    await importDialog.accept();
+
+    await expect(title.getByTestId("save-conflict-notice"))
+      .toContainText("このタブが読み込んだ後にセーブデータが変更されました");
+    expect(await readAutoSaveRecord(staleTab)).toEqual(newestRecord);
+    expect(await readBackupRecords(staleTab)).toEqual(backupsBeforeImport);
+    const persisted = newestRecord!.data as { units: Array<{ id: string; hasActed: boolean }> };
+    expect(persisted.units.find((unit) => unit.id === "unit_001")?.hasActed).toBe(true);
+    expect(persisted.units.find((unit) => unit.id === "unit_004")?.hasActed).toBe(true);
+
+    await staleTab.close();
+  });
+
   test("publishes a valid installable manifest and active service worker", async ({ page }) => {
     await page.goto("/");
 

@@ -1157,6 +1157,7 @@ function CampaignApp() {
 
   async function handleRestoreSaveBackup(slotId: string): Promise<void> {
     if (backupActionPending || saveStatus === "loading" || saveStatus === "saving" || saveStatus === "conflict") return;
+    const expectedAutoSaveSavedAt = autoSaveRevisionRef.current;
 
     let backup: SaveBackupRecord;
     let chapter: ReturnType<typeof getChapterById>;
@@ -1219,7 +1220,7 @@ function CampaignApp() {
         }
       }
 
-      const safetyBackup = await restoreGameStateBackup(backup, restoredState);
+      const safetyBackup = await restoreGameStateBackup(backup, restoredState, expectedAutoSaveSavedAt);
       await syncAutoSaveRevision(restoredState);
       let backupRefreshNotice = "";
       try {
@@ -1261,6 +1262,7 @@ function CampaignApp() {
 
   async function handleImportSaveFile(file: File | null): Promise<void> {
     if (!file || backupActionPending || saveStatus === "conflict") return;
+    const expectedAutoSaveSavedAt = autoSaveRevisionRef.current;
 
     if (file.size > MAX_SAVE_FILE_BYTES) {
       setMessage("セーブファイルが大きすぎます。1 MiB以下のJSONファイルを選択してください。");
@@ -1331,7 +1333,7 @@ function CampaignApp() {
         }
       }
 
-      const safetyBackup = await replaceGameStateWithBackup(importedState);
+      const safetyBackup = await replaceGameStateWithBackup(importedState, expectedAutoSaveSavedAt);
       await syncAutoSaveRevision(importedState);
       let backupRefreshNotice = "";
       try {
