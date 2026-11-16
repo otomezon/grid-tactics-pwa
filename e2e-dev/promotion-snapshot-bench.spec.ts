@@ -239,6 +239,9 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(results).toContainText("本人が狙われた割合");
   await expect(results).toContainText("敵軍phase本人生存率");
   await expect(results).toContainText("95%区間");
+  await expect(results).toContainText("同一seed:");
+  await expect(results).toContainText("昇格のみ");
+  await expect(results).toContainText("非昇格のみ");
 
   const downloadPromise = page.waitForEvent("download");
   await matrix.getByRole("button", { name: "21ケース結果CSVを書き出す" }).click();
@@ -264,6 +267,11 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   expect(csv).toContain("promotion_enemy_defeat_rate_95ci_upper");
   expect(csv).toContain("control_selected_unit_survival_rate_95ci_lower");
   expect(csv).toContain("promotion_player_phase_advance_rate_95ci_upper");
+  expect(csv).toContain("combat_enemy_defeat_control_only");
+  expect(csv).toContain("combat_enemy_defeat_promotion_only");
+  expect(csv).toContain("enemy_phase_party_wipe_control_only");
+  expect(csv).toContain("enemy_phase_party_wipe_promotion_only");
+  expect(csv).toContain("enemy_phase_player_phase_advance_promotion_minus_control_pt");
   expect(csv).toContain("未確認");
 });
  
@@ -314,6 +322,7 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   await expect(samples).toContainText("攻撃命中率");
   await expect(samples).toContainText("この敵の撃破率");
   await expect(samples).toContainText("95%区間");
+  await expect(samples).toContainText("同一seed:");
   await samples.getByLabel("乱数試行回数").selectOption("20");
   await expect(samples).toContainText("20試行");
   await samples.getByLabel("乱数試行回数").selectOption("250");
