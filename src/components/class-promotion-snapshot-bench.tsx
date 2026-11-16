@@ -315,11 +315,9 @@ export function ClassPromotionSnapshotBench() {
       : [],
     [manualWorksheetAudit]
   );
-  const manualWorksheetComparisonFields = useMemo(() =>
-    manualWorksheetAudit?.observationFieldCoverage
-      .filter((entry) => entry.populatedRows > 0)
-      .map((entry) => entry.field) ?? [],
-    [manualWorksheetAudit]
+  const manualWorksheetComparisonFields = useMemo(
+    () => Array.from(new Set(manualWorksheetComparisons.map((entry) => entry.field))),
+    [manualWorksheetComparisons]
   );
   const activeManualWorksheetComparisonField = manualWorksheetComparisonFields.includes(manualWorksheetComparisonField)
     ? manualWorksheetComparisonField

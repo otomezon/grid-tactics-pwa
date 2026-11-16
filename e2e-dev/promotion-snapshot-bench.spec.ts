@@ -485,7 +485,12 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
 
   const observationMatrix = worksheetAudit.getByTestId("promotion-manual-observation-matrix");
   await expect(observationMatrix.locator("tbody tr")).toHaveCount(21);
-  await observationMatrix.getByLabel("比較する観測欄").selectOption("actual_damage");
+  const comparisonFieldSelect = observationMatrix.getByLabel("比較する観測欄");
+  const comparisonFieldOptions = await comparisonFieldSelect.locator("option").allTextContents();
+  expect(comparisonFieldOptions).toContain("actual_damage");
+  expect(comparisonFieldOptions).not.toContain("manual_session_id");
+  expect(comparisonFieldOptions).not.toContain("played_at");
+  await comparisonFieldSelect.selectOption("actual_damage");
   const swordsmanLowMatrixRow = observationMatrix.getByTestId("promotion-manual-observation-matrix-row-swordsman-low");
   await expect(swordsmanLowMatrixRow).toContainText("CSV記載条件一致");
   await expect(swordsmanLowMatrixRow).toContainText("8");
