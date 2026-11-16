@@ -59,7 +59,7 @@ function matchesUnit(entry: CampaignBattleHistoryEntry, unitId: string): boolean
 function searchableText(entry: CampaignBattleHistoryEntry): string {
   const chapter = entry.chapterNumber === null
     ? entry.chapterTitle
-    : \`第\${entry.chapterNumber}章 \${entry.chapterTitle}\`;
+    : "第" + entry.chapterNumber + "章 " + entry.chapterTitle;
   const kindLabel = entry.kind === "player-action"
     ? "味方の行動"
     : entry.kind === "player-attack"
@@ -68,7 +68,7 @@ function searchableText(entry: CampaignBattleHistoryEntry): string {
         ? "敵軍行動"
         : entry.outcome === "victory" ? "ステージクリア 勝利" : "敗北";
   // JSON includes nested strike names, weapons, outcomes, action details, and results.
-  return \`\${chapter} 第\${entry.turn}ターン \${kindLabel} \${JSON.stringify(entry)}\`.toLocaleLowerCase();
+  return (chapter + " 第" + entry.turn + "ターン " + kindLabel + " " + JSON.stringify(entry)).toLocaleLowerCase();
 }
 
 /** Read-only filter that preserves the source order and never mutates campaign state. */
