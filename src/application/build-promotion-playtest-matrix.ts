@@ -78,8 +78,8 @@ export function buildPromotionPlaytestMatrix<T extends PromotionPlaytestCandidat
 
       const classCandidates = candidates.filter((candidate) => candidate.unit.classId === classId);
       const eligibleCandidates = classCandidates.filter((candidate) => candidate.eligible !== false);
-      const distinctUnitSnapshotCount = new Set(classCandidates.map(getSnapshotIdentity)).size;
-      const eligibleDistinctUnitSnapshotCount = new Set(eligibleCandidates.map(getSnapshotIdentity)).size;
+      const distinctUnitSnapshotCount = new Set(classCandidates.map(getCandidateUnitIdentity)).size;
+      const eligibleDistinctUnitSnapshotCount = new Set(eligibleCandidates.map(getCandidateUnitIdentity)).size;
       const ranked = eligibleCandidates
         .map((candidate) => ({
           candidate,
