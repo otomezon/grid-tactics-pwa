@@ -837,12 +837,17 @@ test.describe("production PWA shell", () => {
     expect(backups.every((backup) => backup.data.chapterId === "chapter_01_map")).toBe(true);
     expect((await readAutoSave(page) as { turn: number }).turn).toBe(4);
     await expect(page.getByTestId("save-backup-entry-backup-1")).toContainText("chapter_01_map");
+    await expect(page.getByTestId("save-backup-entry-backup-1")).toContainText("第4ターン · 自軍フェイズ · 進行中");
+    await expect(page.getByTestId("save-backup-entry-backup-1")).toContainText("保存形式: v10");
 
     const restoreDialogPromise = page.waitForEvent("dialog");
     await page.getByTestId("restore-backup-3").click();
     const restoreDialog = await restoreDialogPromise;
     expect(restoreDialog.message()).toContain("第1世代へ退避");
     expect(restoreDialog.message()).toContain("選択した復元元も残します");
+    expect(restoreDialog.message()).toContain("第2ターン・自軍フェイズ・進行中");
+    expect(restoreDialog.message()).toContain("保存形式: v10");
+    expect(restoreDialog.message()).toContain("別タブで自動セーブが更新されている場合");
     await restoreDialog.accept();
     await expect(page.getByRole("status")).toContainText("バックアップからゲーム状態を復元しました。");
     expect((await readAutoSave(page) as { turn: number }).turn).toBe(2);
@@ -890,6 +895,7 @@ test.describe("production PWA shell", () => {
     const legacyRestoreDialog = await legacyRestoreDialogPromise;
     expect(legacyRestoreDialog.message()).toContain("第1世代へ退避");
     expect(legacyRestoreDialog.message()).toContain("選択した復元元も残します");
+    expect(legacyRestoreDialog.message()).toContain("保存形式: v9 → v10");
     await legacyRestoreDialog.accept();
     await expect(page.getByRole("status")).toContainText("旧形式のバックアップを変換して復元しました。");
     const migratedAutoSave = await readAutoSave(page) as {
