@@ -83,6 +83,7 @@ import {
 } from "./persistence/save-repository";
 import { createSaveBackupFileName, createSaveFileContent, parseSaveFileContent } from "./persistence/save-file";
 import { getStorageOperationErrorMessage } from "./persistence/storage-error";
+import { createSaveRevisionChannel, type SaveRevisionChannel } from "./persistence/save-revision-channel";
 import { OperationGuide } from "./components/operation-guide";
 import { CampaignTitleScreen } from "./components/campaign-title-screen";
 import { SaveConflictNotice } from "./components/save-conflict-notice";
@@ -440,10 +441,13 @@ function CampaignApp() {
   const lastMapInputWasTouchRef = useRef(false);
   const touchMoveConfirmationPositionRef = useRef<Position | null>(null);
   const autoSaveRevisionRef = useRef<number | null>(null);
+  const saveRevisionChannelRef = useRef<SaveRevisionChannel | null>(null);
+  const [newestRemoteSaveRevision, setNewestRemoteSaveRevision] = useState<number | null>(null);
 
   async function saveAutoSave(state: GameStateSnapshot): Promise<number> {
     const nextRevision = await saveGameState(state, autoSaveRevisionRef.current);
     autoSaveRevisionRef.current = nextRevision;
+    saveRevisionChannelRef.current?.announce(nextRevision);
     return nextRevision;
   }
 
@@ -453,7 +457,39 @@ function CampaignApp() {
       throw new SaveConflictError(autoSaveRevisionRef.current, currentRecord?.savedAt ?? null);
     }
     autoSaveRevisionRef.current = currentRecord.savedAt;
+    saveRevisionChannelRef.current?.announce(currentRecord.savedAt);
   }
+
+  useEffect(() => {
+    const channel = createSaveRevisionChannel((savedAt) => {
+      setNewestRemoteSaveRevision((current) =>
+        current === null ? savedAt : Math.max(current, savedAt)
+      );
+    });
+    saveRevisionChannelRef.current = channel;
+
+    return () => {
+      channel?.close();
+      if (saveRevisionChannelRef.current === channel) {
+        saveRevisionChannelRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      newestRemoteSaveRevision === null ||
+      saveStatus === "loading" ||
+      saveStatus === "saving" ||
+      saveStatus === "conflict"
+    ) return;
+
+    const localRevision = autoSaveRevisionRef.current;
+    if (localRevision !== null && newestRemoteSaveRevision <= localRevision) return;
+
+    setSaveStatus("conflict");
+    setMessage("別のタブで新しいセーブデータが保存されました。このタブの操作を停止しました。最新のセーブを再読み込みしてください。");
+  }, [newestRemoteSaveRevision, saveStatus]);
 
   useEffect(() => {
     setIsMapEventHistoryOpen(false);
