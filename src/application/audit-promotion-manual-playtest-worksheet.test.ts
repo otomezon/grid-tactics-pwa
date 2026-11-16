@@ -55,7 +55,7 @@ function createRows(): Array<Record<string, string>> {
 }
 
 function toCsv(rows: Array<Record<string, string>>): string {
-  return serializeCsvDocument(headers, rows.map((row) => headers.map((header) => row[header] ?? ""));
+  return serializeCsvDocument(headers, rows.map((row) => headers.map((header) => row[header] ?? "")));
 }
 
 describe("auditPromotionManualPlaytestWorksheet", () => {
