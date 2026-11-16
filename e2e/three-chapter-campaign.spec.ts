@@ -696,27 +696,62 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     const allyTotalsKeyboardTab = battleHistoryPanel.getByRole("tab", { name: "味方別累計" });
     const incomingKeyboardTab = battleHistoryPanel.getByRole("tab", { name: "被攻撃集計" });
     const enemyKeyboardTab = battleHistoryPanel.getByRole("tab", { name: "敵攻撃集計" });
-    await timelineTab.focus();
-    await timelineTab.press("ArrowRight");
-    await expect(allyTotalsKeyboardTab).toBeFocused();
-    await expect(allyTotalsKeyboardTab).toHaveAttribute("aria-selected", "true");
-    await allyTotalsKeyboardTab.press("ArrowRight");
-    await expect(incomingKeyboardTab).toBeFocused();
-    await incomingKeyboardTab.press("ArrowRight");
-    await expect(enemyKeyboardTab).toBeFocused();
-    await enemyKeyboardTab.press("ArrowRight");
-    await expect(timelineTab).toBeFocused();
-    await timelineTab.press("ArrowLeft");
-    await expect(enemyKeyboardTab).toBeFocused();
-    await enemyKeyboardTab.press("Home");
-    await expect(timelineTab).toBeFocused();
-    await timelineTab.press("End");
-    await expect(enemyKeyboardTab).toBeFocused();
-    await enemyKeyboardTab.press("Home");
+    const tabs = {
+      timeline: timelineTab,
+      units: allyTotalsKeyboardTab,
+      incoming: incomingKeyboardTab,
+      enemy: enemyKeyboardTab
+    };
     const tabPanel = battleHistoryPanel.getByRole("tabpanel");
-    await expect(tabPanel).toHaveAttribute("aria-labelledby", "campaign-battle-history-tab-timeline");
-    await expect(timelineTab).toHaveAttribute("tabindex", "0");
-    await expect(enemyKeyboardTab).toHaveAttribute("tabindex", "-1");
+    const expectActiveTab = async (selectedView: keyof typeof tabs) => {
+      for (const [view, tab] of Object.entries(tabs)) {
+        const selected = view === selectedView;
+        await expect(tab).toHaveAttribute("aria-selected", selected ? "true" : "false");
+        await expect(tab).toHaveAttribute("tabindex", selected ? "0" : "-1");
+      }
+      await expect(tabPanel).toHaveAttribute(
+        "aria-labelledby",
+        "campaign-battle-history-tab-" + selectedView
+      );
+      await expect(tabs[selectedView]).toBeFocused();
+    };
+
+    await timelineTab.focus();
+    await expectActiveTab("timeline");
+    await timelineTab.press("ArrowRight");
+    await expectActiveTab("units");
+    await allyTotalsKeyboardTab.press("ArrowRight");
+    await expectActiveTab("incoming");
+    await incomingKeyboardTab.press("ArrowRight");
+    await expectActiveTab("enemy");
+    await enemyKeyboardTab.press("ArrowRight");
+    await expectActiveTab("timeline");
+    await timelineTab.press("ArrowLeft");
+    await expectActiveTab("enemy");
+    await enemyKeyboardTab.press("ArrowLeft");
+    await expectActiveTab("incoming");
+    await incomingKeyboardTab.press("Home");
+    await expectActiveTab("timeline");
+    await timelineTab.press("End");
+    await expectActiveTab("enemy");
+    await enemyKeyboardTab.press("Home");
+    await expectActiveTab("timeline");
+
+    // Only the selected tab is in the tab order; the panel is the next stop.
+    await timelineTab.press("Tab");
+    await expect(tabPanel).toBeFocused();
+    await tabPanel.press("Shift+Tab");
+    await expectActiveTab("timeline");
+
+    // Escape closes the archive and restores focus to its opening control.
+    await timelineTab.press("Escape");
+    await expect(battleHistoryPanel).toHaveCount(0);
+    await expect(battleHistoryToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(battleHistoryToggle).toBeFocused();
+
+    await activate(battleHistoryToggle, input);
+    await expect(battleHistoryPanel).toBeVisible();
+    await expectActiveTab("timeline");
   }
 
   const allyTotalsTab = battleHistoryPanel.getByRole("tab", { name: "味方別累計" });
