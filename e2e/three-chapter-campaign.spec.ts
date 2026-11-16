@@ -749,8 +749,17 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     await expect(battleHistoryToggle).toHaveAttribute("aria-expanded", "false");
     await expect(battleHistoryToggle).toBeFocused();
 
-    await activate(battleHistoryToggle, input);
+    await battleHistoryToggle.press("Enter");
     await expect(battleHistoryPanel).toBeVisible();
+    // Reopening a disclosure does not steal focus from its trigger.
+    await expect(battleHistoryToggle).toBeFocused();
+    await expect(timelineTab).toHaveAttribute("aria-selected", "true");
+    await expect(timelineTab).toHaveAttribute("tabindex", "0");
+    await expect(tabPanel).toHaveAttribute(
+      "aria-labelledby",
+      "campaign-battle-history-tab-timeline"
+    );
+    await timelineTab.focus();
     await expectActiveTab("timeline");
   }
 
