@@ -170,11 +170,16 @@ test.describe("production PWA shell", () => {
     const newerRecord = await readAutoSaveRecord(page);
     expect(newerRecord).not.toBeNull();
 
-    await staleTab.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
+    await staleTab.locator(".map-grid").getByRole("button", { name: /味方04/ }).click();
     await staleTab.getByRole("button", { name: "待機", exact: true }).click();
-    await expect(staleTab.getByTestId("save-conflict-notice")).toContainText("別のタブで新しいセーブが保存されました");
+    await expect(staleTab.getByTestId("save-conflict-notice")).toContainText("このタブが読み込んだ後にセーブデータが変更されました");
     await expect(staleTab.getByTestId("save-conflict-notice").getByRole("button", { name: "最新のセーブを再読み込み" })).toBeVisible();
     expect(await readAutoSaveRecord(page)).toEqual(newerRecord);
+    const persistedState = newerRecord!.data as {
+      units: Array<{ id: string; hasActed: boolean }>;
+    };
+    expect(persistedState.units.find((unit) => unit.id === "unit_001")?.hasActed).toBe(true);
+    expect(persistedState.units.find((unit) => unit.id === "unit_004")?.hasActed).toBe(false);
 
     await staleTab.reload();
     await expect(staleTab.getByTestId("campaign-title-screen")).toBeVisible();
