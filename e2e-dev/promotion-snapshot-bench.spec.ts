@@ -408,6 +408,7 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   const manualRecords = parseCsvRecords(await readFile(manualDownloadPath, "utf8"));
   expect(manualRecords).toHaveLength(43);
   const manualHeaders = manualRecords[0]!;
+  expect(manualHeaders).toHaveLength(120);
   const manualValueAt = (row: string[], name: string) => row[manualHeaders.indexOf(name)] ?? "";
   expect(manualHeaders).toContain("manual_record_status");
   expect(manualHeaders).toContain("candidate_source_classification");
@@ -469,8 +470,16 @@ test("organizes and runs all 21 class-promotion cases, keeping synthetic data ex
   await expect(worksheetAudit).toContainText("21/21 条件一致ペア");
   await expect(worksheetAudit).toContainText("42／42");
   await expect(worksheetAudit).toContainText("観測欄入力済みセル");
-  await expect(worksheetAudit.getByTestId("promotion-manual-audit-case-swordsman-low")).toContainText("観測欄 6/");
+  const swordsmanLowAudit = worksheetAudit.getByTestId("promotion-manual-audit-case-swordsman-low");
+  await expect(swordsmanLowAudit).toContainText("観測欄 6/");
+  await swordsmanLowAudit.locator("td").nth(1).locator("summary").click();
+  await expect(swordsmanLowAudit.locator("td").nth(1)).toContainText("post_level");
   await expect(worksheetAudit).toContainText("真正性");
+
+  const fieldCoverage = worksheetAudit.getByTestId("promotion-manual-field-coverage");
+  await fieldCoverage.locator("summary").click();
+  await expect(fieldCoverage.locator("tr").filter({ hasText: "actual_damage" })).toContainText("42/42");
+  await expect(fieldCoverage.locator("tr").filter({ hasText: "post_level" })).toContainText("0/42");
 
   const mismatchedWorksheet = completedWorksheet.map((record) => [...record]);
   const mismatchRow = mismatchedWorksheet.findIndex((record, index) =>

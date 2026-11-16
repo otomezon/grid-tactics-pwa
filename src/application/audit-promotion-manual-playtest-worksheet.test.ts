@@ -2,23 +2,11 @@ import { describe, expect, it } from "vitest";
 import { serializeCsvDocument } from "./serialize-csv-document";
 import {
   auditPromotionManualPlaytestWorksheet,
-  PROMOTION_MANUAL_PLAYTEST_CASE_IDS,
-  PROMOTION_MANUAL_PLAYTEST_REQUIRED_HEADERS
+  PROMOTION_MANUAL_PLAYTEST_CASE_IDS
 } from "./audit-promotion-manual-playtest-worksheet";
+import { PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS } from "./promotion-manual-playtest-worksheet-schema";
 
-const headers = [
-  ...PROMOTION_MANUAL_PLAYTEST_REQUIRED_HEADERS,
-  "source_file",
-  "source_save_version",
-  "normalized_save_version",
-  "migration_applied",
-  "chapter_id",
-  "snapshot_turn",
-  "snapshot_phase",
-  "enemy_class",
-  "enemy_hp",
-  "enemy_position"
-];
+const headers = [...PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS];
 
 function createRows(): Array<Record<string, string>> {
   return PROMOTION_MANUAL_PLAYTEST_CASE_IDS.flatMap((caseId) =>
@@ -76,6 +64,14 @@ describe("auditPromotionManualPlaytestWorksheet", () => {
     expect(audit.invalidRowCount).toBe(0);
     expect(audit.rowsWithAnyObservation).toBe(1);
     expect(audit.cases[0]!.control?.observationFilledFieldCount).toBe(3);
+    expect(audit.cases[0]!.control?.observationMissingFields).toContain("post_level");
+    expect(audit.cases[0]!.control?.observationFilledFields).toContain("actual_damage");
+    expect(audit.observationFieldCoverage.find((entry) => entry.field === "actual_damage")).toEqual({
+      field: "actual_damage",
+      populatedRows: 1,
+      emptyRows: 41
+    });
+    expect(audit.observationFieldCoverage.find((entry) => entry.field === "post_level")?.populatedRows).toBe(0);
     expect(audit.cases[0]!.control?.manualRecordStatus).toBe("記録済み");
     expect(audit.warnings.join("\n")).toContain("利用者申告");
     expect(audit.warnings.join("\n")).not.toContain("真正性の検証結果");
@@ -127,7 +123,7 @@ describe("auditPromotionManualPlaytestWorksheet", () => {
     const missingHeaders = ["case_id", "planned_branch"];
     const missingColumnsCsv = serializeCsvDocument(missingHeaders, [["swordsman:low", "control"]]);
     const missingColumnsAudit = auditPromotionManualPlaytestWorksheet(missingColumnsCsv);
-    expect(missingColumnsAudit.errors.join("\n")).toContain("必要な列がありません");
+    expect(missingColumnsAudit.errors.join("\n")).toContain("記録テンプレート列がありません");
 
     const malformedAudit = auditPromotionManualPlaytestWorksheet(
       "case_id,planned_branch\n\"swordsman:low,control"

@@ -1,4 +1,5 @@
 import { CLASS_PROMOTION_TARGETS } from "../content/classes";
+import { PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS } from "./promotion-manual-playtest-worksheet-schema";
 
 const PROFILE_IDS = ["low", "median", "upper"] as const;
 const BRANCH_IDS = ["control", "promotion"] as const;
@@ -91,6 +92,8 @@ export interface PromotionManualPlaytestBranchAudit {
   values: Readonly<Record<string, string>>;
   observationFilledFieldCount: number;
   observationFieldCount: number;
+  observationFilledFields: string[];
+  observationMissingFields: string[];
   manualRecordStatus: string;
   candidateSourceClassification: string;
   classificationIsVerifiedValue: string;
@@ -116,6 +119,7 @@ export interface PromotionManualPlaytestWorksheetAudit {
   missingBranchCount: number;
   casesWithMetadataMismatchCount: number;
   observationColumns: string[];
+  observationFieldCoverage: Array<{ field: string; populatedRows: number; emptyRows: number }>;
   observationFilledFieldCount: number;
   rowsWithAnyObservation: number;
   cases: PromotionManualPlaytestCaseAudit[];
@@ -220,13 +224,17 @@ function createBranchAudit(
   values: Record<string, string>,
   observationColumns: readonly string[]
 ): PromotionManualPlaytestBranchAudit {
-  const observationFilledFieldCount = observationColumns
-    .filter((column) => readValue(values, column).length > 0).length;
+  const observationFilledFields = observationColumns
+    .filter((column) => readValue(values, column).length > 0);
+  const observationMissingFields = observationColumns
+    .filter((column) => readValue(values, column).length === 0);
   return {
     rowNumber,
     values,
-    observationFilledFieldCount,
+    observationFilledFieldCount: observationFilledFields.length,
     observationFieldCount: observationColumns.length,
+    observationFilledFields,
+    observationMissingFields,
     manualRecordStatus: readValue(values, "manual_record_status"),
     candidateSourceClassification: readValue(values, "candidate_source_classification"),
     classificationIsVerifiedValue: readValue(values, "classification_is_verified")
@@ -261,6 +269,7 @@ export function auditPromotionManualPlaytestWorksheet(
       missingBranchCount: PROMOTION_MANUAL_PLAYTEST_CASE_IDS.length * BRANCH_IDS.length,
       casesWithMetadataMismatchCount: 0,
       observationColumns: [],
+      observationFieldCoverage: [],
       observationFilledFieldCount: 0,
       rowsWithAnyObservation: 0,
       cases,
@@ -283,6 +292,7 @@ export function auditPromotionManualPlaytestWorksheet(
       missingBranchCount: PROMOTION_MANUAL_PLAYTEST_CASE_IDS.length * BRANCH_IDS.length,
       casesWithMetadataMismatchCount: 0,
       observationColumns: [],
+      observationFieldCoverage: [],
       observationFilledFieldCount: 0,
       rowsWithAnyObservation: 0,
       cases,
@@ -297,10 +307,10 @@ export function auditPromotionManualPlaytestWorksheet(
   if (duplicateHeaders.length > 0) {
     errors.push("ヘッダー名が重複しています: " + Array.from(new Set(duplicateHeaders)).join("／"));
   }
-  const missingHeaders = PROMOTION_MANUAL_PLAYTEST_REQUIRED_HEADERS
+  const missingHeaders = PROMOTION_MANUAL_PLAYTEST_WORKSHEET_HEADERS
     .filter((header) => !headers.includes(header));
   if (missingHeaders.length > 0) {
-    errors.push("実プレイ記録テンプレートに必要な列がありません: " + missingHeaders.join("、"));
+    errors.push("PR #163の記録テンプレート列がありません: " + missingHeaders.join("、"));
   }
   if (errors.length > 0) {
     return {
@@ -315,6 +325,7 @@ export function auditPromotionManualPlaytestWorksheet(
       missingBranchCount: PROMOTION_MANUAL_PLAYTEST_CASE_IDS.length * BRANCH_IDS.length,
       casesWithMetadataMismatchCount: 0,
       observationColumns: headers.filter(isObservationHeader),
+      observationFieldCoverage: [],
       observationFilledFieldCount: 0,
       rowsWithAnyObservation: 0,
       cases,
@@ -419,6 +430,22 @@ export function auditPromotionManualPlaytestWorksheet(
     }
   }
 
+  const acceptedBranches = cases.flatMap((caseAudit) =>
+    [caseAudit.control, caseAudit.promotion].filter(
+      (branch): branch is PromotionManualPlaytestBranchAudit => branch !== null
+    )
+  );
+  const observationFieldCoverage = observationColumns.map((field) => {
+    const populatedRows = acceptedBranches.filter((branch) =>
+      branch.observationFilledFields.includes(field)
+    ).length;
+    return {
+      field,
+      populatedRows,
+      emptyRows: acceptedBranches.length - populatedRows
+    };
+  });
+
   if (actualPlayClaimSeen) {
     warnings.push("「実プレイ由来」はCSVに記録された利用者申告です。ファイルの真正性・出所・独立campaignを検証したものではありません。");
   }
@@ -439,6 +466,7 @@ export function auditPromotionManualPlaytestWorksheet(
     missingBranchCount,
     casesWithMetadataMismatchCount,
     observationColumns,
+    observationFieldCoverage,
     observationFilledFieldCount,
     rowsWithAnyObservation,
     cases,
