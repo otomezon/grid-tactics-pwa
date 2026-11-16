@@ -3043,6 +3043,32 @@ h3 { margin: 0 0 3px; font-size: 1rem; }
   opacity: .55;
   cursor: not-allowed;
 }
+.campaign-battle-history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.campaign-battle-history-pagination button {
+  width: auto;
+  min-width: 42px;
+  min-height: 38px;
+  padding: 6px 10px;
+  font-size: .72rem;
+}
+.campaign-battle-history-pagination button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+.campaign-battle-history-pagination > span {
+  padding: 0 4px;
+  color: #c6d7e0;
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .campaign-battle-history-empty {
   margin: 0;
   padding: 18px 12px;
