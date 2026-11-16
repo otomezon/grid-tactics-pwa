@@ -9,8 +9,8 @@ import { getPromotionCombatSampleSummary, type PromotionCombatSampleSummary } fr
 import { getPromotionEnemyPhaseSampleSummary, type PromotionEnemyPhaseSampleSummary } from "../application/get-promotion-enemy-phase-sample-summary";
 import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../application/build-promotion-playtest-matrix";
 import { importPromotionPlaytestSaveContent, type ImportedPromotionPlaytestSave } from "../application/import-promotion-playtest-save";
-import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { escapeCsvField } from "../application/escape-csv-field";
+import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
 
 const STAT_ROWS: readonly { key: keyof UnitStats; label: string }[] = [
@@ -90,8 +90,6 @@ function getMatrixDataClassificationLabel(value: MatrixDataClassification): stri
   if (value === "synthetic") return "合成fixture";
   return "未確認";
 }
-
-
 
 /** A short deterministic label only; this is not a cryptographic hash. */
 function snapshotFingerprint(snapshot: GameStateSnapshot): string {
@@ -428,7 +426,7 @@ export function ClassPromotionSnapshotBench() {
     const headers = [
       "case_id", "basic_class", "promoted_class", "profile", "target_percentile",
       "candidate_percentile", "source_file", "source_save_version", "normalized_save_version",
-  "migration_applied", "exported_at", "snapshot_fingerprint", "unit_id", "unit_name",
+      "migration_applied", "exported_at", "snapshot_fingerprint", "unit_id", "unit_name",
       "control_hp", "control_strength", "control_magic", "control_skill", "control_speed", "control_luck", "control_defense", "control_resistance",
       "control_current_hp", "control_experience", "movement", "move", "weapon_types", "control_equipped_weapon",
       "promotion_hp", "promotion_strength", "promotion_magic", "promotion_skill", "promotion_speed", "promotion_luck", "promotion_defense", "promotion_resistance",
