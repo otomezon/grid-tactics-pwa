@@ -79,7 +79,7 @@ saveVersion 1〜8からの移行では過去の行動・撃破者・章結果を
 ### 4.1 複数タブ間の自動保存競合
 
 - 起動時に読み込んだauto recordの既存 `savedAt` を、そのタブが最後に確認したrevisionとしてメモリ内に保持する。auto slotがまだない場合は `null` を使う。
-- 自動保存は単一のIndexedDB `readwrite` transaction内でauto recordを読み直し、`savedAt` がタブ側のrevisionと一致した場合だけ更新する。不一致ならtransactionをabortし、他タブが先に保存したデータを上書きしない。
+- 自動保存は単一のIndexedDB `readwrite` transaction内でauto recordを読み直し、`savedAt` がタブ側のrevisionと一致した場合だけ更新する。不一致ならtransactionをabortし、別経路の書き込みによって変更されたデータを上書きしない。
 - 成功時の `savedAt` は既存値より必ず大きくする。同一ミリ秒内の連続保存でもrevisionが衝突しない。追加の保存フィールドやindexは不要。
 - 競合を検知したタブはゲーム操作と追加保存を停止し、最新セーブの再読み込みを案内する。競合時に画面内だけで進んだ操作は保存済みとして扱わない。
 - ユーザーが明示的に行うJSON import／バックアップrestoreは既存の安全退避transactionを使う。通常の自動保存とは異なる、確認付きの明示的な置換操作として扱う。

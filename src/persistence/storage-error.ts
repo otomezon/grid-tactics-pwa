@@ -18,7 +18,7 @@ export function getStorageOperationErrorMessage(error: unknown): string | undefi
     case "SecurityError":
       return "ブラウザーがこのサイトのローカル保存を制限しています。プライベートブラウズやサイトデータの制限を確認し、通常の閲覧モードで再試行してください。";
     case "SaveConflictError":
-      return "別のタブで新しいセーブが保存されています。このタブからの上書きは停止しました。最新のセーブを読み込むため、ページを再読み込みしてください。";
+      return "このタブが読み込んだ後にセーブデータが変更されました。上書きを防ぐため保存を停止しました。最新の状態を読み込むため、ページを再読み込みしてください。";
     default:
       return undefined;
   }

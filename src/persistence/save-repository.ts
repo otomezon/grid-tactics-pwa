@@ -112,7 +112,7 @@ export class SaveConflictError extends Error {
   readonly actualSavedAt: number | null;
 
   constructor(expectedSavedAt: number | null, actualSavedAt: number | null) {
-    super("Another tab saved a newer campaign state.");
+    super("The auto-save revision changed since this tab loaded it.");
     this.name = "SaveConflictError";
     this.expectedSavedAt = expectedSavedAt;
     this.actualSavedAt = actualSavedAt;
