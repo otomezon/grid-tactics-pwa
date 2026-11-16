@@ -397,11 +397,13 @@ export async function createGameStateBackup(expectedSnapshot: GameStateSnapshot)
 /**
  * Atomically preserves the current auto-save, then restores a validated backup.
  * The selected restore source and newest other generation remain within the 3-slot limit.
+ * The current auto-save revision is checked before any record is changed.
  * Both records are read and written in the same IndexedDB readwrite transaction.
  */
 export async function restoreGameStateBackup(
   expectedBackup: SaveBackupRecord,
-  data: GameStateSnapshot
+  data: GameStateSnapshot,
+  expectedAutoSaveSavedAt: number | null
 ): Promise<SaveBackupRecord | null> {
   if (!isBackupSlotId(expectedBackup.slotId)) {
     throw new Error("The requested save backup slot is invalid.");
@@ -438,6 +440,7 @@ export async function restoreGameStateBackup(
           Number.isFinite(currentAutoSave.savedAt)
           ? currentAutoSave.savedAt
           : null;
+        assertAutoSaveRevisionMatches(expectedAutoSaveSavedAt, currentSavedAt);
         const nextAutoSaveSavedAt = getNextAutoSaveTimestamp(Date.now(), currentSavedAt);
         let safetyBackup: SaveBackupRecord | null = null;
 
@@ -505,9 +508,11 @@ export async function restoreGameStateBackup(
 /**
  * Atomically keeps the current auto-save as backup-1 before importing a new snapshot.
  * Existing backup generations shift back by one slot; the oldest is discarded.
+ * The expected auto-save revision prevents a stale tab from replacing newer progress.
  */
 export async function replaceGameStateWithBackup(
-  data: GameStateSnapshot
+  data: GameStateSnapshot,
+  expectedAutoSaveSavedAt: number | null
 ): Promise<SaveBackupRecord | null> {
   const database = await openDatabase();
   const transaction = database.transaction(SAVE_STORE, "readwrite");
@@ -528,6 +533,7 @@ export async function replaceGameStateWithBackup(
           Number.isFinite(currentAutoSave.savedAt)
           ? currentAutoSave.savedAt
           : null;
+        assertAutoSaveRevisionMatches(expectedAutoSaveSavedAt, currentSavedAt);
         const nextAutoSaveSavedAt = getNextAutoSaveTimestamp(Date.now(), currentSavedAt);
         let safetyBackup: SaveBackupRecord | null = null;
 
