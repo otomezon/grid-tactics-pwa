@@ -31,7 +31,7 @@ interface ImportedCandidate {
   key: string;
   fileName: string;
   fingerprint: string;
-  /** Exact serialized snapshot used to prevent duplicate source states across profiles. */
+  /** Canonical save content plus unit ID; the same unit in a renamed file remains one candidate. */
   snapshotIdentity: string;
   snapshot: GameStateSnapshot;
   unit: GameUnit;
@@ -163,7 +163,7 @@ function getCandidatesFromSnapshot(
         key: fingerprint + ":" + unit.id + ":" + fileName,
         fileName,
         fingerprint,
-        snapshotIdentity,
+        snapshotIdentity: snapshotIdentity + "\u0000" + JSON.stringify(unit.id),
         snapshot,
         unit,
         eligible: reasons.length === 0,
@@ -537,9 +537,9 @@ export function ClassPromotionSnapshotBench() {
       "case_id", "basic_class", "promoted_class", "profile", "target_percentile",
       "candidate_percentile", "source_file", "source_save_version", "normalized_save_version",
       "migration_applied", "exported_at",
-      "class_candidate_count", "class_eligible_candidate_count", "class_distinct_snapshot_count",
-      "class_eligible_distinct_snapshot_count", "class_campaign_history_snapshot_count",
-      "class_unit_battle_totals_snapshot_count",
+      "class_candidate_count", "class_eligible_candidate_count", "class_distinct_unit_snapshot_count",
+      "class_eligible_distinct_unit_snapshot_count", "class_campaign_history_unit_snapshot_count",
+      "class_unit_battle_totals_unit_snapshot_count",
       "campaign_log_tracking_available", "unit_battle_totals_tracking_available",
       "campaign_log_entries", "campaign_chapter_count", "campaign_player_action_entries",
       "campaign_player_attack_entries", "campaign_enemy_action_entries", "campaign_chapter_result_entries",
@@ -934,7 +934,7 @@ export function ClassPromotionSnapshotBench() {
         <div className="promotion-playtest-coverage" data-testid="promotion-playtest-coverage">
           <h3>基本職別の候補snapshotカバレッジ</h3>
           <p className="helper-text">
-            各基本職で、実行条件を満たす異なるsnapshot内容が3件必要です。同じ内容を別ファイル名で読み込んでも1件として数え、同じsnapshotを複数profileへ割り当てません。異なるsnapshotは別キャンペーン／別プレイの証明ではありません。ログや累計の件数も真正性の自動判定ではありません。
+            各基本職で、実行条件を満たす異なるユニットsnapshotが3件必要です。同じセーブ・同じunit IDを別ファイル名やJSONキー順で読み込んでも1件として数え、同じユニットを複数profileへ割り当てません。同じセーブ内の異なるunit IDは別候補にできますが、別キャンペーン／別プレイの証明ではありません。ログや累計の件数も真正性の自動判定ではありません。
           </p>
           <div className="promotion-lab-table-wrap">
             <table className="promotion-lab-table" aria-label="基本職別の候補snapshotカバレッジ">
@@ -943,10 +943,10 @@ export function ClassPromotionSnapshotBench() {
                   <th>基本職</th>
                   <th>候補ユニット</th>
                   <th>昇格比較可能</th>
-                  <th>異なるsnapshot</th>
-                  <th>有効snapshot</th>
-                  <th>履歴ログあり</th>
-                  <th>味方別累計あり</th>
+                  <th>異なるユニットsnapshot</th>
+                  <th>有効ユニットsnapshot</th>
+                  <th>履歴ログあり候補</th>
+                  <th>味方別累計あり候補</th>
                 </tr>
               </thead>
               <tbody>
