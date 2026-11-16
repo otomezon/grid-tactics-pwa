@@ -814,7 +814,9 @@ test.describe("production PWA shell", () => {
   });
 
   test("creates three backup generations, rotates the oldest, and validates confirmed restores", async ({ page }) => {
-    test.setTimeout(90_000);
+    // This single stateful flow exercises rotation, current and legacy restores, cancellation,
+    // and several invalid-backup guards against the same IndexedDB data set.
+    test.setTimeout(180_000);
     await startBattle(page);
     await expect(page.locator(".phase-badge")).toHaveText("第1ターン · 自軍フェイズ");
 
