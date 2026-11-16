@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getCampaignBattleLogCoverage, type CampaignBattleHistoryEntry } from "../application/get-campaign-battle-history";
 import { getCampaignIncomingStrikeSummary } from "../application/get-campaign-incoming-strike-summary";
 import { getCampaignEnemyStrikeSummary } from "../application/get-campaign-enemy-strike-summary";
-import { CampaignBattleHistoryPanel, CampaignEnemyStrikeSummaryView, CampaignIncomingStrikeSummaryView } from "./campaign-battle-history-panel";
+import { CampaignBattleHistoryPanel, CampaignEnemyStrikeSummaryView, CampaignIncomingStrikeSummaryView, getNextCampaignBattleHistoryView } from "./campaign-battle-history-panel";
 
 const entries: CampaignBattleHistoryEntry[] = [{
   sequence: 1,
@@ -58,6 +58,16 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("味方の行動・攻撃");
     expect(html).toContain("1 / 1件を表示");
     expect(html).toContain("撃破者別記録（絞り込み結果全体）");
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('aria-label="キャンペーン記録の表示切替"');
+    expect(html).toContain('id="campaign-battle-history-tab-timeline"');
+    expect(html).toContain('role="tab"');
+    expect(html).toContain('aria-selected="true"');
+    expect(html).toContain('aria-controls="campaign-battle-history-tabpanel"');
+    expect(html).toContain('role="tabpanel"');
+    expect(html).toContain('aria-labelledby="campaign-battle-history-tab-timeline"');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('tabindex="-1"');
     expect(html).toContain("時系列ログ");
     expect(html).toContain("味方別累計");
     expect(html).toContain("被攻撃集計");
@@ -266,4 +276,23 @@ describe("CampaignBattleHistoryPanel", () => {
     expect(html).toContain("保持中のログに、敵軍が実際に行ったstrikeはありません。");
   });
 
+});
+
+
+describe("getNextCampaignBattleHistoryView", () => {
+  it("cycles through all four archive views with horizontal arrow keys", () => {
+    expect(getNextCampaignBattleHistoryView("timeline", "ArrowRight")).toBe("units");
+    expect(getNextCampaignBattleHistoryView("units", "ArrowRight")).toBe("incoming");
+    expect(getNextCampaignBattleHistoryView("incoming", "ArrowRight")).toBe("enemy");
+    expect(getNextCampaignBattleHistoryView("enemy", "ArrowRight")).toBe("timeline");
+    expect(getNextCampaignBattleHistoryView("timeline", "ArrowLeft")).toBe("enemy");
+    expect(getNextCampaignBattleHistoryView("enemy", "ArrowLeft")).toBe("incoming");
+  });
+
+  it("moves to the first and last archive views and ignores unrelated keys", () => {
+    expect(getNextCampaignBattleHistoryView("incoming", "Home")).toBe("timeline");
+    expect(getNextCampaignBattleHistoryView("timeline", "End")).toBe("enemy");
+    expect(getNextCampaignBattleHistoryView("units", "Tab")).toBeNull();
+    expect(getNextCampaignBattleHistoryView("enemy", "Escape")).toBeNull();
+  });
 });
