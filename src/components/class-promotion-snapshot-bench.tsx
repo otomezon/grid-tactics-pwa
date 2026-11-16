@@ -11,6 +11,7 @@ import { buildPromotionPlaytestMatrix, getAverageClassStatPercentile } from "../
 import { importPromotionPlaytestSaveContent, type ImportedPromotionPlaytestSave } from "../application/import-promotion-playtest-save";
 import { getPromotionPlaytestEvidence, type PromotionPlaytestEvidence } from "../application/get-promotion-playtest-evidence";
 import { escapeCsvField } from "../application/escape-csv-field";
+import { serializeCsvDocument } from "../application/serialize-csv-document";
 import { getClassPromotionStatPreview } from "../domain/progression/class-change";
 import { SAVE_VERSION, type GameStateSnapshot, type GameUnit, type UnitStats } from "../domain/models/game";
 
@@ -121,7 +122,7 @@ function serializeSnapshotIdentity(value: unknown): string {
 }
 
 function snapshotFingerprint(snapshot: GameStateSnapshot): string {
-  const source = JSON.stringify(snapshot);
+  const source = serializeSnapshotIdentity(snapshot);
   let hash = 0x811c9dc5;
   for (let index = 0; index < source.length; index += 1) {
     hash ^= source.charCodeAt(index);
@@ -294,6 +295,37 @@ export function ClassPromotionSnapshotBench() {
 
   const selectedCandidate = candidates.find((candidate) => candidate.key === selectedKey) ?? candidates[0];
   const selectedClassId = selectedCandidate?.unit.classId;
+  const snapshotInventoryRows = useMemo(() => {
+    const grouped = new Map<string, {
+      candidate: ImportedCandidate;
+      imports: Array<{
+        fileName: string;
+        sourceSaveVersion: number;
+        normalizedSaveVersion: number;
+        migrated: boolean;
+        exportedAt: string;
+        campaignLogTrackingAvailable: boolean;
+        unitBattleTotalsTrackingAvailable: boolean;
+      }>;
+    }>();
+
+    for (const candidate of candidates) {
+      const source = {
+        fileName: candidate.fileName,
+        sourceSaveVersion: candidate.sourceSaveVersion,
+        normalizedSaveVersion: candidate.normalizedSaveVersion,
+        migrated: candidate.migrated,
+        exportedAt: candidate.exportedAt,
+        campaignLogTrackingAvailable: candidate.sourceSaveVersion >= 9,
+        unitBattleTotalsTrackingAvailable: candidate.sourceSaveVersion >= 3
+      };
+      const existing = grouped.get(candidate.unitSnapshotIdentity);
+      if (existing) existing.imports.push(source);
+      else grouped.set(candidate.unitSnapshotIdentity, { candidate, imports: [source] });
+    }
+
+    return Array.from(grouped.values());
+  }, [candidates]);
   const selectedEvidence = selectedCandidate
     ? getPromotionPlaytestEvidence(selectedCandidate.snapshot, selectedCandidate.unit.id, selectedCandidate.sourceSaveVersion)
     : null;
@@ -713,6 +745,78 @@ export function ClassPromotionSnapshotBench() {
     URL.revokeObjectURL(url);
   }
 
+  function handleDownloadPromotionSnapshotInventory() {
+    if (snapshotInventoryRows.length === 0) return;
+
+    const headers = [
+      "source_file_names_json", "source_imports_json", "import_copy_count", "snapshot_fingerprint",
+      "source_save_versions_json", "normalized_save_versions_json", "migration_applied_values_json", "exported_at_values_json",
+      "chapter_id", "turn", "phase", "rng_state",
+      "unit_id", "unit_name", "basic_class", "level", "experience", "current_hp", "max_hp",
+      "position_x", "position_y", "eligible", "eligibility_reasons", "promotion_seal_added_to_comparison_copy",
+      "stat_hp", "stat_strength", "stat_magic", "stat_skill", "stat_speed", "stat_luck", "stat_defense", "stat_resistance",
+      "movement_type", "move", "usable_weapon_types_json", "equipped_weapon_id", "inventory_json",
+      "campaign_log_tracking_available_for_all_imports", "campaign_log_tracking_available_for_any_import",
+      "campaign_log_entries", "campaign_chapter_count",
+      "campaign_player_action_entries", "campaign_player_attack_entries", "campaign_enemy_action_entries",
+      "campaign_chapter_result_entries", "selected_unit_action_entries", "selected_unit_attack_entries",
+      "selected_unit_targeted_enemy_action_entries", "selected_unit_attack_strikes",
+      "unit_battle_totals_tracking_available_for_all_imports",
+      "unit_battle_totals_tracking_available_for_any_import", "selected_unit_battle_totals_present",
+      "selected_unit_record_attacks", "selected_unit_record_strikes", "selected_unit_record_hits",
+      "selected_unit_record_damage_dealt", "selected_unit_record_enemies_defeated",
+      "selected_unit_record_experience_awarded"
+    ];
+    const rows = snapshotInventoryRows.map(({ candidate, imports }) => {
+      const evidence = getPromotionPlaytestEvidence(
+        candidate.snapshot,
+        candidate.unit.id,
+        candidate.sourceSaveVersion
+      );
+      const totals = evidence.selectedUnitBattleTotals;
+      const sourceFileNames = Array.from(new Set(imports.map((entry) => entry.fileName)));
+      const exportedAtValues = Array.from(new Set(imports.map((entry) => entry.exportedAt)));
+
+      return [
+        JSON.stringify(sourceFileNames), JSON.stringify(imports), imports.length, candidate.fingerprint,
+        JSON.stringify(Array.from(new Set(imports.map((entry) => entry.sourceSaveVersion)))),
+        JSON.stringify(Array.from(new Set(imports.map((entry) => entry.normalizedSaveVersion)))),
+        JSON.stringify(Array.from(new Set(imports.map((entry) => entry.migrated)))),
+        JSON.stringify(exportedAtValues), candidate.snapshot.chapterId, candidate.snapshot.turn,
+        candidate.snapshot.phase, candidate.snapshot.rngState,
+        candidate.unit.id, candidate.unit.name, candidate.unit.classId, candidate.unit.level,
+        candidate.unit.experience, candidate.unit.currentHp, candidate.unit.stats.hp,
+        candidate.unit.position.x, candidate.unit.position.y, candidate.eligible,
+        candidate.reasons.join("／"), candidate.testSealInjected,
+        candidate.unit.stats.hp, candidate.unit.stats.strength, candidate.unit.stats.magic,
+        candidate.unit.stats.skill, candidate.unit.stats.speed, candidate.unit.stats.luck,
+        candidate.unit.stats.defense, candidate.unit.stats.resistance,
+        candidate.unit.movementType, candidate.unit.move, JSON.stringify(candidate.unit.usableWeaponTypes),
+        candidate.unit.equippedWeaponId, JSON.stringify(candidate.unit.inventory),
+        imports.every((entry) => entry.campaignLogTrackingAvailable),
+        imports.some((entry) => entry.campaignLogTrackingAvailable),
+        evidence.campaignLogEntries, evidence.campaignChapterCount,
+        evidence.playerActionEntries, evidence.playerAttackEntries, evidence.enemyActionEntries,
+        evidence.chapterResultEntries, evidence.selectedUnitActionEntries,
+        evidence.selectedUnitAttackEntries, evidence.selectedUnitTargetedEnemyActionEntries,
+        evidence.selectedUnitAttackStrikes,
+        imports.every((entry) => entry.unitBattleTotalsTrackingAvailable),
+        imports.some((entry) => entry.unitBattleTotalsTrackingAvailable), totals !== null, totals?.attacks ?? "", totals?.strikes ?? "", totals?.hits ?? "",
+        totals?.damageDealt ?? "", totals?.enemiesDefeated ?? "", totals?.experienceAwarded ?? ""
+      ];
+    });
+    const csv = serializeCsvDocument(headers, rows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "class-promotion-snapshot-inventory.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
@@ -798,16 +902,28 @@ export function ClassPromotionSnapshotBench() {
         <p className="helper-text">
           JSON export（envelope v1／GameState saveVersion 1〜{SAVE_VERSION}）に対応します。v1〜v9はこのベンチ内のコピーだけをsaveVersion {SAVE_VERSION}へ移行し、元ファイルは変更しません。読み込んだ内容はメモリ上だけに保持し、ページ再読み込みで消えます。
         </p>
+        <p className="helper-text">
+          候補・履歴根拠CSVは21ケースの実行前でも書き出せます。同一セーブ内容＋同一unit IDの重複読み込みは1行にまとめ、元ファイル名・export日時・version情報は読み込み元一覧として残します。位置は0始まりです。履歴欄は追跡可否フラグと件数を分け、未追跡と記録0件を区別します。
+        </p>
         {errors.length > 0 && (
           <div className="promotion-snapshot-errors" role="alert">
             {errors.map((error, index) => <p key={index}>{error}</p>)}
           </div>
         )}
         {candidates.length > 0 && (
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => {
+          <div className="promotion-snapshot-matrix-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              data-testid="promotion-snapshot-inventory-export"
+              onClick={handleDownloadPromotionSnapshotInventory}
+            >
+              候補・履歴根拠CSVを書き出す
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
               setCandidates([]);
               setSelectedKey("");
               setErrors([]);
@@ -819,8 +935,9 @@ export function ClassPromotionSnapshotBench() {
               setMatrixRunError("");
             }}
           >
-            読み込んだsnapshotをすべて破棄
-          </button>
+              読み込んだsnapshotをすべて破棄
+            </button>
+          </div>
         )}
       </section>
 

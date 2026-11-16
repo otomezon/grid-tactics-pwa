@@ -176,6 +176,17 @@ snapshotベンチは読み込んだsnapshotの既存記録から、キャンペ�
 
 データ区分の「実プレイ由来」は利用者申告であり、アプリによる真正性検証ではない。未確認または合成fixtureを実プレイ記録へ転記しない。CSVは明示的なdownload操作でのみ出力され、snapshot／結果はメモリ上でのみ処理する。従来どおりGameState・IndexedDB・自動保存・network送信は変更しない。
 
+
+### 3.6 実セーブ候補の証拠台帳CSV（PR #161）
+
+実セーブsnapshotを読み込んだ時点で、21ケースのseed反復を実行する前でも「候補・履歴根拠CSV」を書き出せる。これは候補の収集状況と、比較に使う前の確認を記録する台帳であり、21ケースの戦闘結果CSVとは別ファイルである。
+
+- 同一の正規化済みセーブ内容＋同一unit IDを複数ファイルから読み込んだ場合は1行へまとめる。source file名・export日時・元／正規化saveVersion・migration有無は読み込み元一覧として保持する。異なるunit IDは別候補となるが、同一campaignからの候補かどうかは判定しない。
+- 台帳にはクラス・Lv／EXP・8能力・HP・位置・フェイズ・移動／武器情報・昇格比較可否とその理由を含める。位置座標は0始まり。snapshot fingerprintは照合用の短い表示ラベルであり、暗号学的ハッシュや改変検出値ではない。
+- campaignBattleLog／campaignUnitBattleRecordsは元saveVersionに応じた追跡可否と件数／累計を分けて記録する。未追跡と追跡対象の0件、味方別累計の追跡対象だが対象unit記録なし、を区別する。
+- 保存済み記録の有無は真正性・完全性・異なるcampaignの証明ではない。実プレイ区分も利用者申告のままであり、CSVはこれを自動判定しない。
+- CSVはユーザー操作によるダウンロードのみ。候補・履歴はメモリ上で扱い、GameState／RNG／IndexedDB／saveVersion／ネットワーク送信へ影響しない。
+
 ## 4. 保存データ互換性の方針
 
 現在の `GameUnit` は `classId`、`level`、`experience`、`stats`、`currentHp`、`movementType`、`move`、`usableWeaponTypes`、`inventory`、`equippedWeaponId` を保存する。静的なクラス定義・ボーナス表をcontent層へ追加するだけなら、snapshot schemaの変更は不要であり、既存のGameUnitフィールドだけを使う変更ではsaveVersionを上げずに済むが、現行saveVersion 10では、キャンペーン累計戦績・章間選択・キャンペーン戦闘履歴などもsnapshotに保持する。クラスチェンジ自体は既存のGameUnitフィールドを使い、専用の保存フィールドを追加していない。
