@@ -746,7 +746,7 @@ export function ClassPromotionSnapshotBench() {
 
     const headers = [
       "source_file_names_json", "source_imports_json", "import_copy_count", "snapshot_fingerprint",
-      "source_save_version", "normalized_save_version", "migration_applied", "exported_at_values_json",
+      "source_save_versions_json", "normalized_save_versions_json", "migration_applied_values_json", "exported_at_values_json",
       "chapter_id", "turn", "phase", "rng_state",
       "unit_id", "unit_name", "basic_class", "level", "experience", "current_hp", "max_hp",
       "position_x", "position_y", "eligible", "eligibility_reasons", "promotion_seal_added_to_comparison_copy",
@@ -773,7 +773,9 @@ export function ClassPromotionSnapshotBench() {
 
       return [
         JSON.stringify(sourceFileNames), JSON.stringify(imports), imports.length, candidate.fingerprint,
-        candidate.sourceSaveVersion, candidate.normalizedSaveVersion, candidate.migrated,
+        JSON.stringify(Array.from(new Set(imports.map((entry) => entry.sourceSaveVersion)))),
+        JSON.stringify(Array.from(new Set(imports.map((entry) => entry.normalizedSaveVersion)))),
+        JSON.stringify(Array.from(new Set(imports.map((entry) => entry.migrated)))),
         JSON.stringify(exportedAtValues), candidate.snapshot.chapterId, candidate.snapshot.turn,
         candidate.snapshot.phase, candidate.snapshot.rngState,
         candidate.unit.id, candidate.unit.name, candidate.unit.classId, candidate.unit.level,

@@ -523,10 +523,15 @@ test("exports a deduplicated promotion candidate inventory with source and saved
       name: "campaign-history-key-order-copy.json",
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(second))
+    },
+    {
+      name: "legacy-v1-no-history.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(makeLegacyVersionOnePromotionSnapshotFile()))
     }
   ]);
 
-  await expect(bench).toContainText("2候補");
+  await expect(bench).toContainText("3候補");
   const exportButton = bench.getByTestId("promotion-snapshot-inventory-export");
   await expect(exportButton).toBeEnabled();
   const downloadPromise = page.waitForEvent("download");
@@ -537,12 +542,21 @@ test("exports a deduplicated promotion candidate inventory with source and saved
   if (!downloadPath) throw new Error("CSV download path was not available.");
   const csv = await readFile(downloadPath, "utf8");
   const records = parseCsvRecords(csv);
-  expect(records).toHaveLength(2);
+  expect(records).toHaveLength(3);
 
   const headers = records[0]!;
-  const row = records[1]!;
+  const valueAt = (row: string[], name: string) => row[headers.indexOf(name)] ?? "";
+  const row = records.slice(1).find((entry) =>
+    JSON.parse(valueAt(entry, "source_file_names_json")).includes("campaign-history-first.json")
+  );
+  const legacyRow = records.slice(1).find((entry) =>
+    JSON.parse(valueAt(entry, "source_file_names_json")).includes("legacy-v1-no-history.json")
+  );
+  if (!row || !legacyRow) throw new Error("Expected current and legacy candidate inventory rows.");
   expect(row).toHaveLength(headers.length);
-  const value = (name: string) => row[headers.indexOf(name)] ?? "";
+  expect(legacyRow).toHaveLength(headers.length);
+  const value = (name: string) => valueAt(row, name);
+  const legacyValue = (name: string) => valueAt(legacyRow, name);
   expect(headers).toContain("campaign_log_tracking_available");
   expect(headers).toContain("selected_unit_record_damage_dealt");
   expect(value("import_copy_count")).toBe("2");
@@ -563,8 +577,16 @@ test("exports a deduplicated promotion candidate inventory with source and saved
   expect(value("selected_unit_battle_totals_present")).toBe("true");
   expect(value("selected_unit_record_damage_dealt")).toBe("12");
   expect(value("unit_name")).toContain("'=HYPERLINK");
-  expect(value("source_save_version")).toBe("10");
-  expect(value("normalized_save_version")).toBe("10");
+  expect(JSON.parse(value("source_save_versions_json"))).toEqual([10]);
+  expect(JSON.parse(value("normalized_save_versions_json"))).toEqual([10]);
+  expect(JSON.parse(value("migration_applied_values_json"))).toEqual([false]);
+  expect(JSON.parse(legacyValue("source_save_versions_json"))).toEqual([1]);
+  expect(JSON.parse(legacyValue("normalized_save_versions_json"))).toEqual([10]);
+  expect(JSON.parse(legacyValue("migration_applied_values_json"))).toEqual([true]);
+  expect(legacyValue("campaign_log_tracking_available")).toBe("false");
+  expect(legacyValue("campaign_log_entries")).toBe("0");
+  expect(legacyValue("unit_battle_totals_tracking_available")).toBe("false");
+  expect(legacyValue("selected_unit_battle_totals_present")).toBe("false");
 });
 
 test("imports an exported save locally and compares the actual unit snapshot with a detached promotion copy", async ({ page }) => {
