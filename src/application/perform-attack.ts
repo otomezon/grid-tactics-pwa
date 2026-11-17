@@ -1,5 +1,5 @@
 import { WEAPONS_BY_ID } from "../content/weapons";
-import { getPrototypeStatCaps } from "../content/classes";
+import { getClassStatCaps } from "../content/classes";
 import { TERRAIN_DEFINITIONS } from "../content/terrain";
 import {
   buildCombatForecast,
@@ -193,7 +193,7 @@ export function performAttackForFaction(
           attackerAfterCombat,
           experienceAwarded,
           nextRngState,
-          getPrototypeStatCaps(attackerAfterCombat.classId)
+          getClassStatCaps(attackerAfterCombat.classId)
         );
         nextRngState = progression.rngState;
         levelUps = progression.levelUps;
