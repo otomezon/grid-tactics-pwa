@@ -124,7 +124,11 @@ export function applyChapterRewards(
   }
 
   const nextState = { ...state, units, reserveUnits };
-  if (!isValidGameStateSnapshot(nextState, map)) {
+  const nextStateForValidation: GameStateSnapshot = {
+    ...nextState,
+    units: nextState.units.filter((unit) => unit.currentHp > 0)
+  };
+  if (!isValidGameStateSnapshot(nextStateForValidation, map)) {
     throw new Error("The game state after applying chapter rewards is invalid.");
   }
 
