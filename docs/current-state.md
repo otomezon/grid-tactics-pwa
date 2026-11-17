@@ -330,3 +330,13 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - PR #190でVitestを5.1.0へ更新し、PWA build依存を旧 `vite-plugin-pwa`／Workbox 7から `@unplugin-pwa/vite`／Workbox 8へ移行した。既存のクラシックService Workerと `virtual:pwa-register` は維持する。
 - PR #191で `@playwright/test` 1.65.1、`@vitejs/plugin-react` 6.3.0、Vite 8.3.8へ更新した。
 - Dependency Graph有効化後、PR #191のSecurity run `44035627631` ではDependency Reviewを含む全jobが成功。マージ後のmain Security run `44037000738` ではnpm auditが `found 0 vulnerabilities`、CodeQLも成功した。
+
+
+## v0.1.0初回リリース準備（2026-11-17）
+
+- 初回リリース候補は3章のプレイアブルプロトタイプ。シナリオ・マップ・武器性能・章間HP等に試作／暫定のまま残る要素を完成済みと扱わない。
+- クラスチェンジは7経路、14クラスの能力上限・昇格ボーナス・移動／武器プロフィールを固定データへ切り替えた。昇格時には昇格先プロフィールを適用し、適性外の装備は解除して所持品へ保持する。詳細は `docs/release-v0.1.0.md`。
+- 第1章勝利後に生存中の出撃味方へクラスチェンジの証を1個ずつ配布する。全受取人分を原子的に検証し、所持品が満杯なら一部だけ付与しない。既存セーブへ遡及付与しない。saveVersion 10を維持。
+- GitHub Pagesプロジェクトサイト向けに `/grid-tactics-pwa/` base path、Pull Request用artifact検査、main push時のdeploy workflowを追加。初回公開前にRepository Settings → PagesでSourceをGitHub Actionsに設定する必要があり、実際のdeploy成功はまだ確認していない。
+- クラス数値は初回リリースの設計値であり、プレイヤー実セーブ21ケースの統制実プレイ比較は未実施。合成fixtureやCIだけで実戦バランスが証明されたとは扱わない。
+- iOS Safari／Android Chromeの実機インストール・standalone・オフライン確認は未実施。スマートフォン手順書を使い、結果を別途記録する。
