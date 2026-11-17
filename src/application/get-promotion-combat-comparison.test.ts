@@ -76,6 +76,67 @@ describe("getPromotionCombatComparison", () => {
     expect(promotion.nextState.units.find((unit) => unit.id === "unit_001")?.hasActed).toBe(true);
   });
 
+  it("compares a cavalry promotion after its movement range increases", () => {
+    const base = battleReadySnapshot();
+    const control: GameStateSnapshot = {
+      ...base,
+      units: base.units.map((unit) => unit.id === "unit_001"
+        ? {
+            ...unit,
+            classId: "cavalry",
+            movementType: "cavalry",
+            move: 6,
+            usableWeaponTypes: ["sword", "lance"],
+            inventory: [...unit.inventory, "iron_lance"],
+            equippedWeaponId: "iron_lance"
+          }
+        : unit
+      )
+    };
+    const definition = getClassPromotionDefinition("cavalry");
+    if (!definition) throw new Error("Missing cavalry promotion definition.");
+    const promotion = performClassChange(control, "unit_001", definition);
+
+    expect(promotion.promotedUnit.move).toBe(7);
+    const comparison = getPromotionCombatComparison(
+      control,
+      promotion.nextState,
+      CHAPTER_01_MAP,
+      "unit_001",
+      "enemy_001"
+    );
+
+    expect(comparison.control.forecast.strikes[0]?.weaponId).toBe("iron_lance");
+    expect(comparison.promotion.forecast.strikes[0]?.weaponId).toBe("iron_lance");
+    expect(comparison.promotion.result.events.length).toBeGreaterThan(0);
+  });
+
+  it("compares broader promoted weapon access when both classes can use the equipped weapon", () => {
+    const base = battleReadySnapshot();
+    const control: GameStateSnapshot = {
+      ...base,
+      units: base.units.map((unit) => unit.id === "unit_001"
+        ? { ...unit, classId: "mercenary" }
+        : unit
+      )
+    };
+    const definition = getClassPromotionDefinition("mercenary");
+    if (!definition) throw new Error("Missing mercenary promotion definition.");
+    const promotion = performClassChange(control, "unit_001", definition);
+
+    expect(promotion.promotedUnit.usableWeaponTypes).toEqual(["sword", "axe"]);
+    const comparison = getPromotionCombatComparison(
+      control,
+      promotion.nextState,
+      CHAPTER_01_MAP,
+      "unit_001",
+      "enemy_001"
+    );
+
+    expect(comparison.control.forecast.strikes[0]?.weaponId).toBe("iron_sword");
+    expect(comparison.promotion.forecast.strikes[0]?.weaponId).toBe("iron_sword");
+  });
+
   it("rejects branches with different starting RNG", () => {
     const control = battleReadySnapshot();
     const definition = getClassPromotionDefinition("swordsman");
