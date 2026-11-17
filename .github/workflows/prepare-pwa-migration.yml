@@ -2,6 +2,9 @@ name: Temporary PWA dependency migration verification
 # Removed after the lockfile and complete CI verification.
 
 on:
+  push:
+    branches:
+      - security/update-vitest-5-1-0
   pull_request:
     branches:
       - main
