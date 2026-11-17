@@ -24,7 +24,7 @@ function testUnit(overrides: Partial<GameUnit> = {}): GameUnit {
 
 describe("applyExperience", () => {
   it("stores experience without leveling below 100", () => {
-    const result = applyExperience(testUnit({ experience: 20 }), 30, 0x12345678, getPrototypeStatCaps("swordsman"));
+    const result = applyExperience(testUnit({ experience: 20 }), 30, 0x12345678, getClassStatCaps("swordsman"));
 
     expect(result.unit.experience).toBe(50);
     expect(result.unit.level).toBe(1);
@@ -34,7 +34,7 @@ describe("applyExperience", () => {
 
   it("levels up at 100 EXP and independently applies every successful growth", () => {
     const unit = testUnit({ experience: 90, currentHp: 11 });
-    const result = applyExperience(unit, 10, 0x12345678, getPrototypeStatCaps(unit.classId));
+    const result = applyExperience(unit, 10, 0x12345678, getClassStatCaps(unit.classId));
 
     expect(result.unit.level).toBe(2);
     expect(result.unit.experience).toBe(0);
@@ -55,7 +55,7 @@ describe("applyExperience", () => {
   });
 
   it("does not exceed the supplied class stat caps", () => {
-    const caps = { ...getPrototypeStatCaps("swordsman"), strength: 6, hp: 20 };
+    const caps = { ...getClassStatCaps("swordsman"), strength: 6, hp: 20 };
     const unit = testUnit({
       experience: 99,
       stats: { ...testUnit().stats, strength: 6, hp: 20 }
@@ -101,7 +101,7 @@ describe("applyExperience", () => {
 
   it("supports multiple level-ups from a single award", () => {
     const unit = testUnit({ experience: 90 });
-    const result = applyExperience(unit, 210, 0x12345678, getPrototypeStatCaps(unit.classId));
+    const result = applyExperience(unit, 210, 0x12345678, getClassStatCaps(unit.classId));
 
     expect(result.unit.level).toBe(4);
     expect(result.unit.experience).toBe(0);
@@ -116,7 +116,7 @@ describe("applyExperience", () => {
       },
       experience: 99
     });
-    const result = applyExperience(unit, 1, 0x12345678, getPrototypeStatCaps(unit.classId));
+    const result = applyExperience(unit, 1, 0x12345678, getClassStatCaps(unit.classId));
 
     expect(result.unit.stats).toEqual(unit.stats);
     expect(result.levelUps).toEqual([{
@@ -128,7 +128,7 @@ describe("applyExperience", () => {
   });
 
   it("does not permit invalid experience awards or invalid saved EXP progress", () => {
-    expect(() => applyExperience(testUnit(), -1, 0x12345678, getPrototypeStatCaps("swordsman"))).toThrow(RangeError);
-    expect(() => applyExperience(testUnit({ experience: 100 }), 1, 0x12345678, getPrototypeStatCaps("swordsman"))).toThrow(RangeError);
+    expect(() => applyExperience(testUnit(), -1, 0x12345678, getClassStatCaps("swordsman"))).toThrow(RangeError);
+    expect(() => applyExperience(testUnit({ experience: 100 }), 1, 0x12345678, getClassStatCaps("swordsman"))).toThrow(RangeError);
   });
 });
