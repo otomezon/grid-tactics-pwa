@@ -61,12 +61,11 @@ describe("applyChapterRewards with the class-promotion item", () => {
       equippedWeaponId: reserved.equippedWeaponId
     };
     state.units = state.units
-      .filter((unit) => unit.id !== defeated.id && unit.id !== reserved.id)
-      .map((unit) => unit.id === defeated.id ? { ...unit, currentHp: 0 } : unit);
-    state.units = state.units.map((unit) => unit.id === defeated.id
-      ? { ...unit, currentHp: 0 }
-      : unit
-    );
+      .filter((unit) => unit.id !== reserved.id)
+      .map((unit) => unit.id === defeated.id
+        ? { ...unit, currentHp: 0 }
+        : unit
+      );
     state.reserveUnits = [reserveRecord];
     const original = structuredClone(state);
 
