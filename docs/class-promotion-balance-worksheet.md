@@ -2,7 +2,7 @@
 
 - 更新日: 2026-11-17
 - 状態: v0.1.0用の能力上限・昇格ボーナス・クラス別移動／武器プロフィール・初回証報酬を採用候補として固定。実プレイ21ケースの比較記録は未実施で、リリース後の検証課題として残す。
-- 関連仕様: [クラスチェンジ仕様・未決定事項と実装計画](class-promotion.md)
+- 関連仕様: [クラスチェンジ仕様・v0.1.0採用値と検証課題](class-promotion.md)
 - 判断Issue: [#26 — Design decision: approve the class promotion policy baseline](https://github.com/otomezon/grid-tactics-pwa/issues/26)
 - 対象の現行データ: `src/content/class-definitions.ts`（v0.1.0クラス・上限・ボーナス・プロフィール）／`src/content/classes.ts`（互換projection）
 
