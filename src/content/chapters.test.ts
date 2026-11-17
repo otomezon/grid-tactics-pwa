@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isValidGameMapDefinition } from "../domain/models/validate-game-map";
+import { ALL_SURVIVING_PLAYER_UNITS } from "../domain/progression/chapter-reward";
+import { PROMOTION_ITEM_ID } from "./items";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
 import { CHAPTERS, getChapterById, getNextChapter, INITIAL_CHAPTER, isValidCampaignChoiceLinks } from "./chapters";
 import { CHAPTER_01_MAP, MAIN_CHARACTER_UNIT_ID } from "./maps/chapter-01";
@@ -30,6 +32,13 @@ describe("chapter content registry", () => {
 
     expect(MAIN_CHARACTER_UNIT_ID).toBe("unit_001");
     expect(CHAPTER_01_MAP.objective).toEqual({ type: "defeat_boss", targetUnitId: "enemy_005" });
+    expect(CHAPTERS[0]?.clearRewards).toEqual([{
+      recipientUnitId: ALL_SURVIVING_PLAYER_UNITS,
+      itemId: PROMOTION_ITEM_ID,
+      quantity: 1
+    }]);
+    expect(CHAPTERS[1]?.clearRewards).toEqual([]);
+    expect(CHAPTERS[2]?.clearRewards).toEqual([]);
     expect(CHAPTER_01_MAP.enemyDeployment.some((deployment) => deployment.unitId === "enemy_005")).toBe(true);
     expect(CHAPTER_01_MAP.objects).toBeUndefined();
     expect(CHAPTER_02_MAP.objects).toEqual([
