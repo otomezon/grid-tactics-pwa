@@ -10,10 +10,10 @@
 | UI | React 19.3.1 / React DOM 19.3.1 |
 | 言語 | TypeScript 7.0.2 |
 | 開発・ビルド | Vite 8.3.6、`@vitejs/plugin-react` 6.2.1 |
-| PWA | `vite-plugin-pwa` 2.0.0 |
+| PWA | `@unplugin-pwa/vite` 0.0.6 / `@vite-pwa/workbox-build` 8.0.15 |
 | テスト | Vitest 5.1.0、Playwright Test 1.65.0（Chromium E2E／WebKit iPhoneモバイルprofile） |
 
-直接依存のバージョンは `package.json` に固定し、依存関係全体をnpm lockfile v3（`package-lock.json`）へ記録している。クリーンな環境とCIでは `npm ci` を使用し、lockfileにない依存解決の更新が起きないようにする。PWA plugin 2.0.0はNode.js 20.19.0以上を要求し、Vitest 5系のNode要件も満たすようNode 26を標準にしている。
+直接依存のバージョンは `package.json` に固定し、依存関係全体をnpm lockfile v3（`package-lock.json`）へ記録している。クリーンな環境とCIでは `npm ci` を使用し、lockfileにない依存解決の更新が起きないようにする。PWA toolchainはNode.js 22.14.0以上を要求する。`.nvmrc`のNode 26を標準にし、Vitest 5系の実行要件も満たす。
 
 ## 2. ローカルセットアップ
 
@@ -57,7 +57,7 @@ CIのworkflow checkをマージ必須にするには、GitHubのRulesets／branc
 
 ## 5. PWA
 
-`vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。アプリはブラウザの `beforeinstallprompt` イベントを受け取った場合だけインストールボタンを表示し、ユーザー操作からブラウザ標準のインストールプロンプトを呼び出す。`appinstalled` またはstandalone display modeを検知するとインストール済み表示へ切り替える。イベントに対応しないブラウザ向けには手動追加方法を案内し、iPhone／iPadではSafariの共有メニューを利用する。インストール可否はブラウザ・OS・利用条件に依存するため、イベントが届かない場合に独自のインストール成功表示は行わない。CIのブラウザE2Eでは、本番Preview上でmanifest・Service Worker・オフライン起動・インストールイベントの表示／確定／キャンセル／完了状態に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。実施項目・結果記録は [スマートフォン／PWA実機確認手順](smartphone-verification.md) を使用し、CIのChromium／WebKit mobile profile結果と実機で確認した端末・OS・ブラウザを区別する。
+`vite.config.ts` で `@unplugin-pwa/vite` を設定し、manifest、SVGアイコン、クラシックService Workerを生成する。Service Workerはbuild成果物に含まれる。アプリはブラウザの `beforeinstallprompt` イベントを受け取った場合だけインストールボタンを表示し、ユーザー操作からブラウザ標準のインストールプロンプトを呼び出す。`appinstalled` またはstandalone display modeを検知するとインストール済み表示へ切り替える。イベントに対応しないブラウザ向けには手動追加方法を案内し、iPhone／iPadではSafariの共有メニューを利用する。インストール可否はブラウザ・OS・利用条件に依存するため、イベントが届かない場合に独自のインストール成功表示は行わない。CIのブラウザE2Eでは、本番Preview上でmanifest・Service Worker・オフライン起動・インストールイベントの表示／確定／キャンセル／完了状態に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。実施項目・結果記録は [スマートフォン／PWA実機確認手順](smartphone-verification.md) を使用し、CIのChromium／WebKit mobile profile結果と実機で確認した端末・OS・ブラウザを区別する。
 
 ## 6. 環境変数・外部サービス・デプロイ
 

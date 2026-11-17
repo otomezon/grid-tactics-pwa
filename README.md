@@ -42,7 +42,7 @@ PR #149（merge commit `eb78eb85239e32b2fe585846956aaa731af3f2a7`）で時系列
 - React 19.3.1 / React DOM 19.3.1
 - TypeScript 7.0.2
 - Vite 8.3.6
-- vite-plugin-pwa 2.0.0
+- @unplugin-pwa/vite 0.0.6 / @vite-pwa/workbox-build 8.0.15
 - Vitest 5.1.0
 - Playwright Test 1.65.0（Chromium E2E／iPhone相当WebKit mobile smoke test）
 - IndexedDB（ブラウザ内の自動保存、JSON export/import、最大3世代の手動ローカルバックアップ／確認付き復元、saveVersion 10／v1〜v9セーブ移行）
