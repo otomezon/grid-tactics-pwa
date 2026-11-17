@@ -1,5 +1,9 @@
 import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
-import type { ChapterRewardDefinition } from "../domain/progression/chapter-reward";
+import {
+  ALL_SURVIVING_PLAYER_UNITS,
+  type ChapterRewardDefinition
+} from "../domain/progression/chapter-reward";
+import { PROMOTION_ITEM_ID } from "./items";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "./maps/chapter-01";
 import { CHAPTER_02_MAP, CHAPTER_02_INITIAL_STATE } from "./maps/chapter-02";
 import { CHAPTER_03_MAP, CHAPTER_03_INITIAL_STATE } from "./maps/chapter-03";
@@ -25,7 +29,11 @@ export const CHAPTERS: readonly ChapterDefinition[] = [
     summary: "基本操作と戦闘を確認するステージです。",
     map: CHAPTER_01_MAP,
     initialState: INITIAL_GAME_STATE,
-    clearRewards: [],
+    clearRewards: [{
+      recipientUnitId: ALL_SURVIVING_PLAYER_UNITS,
+      itemId: PROMOTION_ITEM_ID,
+      quantity: 1
+    }],
     isPrototype: true
   },
   {

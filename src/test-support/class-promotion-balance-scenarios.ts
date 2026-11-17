@@ -16,7 +16,7 @@ import { getClassPromotionStatPreview } from "../domain/progression/class-change
 import {
   CLASS_PROMOTION_DEFINITIONS,
   CLASS_PROMOTION_TARGETS,
-  PROTOTYPE_CLASS_STAT_CAPS
+  CLASS_STAT_CAPS
 } from "../content/classes";
 import { INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 
@@ -77,7 +77,7 @@ function buildGrowthCandidates(): Array<{
     throw new Error("Chapter 1 prototype growth template unit_001 is missing.");
   }
 
-  const caps = PROTOTYPE_CLASS_STAT_CAPS[template.classId];
+  const caps = CLASS_STAT_CAPS[template.classId];
   if (!caps) {
     throw new Error("Prototype stat caps are missing for " + template.classId + ".");
   }
@@ -131,7 +131,7 @@ const growthCandidates = buildGrowthCandidates();
 
 /**
  * Low / median / high are percentiles within this synthetic seed sweep only.
- * "High" does not mean near the approved (or still undecided) class cap.
+ * "High" does not mean near any class cap or represent a real player profile.
  */
 export const PROTOTYPE_GROWTH_PROFILES: readonly PrototypeGrowthProfile[] = [
   selectProfile(growthCandidates, "low", 10),
@@ -140,9 +140,9 @@ export const PROTOTYPE_GROWTH_PROFILES: readonly PrototypeGrowthProfile[] = [
 ];
 
 /**
- * Seven current provisional promotion definitions multiplied by three
- * synthetic profiles. The preview uses the same pure calculation helper as
- * the promotion command, but the placeholder content remains unapproved.
+ * The seven initial-release promotion definitions multiplied by three
+ * synthetic growth profiles. The preview uses the same pure calculation
+ * helper as the promotion command; only the growth profiles are synthetic.
  */
 export const PROTOTYPE_PROMOTION_SCENARIOS: readonly PrototypePromotionScenario[] =
   Object.entries(CLASS_PROMOTION_TARGETS).flatMap(([sourceClassId, targetClassId]) => {

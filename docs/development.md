@@ -61,7 +61,13 @@ CIのworkflow checkをマージ必須にするには、GitHubのRulesets／branc
 
 ## 6. 環境変数・外部サービス・デプロイ
 
-現時点で環境変数、外部API、ホスティング先、本番デプロイ手順は定義していない。設定を推測で追加しないこと。本番環境への接続やデプロイは別途承認を得てから行う。
+公開先はGitHub Pagesのプロジェクトサイト `https://otomezon.github.io/grid-tactics-pwa/` とする。公開用base pathは `/grid-tactics-pwa/`。通常の `npm run dev`／CI buildはルート `/` を使用し、Pages用のビルドだけ `GITHUB_PAGES_BUILD=true` を設定する。
+
+`.github/workflows/deploy-pages.yml` はPull Requestで型チェック・Vitest・Pages用本番build・PWA manifest／Service Worker／Workbox artifact検証を行い、mainへのpush後にartifactをGitHub Pagesへdeployする。PRイベントではdeploy jobを実行しない。外部APIや秘密の環境変数は使用しない。
+
+初回デプロイ前にリポジトリ所有者がSettings → Pages → Build and deployment → Sourceを `GitHub Actions` に設定する。workflow追加だけでPages設定が完了したとは扱わない。デプロイ成功・公開URLのHTTPS応答を確認するまでは公開済みと報告しない。
+
+GitHub Pagesは静的ファイル配信のみで、IndexedDBのセーブ／ローカルバックアップをサーバーへ同期しない。公開前の実機iOS／Android確認は [スマートフォン／PWA実機確認手順](smartphone-verification.md) と [v0.1.0受け入れチェック](release-v0.1.0.md) に従い、未実施は未実施として記録する。
 
 
 ### 味方ユニットの読み取り専用インスペクター

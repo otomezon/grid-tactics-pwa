@@ -33,8 +33,10 @@ describe("typed class definition registry", () => {
     for (const [classId, definition] of Object.entries(CLASS_DEFINITIONS)) {
       expect(definition.id).toBe(classId);
       expect(definition.displayName.trim()).not.toBe("");
-      expect(Object.values(definition.prototypeStatCaps)).toEqual([60, 30, 30, 30, 30, 30, 30, 30]);
-      expect(Object.isFrozen(definition.prototypeStatCaps)).toBe(true);
+      expect(Object.values(definition.statCaps).every((value) => Number.isInteger(value) && value > 0)).toBe(true);
+      expect(Object.isFrozen(definition.statCaps)).toBe(true);
+      expect(Object.isFrozen(definition.movementProfile)).toBe(true);
+      expect(Object.isFrozen(definition.movementProfile.usableWeaponTypes)).toBe(true);
     }
   });
 
@@ -81,14 +83,19 @@ describe("typed class definition registry", () => {
 
     const returnedCaps = getPrototypeStatCaps("swordsman");
     returnedCaps.hp = 1;
-    expect(getPrototypeStatCaps("swordsman").hp).toBe(60);
+    expect(getPrototypeStatCaps("swordsman").hp).toBe(40);
 
     const firstPromotion = getClassPromotionDefinition("swordsman")!;
     firstPromotion.statBonuses.hp = 99;
     firstPromotion.statCaps.hp = 1;
     const secondPromotion = getClassPromotionDefinition("swordsman")!;
-    expect(secondPromotion.statBonuses.hp).toBe(2);
+    expect(secondPromotion.statBonuses.hp).toBe(5);
     expect(secondPromotion.statCaps.hp).toBe(60);
+    expect(secondPromotion.targetClassProfile).toMatchObject({
+      move: 5,
+      movementType: "infantry",
+      usableWeaponTypes: ["sword"]
+    });
   });
 
   it("keeps exported class compatibility projections deeply immutable", () => {
@@ -96,6 +103,8 @@ describe("typed class definition registry", () => {
       expect(Object.isFrozen(definition)).toBe(true);
       expect(Object.isFrozen(definition.statBonuses)).toBe(true);
       expect(Object.isFrozen(definition.statCaps)).toBe(true);
+      expect(Object.isFrozen(definition.targetClassProfile)).toBe(true);
+      expect(Object.isFrozen(definition.targetClassProfile.usableWeaponTypes)).toBe(true);
     }
 
     for (const caps of Object.values(PROTOTYPE_CLASS_STAT_CAPS)) {
@@ -106,13 +115,40 @@ describe("typed class definition registry", () => {
     if (!promotion) throw new Error("The swordsman promotion definition is missing.");
     expect(Reflect.set(promotion.statBonuses, "hp", 99)).toBe(false);
     expect(Reflect.set(promotion.statCaps, "hp", 1)).toBe(false);
-    expect(promotion.statBonuses.hp).toBe(2);
+    expect(Reflect.set(promotion.targetClassProfile, "move", 9)).toBe(false);
+    expect(promotion.statBonuses.hp).toBe(5);
     expect(promotion.statCaps.hp).toBe(60);
+    expect(promotion.targetClassProfile.move).toBe(5);
 
     const caps = PROTOTYPE_CLASS_STAT_CAPS.swordsman;
     if (!caps) throw new Error("The swordsman prototype stat caps are missing.");
     expect(Reflect.set(caps, "hp", 1)).toBe(false);
-    expect(caps.hp).toBe(60);
+    expect(caps.hp).toBe(40);
+  });
+
+
+  it("pins each class movement and weapon-access profile", () => {
+    expect(Object.fromEntries(
+      Object.entries(CLASS_DEFINITIONS).map(([id, definition]) => [
+        id,
+        definition.movementProfile
+      ])
+    )).toEqual({
+      swordsman: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword"] },
+      mercenary: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword"] },
+      fighter: { move: 5, movementType: "infantry", usableWeaponTypes: ["axe"] },
+      soldier: { move: 5, movementType: "infantry", usableWeaponTypes: ["lance"] },
+      cavalry: { move: 6, movementType: "cavalry", usableWeaponTypes: ["sword", "lance"] },
+      archer: { move: 5, movementType: "infantry", usableWeaponTypes: ["bow"] },
+      mage: { move: 5, movementType: "infantry", usableWeaponTypes: ["magic"] },
+      swordmaster: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword"] },
+      hero: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword", "axe"] },
+      warrior: { move: 5, movementType: "infantry", usableWeaponTypes: ["axe"] },
+      general: { move: 5, movementType: "infantry", usableWeaponTypes: ["lance", "axe"] },
+      paladin: { move: 7, movementType: "cavalry", usableWeaponTypes: ["sword", "lance"] },
+      sniper: { move: 5, movementType: "infantry", usableWeaponTypes: ["bow"] },
+      sage: { move: 5, movementType: "infantry", usableWeaponTypes: ["magic"] }
+    });
   });
 
   it("rejects unknown class IDs and labels registered class tiers", () => {
@@ -124,6 +160,6 @@ describe("typed class definition registry", () => {
     expect(getClassTierLabel("swordsman")).toBe("基本職");
     expect(getClassTierLabel("swordmaster")).toBe("昇格職");
     expect(getClassTierLabel("unknown")).toBe("未登録職");
-    expect(() => getPrototypeStatCaps("unknown")).toThrow(/No prototype stat caps/);
+    expect(() => getPrototypeStatCaps("unknown")).toThrow(/No class stat caps/);
   });
 });

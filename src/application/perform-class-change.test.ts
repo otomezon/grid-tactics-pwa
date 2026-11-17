@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CLASS_PROMOTION_TARGETS } from "../content/classes";
 import { PROMOTION_ITEM_ID } from "../content/items";
+import { WEAPONS_BY_ID } from "../content/weapons";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import type { GameStateSnapshot, UnitStats } from "../domain/models/game";
 import type { ClassPromotionDefinition } from "../domain/progression/class-change";
@@ -81,6 +82,24 @@ describe("performClassChange", () => {
     expect(isValidGameStateSnapshot(result.nextState, CHAPTER_01_MAP)).toBe(true);
     expect(result.nextState.units.find((unit) => unit.id === "unit_002")).toEqual(otherUnit);
     expect(state.units.find((unit) => unit.id === "unit_001")?.classId).toBe("swordsman");
+  });
+
+  it("applies the target movement and weapon profile and retains a newly unusable equipped weapon", () => {
+    const state = eligibleState();
+    const result = performClassChange(state, "unit_001", definition({
+      targetClassProfile: {
+        move: 6,
+        movementType: "cavalry",
+        usableWeaponTypes: ["axe"]
+      }
+    }));
+
+    expect(result.promotedUnit.move).toBe(6);
+    expect(result.promotedUnit.movementType).toBe("cavalry");
+    expect(result.promotedUnit.usableWeaponTypes).toEqual(["axe"]);
+    expect(result.promotedUnit.equippedWeaponId).toBeNull();
+    expect(result.promotedUnit.inventory).toContain("iron_sword");
+    expect(WEAPONS_BY_ID.iron_sword?.weaponType).toBe("sword");
   });
 
   it("rejects class changes outside the player phase", () => {

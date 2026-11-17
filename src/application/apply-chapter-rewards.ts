@@ -2,9 +2,10 @@ import { INVENTORY_ITEMS_BY_ID } from "../content/items";
 import type { GameMapDefinition, GameStateSnapshot } from "../domain/models/game";
 import { evaluateBattleOutcome } from "../domain/rules/evaluate-battle-outcome";
 import { isValidGameStateSnapshot } from "../domain/models/validate-game-state";
-import type {
-  ChapterRewardDefinition,
-  ChapterRewardRecord
+import {
+  ALL_SURVIVING_PLAYER_UNITS,
+  type ChapterRewardDefinition,
+  type ChapterRewardRecord
 } from "../domain/progression/chapter-reward";
 
 const MAX_INVENTORY_SIZE = 5;
@@ -15,18 +16,15 @@ export interface ApplyChapterRewardsResult {
 }
 
 /**
- * Adds explicitly configured chapter-clear items to surviving player units.
- * The command deliberately accepts reward data rather than inventing amounts,
- * recipients, or item pools. Items are not granted before a confirmed victory.
+ * Adds explicitly configured chapter-clear items to living player units.
+ * The group selector includes active and reserve party members. The whole
+ * batch is returned only when every recipient has room for every item.
  */
 export function applyChapterRewards(
   state: GameStateSnapshot,
   map: GameMapDefinition,
   rewards: readonly ChapterRewardDefinition[]
 ): ApplyChapterRewardsResult {
-  // A defeated unit may still be present in a command input before the caller
-  // has pruned it. Validate surviving units, then preserve the original list
-  // for the recipient-specific rejection below.
   const stateForValidation: GameStateSnapshot = {
     ...state,
     units: state.units.filter((unit) => unit.currentHp > 0)
@@ -39,6 +37,7 @@ export function applyChapterRewards(
   }
 
   let units = state.units;
+  let reserveUnits = state.reserveUnits;
   const applied: ChapterRewardRecord[] = [];
 
   for (const reward of rewards) {
@@ -52,39 +51,84 @@ export function applyChapterRewards(
 
     const item = INVENTORY_ITEMS_BY_ID[reward.itemId];
     if (!item) {
-      throw new Error(`Chapter reward item "${reward.itemId}" is not defined.`);
+      throw new Error("Chapter reward item \"" + reward.itemId + "\" is not defined.");
     }
 
-    const recipient = units.find((unit) => unit.id === reward.recipientUnitId);
-    if (!recipient || recipient.faction !== "player" || recipient.currentHp <= 0) {
-      throw new Error(`Chapter reward recipient "${reward.recipientUnitId}" is not a surviving player unit.`);
+    const recipients = reward.recipientUnitId === ALL_SURVIVING_PLAYER_UNITS
+      ? [
+          ...units
+            .filter((unit) => unit.faction === "player" && unit.currentHp > 0)
+            .map((unit) => ({ unit, isReserve: false as const })),
+          ...reserveUnits
+            .filter((unit) => unit.currentHp > 0)
+            .map((unit) => ({ unit, isReserve: true as const }))
+        ]
+      : [
+          ...units
+            .filter((unit) =>
+              unit.id === reward.recipientUnitId &&
+              unit.faction === "player" &&
+              unit.currentHp > 0
+            )
+            .map((unit) => ({ unit, isReserve: false as const })),
+          ...reserveUnits
+            .filter((unit) =>
+              unit.id === reward.recipientUnitId &&
+              unit.currentHp > 0
+            )
+            .map((unit) => ({ unit, isReserve: true as const }))
+        ];
+
+    if (recipients.length === 0) {
+      throw new Error(
+        reward.recipientUnitId === ALL_SURVIVING_PLAYER_UNITS
+          ? "There are no surviving player units to receive the chapter reward."
+          : "Chapter reward recipient \"" + reward.recipientUnitId + "\" is not a surviving player unit."
+      );
     }
 
-    if (recipient.inventory.length + reward.quantity > MAX_INVENTORY_SIZE) {
-      throw new Error(`${recipient.name}'s inventory does not have enough free slots for the chapter reward.`);
+    for (const recipientEntry of recipients) {
+      const recipient = recipientEntry.unit;
+      if (recipient.inventory.length + reward.quantity > MAX_INVENTORY_SIZE) {
+        throw new Error(
+          recipient.name + "'s inventory does not have enough free slots for the chapter reward."
+        );
+      }
+
+      const nextInventory = [
+        ...recipient.inventory,
+        ...Array.from({ length: reward.quantity }, () => reward.itemId)
+      ];
+      if (recipientEntry.isReserve) {
+        reserveUnits = reserveUnits.map((unit) =>
+          unit.id === recipient.id
+            ? { ...unit, inventory: nextInventory }
+            : unit
+        );
+      } else {
+        units = units.map((unit) =>
+          unit.id === recipient.id
+            ? { ...unit, inventory: nextInventory }
+            : unit
+        );
+      }
+
+      applied.push({
+        recipientUnitId: recipient.id,
+        itemId: reward.itemId,
+        quantity: reward.quantity,
+        recipientName: recipient.name,
+        itemName: item.name
+      });
     }
-
-    units = units.map((unit) =>
-      unit.id === recipient.id
-        ? {
-            ...unit,
-            inventory: [
-              ...unit.inventory,
-              ...Array.from({ length: reward.quantity }, () => reward.itemId)
-            ]
-          }
-        : unit
-    );
-
-    applied.push({
-      ...reward,
-      recipientName: recipient.name,
-      itemName: item.name
-    });
   }
 
-  const nextState = { ...state, units };
-  if (!isValidGameStateSnapshot(nextState, map)) {
+  const nextState = { ...state, units, reserveUnits };
+  const nextStateForValidation: GameStateSnapshot = {
+    ...nextState,
+    units: nextState.units.filter((unit) => unit.currentHp > 0)
+  };
+  if (!isValidGameStateSnapshot(nextStateForValidation, map)) {
     throw new Error("The game state after applying chapter rewards is invalid.");
   }
 

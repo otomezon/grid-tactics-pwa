@@ -2,7 +2,10 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "@unplugin-pwa/vite";
 
+const buildBase = process.env.GITHUB_PAGES_BUILD === "true" ? "/grid-tactics-pwa/" : "/";
+
 export default defineConfig({
+  base: buildBase,
   plugins: [
     react(),
     VitePWA({
@@ -15,11 +18,11 @@ export default defineConfig({
         theme_color: "#172333",
         background_color: "#101820",
         display: "standalone",
-        start_url: "/",
-        scope: "/",
+        start_url: "./",
+        scope: "./",
         icons: [
-          { src: "/icons/pwa-192.svg", sizes: "192x192", type: "image/svg+xml", purpose: "any" },
-          { src: "/icons/pwa-512.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" }
+          { src: "icons/pwa-192.svg", sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+          { src: "icons/pwa-512.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" }
         ]
       },
       generateSW: {

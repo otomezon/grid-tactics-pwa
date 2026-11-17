@@ -1,4 +1,5 @@
 import { getPromotionTargetClassId } from "../content/classes";
+import { WEAPONS_BY_ID } from "../content/weapons";
 import type { GameStateSnapshot, GameUnit, UnitStats } from "../domain/models/game";
 import {
   applyClassPromotion,
@@ -39,16 +40,23 @@ export function performClassChange(
   }
 
   const promotion = applyClassPromotion(unit, definition);
+  const equippedWeapon = promotion.unit.equippedWeaponId
+    ? WEAPONS_BY_ID[promotion.unit.equippedWeaponId]
+    : undefined;
+  const promotedUnit: GameUnit = equippedWeapon &&
+      !promotion.unit.usableWeaponTypes.includes(equippedWeapon.weaponType)
+    ? { ...promotion.unit, equippedWeaponId: null }
+    : promotion.unit;
   const nextState: GameStateSnapshot = {
     ...state,
     units: state.units.map((candidate) =>
-      candidate.id === unitId ? promotion.unit : candidate
+      candidate.id === unitId ? promotedUnit : candidate
     )
   };
 
   return {
     nextState,
-    promotedUnit: promotion.unit,
+    promotedUnit,
     consumedItemId: promotion.consumedItemId,
     appliedBonuses: promotion.appliedBonuses
   };

@@ -72,16 +72,13 @@ export function getPromotionCombatComparison(
     throw new Error("Both combat branches must contain the selected attacker and defender.");
   }
 
-  const sameAttackPosition = (left: typeof controlAttacker, right: typeof promotedAttacker) =>
+  const sameAttackState = (left: typeof controlAttacker, right: typeof promotedAttacker) =>
     left.id === right.id &&
     left.faction === right.faction &&
     left.currentHp === right.currentHp &&
     left.position.x === right.position.x &&
     left.position.y === right.position.y &&
-    left.movementType === right.movementType &&
-    left.move === right.move &&
-    left.equippedWeaponId === right.equippedWeaponId &&
-    JSON.stringify(left.usableWeaponTypes) === JSON.stringify(right.usableWeaponTypes);
+    left.equippedWeaponId === right.equippedWeaponId;
 
   if (
     controlAttacker.faction !== "player" ||
@@ -90,11 +87,11 @@ export function getPromotionCombatComparison(
     promotedAttacker.hasMoved ||
     controlAttacker.hasActed ||
     !promotedAttacker.hasActed ||
-    !sameAttackPosition(controlAttacker, promotedAttacker) ||
+    !sameAttackState(controlAttacker, promotedAttacker) ||
     controlDefender.faction !== "enemy" ||
     JSON.stringify(controlDefender) !== JSON.stringify(promotedDefender)
   ) {
-    throw new Error("Combat branches must preserve the same ready attacker position, weapon access, and unchanged enemy.");
+    throw new Error("Combat branches must preserve the same ready attacker, position, equipped weapon, and unchanged enemy. Each class must be able to use that weapon.");
   }
 
   // performAttack uses the normal application/domain combat path. The copies
