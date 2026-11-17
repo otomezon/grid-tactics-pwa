@@ -41,10 +41,33 @@ describe("applyChapterRewards with the class-promotion item", () => {
     expect(initialRecipient.inventory).not.toContain(PROMOTION_ITEM_ID);
   });
 
-  it("grants the configured promotion seal to every surviving deployed ally and excludes defeated units", () => {
+  it("grants the promotion seal to all living active and reserve allies and excludes defeated units", () => {
     const state = clearedState();
-    const defeated = { ...state.units[1]!, currentHp: 0 };
-    state.units = state.units.map((unit) => unit.id === defeated.id ? defeated : unit);
+    const defeated = state.units.find((unit) => unit.id === "unit_002")!;
+    const reserved = state.units.find((unit) => unit.id === "unit_004")!;
+    const reserveRecord = {
+      id: reserved.id,
+      name: reserved.name,
+      classId: reserved.classId,
+      level: reserved.level,
+      experience: reserved.experience,
+      stats: { ...reserved.stats },
+      growthRates: { ...reserved.growthRates },
+      currentHp: reserved.currentHp,
+      movementType: reserved.movementType,
+      move: reserved.move,
+      usableWeaponTypes: [...reserved.usableWeaponTypes],
+      inventory: [...reserved.inventory],
+      equippedWeaponId: reserved.equippedWeaponId
+    };
+    state.units = state.units
+      .filter((unit) => unit.id !== defeated.id && unit.id !== reserved.id)
+      .map((unit) => unit.id === defeated.id ? { ...unit, currentHp: 0 } : unit);
+    state.units = state.units.map((unit) => unit.id === defeated.id
+      ? { ...unit, currentHp: 0 }
+      : unit
+    );
+    state.reserveUnits = [reserveRecord];
     const original = structuredClone(state);
 
     const result = applyChapterRewards(state, CHAPTER_01_MAP, [{
@@ -53,10 +76,15 @@ describe("applyChapterRewards with the class-promotion item", () => {
       quantity: 1
     }]);
 
-    const livingPlayers = state.units.filter((unit) => unit.currentHp > 0);
-    expect(result.rewardsApplied).toHaveLength(livingPlayers.length);
+    const livingPlayers = state.units.filter((unit) => unit.faction === "player" && unit.currentHp > 0);
+    const livingReserves = state.reserveUnits.filter((unit) => unit.currentHp > 0);
+    expect(result.rewardsApplied).toHaveLength(livingPlayers.length + livingReserves.length);
     for (const unit of livingPlayers) {
       expect(result.nextState.units.find((candidate) => candidate.id === unit.id)?.inventory)
+        .toContain(PROMOTION_ITEM_ID);
+    }
+    for (const unit of livingReserves) {
+      expect(result.nextState.reserveUnits.find((candidate) => candidate.id === unit.id)?.inventory)
         .toContain(PROMOTION_ITEM_ID);
     }
     expect(result.nextState.units.find((unit) => unit.id === defeated.id)?.inventory)
@@ -64,12 +92,25 @@ describe("applyChapterRewards with the class-promotion item", () => {
     expect(state).toEqual(original);
   });
 
-  it("rejects a party reward atomically when one surviving ally has a full inventory", () => {
+  it("rejects a party reward atomically when a reserve ally has a full inventory", () => {
     const state = clearedState();
-    state.units = state.units.map((unit) => unit.id === "unit_004"
-      ? { ...unit, inventory: ["iron_sword", "iron_lance", "iron_axe", "short_bow", "fire_tome"] }
-      : unit
-    );
+    const reserved = state.units.find((unit) => unit.id === "unit_004")!;
+    state.units = state.units.filter((unit) => unit.id !== reserved.id);
+    state.reserveUnits = [{
+      id: reserved.id,
+      name: reserved.name,
+      classId: reserved.classId,
+      level: reserved.level,
+      experience: reserved.experience,
+      stats: { ...reserved.stats },
+      growthRates: { ...reserved.growthRates },
+      currentHp: reserved.currentHp,
+      movementType: reserved.movementType,
+      move: reserved.move,
+      usableWeaponTypes: [...reserved.usableWeaponTypes],
+      inventory: ["iron_sword", "iron_lance", "iron_axe", "short_bow", "fire_tome"],
+      equippedWeaponId: reserved.equippedWeaponId
+    }];
     const original = structuredClone(state);
 
     expect(() => applyChapterRewards(state, CHAPTER_01_MAP, [{
