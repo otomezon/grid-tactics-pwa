@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_GAME_STATE } from "../../content/maps/chapter-01";
-import { getPrototypeStatCaps } from "../../content/classes";
+import { getClassStatCaps } from "../../content/classes";
 import type { GameUnit } from "../models/game";
 import { applyExperience } from "./level-up";
 
