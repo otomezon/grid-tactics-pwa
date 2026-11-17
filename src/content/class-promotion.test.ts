@@ -28,6 +28,212 @@ describe("class promotion content", () => {
     }
   });
 
+
+  it("pins the initial-release stat caps and promotion bonus values for all 14 classes", () => {
+    expect(Object.fromEntries(
+      Object.entries(CLASS_DEFINITIONS).map(([id, definition]) => [id, definition.statCaps])
+    )).toEqual({
+  "swordsman": {
+    "hp": 40,
+    "strength": 20,
+    "magic": 10,
+    "skill": 22,
+    "speed": 24,
+    "luck": 30,
+    "defense": 18,
+    "resistance": 16
+  },
+  "mercenary": {
+    "hp": 42,
+    "strength": 22,
+    "magic": 10,
+    "skill": 22,
+    "speed": 21,
+    "luck": 26,
+    "defense": 20,
+    "resistance": 16
+  },
+  "fighter": {
+    "hp": 45,
+    "strength": 24,
+    "magic": 5,
+    "skill": 18,
+    "speed": 18,
+    "luck": 24,
+    "defense": 22,
+    "resistance": 12
+  },
+  "soldier": {
+    "hp": 42,
+    "strength": 21,
+    "magic": 8,
+    "skill": 20,
+    "speed": 18,
+    "luck": 26,
+    "defense": 23,
+    "resistance": 15
+  },
+  "cavalry": {
+    "hp": 42,
+    "strength": 21,
+    "magic": 8,
+    "skill": 20,
+    "speed": 21,
+    "luck": 24,
+    "defense": 20,
+    "resistance": 14
+  },
+  "archer": {
+    "hp": 40,
+    "strength": 20,
+    "magic": 8,
+    "skill": 24,
+    "speed": 21,
+    "luck": 26,
+    "defense": 17,
+    "resistance": 16
+  },
+  "mage": {
+    "hp": 38,
+    "strength": 10,
+    "magic": 24,
+    "skill": 20,
+    "speed": 20,
+    "luck": 26,
+    "defense": 14,
+    "resistance": 22
+  },
+  "swordmaster": {
+    "hp": 60,
+    "strength": 25,
+    "magic": 10,
+    "skill": 30,
+    "speed": 30,
+    "luck": 30,
+    "defense": 22,
+    "resistance": 20
+  },
+  "hero": {
+    "hp": 60,
+    "strength": 27,
+    "magic": 15,
+    "skill": 27,
+    "speed": 27,
+    "luck": 30,
+    "defense": 25,
+    "resistance": 22
+  },
+  "warrior": {
+    "hp": 65,
+    "strength": 30,
+    "magic": 8,
+    "skill": 24,
+    "speed": 24,
+    "luck": 28,
+    "defense": 27,
+    "resistance": 18
+  },
+  "general": {
+    "hp": 65,
+    "strength": 27,
+    "magic": 12,
+    "skill": 26,
+    "speed": 23,
+    "luck": 28,
+    "defense": 30,
+    "resistance": 25
+  },
+  "paladin": {
+    "hp": 60,
+    "strength": 27,
+    "magic": 16,
+    "skill": 26,
+    "speed": 28,
+    "luck": 28,
+    "defense": 27,
+    "resistance": 24
+  },
+  "sniper": {
+    "hp": 58,
+    "strength": 25,
+    "magic": 12,
+    "skill": 30,
+    "speed": 27,
+    "luck": 30,
+    "defense": 22,
+    "resistance": 21
+  },
+  "sage": {
+    "hp": 55,
+    "strength": 15,
+    "magic": 30,
+    "skill": 28,
+    "speed": 27,
+    "luck": 30,
+    "defense": 20,
+    "resistance": 30
+  }
+});
+    expect(Object.fromEntries(
+      Object.entries(CLASS_PROMOTION_DEFINITIONS).map(([id, definition]) => [id, definition.statBonuses])
+    )).toEqual({
+  "swordsman": {
+    "hp": 5,
+    "strength": 2,
+    "skill": 3,
+    "speed": 3,
+    "luck": 1,
+    "defense": 1
+  },
+  "mercenary": {
+    "hp": 5,
+    "strength": 3,
+    "skill": 2,
+    "speed": 2,
+    "defense": 2
+  },
+  "fighter": {
+    "hp": 6,
+    "strength": 3,
+    "skill": 2,
+    "speed": 1,
+    "defense": 2
+  },
+  "soldier": {
+    "hp": 5,
+    "strength": 2,
+    "skill": 1,
+    "speed": 1,
+    "defense": 3,
+    "resistance": 2
+  },
+  "cavalry": {
+    "hp": 5,
+    "strength": 2,
+    "skill": 2,
+    "speed": 2,
+    "defense": 2,
+    "resistance": 1
+  },
+  "archer": {
+    "hp": 4,
+    "strength": 2,
+    "skill": 3,
+    "speed": 2,
+    "luck": 1,
+    "defense": 1
+  },
+  "mage": {
+    "hp": 4,
+    "strength": 1,
+    "magic": 4,
+    "skill": 2,
+    "speed": 1,
+    "resistance": 2
+  }
+});
+  });
+
   it("applies each of the seven one-step promotion paths and does not allow re-promotion", () => {
     const baseUnit = INITIAL_GAME_STATE.units.find((unit) => unit.id === "unit_001")!;
 
