@@ -47,7 +47,7 @@ export function ClassPromotionLab() {
           <p className="eyebrow">DEVELOPMENT ONLY · SYNTHETIC FIXTURES</p>
           <h1>昇格バランス試験室</h1>
           <p className="promotion-lab-lead">
-            現行の仮ボーナス・仮上限を使った、再現可能な能力値previewです。実プレイ結果や正式バランスではありません。
+            初回リリース候補の昇格ボーナス・クラス上限を使った合成能力値previewです。成長profileは固定seedから作った合成データで、実プレイ結果ではありません。
           </p>
         </div>
         <a className="secondary-button promotion-lab-back" href="/">キャンペーンへ戻る</a>
@@ -104,7 +104,7 @@ export function ClassPromotionLab() {
               {CLASS_DISPLAY_NAMES[scenario.sourceClassId] ?? scenario.sourceClassId} → {getClassDisplayName(scenario.targetClassId)}
             </h2>
           </div>
-          <span className="promotion-lab-provisional">試作値</span>
+          <span className="promotion-lab-provisional">リリース候補値</span>
         </div>
         <div className="promotion-lab-table-wrap">
           <table className="promotion-lab-table" aria-label="昇格能力値preview">
@@ -115,7 +115,7 @@ export function ClassPromotionLab() {
                 <th scope="col">昇格preview</th>
                 <th scope="col">要求ボーナス</th>
                 <th scope="col">実増加</th>
-                <th scope="col">仮上限</th>
+                <th scope="col">昇格先上限</th>
               </tr>
             </thead>
             <tbody>
