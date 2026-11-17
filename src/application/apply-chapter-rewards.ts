@@ -16,8 +16,8 @@ export interface ApplyChapterRewardsResult {
 }
 
 /**
- * Adds explicitly configured chapter-clear items to surviving player units.
- * Group rewards are expanded against the post-battle living roster; the whole
+ * Adds explicitly configured chapter-clear items to living player units.
+ * The group selector includes active and reserve party members. The whole
  * batch is returned only when every recipient has room for every item.
  */
 export function applyChapterRewards(
@@ -37,6 +37,7 @@ export function applyChapterRewards(
   }
 
   let units = state.units;
+  let reserveUnits = state.reserveUnits;
   const applied: ChapterRewardRecord[] = [];
 
   for (const reward of rewards) {
@@ -54,12 +55,29 @@ export function applyChapterRewards(
     }
 
     const recipients = reward.recipientUnitId === ALL_SURVIVING_PLAYER_UNITS
-      ? units.filter((unit) => unit.faction === "player" && unit.currentHp > 0)
-      : units.filter((unit) =>
-          unit.id === reward.recipientUnitId &&
-          unit.faction === "player" &&
-          unit.currentHp > 0
-        );
+      ? [
+          ...units
+            .filter((unit) => unit.faction === "player" && unit.currentHp > 0)
+            .map((unit) => ({ unit, isReserve: false as const })),
+          ...reserveUnits
+            .filter((unit) => unit.currentHp > 0)
+            .map((unit) => ({ unit, isReserve: true as const }))
+        ]
+      : [
+          ...units
+            .filter((unit) =>
+              unit.id === reward.recipientUnitId &&
+              unit.faction === "player" &&
+              unit.currentHp > 0
+            )
+            .map((unit) => ({ unit, isReserve: false as const })),
+          ...reserveUnits
+            .filter((unit) =>
+              unit.id === reward.recipientUnitId &&
+              unit.currentHp > 0
+            )
+            .map((unit) => ({ unit, isReserve: true as const }))
+        ];
 
     if (recipients.length === 0) {
       throw new Error(
@@ -69,21 +87,30 @@ export function applyChapterRewards(
       );
     }
 
-    for (const recipient of recipients) {
+    for (const recipientEntry of recipients) {
+      const recipient = recipientEntry.unit;
       if (recipient.inventory.length + reward.quantity > MAX_INVENTORY_SIZE) {
         throw new Error(\`\${recipient.name}'s inventory does not have enough free slots for the chapter reward.\`);
       }
-      units = units.map((unit) =>
-        unit.id === recipient.id
-          ? {
-              ...unit,
-              inventory: [
-                ...unit.inventory,
-                ...Array.from({ length: reward.quantity }, () => reward.itemId)
-              ]
-            }
-          : unit
-      );
+
+      const nextInventory = [
+        ...recipient.inventory,
+        ...Array.from({ length: reward.quantity }, () => reward.itemId)
+      ];
+      if (recipientEntry.isReserve) {
+        reserveUnits = reserveUnits.map((unit) =>
+          unit.id === recipient.id
+            ? { ...unit, inventory: nextInventory }
+            : unit
+        );
+      } else {
+        units = units.map((unit) =>
+          unit.id === recipient.id
+            ? { ...unit, inventory: nextInventory }
+            : unit
+        );
+      }
+
       applied.push({
         recipientUnitId: recipient.id,
         itemId: reward.itemId,
@@ -94,7 +121,7 @@ export function applyChapterRewards(
     }
   }
 
-  const nextState = { ...state, units };
+  const nextState = { ...state, units, reserveUnits };
   if (!isValidGameStateSnapshot(nextState, map)) {
     throw new Error("The game state after applying chapter rewards is invalid.");
   }
