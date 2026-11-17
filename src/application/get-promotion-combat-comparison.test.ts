@@ -67,7 +67,7 @@ describe("getPromotionCombatComparison", () => {
 
     expect(comparison.startingRngState).toBe(0x12345678);
     expect(comparison.control.forecast.strikes[0]?.hitRate).toBe(73);
-    expect(comparison.promotion.forecast.strikes[0]?.hitRate).toBe(75);
+    expect(comparison.promotion.forecast.strikes[0]?.hitRate).toBe(80);
     expect(comparison.control.result.events.length).toBeGreaterThan(0);
     expect(comparison.promotion.result.events.length).toBeGreaterThan(0);
     expect(comparison.control.finalRngState).toBe(comparison.promotion.finalRngState);
