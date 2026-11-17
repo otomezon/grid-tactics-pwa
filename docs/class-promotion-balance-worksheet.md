@@ -212,7 +212,7 @@ v0.1.0採用候補のクラス別上限に対して、このLv.10合成profile�
 
 採択内容の根拠は [Issue #26](https://github.com/otomezon/grid-tactics-pwa/issues/26) の2026-11-12付コメント。この表の採択済み表示は非数値方針に限る。**CP-04／CP-05の能力上限・昇格ボーナス数値、クラス別の正式な移動／武器データ、および最初の証の配布元・受取人・数量は未決定のまま**とする。
 
-## 5. 統制プレイテスト手順
+## 5. 統制プレイテスト手順（未実施・将来の検証記録用）
 
 ### 5.1 試験マトリクス
 
@@ -337,7 +337,7 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 - 各列の件数は入力状況の説明に限る。異なるクラス／敵／profileの観測値を平均・順位化せず、ケース横断のバランス合否・統計的有意差・実施完了を判定しない。
 - 画面表示と class-promotion-manual-playtest-observation-coverage.csv はメモリ上の監査結果だけから作り、明示操作によるローカルdownloadのみ行う。GameState／RNG／IndexedDB／自動保存／saveVersion／ネットワーク通信は変更しない。
 
-## 6. 承認記録
+## 6. 承認記録（v0.1.0の採用表は文書先頭とPR #193を参照）
 
 | 項目 | 値 |
 |---|---|
@@ -352,13 +352,13 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 ## 開発専用昇格試験室
 
 - 起動: `npm run dev` の後、`http://localhost:5173/?promotion-lab=1` を開く。
-- 対象: 現行7経路×low／median／highの合成fixture 21件。経路・profileを切り替え、現在値、昇格preview、要求ボーナス、実増加量、仮上限を確認する。
+- 対象: 現行7経路×low／median／highの合成fixture 21件。経路・profileを切り替え、現在値、昇格preview、要求ボーナス、実増加量、昇格先上限を確認する。
 - 分離: `import.meta.env.DEV` のときだけ表示。本編画面をマウントせず、GameState／RNG／IndexedDB／自動保存／saveVersionにアクセスしない。
 - 限界: 合成fixtureによるstat-only previewであり、実プレイ成長分布、戦闘結果、移動・武器性能、CP-04／05のバランス妥当性を証明しない。実プレイ21ケースの記録は別途必要。
 - 検証: `npm run test:e2e` は本番Previewでの既存E2Eに加え、Vite開発サーバーでの試験室E2Eを実行する。
 
 
-## 21ケース統制評価マトリクス（開発専用・PR #84）
+## 21ケース統制評価マトリクス（開発専用・PR #84、実プレイ未完了）
 
 - 起動は既存 `/?promotion-snapshots=1` のまま。各基本職についてLv.10+候補snapshotが3件以上読み込まれると、低位25%／中央値50%／上位90%に近い候補を仮提案する。能力8項目の同クラス内mid-rank平均を使い、3件未満は候補不足と表示して候補を提案しない。
 - 21行それぞれでcandidateと射程内enemyを選び直し、条件を確認してチェックを入れる。候補の重複や昇格不可、攻撃対象なし、候補不足の行は実行可能扱いにしない。profilesは相対分布上の選定目安で、growth rate／正式cap近傍の判定ではない。
@@ -366,7 +366,7 @@ CIのユニットテスト・Chromium E2Eは仕様と実装の整合性確認に
 - 敵撃破・攻撃側生存、および敵軍phaseの標的率・生存率・敗北／全滅率・次phase進行率は、seed単位の二値結果から95% Wilson score区間を表示する。strike単位の命中率／必殺率は同一戦闘内の複数strikeが独立でないため、この区間を付けない。区間はcontrol／promotion各枝の固定条件での試行数による幅であり、両枝の差の信頼区間／有意差判定ではない。実プレイの不確実性や別の戦場条件を表さない。
 - 各二値指標は対応するseed pairを「controlのみ／promotionのみ／両方／どちらもなし」に分けて件数化し、promotionのみ−controlのみのpercentage-point差を表示／CSVへ記録する。これはイベント発生のペア内訳であり、発生が望ましいかは指標によって異なる（敗北／全滅では発生件数が少ない方が望ましい）。差の信頼区間／有意差判定ではない。
 - 各caseのデータ区分は「未確認」「実プレイ由来（利用者申告）」「合成fixture」。実プレイ由来はユーザーの申告をCSVに残すもので、アプリはファイルの真正性・出所を検証しない。合成fixtureまたは未確認データを実プレイ結果としてWorksheetへ転記しない。
-- 21件完了後に手動CSV downloadが可能。CSVにはprofile／候補fingerprint／unit／control・promotionの8能力／現在HP／EXP／装備／要求・実適用ボーナス／map／enemy／seed range／sample count／combat metrics／data classificationを含める。昇格後能力・ボーナスは現在の仮prototype dataに基づく。CSV以外の永続記録や自動送信は行わない。
+- 21件完了後に手動CSV downloadが可能。CSVにはprofile／候補fingerprint／unit／control・promotionの8能力／現在HP／EXP／装備／要求・実適用ボーナス／map／enemy／seed range／sample count／combat metrics／data classificationを含める。昇格後能力・ボーナスはv0.1.0採用候補データに基づく。ここでのcontrol／promotion snapshotはプレイヤー実セーブ由来かを明示し、合成seedを実測として分類しない。CSV以外の永続記録や自動送信は行わない。
 
 ## 実セーブsnapshotの取り込み・比較（開発専用）
 
