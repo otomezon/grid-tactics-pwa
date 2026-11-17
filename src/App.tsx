@@ -20,7 +20,7 @@ import { getChapterById, getNextChapter, INITIAL_CHAPTER } from "./content/chapt
 import { TERRAIN_DEFINITIONS } from "./content/terrain";
 import { WEAPONS_BY_ID } from "./content/weapons";
 import { INVENTORY_ITEMS_BY_ID, PROMOTION_ITEM_ID } from "./content/items";
-import { getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
+import { getClassDefinition, getClassDisplayName, getClassPromotionDefinition } from "./content/classes";
 import { getTacticalRoleLabel } from "./content/tactical-roles";
 import { performClassChange } from "./application/perform-class-change";
 import { performItemUse } from "./application/perform-item-use";
@@ -2125,15 +2125,32 @@ function CampaignApp() {
   const promotionStatPreview = selectedUnit && promotionDefinition
     ? getClassPromotionStatPreview(selectedUnit.stats, promotionDefinition)
     : undefined;
+  const promotionTargetClass = promotionDefinition
+    ? getClassDefinition(promotionDefinition.toClassId)
+    : undefined;
   const promotionMovementLabel = selectedUnit
     ? (selectedUnit.movementType === "infantry" ? "歩兵" : "騎馬") + "・" + selectedUnit.move
     : "";
+  const promotionTargetMovementLabel = promotionTargetClass
+    ? (promotionTargetClass.movementProfile.movementType === "infantry" ? "歩兵" : "騎馬") +
+      "・" + promotionTargetClass.movementProfile.move
+    : promotionMovementLabel;
   const promotionWeaponAccessLabel = selectedUnit
     ? selectedUnit.usableWeaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join("・") || "なし"
     : "";
-  const promotionEquippedWeaponLabel = selectedUnit?.equippedWeaponId
-    ? WEAPONS_BY_ID[selectedUnit.equippedWeaponId]?.name ?? selectedUnit.equippedWeaponId
-    : "未装備";
+  const promotionTargetWeaponAccessLabel = promotionTargetClass
+    ? promotionTargetClass.movementProfile.usableWeaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join("・") || "なし"
+    : promotionWeaponAccessLabel;
+  const promotionEquippedWeapon = selectedUnit?.equippedWeaponId
+    ? WEAPONS_BY_ID[selectedUnit.equippedWeaponId]
+    : undefined;
+  const promotionEquippedWeaponLabel = promotionEquippedWeapon?.name ??
+    (selectedUnit?.equippedWeaponId ?? "未装備");
+  const promotionTargetEquippedWeaponLabel = promotionEquippedWeapon &&
+      promotionTargetClass &&
+      !promotionTargetClass.movementProfile.usableWeaponTypes.includes(promotionEquippedWeapon.weaponType)
+    ? "解除（所持品に保持）"
+    : promotionEquippedWeaponLabel;
   const canStartClassChange = Boolean(
     selectedUnit &&
     selectedUnit.faction === "player" &&
@@ -3122,14 +3139,13 @@ function CampaignApp() {
                             <div className="promotion-confirmation" role="group" aria-label="クラスチェンジ確認">
                               <strong>{getClassDisplayName(promotionDefinition.toClassId)}へ昇格しますか？</strong>
                               <p className="promotion-preview-notice">
-                                能力ボーナス・クラス上限はすべて試作値です。正式なバランスではありません。
-                                既存能力が仮上限を超えていても、昇格時に能力を下げることはありません。
+                                初回リリース用の正式設定を適用します。既存能力が昇格先上限を超えていても、昇格時に能力を下げることはありません。以後の成長は昇格先上限で止まります。
                               </p>
                               <section className="promotion-preview-section" aria-labelledby="promotion-stat-preview-heading">
-                                <h4 id="promotion-stat-preview-heading">能力値の変化（仮上限適用後）</h4>
+                                <h4 id="promotion-stat-preview-heading">能力値の変化（昇格先上限適用後）</h4>
                                 <table className="promotion-stat-table" aria-label="昇格後の能力値プレビュー">
                                   <thead>
-                                    <tr><th scope="col">能力</th><th scope="col">現在</th><th scope="col">昇格後</th><th scope="col">要求 / 実増加 / 仮上限</th></tr>
+                                    <tr><th scope="col">能力</th><th scope="col">現在</th><th scope="col">昇格後</th><th scope="col">要求 / 実増加 / 昇格先上限</th></tr>
                                   </thead>
                                   <tbody>
                                     {promotionStatPreview.changes.map((change) => {
@@ -3154,9 +3170,9 @@ function CampaignApp() {
                                 <div><dt>経験値</dt><dd>EXP {selectedUnit.experience}（保持）</dd></div>
                                 <div><dt>最大HP</dt><dd>{selectedUnit.stats.hp} → {promotionStatPreview.stats.hp}</dd></div>
                                 <div><dt>現在HP</dt><dd>{selectedUnit.currentHp} → {selectedUnit.currentHp}（回復なし）</dd></div>
-                                <div><dt>移動性能</dt><dd>{promotionMovementLabel}（維持）</dd></div>
-                                <div><dt>武器適性</dt><dd>{promotionWeaponAccessLabel}（維持）</dd></div>
-                                <div><dt>装備中</dt><dd>{promotionEquippedWeaponLabel}（維持）</dd></div>
+                                <div><dt>移動性能</dt><dd>{promotionMovementLabel} → {promotionTargetMovementLabel}</dd></div>
+                                <div><dt>武器適性</dt><dd>{promotionWeaponAccessLabel} → {promotionTargetWeaponAccessLabel}</dd></div>
+                                <div><dt>装備中</dt><dd>{promotionEquippedWeaponLabel} → {promotionTargetEquippedWeaponLabel}</dd></div>
                                 <div><dt>昇格の証</dt><dd>{promotionItemCount} → {promotionItemCount - 1}個（1個消費）</dd></div>
                                 <div><dt>行動</dt><dd>昇格後は行動済み</dd></div>
                               </dl>
