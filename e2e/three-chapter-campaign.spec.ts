@@ -423,10 +423,10 @@ test("carries one campaign through all three chapters with desktop clicks and mo
   });
   expect(chapterTwoAfterChest.reserveUnits.find((unit) => unit.id === "unit_004")).toMatchObject({
     id: "unit_004",
-    inventory: reserveUnit.inventory
+    inventory: [...reserveUnit.inventory, "promotion_seal"]
   });
   expect(chapterTwoAfterChest.units.find((unit) => unit.id === "unit_001")?.inventory)
-    .toEqual([...carriedUnit.inventory, "healing_potion"]);
+    .toEqual([...carriedUnit.inventory, "promotion_seal", "healing_potion"]);
   const chestBattleLog = chapterTwoAfterChest.campaignBattleLog;
   expect(chestBattleLog.slice(0, chapterTwoAfterVillageChoice.campaignBattleLog.length))
     .toEqual(chapterTwoAfterVillageChoice.campaignBattleLog);
@@ -543,7 +543,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     experience: 28,
     stats: { strength: 9 },
     currentHp: 14,
-    inventory: reserveUnit.inventory
+    inventory: [...reserveUnit.inventory, "promotion_seal"]
   });
   expect(chapterThreeState.units.filter((unit) => unit.faction === "enemy").map((unit) => unit.id))
     .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
