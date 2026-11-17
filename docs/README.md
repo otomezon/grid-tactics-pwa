@@ -1,5 +1,7 @@
 # ドキュメント目次
 
+2026-11-17更新: PR #187（merge commit `0fb2915b79186145adadb00476f6a91b5e5fd9d0`）でキャンペーン記録アーカイブを再オープンしたときのフォーカス維持を修正し、CI run #1805の全工程が成功した。セキュリティ運用は [security.md](security.md) と [development.md](development.md) を参照。
+
 PR #182（merge commit `6d8b5fcb65a868d521cd2794102876291c499b60`）では、キャンペーン記録の時系列ログを味方ユニットで絞り込めるようにし、味方別累計CSVの検索結果／累計全員出力と条件メタデータを追加した。PR CI run #1793とmain post-merge run #1794は型チェック・単体テスト・本番ビルド成功、Chromium E2E 1件は追加CSV列の期待値不足で失敗。PR #183ではこの期待値を修正し、保存済み実strikeから味方別の被攻撃集計を導出する読み取り専用ビューを追加する。
 
 PR #174（merge commit `af1508fb83820dfa6740a179a565c158da96fc4f`）では、同一ブラウザー内の古いタブへ自動セーブrevisionの変更を即時通知する機能を追加した。通知内容は `savedAt` revisionのみで、IndexedDB transaction内のrevision照合を最終防衛線として維持する。

@@ -4,7 +4,17 @@
 
 初期アプリ基盤を追加した。現時点ではシングルプレイのブラウザアプリであり、サーバー、ログイン、外部API、オンライン同期、分析・トラッキングは実装していない。
 
-「脆弱性なし」「安全」と評価できる状態ではない。ホスティング、HTTPS配信、CSP、HTTPセキュリティヘッダー、依存関係監査、コードスキャンは未設定／未確認。
+「脆弱性なし」「安全」と評価できる状態ではない。GitHub Actionsには依存関係監査、Pull Requestの依存変更レビュー、JavaScript／TypeScriptのCodeQL解析を定義しているが、各実行結果はActions／Securityの実際の結果で確認する。ワークフローを置いただけで脆弱性がないことや、必須チェックとして保護されていることを意味しない。本番ホスティング、HTTPS配信、CSP、HTTPセキュリティヘッダーは未設定／未確認。
+
+### 自動検査と依存更新
+
+- `.github/workflows/security.yml` はPull Request、`main`へのpush、毎週のスケジュール、手動実行で起動する。
+- 依存関係監査はlockfile全体を対象に `npm audit --audit-level=high` を実行する。high／criticalの脆弱性が検出された場合は失敗させる。devDependenciesも監査対象である。
+- Dependency ReviewはPull Requestで変更されたruntime／development依存関係を確認し、新たに導入されるhigh／critical脆弱性を失敗にする。ライセンスの許可／拒否ポリシーはまだ定義していないため、この検査ではライセンス判定を無効にしている。
+- CodeQLはJavaScript／TypeScriptを解析する。自動ビルド工程を必要としない言語として `build-mode: none` を指定し、同一リポジトリのPull Request、`main`へのpush、週次実行で解析する。forkからのPull Requestでは、Security Eventsへの書き込み権限を与えないためCodeQL jobを実行しない。
+- `.github/dependabot.yml` はnpm依存関係とGitHub Actionsの更新確認を毎週行い、各ecosystemの更新をそれぞれ1つのグループへまとめる。major／minor／patchを同じ週次グループで提案するため、更新は一括してCIで検証し、互換性を確認してから採用する。
+- Dependency Review／CodeQLの結果や監査の失敗状態はGitHub上で確認する。PRマージを必須チェックでブロックするには、GitHubのRulesets／ブランチ保護設定で対象checkをrequiredにする必要がある。ワークフロー定義自体はその設定を変更しない。
+- Dependabotのversion update設定は、GitHub側のDependabot alerts／security updatesを有効にしたことを意味しない。リポジトリのSecurity設定でDependency graph、Dependabot alerts、Dependabot security updates、secret scanningの可否と状態を別途確認する。
 
 ## 2. ローカル保存データ
 
@@ -20,7 +30,7 @@
 - 永続ストレージの許可はブラウザによる自動的な容量整理・evictionのリスクを下げるための要求であり、端末故障、利用者によるデータ消去、ブラウザ設定のリセット、OS／ブラウザの不具合から保護するものではない。JSON exportと手動3世代backupを引き続き利用する。
 - IndexedDB書き込みで `QuotaExceededError` が発生した場合は、セーブJSONの退避と空き容量の確保を案内する。`SecurityError` の場合は、プライベートブラウズやサイトデータ制限など、ブラウザー側のローカル保存制限を確認するよう案内する。エラー名に基づく案内であり、ブラウザーごとの発生条件を保証するものではない。
 - 自動保存だけでなく、手動バックアップ復元とJSONセーブ読み込みも、操作開始時の `savedAt` revisionをtransaction内で照合する。別タブなどが先に更新していれば置換を拒否する。
-- 対応ブラウザーではBroadcastChannelで自動セーブのrevision番号だけを同一オリジンの別タブへ通知し、古い画面をすぐ競合状態へ切り替えて操作を停止する。セーブ本文やユニット情報は通知しない。BroadcastChannel非対応・失敗時もIndexedDBのreadwrite transaction内にあるrevision照合を維持し、上書きを防ぐ。これは同一ブラウザー内の競合保護であり、別ブラウザー・端末との同期機能ではない。
+- 対応ブラウザーではBroadcastChannelで自動セーブのrevision番号だけを同一オリジンの別タブへ通知し、古い画面をすぐ競合状態へ切り替えて操作を停止する。セーブ本文やユニット情報は通知しない。BroadcastChannel非対応・失敗時もIndexedDBのreadwrite transaction内のrevision照合を維持し、上書きを防ぐ。これは同一ブラウザー内の競合保護であり、別ブラウザー・端末との同期機能ではない。
 - ストレージ消去・容量制限・ブラウザ設定によりセーブが失われる可能性がある。
 
 ## 3. PWA・依存関係
@@ -29,8 +39,8 @@
 - 更新検知は `registerType: "prompt"` で行い、新しいService Workerが待機しても自動で有効化・再読み込みしない。アプリの更新案内から明示的に「更新して再読み込み」を選択した場合だけ待機中workerを有効化する。
 - 更新ボタンはタイトル画面、または保存済みの勝敗確定画面でのみ有効。出撃準備／戦闘中、未確認イベントがある間、ロード・保存・バックアップ・次章準備中、セーブ検証で読み込みがブロックされた状態では更新を適用しない。
 - 「あとで」で案内を閉じても待機中workerは保持する。アプリが安全な画面へ戻ると更新案内を再表示する。適用時のページ再読み込み後は既存IndexedDBセーブから再開する。
-- 依存関係は `package.json` とlockfileで固定する。
-- HTTPS配信、CSP、依存脆弱性監査、キャッシュ失効や更新適用の実スマートフォン確認は今後の作業。
+- 依存関係は `package.json` とlockfileで固定し、週次のグループ更新はDependabotから提案する。npm audit、Dependency Review、CodeQLの各CI結果はGitHub Actions／Securityで確認する。
+- HTTPS配信、CSP、HTTPセキュリティヘッダー、本番ホスティングは配信先が未決定のため今後の作業。設定値や外部サービスを推測して追加しない。
 
 ## 4. コンテンツ権利
 
@@ -38,4 +48,4 @@
 
 ## 5. 未確認事項
 
-本番ホスティングのHTTPS・ヘッダー設定、依存パッケージ監査、CSP、コードスキャン、secret scanning、セーブ／バックアップの実スマートフォンでの作成・復元、ストレージ容量不足・private browsing時の実際の挙動、Service Worker更新時の実機保護動作は未確認。`QuotaExceededError`／`SecurityError` に対する画面案内は実装したが、実機での再現・復旧確認は別途必要。
+npm audit／Dependency Review／CodeQLの実行結果と、GitHub側のDependency graph／Dependabot alerts／security updates／secret scanningの有効状態は各CI runとリポジトリ設定で確認する。ブランチ保護でSecurity checksが必須になっているかも未確認。本番ホスティングのHTTPS・ヘッダー設定、CSP、セーブ／バックアップの実スマートフォンでの作成・復元、ストレージ容量不足・private browsing時の実際の挙動、Service Worker更新時の実機保護動作は引き続き未確認。`QuotaExceededError`／`SecurityError` に対する画面案内は実装したが、実機での再現・復旧確認は別途必要。

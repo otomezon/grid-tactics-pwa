@@ -49,6 +49,12 @@ npm run preview
 
 `.github/workflows/ci.yml` を追加した。Pull Requestと `main`／`feature/**` へのpushでNode.jsを `.nvmrc` からセットアップし、`npm ci`、型チェック、Vitest、Vite build、Playwright用Chromium／WebKitの導入、ブラウザE2Eテストを実行する。PRのChecksで実行結果を確認すること。ローカル実行・CI実行済みであると推測して報告してはいけない。
 
+追加の `.github/workflows/security.yml` はPull Request／`main` push／週次／手動実行でセキュリティ検査を行う。依存関係全体の `npm audit --audit-level=high`、Pull Requestで新規依存に導入されるhigh／critical脆弱性のDependency Review、JavaScript／TypeScriptのCodeQL解析を定義する。CodeQLは同一リポジトリのPull Requestを対象にし、fork Pull Requestでは書き込み権限を要求する解析jobをskipする。各結果は対応するGitHub Actions checkとSecurity画面で確認する。
+
+`.github/dependabot.yml` はnpmとGitHub Actionsのversion updateを毎週実行し、同一ecosystemのmajor／minor／patch更新を一括グループ化する。大量の個別PRを作らないよう各ecosystemのopen PR上限を1件とする。依存更新はロックファイルを含めて同じPR内で検証し、CI／security checksが通ったことを確認してから採用する。
+
+CIのworkflow checkをマージ必須にするには、GitHubのRulesets／branch protectionでstatus checkをrequiredに設定する。YAMLだけではbranch protectionを変更できないため、リポジトリ設定で別途確認する。
+
 ## 5. PWA
 
 `vite.config.ts` で `vite-plugin-pwa` を設定し、manifest、SVGアイコン、Service Workerを生成する。Service Workerはbuild成果物に含まれる。アプリはブラウザの `beforeinstallprompt` イベントを受け取った場合だけインストールボタンを表示し、ユーザー操作からブラウザ標準のインストールプロンプトを呼び出す。`appinstalled` またはstandalone display modeを検知するとインストール済み表示へ切り替える。イベントに対応しないブラウザ向けには手動追加方法を案内し、iPhone／iPadではSafariの共有メニューを利用する。インストール可否はブラウザ・OS・利用条件に依存するため、イベントが届かない場合に独自のインストール成功表示は行わない。CIのブラウザE2Eでは、本番Preview上でmanifest・Service Worker・オフライン起動・インストールイベントの表示／確定／キャンセル／完了状態に加え、Service Workerスクリプト更新後の自動再読み込みとIndexedDB保存状態の復元を検証する。実際のスマートフォンへのインストール、OSによるアプリ終了／再開、実機オフライン動作は引き続き手動確認が必要。実施項目・結果記録は [スマートフォン／PWA実機確認手順](smartphone-verification.md) を使用し、CIのChromium／WebKit mobile profile結果と実機で確認した端末・OS・ブラウザを区別する。

@@ -1,0 +1,39 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: '02:00'
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 1
+    groups:
+      all-npm-dependencies:
+        patterns:
+          - '*'
+        update-types:
+          - major
+          - minor
+          - patch
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: '02:15'
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 1
+    groups:
+      all-github-actions:
+        patterns:
+          - '*'
+        update-types:
+          - major
+          - minor
+          - patch
+    commit-message:
+      prefix: ci
