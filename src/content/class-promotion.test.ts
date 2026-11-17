@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLASS_DEFINITIONS,
   CLASS_PROMOTION_DEFINITIONS,
   CLASS_PROMOTION_TARGETS,
   getPrototypeStatCaps,
