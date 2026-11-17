@@ -463,7 +463,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     position: { x: 2, y: 8 }, hasMoved: true, hasActed: true
   });
   expect(chapterTwoAfterObjectInteraction.units.find((unit) => unit.id === "unit_001")?.inventory)
-    .toEqual([...carriedUnit.inventory, "healing_potion"]);
+    .toEqual([...carriedUnit.inventory, "promotion_seal", "healing_potion"]);
   const doorBattleLog = chapterTwoAfterObjectInteraction.campaignBattleLog;
   expect(doorBattleLog.slice(0, chapterTwoAfterChest.campaignBattleLog.length))
     .toEqual(chapterTwoAfterChest.campaignBattleLog);
