@@ -69,7 +69,7 @@ describe("synthetic class-promotion balance scenarios", () => {
     ]);
   });
 
-  it("creates 21 path/profile combinations from the seven provisional definitions", () => {
+  it("creates 21 path/profile combinations from the seven release-candidate definitions", () => {
     expect(PROTOTYPE_PROMOTION_SCENARIOS).toHaveLength(21);
 
     const paths = Object.keys(CLASS_PROMOTION_TARGETS);
