@@ -48,4 +48,4 @@
 
 ## 5. 未確認事項
 
-npm audit／Dependency Review／CodeQLの実行結果と、GitHub側のDependency graph／Dependabot alerts／security updates／secret scanningの有効状態は各CI runとリポジトリ設定で確認する。ブランチ保護でSecurity checksが必須になっているかも未確認。本番ホスティングのHTTPS・ヘッダー設定、CSP、セーブ／バックアップの実スマートフォンでの作成・復元、ストレージ容量不足・private browsing時の実際の挙動、Service Worker更新時の実機保護動作は引き続き未確認。\`QuotaExceededError\`／\`SecurityError\` に対する画面案内は実装したが、実機での再現・復旧確認は別途必要。
+npm audit／Dependency Review／CodeQLの実行結果と、GitHub側のDependency graph／Dependabot alerts／security updates／secret scanningの有効状態は各CI runとリポジトリ設定で確認する。ブランチ保護でSecurity checksが必須になっているかも未確認。本番ホスティングのHTTPS・ヘッダー設定、CSP、セーブ／バックアップの実スマートフォンでの作成・復元、ストレージ容量不足・private browsing時の実際の挙動、Service Worker更新時の実機保護動作は引き続き未確認。`QuotaExceededError`／`SecurityError` に対する画面案内は実装したが、実機での再現・復旧確認は別途必要。
