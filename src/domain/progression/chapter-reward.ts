@@ -1,7 +1,7 @@
 export const ALL_SURVIVING_PLAYER_UNITS = "@all-surviving-player-units" as const;
 
 export interface ChapterRewardDefinition {
-  /** Stable unit ID, or ALL_SURVIVING_PLAYER_UNITS for every living deployed ally. */
+  /** Stable unit ID, or ALL_SURVIVING_PLAYER_UNITS for every living active or reserve party member. */
   recipientUnitId: string | typeof ALL_SURVIVING_PLAYER_UNITS;
   /** ID of an item defined in src/content/items.ts. */
   itemId: string;
