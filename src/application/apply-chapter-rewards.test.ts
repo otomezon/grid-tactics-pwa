@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PROMOTION_ITEM_ID } from "../content/items";
+import { ALL_SURVIVING_PLAYER_UNITS } from "../domain/progression/chapter-reward";
 import { CHAPTER_01_MAP, INITIAL_GAME_STATE } from "../content/maps/chapter-01";
 import type { GameStateSnapshot } from "../domain/models/game";
 import { applyChapterRewards } from "./apply-chapter-rewards";
@@ -38,6 +39,45 @@ describe("applyChapterRewards with the class-promotion item", () => {
       quantity: 1
     }]);
     expect(initialRecipient.inventory).not.toContain(PROMOTION_ITEM_ID);
+  });
+
+  it("grants the configured promotion seal to every surviving deployed ally and excludes defeated units", () => {
+    const state = clearedState();
+    const defeated = { ...state.units[1]!, currentHp: 0 };
+    state.units = state.units.map((unit) => unit.id === defeated.id ? defeated : unit);
+    const original = structuredClone(state);
+
+    const result = applyChapterRewards(state, CHAPTER_01_MAP, [{
+      recipientUnitId: ALL_SURVIVING_PLAYER_UNITS,
+      itemId: PROMOTION_ITEM_ID,
+      quantity: 1
+    }]);
+
+    const livingPlayers = state.units.filter((unit) => unit.currentHp > 0);
+    expect(result.rewardsApplied).toHaveLength(livingPlayers.length);
+    for (const unit of livingPlayers) {
+      expect(result.nextState.units.find((candidate) => candidate.id === unit.id)?.inventory)
+        .toContain(PROMOTION_ITEM_ID);
+    }
+    expect(result.nextState.units.find((unit) => unit.id === defeated.id)?.inventory)
+      .not.toContain(PROMOTION_ITEM_ID);
+    expect(state).toEqual(original);
+  });
+
+  it("rejects a party reward atomically when one surviving ally has a full inventory", () => {
+    const state = clearedState();
+    state.units = state.units.map((unit) => unit.id === "unit_004"
+      ? { ...unit, inventory: ["iron_sword", "iron_lance", "iron_axe", "short_bow", "fire_tome"] }
+      : unit
+    );
+    const original = structuredClone(state);
+
+    expect(() => applyChapterRewards(state, CHAPTER_01_MAP, [{
+      recipientUnitId: ALL_SURVIVING_PLAYER_UNITS,
+      itemId: PROMOTION_ITEM_ID,
+      quantity: 1
+    }])).toThrow(/does not have enough free slots/);
+    expect(state).toEqual(original);
   });
 
   it("does not grant a promotion seal before a chapter victory", () => {
