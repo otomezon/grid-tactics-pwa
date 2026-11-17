@@ -83,7 +83,7 @@ describe("typed class definition registry", () => {
 
     const returnedCaps = getPrototypeStatCaps("swordsman");
     returnedCaps.hp = 1;
-    expect(getPrototypeStatCaps("swordsman").hp).toBe(60);
+    expect(getPrototypeStatCaps("swordsman").hp).toBe(40);
 
     const firstPromotion = getClassPromotionDefinition("swordsman")!;
     firstPromotion.statBonuses.hp = 99;
@@ -123,7 +123,32 @@ describe("typed class definition registry", () => {
     const caps = PROTOTYPE_CLASS_STAT_CAPS.swordsman;
     if (!caps) throw new Error("The swordsman prototype stat caps are missing.");
     expect(Reflect.set(caps, "hp", 1)).toBe(false);
-    expect(caps.hp).toBe(60);
+    expect(caps.hp).toBe(40);
+  });
+
+
+  it("pins each class movement and weapon-access profile", () => {
+    expect(Object.fromEntries(
+      Object.entries(CLASS_DEFINITIONS).map(([id, definition]) => [
+        id,
+        definition.movementProfile
+      ])
+    )).toEqual({
+      swordsman: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword"] },
+      mercenary: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword"] },
+      fighter: { move: 5, movementType: "infantry", usableWeaponTypes: ["axe"] },
+      soldier: { move: 5, movementType: "infantry", usableWeaponTypes: ["lance"] },
+      cavalry: { move: 6, movementType: "cavalry", usableWeaponTypes: ["sword", "lance"] },
+      archer: { move: 5, movementType: "infantry", usableWeaponTypes: ["bow"] },
+      mage: { move: 5, movementType: "infantry", usableWeaponTypes: ["magic"] },
+      swordmaster: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword"] },
+      hero: { move: 5, movementType: "infantry", usableWeaponTypes: ["sword", "axe"] },
+      warrior: { move: 5, movementType: "infantry", usableWeaponTypes: ["axe"] },
+      general: { move: 5, movementType: "infantry", usableWeaponTypes: ["lance", "axe"] },
+      paladin: { move: 7, movementType: "cavalry", usableWeaponTypes: ["sword", "lance"] },
+      sniper: { move: 5, movementType: "infantry", usableWeaponTypes: ["bow"] },
+      sage: { move: 5, movementType: "infantry", usableWeaponTypes: ["magic"] }
+    });
   });
 
   it("rejects unknown class IDs and labels registered class tiers", () => {
