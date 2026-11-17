@@ -5,7 +5,7 @@
 | 項目 | 設定 |
 |---|---|
 | Node.js | `.nvmrc` は 26（Node.js 26 LTSを基準） |
-| 許容Node.js | `^22.12.0 || ^24.0.0 || >=26.0.0` |
+| 許容Node.js | `^22.14.0 || ^24.0.0 || >=26.0.0` |
 | package manager | npm |
 | UI | React 19.3.1 / React DOM 19.3.1 |
 | 言語 | TypeScript 7.0.2 |
