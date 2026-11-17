@@ -51,7 +51,7 @@ export function applyChapterRewards(
 
     const item = INVENTORY_ITEMS_BY_ID[reward.itemId];
     if (!item) {
-      throw new Error(\`Chapter reward item "\${reward.itemId}" is not defined.\`);
+      throw new Error("Chapter reward item \"" + reward.itemId + "\" is not defined.");
     }
 
     const recipients = reward.recipientUnitId === ALL_SURVIVING_PLAYER_UNITS
@@ -83,14 +83,16 @@ export function applyChapterRewards(
       throw new Error(
         reward.recipientUnitId === ALL_SURVIVING_PLAYER_UNITS
           ? "There are no surviving player units to receive the chapter reward."
-          : \`Chapter reward recipient "\${reward.recipientUnitId}" is not a surviving player unit.\`
+          : "Chapter reward recipient \"" + reward.recipientUnitId + "\" is not a surviving player unit."
       );
     }
 
     for (const recipientEntry of recipients) {
       const recipient = recipientEntry.unit;
       if (recipient.inventory.length + reward.quantity > MAX_INVENTORY_SIZE) {
-        throw new Error(\`\${recipient.name}'s inventory does not have enough free slots for the chapter reward.\`);
+        throw new Error(
+          recipient.name + "'s inventory does not have enough free slots for the chapter reward."
+        );
       }
 
       const nextInventory = [
