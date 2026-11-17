@@ -1,5 +1,5 @@
 import type { UnitStats } from "../domain/models/game";
-import type { ClassPromotionDefinition } from "../domain/progression/class-change";
+import type { ClassPromotionDefinition, PromotionClassProfile } from "../domain/progression/class-change";
 import {
   CLASS_DEFINITIONS,
   getClassDefinition,
@@ -27,11 +27,20 @@ function copyStatCaps(caps: Readonly<UnitStats>): UnitStats {
   return { ...caps };
 }
 
+function copyMovementProfile(profile: PromotionClassProfile): PromotionClassProfile {
+  return {
+    move: profile.move,
+    movementType: profile.movementType,
+    usableWeaponTypes: [...profile.usableWeaponTypes]
+  };
+}
+
 type ImmutableClassPromotionDefinition = Readonly<
-  Omit<ClassPromotionDefinition, "statBonuses" | "statCaps">
+  Omit<ClassPromotionDefinition, "statBonuses" | "statCaps" | "targetClassProfile">
 > & {
   readonly statBonuses: Readonly<Partial<UnitStats>>;
   readonly statCaps: Readonly<UnitStats>;
+  readonly targetClassProfile: PromotionClassProfile;
 };
 
 function freezePromotionDefinition(
@@ -40,7 +49,11 @@ function freezePromotionDefinition(
   return Object.freeze({
     ...definition,
     statBonuses: Object.freeze({ ...definition.statBonuses }),
-    statCaps: Object.freeze({ ...definition.statCaps })
+    statCaps: Object.freeze({ ...definition.statCaps }),
+    targetClassProfile: Object.freeze({
+      ...definition.targetClassProfile!,
+      usableWeaponTypes: Object.freeze([...definition.targetClassProfile!.usableWeaponTypes])
+    })
   });
 }
 
@@ -63,35 +76,43 @@ export function getClassTierLabel(classId: string): "基本職" | "昇格職" | 
   return definition.tier === "basic" ? "基本職" : "昇格職";
 }
 
-export const PROTOTYPE_CLASS_STAT_CAPS: Readonly<Record<string, Readonly<UnitStats>>> = Object.freeze(
+export const CLASS_STAT_CAPS: Readonly<Record<string, Readonly<UnitStats>>> = Object.freeze(
   Object.fromEntries(
     Object.values(CLASS_DEFINITIONS).map((definition) => [
       definition.id,
-      Object.freeze(copyStatCaps(definition.prototypeStatCaps))
+      Object.freeze(copyStatCaps(definition.statCaps))
     ])
   ) as Record<string, Readonly<UnitStats>>
 );
 
-export function getPrototypeStatCaps(classId: string): UnitStats {
+/** @deprecated Use CLASS_STAT_CAPS. Kept for the development-only fixture lab. */
+export const PROTOTYPE_CLASS_STAT_CAPS = CLASS_STAT_CAPS;
+
+export function getClassStatCaps(classId: string): UnitStats {
   const definition = getClassDefinition(classId);
   if (!definition) {
-    throw new Error("No prototype stat caps are defined for class: " + classId);
+    throw new Error("No class stat caps are defined for class: " + classId);
   }
-  return copyStatCaps(definition.prototypeStatCaps);
+  return copyStatCaps(definition.statCaps);
+}
+
+/** @deprecated Use getClassStatCaps. */
+export function getPrototypeStatCaps(classId: string): UnitStats {
+  return getClassStatCaps(classId);
 }
 
 function toPromotionDefinition(
   definition: BasicClassDefinition
 ): ClassPromotionDefinition {
+  const target = CLASS_DEFINITIONS[definition.promotion.targetClassId];
   return {
     fromClassId: definition.id,
-    toClassId: definition.promotion.targetClassId,
+    toClassId: target.id,
     requiredItemId: definition.promotion.requiredItemId,
     statBonuses: { ...definition.promotion.statBonuses },
-    statCaps: copyStatCaps(
-      CLASS_DEFINITIONS[definition.promotion.targetClassId].prototypeStatCaps
-    ),
-    experiencePolicy: definition.promotion.experiencePolicy
+    statCaps: copyStatCaps(target.statCaps),
+    experiencePolicy: definition.promotion.experiencePolicy,
+    targetClassProfile: copyMovementProfile(target.movementProfile)
   };
 }
 
