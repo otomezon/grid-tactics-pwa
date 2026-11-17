@@ -24,6 +24,7 @@
     "forceConsistentCasingInFileNames": true,
     "types": [
       "vite/client",
+      "@unplugin-pwa/core/client",
       "node"
     ]
   },
