@@ -19,7 +19,7 @@ describe("getDeploymentUnitDetails", () => {
       id: "promotion_seal",
       inventoryIndex: 1,
       name: "クラスチェンジの証",
-      description: "基本職Lv.10以上の味方が昇格するために使う試作アイテム。"
+      description: "基本職Lv.10以上の味方を一段階昇格させる。昇格時に1個消費する。"
     }]);
   });
 
