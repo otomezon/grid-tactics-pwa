@@ -10,6 +10,8 @@
 
 - `.github/workflows/security.yml` はPull Request、`main`へのpush、毎週のスケジュール、手動実行で起動する。
 - 依存関係監査はlockfile全体を対象に `npm audit --audit-level=high` を実行する。high／criticalの脆弱性が検出された場合は失敗させる。devDependenciesも監査対象である。
+- `--audit-level=high` は失敗させる最低severityであり、moderate以下が存在してもjobは成功する。2026-11-17のmain Security run `43991915856` ではjobは成功したが、moderateが6件報告されたため「脆弱性ゼロ」とは扱わない。
+- 同runで確認したVitest 5.0.0の `@vitest/mocker` に関するGHSA-qxg6-89mg-rqv8／GHSA-xp26-3454-mjgpはVitest 5.1.0で修正されているため、本更新でVitestと対応lockfileを同期する。Workbox側は `vite-plugin-pwa@2.0.0 → workbox-build@7.4.1 → glob@11.1.0／minimatch@10.2.6` の依存範囲が修正版を許容しない。上流Issue [GoogleChrome/workbox#3599](https://github.com/GoogleChrome/workbox/issues/3599) が未解決のため、互換性未確認のoverrideやPWA pluginのbreaking downgradeは行わず、正式な上流リリースまで保留する。
 - Dependency ReviewはPull Requestで変更されたruntime／development依存関係を確認し、新たに導入されるhigh／critical脆弱性を失敗にする。ライセンスの許可／拒否ポリシーはまだ定義していないため、この検査ではライセンス判定を無効にしている。
 - CodeQLはJavaScript／TypeScriptを解析する。自動ビルド工程を必要としない言語として `build-mode: none` を指定し、同一リポジトリのPull Request、`main`へのpush、週次実行で解析する。forkからのPull Requestでは、Security Eventsへの書き込み権限を与えないためCodeQL jobを実行しない。
 - `.github/dependabot.yml` はnpm依存関係とGitHub Actionsの更新確認を毎週行い、各ecosystemの更新をそれぞれ1つのグループへまとめる。major／minor／patchを同じ週次グループで提案するため、更新は一括してCIで検証し、互換性を確認してから採用する。
