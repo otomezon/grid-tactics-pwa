@@ -325,13 +325,17 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     turn: 1,
     rngState: 0x12345678
   });
+  expect(chapterTwoState.units.filter((unit) => unit.faction === "player")
+    .every((unit) => unit.inventory.includes("promotion_seal"))).toBe(true);
+  expect(chapterTwoState.reserveUnits.find((unit) => unit.id === "unit_004")?.inventory)
+    .toContain("promotion_seal");
   expect(chapterTwoState.units.find((unit) => unit.id === "unit_001")).toMatchObject({
     faction: "player",
     level: 7,
     experience: 42,
     stats: { strength: 11 },
     currentHp: 13,
-    inventory: carriedUnit.inventory,
+    inventory: [...carriedUnit.inventory, "promotion_seal"],
     hasMoved: false,
     hasActed: false
   });
@@ -341,7 +345,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     experience: 28,
     stats: { strength: 9 },
     currentHp: 14,
-    inventory: reserveUnit.inventory
+    inventory: [...reserveUnit.inventory, "promotion_seal"]
   });
 
   await page.reload();
@@ -529,7 +533,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     experience: 42,
     stats: { strength: 11 },
     currentHp: 13,
-    inventory: [...carriedUnit.inventory, "healing_potion"],
+    inventory: [...carriedUnit.inventory, "promotion_seal", "healing_potion"],
     hasMoved: false,
     hasActed: false
   });
@@ -573,7 +577,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     currentHp: 20,
     hasMoved: false,
     hasActed: true,
-    inventory: carriedUnit.inventory
+    inventory: [...carriedUnit.inventory, "promotion_seal"]
   });
   expect(healedChapterThreeState.campaignBattleLog.slice(0, chapterThreeState.campaignBattleLog.length))
     .toEqual(chapterThreeState.campaignBattleLog);
