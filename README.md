@@ -86,7 +86,7 @@ npm run preview
 - [戦闘システム](docs/combat.md)
 - [敵AI・フェイズ進行](docs/enemy-ai.md)
 - [経験値・レベルアップ・リザルト](docs/progression.md)
-- [クラスチェンジの仕様・判断待ち・実装計画](docs/class-promotion.md)
+- [クラスチェンジ仕様・v0.1.0採用値と検証課題](docs/class-promotion.md)
 - [クラスチェンジ・バランス記入表](docs/class-promotion-balance-worksheet.md)
 - [開発環境・手順](docs/development.md)
 - [スマートフォン／PWA実機確認](docs/smartphone-verification.md)
