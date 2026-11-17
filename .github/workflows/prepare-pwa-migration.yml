@@ -1,9 +1,13 @@
 name: Temporary PWA dependency migration verification
 
 on:
-  push:
+  pull_request:
     branches:
-      - security/update-vitest-5-1-0
+      - main
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
 
 permissions:
   contents: write
@@ -11,10 +15,14 @@ permissions:
 jobs:
   regenerate-and-verify:
     name: Regenerate lockfile and verify PWA migration
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -47,6 +55,8 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Commit regenerated lockfile
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           git add package-lock.json
           if git diff --cached --quiet; then
@@ -56,4 +66,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: regenerate PWA dependency lockfile"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${BRANCH}"
