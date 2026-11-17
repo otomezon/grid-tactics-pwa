@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { VitePWA } from "vite-plugin-pwa";
+import { VitePWA } from "@unplugin-pwa/vite";
 
 export default defineConfig({
   plugins: [
@@ -22,7 +22,7 @@ export default defineConfig({
           { src: "/icons/pwa-512.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" }
         ]
       },
-      workbox: {
+      generateSW: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,json}"]
       }
     })

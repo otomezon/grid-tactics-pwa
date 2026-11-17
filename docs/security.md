@@ -10,6 +10,8 @@
 
 - `.github/workflows/security.yml` はPull Request、`main`へのpush、毎週のスケジュール、手動実行で起動する。
 - 依存関係監査はlockfile全体を対象に `npm audit --audit-level=high` を実行する。high／criticalの脆弱性が検出された場合は失敗させる。devDependenciesも監査対象である。
+- `--audit-level=high` は失敗させる最低severityであり、moderate以下が存在してもjobは成功する。2026-11-17のmain Security run `43991915856` ではmoderateが6件報告された。PR #190でVitestとPWA build依存を更新した後の移行検証run `44033185645` は `found 0 vulnerabilities` を報告した。監査結果はrun・lockfile時点の観測であり、将来の依存更新後もゼロを保証するものではない。
+- 同runで確認したVitest 5.0.0の `@vitest/mocker` に関するGHSA-qxg6-89mg-rqv8／GHSA-xp26-3454-mjgpはVitest 5.1.0で修正されている。旧 `vite-plugin-pwa@2.0.0 → workbox-build@7.4.1` の依存範囲はglob／minimatchの修正版を選択できないため、公式後継の `@unplugin-pwa/vite@0.0.6`／`@vite-pwa/workbox-build@8.0.15` へ移行した。後継は `tinyglobby` を使い、旧Workbox 7のglob／minimatch経路を使わない。設定はクラシックService Workerと既存の `virtual:pwa-register` 登録APIを維持する。PR #190の移行検証run `44033185645` では `npm ci`、typecheck、79 files／550 unit tests、本番PWA build、Chromium／WebKit browser E2E 92件、開発E2E 11件が成功し、再生成lockfileの `npm audit` は `found 0 vulnerabilities` となった。
 - Dependency ReviewはPull Requestで変更されたruntime／development依存関係を確認し、新たに導入されるhigh／critical脆弱性を失敗にする。ライセンスの許可／拒否ポリシーはまだ定義していないため、この検査ではライセンス判定を無効にしている。
 - CodeQLはJavaScript／TypeScriptを解析する。自動ビルド工程を必要としない言語として `build-mode: none` を指定し、同一リポジトリのPull Request、`main`へのpush、週次実行で解析する。forkからのPull Requestでは、Security Eventsへの書き込み権限を与えないためCodeQL jobを実行しない。
 - `.github/dependabot.yml` はnpm依存関係とGitHub Actionsの更新確認を毎週行い、各ecosystemの更新をそれぞれ1つのグループへまとめる。major／minor／patchを同じ週次グループで提案するため、更新は一括してCIで検証し、互換性を確認してから採用する。
