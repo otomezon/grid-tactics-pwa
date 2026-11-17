@@ -1,4 +1,4 @@
-import type { GameUnit, UnitStats } from "../models/game";
+import type { GameUnit, MovementType, UnitStats, WeaponType } from "../models/game";
 
 const STAT_KEYS: readonly (keyof UnitStats)[] = [
   "hp",
@@ -13,6 +13,12 @@ const STAT_KEYS: readonly (keyof UnitStats)[] = [
 
 export type PromotionExperiencePolicy = "preserve" | "reset";
 
+export interface PromotionClassProfile {
+  move: number;
+  movementType: MovementType;
+  usableWeaponTypes: readonly WeaponType[];
+}
+
 export interface ClassPromotionDefinition {
   fromClassId: string;
   toClassId: string;
@@ -21,6 +27,8 @@ export interface ClassPromotionDefinition {
   statCaps: UnitStats;
   /** Controls whether the current 0–99 EXP remainder is preserved when the level resets. */
   experiencePolicy: PromotionExperiencePolicy;
+  /** Explicit target-class movement and weapon access for release promotion data. */
+  targetClassProfile?: PromotionClassProfile;
 }
 
 export interface PromotionStatChange {
@@ -71,6 +79,21 @@ function validateDefinition(definition: ClassPromotionDefinition): void {
     )
   ) {
     throw new RangeError("Promotion stat caps must be non-negative integers and HP must be positive.");
+  }
+
+  if (definition.targetClassProfile) {
+    const profile = definition.targetClassProfile;
+    const validWeaponTypes: readonly WeaponType[] = ["sword", "lance", "axe", "bow", "magic"];
+    if (
+      !Number.isInteger(profile.move) ||
+      profile.move < 1 ||
+      (profile.movementType !== "infantry" && profile.movementType !== "cavalry") ||
+      !Array.isArray(profile.usableWeaponTypes) ||
+      profile.usableWeaponTypes.some((weaponType) => !validWeaponTypes.includes(weaponType)) ||
+      new Set(profile.usableWeaponTypes).size !== profile.usableWeaponTypes.length
+    ) {
+      throw new RangeError("A promotion target must define a valid movement and weapon profile.");
+    }
   }
 
   const bonusEntries = Object.entries(definition.statBonuses ?? {});
@@ -189,6 +212,11 @@ export function applyClassPromotion(
       experience: definition.experiencePolicy === "reset" ? 0 : unit.experience,
       stats: statPreview.stats,
       currentHp: unit.currentHp,
+      move: definition.targetClassProfile?.move ?? unit.move,
+      movementType: definition.targetClassProfile?.movementType ?? unit.movementType,
+      usableWeaponTypes: definition.targetClassProfile
+        ? [...definition.targetClassProfile.usableWeaponTypes]
+        : [...unit.usableWeaponTypes],
       inventory,
       hasActed: true
     },
