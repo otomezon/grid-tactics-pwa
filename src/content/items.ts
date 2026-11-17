@@ -9,10 +9,7 @@ export interface InventoryItemDefinition {
   effect?: InventoryItemEffect;
 }
 
-/** Prototype promotion token; it is an item ID in the existing inventory array. */
 export const PROMOTION_ITEM_ID = "promotion_seal";
-
-/** Prototype self-healing consumable; its healing amount is not final balance. */
 export const HEALING_POTION_ID = "healing_potion";
 export const HEALING_POTION_AMOUNT = 10;
 
@@ -20,7 +17,7 @@ export const INVENTORY_ITEMS: readonly InventoryItemDefinition[] = [
   {
     id: PROMOTION_ITEM_ID,
     name: "クラスチェンジの証",
-    description: "基本職Lv.10以上の味方が昇格するために使う試作アイテム。",
+    description: "基本職Lv.10以上の味方を一段階昇格させる。昇格時に1個消費する。",
     category: "promotion"
   },
   {
