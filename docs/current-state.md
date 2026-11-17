@@ -330,4 +330,3 @@ PR #77（merge commit `8883a9042c5527632fabdac87c0d74fb32c04ff9`）で、戦闘�
 - PR #190でVitestを5.1.0へ更新し、PWA build依存を旧 `vite-plugin-pwa`／Workbox 7から `@unplugin-pwa/vite`／Workbox 8へ移行した。既存のクラシックService Workerと `virtual:pwa-register` は維持する。
 - PR #191で `@playwright/test` 1.65.1、`@vitejs/plugin-react` 6.3.0、Vite 8.3.8へ更新した。
 - Dependency Graph有効化後、PR #191のSecurity run `44035627631` ではDependency Reviewを含む全jobが成功。マージ後のmain Security run `44037000738` ではnpm auditが `found 0 vulnerabilities`、CodeQLも成功した。
-- mainの統合CI run `44037000675` はドキュメント記録時点でブラウザE2Eが実行中。結果を確認するまではpost-merge CI全体の成功とは記録しない。
