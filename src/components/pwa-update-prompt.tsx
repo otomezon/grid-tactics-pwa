@@ -47,7 +47,7 @@ export function PwaUpdatePrompt({ canApplyUpdate }: PwaUpdatePromptProps) {
     if (!canApplyUpdate || isApplying) return;
     setIsApplying(true);
     setApplyError(false);
-    void updateServiceWorker(true).catch(() => {
+    void updateServiceWorker().catch(() => {
       setIsApplying(false);
       setApplyError(true);
     });
