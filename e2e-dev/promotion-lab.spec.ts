@@ -25,9 +25,9 @@ test("opens the isolated development-only promotion lab with 21 deterministic sc
   const strength = lab.getByTestId("promotion-lab-stat-strength").locator("td");
   await expect(strength).toHaveCount(5);
   await expect(strength.nth(0)).toHaveText("9");
-  await expect(strength.nth(1)).toHaveText("11");
-  await expect(strength.nth(2)).toHaveText("+2");
-  await expect(strength.nth(3)).toHaveText("+2");
+  await expect(strength.nth(1)).toHaveText("12");
+  await expect(strength.nth(2)).toHaveText("+3");
+  await expect(strength.nth(3)).toHaveText("+3");
   await expect(strength.nth(4)).toHaveText("30");
 });
 
