@@ -331,12 +331,17 @@ test.describe("production PWA shell", () => {
     expect(manifest.name).toBe("Grid Tactics PWA");
     expect(manifest.short_name).toBe("Grid Tactics");
     expect(manifest.display).toBe("standalone");
-    expect(manifest.start_url).toBe("/");
-    expect(manifest.scope).toBe("/");
+    const manifestUrl = new URL(manifestHref!, page.url());
+    expect(manifest.start_url).toBe("./");
+    expect(manifest.scope).toBe("./");
+    expect(new URL(manifest.start_url, manifestUrl).href).toBe(new URL("./", manifestUrl).href);
+    expect(new URL(manifest.scope, manifestUrl).href).toBe(new URL("./", manifestUrl).href);
     expect(manifest.icons).toEqual(expect.arrayContaining([
-      expect.objectContaining({ src: "/icons/pwa-192.svg", sizes: "192x192" }),
-      expect.objectContaining({ src: "/icons/pwa-512.svg", sizes: "512x512", purpose: "maskable" })
+      expect.objectContaining({ src: "icons/pwa-192.svg", sizes: "192x192" }),
+      expect.objectContaining({ src: "icons/pwa-512.svg", sizes: "512x512", purpose: "maskable" })
     ]));
+    expect(manifest.icons.map((icon) => new URL(icon.src, manifestUrl).pathname))
+      .toEqual(expect.arrayContaining(["/icons/pwa-192.svg", "/icons/pwa-512.svg"]));
 
     const registration = await page.evaluate(async () => {
       const activeRegistration = await navigator.serviceWorker.ready;

@@ -577,7 +577,7 @@ test("carries one campaign through all three chapters with desktop clicks and mo
     currentHp: 20,
     hasMoved: false,
     hasActed: true,
-    inventory: [...carriedUnit.inventory, "promotion_seal"]
+    inventory: [...carriedCandidate.inventory, "promotion_seal", "healing_potion"]
   });
   expect(healedChapterThreeState.campaignBattleLog.slice(0, chapterThreeState.campaignBattleLog.length))
     .toEqual(chapterThreeState.campaignBattleLog);
