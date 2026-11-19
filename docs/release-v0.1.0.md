@@ -97,7 +97,7 @@ v0.1.0は3章連続で遊べるプレイアブルプロトタイプの初回公�
 
 - PR #193、#194、#195はmainへマージ済み。
 - main commit `881e59dd7d8be9d460a4241ace37fed0e266d3e2` のGitHub Pages deploymentは成功し、配信先は上記URL。
-- post-merge CI run #44491937651は型チェック・単体テスト・本番buildが成功。Chromium／WebKit E2Eの完了はActions runで最終確認する。
+- post-merge CI run #44491937651は79テストファイル／558単体テスト、production build、production Chromium／WebKit E2E 92件が成功。開発E2Eは21ケース合成マトリクスを含む10件が成功し、1件はsnapshot比較の命中率期待値75%が現行表示80%とずれて失敗。PR #196で期待値を同期し、CI再検証中。
 - GitHub Release `v0.1.0` は未公開。実プレイ21ケースとiOS Safari／Android Chromeの実機受け入れが未完了のため、正式公開判定は保留。
 
 ## リリース判定チェックリスト
