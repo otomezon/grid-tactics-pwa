@@ -1839,7 +1839,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.locator(".map-grid").getByRole("button", { name: /主人公/ }).click();
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmation = page.getByRole("group", { name: "クラスチェンジ確認" });
-    await expect(confirmation).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
+    await expect(confirmation).toContainText("初回リリース用の正式設定を適用します。");
     await expect(confirmation).toContainText("Lv.10 → Lv.1");
     await expect(confirmation).toContainText("EXP 73（保持）");
     await expect(confirmation).toContainText("昇格後は行動済み");
@@ -1847,14 +1847,14 @@ test("shows candidate details and persists the selected deployment roster", asyn
     const statPreview = confirmation.getByRole("table", { name: "昇格後の能力値プレビュー" });
     await expect(statPreview.locator("tbody tr")).toHaveCount(8);
     const expectedStatPreview = [
-      { key: "hp", current: "20", next: "22", change: "要求 +2 / 実 +2 / 上限 60" },
-      { key: "strength", current: "32", next: "32", change: "要求 +0 / 実 +0 / 上限 30" },
-      { key: "magic", current: "0", next: "0", change: "要求 +0 / 実 +0 / 上限 30" },
-      { key: "skill", current: "7", next: "8", change: "要求 +1 / 実 +1 / 上限 30" },
-      { key: "speed", current: "8", next: "9", change: "要求 +1 / 実 +1 / 上限 30" },
-      { key: "luck", current: "4", next: "4", change: "要求 +0 / 実 +0 / 上限 30" },
-      { key: "defense", current: "5", next: "5", change: "要求 +0 / 実 +0 / 上限 30" },
-      { key: "resistance", current: "1", next: "1", change: "要求 +0 / 実 +0 / 上限 30" }
+      { key: "hp", current: "20", next: "25", change: "要求 +5 / 実 +5 / 上限 60" },
+      { key: "strength", current: "32", next: "32", change: "要求 +2 / 実 +0 / 上限 25" },
+      { key: "magic", current: "0", next: "0", change: "要求 +0 / 実 +0 / 上限 10" },
+      { key: "skill", current: "7", next: "10", change: "要求 +3 / 実 +3 / 上限 30" },
+      { key: "speed", current: "8", next: "11", change: "要求 +3 / 実 +3 / 上限 30" },
+      { key: "luck", current: "4", next: "5", change: "要求 +1 / 実 +1 / 上限 30" },
+      { key: "defense", current: "5", next: "6", change: "要求 +1 / 実 +1 / 上限 22" },
+      { key: "resistance", current: "1", next: "1", change: "要求 +0 / 実 +0 / 上限 20" }
     ] as const;
     for (const expected of expectedStatPreview) {
       const cells = page.getByTestId(`promotion-stat-${expected.key}`).locator("td");
@@ -1865,9 +1865,9 @@ test("shows candidate details and persists the selected deployment roster", asyn
     }
     await expect(page.getByTestId("promotion-stat-strength")).toContainText("既存値を維持");
     await expect(confirmation).toContainText("20 → 20（回復なし）");
-    await expect(confirmation).toContainText("歩兵・5（維持）");
-    await expect(confirmation).toContainText("剣（維持）");
-    await expect(confirmation).toContainText("試作の鉄の剣（維持）");
+    await expect(confirmation).toContainText("歩兵・5 → 歩兵・5");
+    await expect(confirmation).toContainText("剣 → 剣");
+    await expect(confirmation).toContainText("試作の鉄の剣 → 試作の鉄の剣");
     await expect(confirmation).toContainText("1 → 0個（1個消費）");
 
     const beforeCancel = await readAutoSave(page);
@@ -1877,7 +1877,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
 
     await promotionPanel.getByRole("button", { name: "クラスチェンジを確認" }).click();
     const confirmedAgain = page.getByRole("group", { name: "クラスチェンジ確認" });
-    await expect(confirmedAgain).toContainText("能力ボーナス・クラス上限はすべて試作値です。");
+    await expect(confirmedAgain).toContainText("初回リリース用の正式設定を適用します。");
     await expect(confirmedAgain.getByRole("table", { name: "昇格後の能力値プレビュー" }).locator("tbody tr")).toHaveCount(8);
     await expect(confirmedAgain).toContainText("Lv.10 → Lv.1");
     await expect(confirmedAgain).toContainText("EXP 73（保持）");
@@ -2747,9 +2747,7 @@ test("shows candidate details and persists the selected deployment roster", asyn
     await page.reload();
     await continueSavedCampaign(page);
     await expect(page.getByText("ステージクリア", { exact: true })).toBeVisible();
-    await expect(page.locator(".chapter-rewards")).toContainText(
-      "この章には追加アイテム報酬が設定されていません"
-    );
+    await expect(page.locator(".chapter-rewards")).toContainText("クラスチェンジの証×1");
     const nextChapterButton = page.getByRole("button", { name: "第2章・試作マップを開始" });
     await expect(nextChapterButton).toBeVisible();
 
@@ -2805,18 +2803,21 @@ test("shows candidate details and persists the selected deployment roster", asyn
       experience: 42,
       stats: { strength: 11 },
       currentHp: 13,
-      inventory: [...carriedUnit.inventory],
+      inventory: [...carriedUnit.inventory, "promotion_seal"],
       hasMoved: false,
       hasActed: false
     });
+    expect(nextChapterState.units.filter((unit) => unit.faction === "player")
+      .every((unit) => unit.inventory.includes("promotion_seal"))).toBe(true);
     expect(nextChapterState.units.some((unit) => unit.id === "unit_004")).toBe(false);
     expect(nextChapterState.reserveUnits.find((unit) => unit.id === "unit_004")).toMatchObject({
       level: 4,
       experience: 28,
       stats: { strength: 9 },
       currentHp: 14,
-      inventory: [...reserveUnit.inventory]
+      inventory: [...reserveUnit.inventory, "promotion_seal"]
     });
+    expect(nextChapterState.reserveUnits.every((unit) => unit.inventory.includes("promotion_seal"))).toBe(true);
     expect(nextChapterState.units.filter((unit) => unit.faction === "enemy").map((unit) => unit.id))
       .toEqual(["enemy_001", "enemy_002", "enemy_003", "enemy_004", "enemy_005"]);
 
