@@ -939,7 +939,7 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   const controlCombat = combat.getByTestId("promotion-snapshot-combat-control");
   const promotionCombat = combat.getByTestId("promotion-snapshot-combat-promotion");
   await expect(controlCombat).toContainText("命中 73%");
-  await expect(promotionCombat).toContainText("命中 75%");
+  await expect(promotionCombat).toContainText("命中 80%");
   await expect(controlCombat).toContainText("実行結果（このseedの1試行）");
   await expect(promotionCombat).toContainText("実行結果（このseedの1試行）");
 
