@@ -1,8 +1,8 @@
 # v0.1.0 初回リリース方針・受け入れチェック
 
-- 更新日: 2026-11-17
+- 更新日: 2026-11-19
 - 公開方式: GitHub Pages（プロジェクトサイト）
-- 公開予定URL: https://otomezon.github.io/grid-tactics-pwa/
+- 公開URL: https://otomezon.github.io/grid-tactics-pwa/
 - セーブ形式: `saveVersion: 10` を維持し、このリリースでmigrationを追加しない。
 
 ## リリースに含める範囲
@@ -89,15 +89,24 @@ v0.1.0は3章連続で遊べるプレイアブルプロトタイプの初回公�
 
 - Viteのローカル／通常CIビルドはルート `/`、公開ビルドは `/grid-tactics-pwa/` をbase pathにする。
 - Pull RequestではPages用buildとmanifest／Service Worker／Workbox artifact検査を実行し、mainへのpush後にGitHub Pagesへdeployする。
-- リポジトリのSettings → Pages → Build and deployment → Sourceを `GitHub Actions` に設定する必要がある。workflowファイルの追加だけでリポジトリ設定が自動的に完了したとは扱わない。
-- mainへのマージ後、Pages deploy workflowが成功し、公開URLへHTTPSでアクセスできることを確認してから公開済みと扱う。
+- リポジトリのSettings → Pages → Build and deployment → Sourceは `GitHub Actions` に設定済み。workflowファイルの追加だけで設定が自動完了したとは扱わず、リポジトリ設定とActions実行結果を別々に確認する。
+- main commit `cb7e040a4165f2a9e995e79d7732e633cc133a92` に対する2026-11-19のPages deploy run [#44494334807](https://github.com/otomezon/grid-tactics-pwa/actions/runs/44494334807) はbuild／artifact検査／deployが成功し、公開物の配信が完了した。外部ブラウザ／実機からのHTTPS・PWA・オフライン確認は別の手動受け入れ項目として残す。
 - IndexedDBセーブとバックアップはブラウザ／端末内に保存される。GitHub Pagesはセーブ同期・クラウドバックアップを提供しない。
+
+## 2026-11-19時点の確認状況
+
+- PR #193〜#196はmainへマージ済み。PR #196は開発専用snapshot benchの表示期待値のみを80%へ更新し、戦闘ロジック／クラス数値は変更していない。
+- main CI run [#44494334810](https://github.com/otomezon/grid-tactics-pwa/actions/runs/44494334810) は成功。
+- main Security run [#44494334788](https://github.com/otomezon/grid-tactics-pwa/actions/runs/44494334788) はCodeQLとnpm auditが成功。main pushのためPR専用Dependency Reviewはスキップ。
+- main Pages deploy run [#44494334807](https://github.com/otomezon/grid-tactics-pwa/actions/runs/44494334807) は成功し、上記URLへ配信済み。
+- GitHub Release `v0.1.0` は未公開。21ケースの実プレイ比較とiOS Safari／Android Chromeの実機受け入れが未完了のため、正式リリース判定は保留。
 
 ## リリース判定チェックリスト
 
 - [ ] このPRのTypeScript、Vitest、既存Chromium／WebKit E2E、Pages向けbuild／artifact検証が成功。
-- [ ] mainマージ後のCI／Security／Pages deployが成功。
-- [ ] Settings → PagesのSourceがGitHub Actionsであり、公開URLがHTTPSで開く。
+- [x] main commit `cb7e040` のCI run #44494334810、Security run #44494334788、Pages deploy run #44494334807が成功。
+- [x] Settings → PagesのSourceがGitHub Actionsに設定され、Pages deployが成功。
+- [ ] 外部ブラウザおよび実機から公開URLがHTTPSで開き、PWAとして正常起動することを確認。
 - [ ] iOS Safari／Android Chromeの実機でホーム画面追加、standalone起動、終了／再開、オンライン初回起動、オフライン起動を確認して結果を記録。
 - [ ] 第1章の証配布、第7経路の昇格、上限境界、移動／武器／装備解除、再読込後の保持を検証用セーブで確認。
 - [ ] GitHub Release `v0.1.0` を公開する。Release作成はPRマージ後、配信・受け入れ確認を終えてから行う。
