@@ -140,11 +140,7 @@ function assertComparableEnemyPhaseSnapshots(
     controlSelected.currentHp !== promotionSelected.currentHp ||
     controlSelected.experience !== promotionSelected.experience ||
     controlSelected.position.x !== promotionSelected.position.x ||
-    controlSelected.position.y !== promotionSelected.position.y ||
-    controlSelected.movementType !== promotionSelected.movementType ||
-    controlSelected.move !== promotionSelected.move ||
-    controlSelected.equippedWeaponId !== promotionSelected.equippedWeaponId ||
-    JSON.stringify(controlSelected.usableWeaponTypes) !== JSON.stringify(promotionSelected.usableWeaponTypes)
+    controlSelected.position.y !== promotionSelected.position.y
   ) {
     throw new Error("Enemy-phase branches must preserve the same living, unmoved unit, HP/EXP, and action/position context.");
   }
