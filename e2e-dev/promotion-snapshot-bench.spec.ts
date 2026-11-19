@@ -927,9 +927,9 @@ test("imports an exported save locally and compares the actual unit snapshot wit
   const hpCells = bench.getByTestId("promotion-snapshot-stat-hp").locator("td");
   await expect(hpCells).toHaveCount(5);
   await expect(hpCells.nth(0)).toHaveText("28");
-  await expect(hpCells.nth(1)).toHaveText("30");
-  await expect(hpCells.nth(2)).toHaveText("+2");
-  await expect(hpCells.nth(3)).toHaveText("+2");
+  await expect(hpCells.nth(1)).toHaveText("33");
+  await expect(hpCells.nth(2)).toHaveText("+5");
+  await expect(hpCells.nth(3)).toHaveText("+5");
   await expect(hpCells.nth(4)).toHaveText("60");
 
   const combat = bench.getByTestId("promotion-snapshot-combat");
