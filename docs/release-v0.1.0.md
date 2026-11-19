@@ -89,9 +89,16 @@ v0.1.0は3章連続で遊べるプレイアブルプロトタイプの初回公�
 
 - Viteのローカル／通常CIビルドはルート `/`、公開ビルドは `/grid-tactics-pwa/` をbase pathにする。
 - Pull RequestではPages用buildとmanifest／Service Worker／Workbox artifact検査を実行し、mainへのpush後にGitHub Pagesへdeployする。
-- リポジトリのSettings → Pages → Build and deployment → Sourceを `GitHub Actions` に設定する必要がある。workflowファイルの追加だけでリポジトリ設定が自動的に完了したとは扱わない。
-- mainへのマージ後、Pages deploy workflowが成功し、公開URLへHTTPSでアクセスできることを確認してから公開済みと扱う。
+- リポジトリのSettings → Pages → Build and deployment → Sourceは `GitHub Actions` に設定済み（2026-11-19時点）。workflowファイルの追加だけで設定が自動完了したとは扱わず、リポジトリ設定とActions実行結果を別々に確認する。
+- main commit `881e59dd7d8be9d460a4241ace37fed0e266d3e2` に対する2026-11-19のPages deploy workflowはbuild／artifact検査／deployがすべて成功し、環境URL `https://otomezon.github.io/grid-tactics-pwa/` を返した。公開物の配信は完了。実機ブラウザからのHTTPS／PWA／オフライン確認は別の手動受け入れ項目として残す。
 - IndexedDBセーブとバックアップはブラウザ／端末内に保存される。GitHub Pagesはセーブ同期・クラウドバックアップを提供しない。
+
+## 2026-11-19時点の確認状況
+
+- PR #193、#194、#195はmainへマージ済み。
+- main commit `881e59dd7d8be9d460a4241ace37fed0e266d3e2` のGitHub Pages deploymentは成功し、配信先は上記URL。
+- post-merge CI run #44491937651は型チェック・単体テスト・本番buildが成功。Chromium／WebKit E2Eの完了はActions runで最終確認する。
+- GitHub Release `v0.1.0` は未公開。実プレイ21ケースとiOS Safari／Android Chromeの実機受け入れが未完了のため、正式公開判定は保留。
 
 ## リリース判定チェックリスト
 
