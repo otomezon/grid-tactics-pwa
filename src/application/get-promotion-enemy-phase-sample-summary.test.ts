@@ -119,6 +119,64 @@ describe("promotion enemy-phase sample summary", () => {
     expect(promotion.nextState.units.find((unit) => unit.id === "unit_001")?.hasActed).toBe(true);
   });
 
+  it("includes promoted movement and weapon profiles in the enemy-phase comparison", () => {
+    const profileCases = [
+      {
+        classId: "mercenary",
+        movementType: "infantry" as const,
+        move: 5,
+        usableWeaponTypes: ["sword"] as const,
+        equippedWeaponId: "iron_sword",
+        inventory: ["iron_sword", PROMOTION_ITEM_ID],
+        expectedMove: 5,
+        expectedWeapons: ["sword", "axe"]
+      },
+      {
+        classId: "cavalry",
+        movementType: "cavalry" as const,
+        move: 6,
+        usableWeaponTypes: ["sword", "lance"] as const,
+        equippedWeaponId: "iron_lance",
+        inventory: ["iron_sword", "iron_lance", PROMOTION_ITEM_ID],
+        expectedMove: 7,
+        expectedWeapons: ["sword", "lance"]
+      }
+    ];
+
+    for (const profile of profileCases) {
+      const base = battleReadySnapshot();
+      const control: GameStateSnapshot = {
+        ...base,
+        units: base.units.map((unit) => unit.id === "unit_001"
+          ? {
+              ...unit,
+              classId: profile.classId,
+              movementType: profile.movementType,
+              move: profile.move,
+              usableWeaponTypes: [...profile.usableWeaponTypes],
+              inventory: [...profile.inventory],
+              equippedWeaponId: profile.equippedWeaponId
+            }
+          : unit
+        )
+      };
+      const definition = getClassPromotionDefinition(profile.classId);
+      if (!definition) throw new Error("Missing " + profile.classId + " promotion definition.");
+      const promotion = performClassChange(control, "unit_001", definition);
+
+      expect(promotion.promotedUnit.move).toBe(profile.expectedMove);
+      expect(promotion.promotedUnit.usableWeaponTypes).toEqual(profile.expectedWeapons);
+      const summary = getPromotionEnemyPhaseSampleSummary(
+        control,
+        promotion.nextState,
+        CHAPTER_01_MAP,
+        "unit_001",
+        4
+      );
+      expect(summary.sampleCount).toBe(4);
+    }
+  });
+
   it("rejects branches that do not share identical enemy and reserve snapshots", () => {
     const control = battleReadySnapshot();
     const definition = getClassPromotionDefinition("swordsman");
